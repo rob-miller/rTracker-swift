@@ -1,0 +1,413 @@
+//  Converted to Swift 5.7.2 by Swiftify v5.7.25331 - https://swiftify.com/
+///************
+/// vogd.swift
+/// Copyright 2011-2021 Robert T. Miller
+/// Licensed under the Apache License, Version 2.0 (the "License");
+/// you may not use this file except in compliance with the License.
+/// You may obtain a copy of the License at
+/// http://www.apache.org/licenses/LICENSE-2.0
+/// Unless required by applicable law or agreed to in writing, software
+/// distributed under the License is distributed on an "AS IS" BASIS,
+/// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+/// See the License for the specific language governing permissions and
+/// limitations under the License.
+///***************
+
+//
+//  vogd.swift
+//
+//  Value Object Graph Data
+//
+//  rTracker
+//
+//  Created by Rob Miller on 10/05/2011.
+//  Copyright 2011 Robert T. Miller. All rights reserved.
+//
+
+import Foundation
+
+class vogd: NSObject {
+    /*{
+        valueObj *vo;
+        NSArray *xdat;
+        NSArray *ydat;
+
+        double minVal;
+        double maxVal;
+
+        double vScale;
+
+        CGFloat yZero;
+    }*/
+    var vo: valueObj?
+    var xdat: [AnyHashable]?
+    var ydat: [AnyHashable]?
+    var minVal = 0.0
+    var maxVal = 0.0
+    var vScale = 0.0
+    var yZero: CGFloat = 0.0
+
+    override init() {
+        DBGErr("vogd: invalid init!")
+        super.init()
+    }
+
+    func getMinMax(_ targ: String?, alt: String?) -> Double {
+        var retval = 0.0
+        if nil != alt {
+            if Scanner.localizedScanner(with: alt ?? "").scanDouble(UnsafeMutablePointer<Double>(mutating: &retval)) {
+                return retval
+            }
+        }
+        let myTracker = vo?.parentTracker as? trackerObj
+        let myTOGD = myTracker?.togd as? togd
+        let sql = String(format: "select %@(val collate CMPSTRDBL) from voData where id=%ld and val != '' and date >= %d and date <= %d;", targ ?? "", Int(vo?.vid ?? 0), myTOGD?.firstDate ?? 0, myTOGD?.lastDate ?? 0)
+        return myTracker?.toQry2Double(sql) ?? 0.0
+    }
+
+    func initAsNum(_ inVO: valueObj?) -> vogd? {
+        super.init()
+        vo = inVO
+        yZero = 0.0
+
+        //double dscale = d(self.bounds.size.width - (2.0f*BORDER)) / d(self.lastDate - self.firstDate);
+
+        let myTracker = vo?.parentTracker as? trackerObj
+        let myTOGD = myTracker?.togd as? togd
+
+        if (vo?.vtype == VOT_NUMBER || vo?.vtype == VOT_FUNC) && ("0" == (vo?.optDict)?["autoscale"]) {
+            //DBGLog(@"autoscale= %@", [self.vo.optDict objectForKey:@"autoscale"]);
+            minVal = getMinMax("min", alt: (vo?.optDict)?["gmin"] as? String)
+            maxVal = getMinMax("max", alt: (vo?.optDict)?["gmax"] as? String)
+        } else if vo?.vtype == VOT_SLIDER {
+            let nmin = (vo?.optDict)?["smin"] as? NSNumber
+            let nmax = (vo?.optDict)?["smax"] as? NSNumber
+            minVal = nmin != nil ? nmin?.doubleValue ?? 0.0 : d(SLIDRMINDFLT)
+            maxVal = nmax != nil ? nmax?.doubleValue ?? 0.0 : d(SLIDRMAXDFLT)
+        } else if vo?.vtype == VOT_BOOLEAN {
+            let offVal = 0.0
+            let onVal = ((vo?.optDict)?["boolval"] as? NSNumber)?.doubleValue ?? 0.0
+            if offVal < onVal {
+                minVal = offVal
+                maxVal = onVal
+            } else {
+                minVal = onVal
+                maxVal = offVal
+            }
+        } else if vo?.vtype == VOT_CHOICE {
+            minVal = d(0)
+            maxVal = d(0)
+            let c = 0
+            for i in 0..<CHOICES {
+                let key = "cv\(i)"
+                let tstVal = vo?.optDict?[key] as? String
+                let skey = "c\(i)"
+                let tstStr = vo?.optDict?[skey] as? String
+                if nil != tstVal {
+                    // only do specified choices
+                    c += 1
+                    let tval = Double(tstVal ?? "") ?? 0.0
+                    if minVal > tval {
+                        minVal = tval
+                    }
+                    if maxVal < tval {
+                        maxVal = tval
+                    }
+                } else if nil != tstStr {
+                    c += 1
+                }
+            }
+            if minVal == maxVal {
+                // if no cv values set above, default to choice numbers
+                minVal = d(1)
+                maxVal = d(CHOICES)
+            }
+            #if GRAPHDBG
+            DBGLog("minVal= %lf maxVal= %lf", minVal, maxVal)
+            #endif
+
+            let step = (maxVal - minVal) / Double(c) //  CHOICES;
+            minVal -= step //( d( YTICKS - CHOICES ) /2.0 ) * step;   // YTICKS=7, CHOICES=6, so need blank positions at top and bottom
+            maxVal += step * d(YTICKS - Double(c)) // step ; //( d( YTICKS - CHOICES ) /2.0 ) * step;
+            #if GRAPHDBG
+            DBGLog("minVal= %lf maxVal= %lf", minVal, maxVal)
+            //DBGLog(@"Foo");
+            #endif
+        } else {
+            // number or function with autoscale
+
+            minVal = getMinMax("min", alt: nil)
+            maxVal = getMinMax("max", alt: nil)
+
+            /*
+                        // should be option ASFROMZERO
+                        if ((0.0f < self.minVal) && (0.0f < self.maxVal)) {   // confusing if no start at 0
+                            self.minVal = 0.0f;
+                        }
+                        */
+        }
+
+        if minVal == maxVal {
+            minVal = 0.0
+        }
+        if minVal == maxVal {
+            maxVal = 1.0
+        }
+
+        if VOT_CHOICE != vo?.vtype {
+            let yScaleExpand = (maxVal - minVal) * GRAPHSCALE
+            if nil == (vo?.optDict)?["gmax"] {
+                maxVal += yScaleExpand // +5% each way for visibility unless specified
+            }
+            if nil == (vo?.optDict)?["gmin"] {
+                minVal -= yScaleExpand
+            }
+        }
+        #if GRAPHDBG
+        DBGLog("%@ minval= %f  maxval= %f", vo?.valueName, minVal, maxVal)
+        #endif
+
+        //double vscale = d(self.bounds.size.height - (2.0f*BORDER)) / (maxVal - minVal);
+        vScale = d(myTOGD?.rect.size.height) / (maxVal - minVal)
+
+        yZero -= CGFloat(minVal)
+        yZero *= CGFloat(vScale)
+
+        var mxdat: [AnyHashable] = []
+        var mydat: [AnyHashable] = []
+
+        var i1: [AnyHashable] = []
+        var d1: [AnyHashable] = []
+
+        //myTracker.sql = [NSString stringWithFormat:@"select date,val from voData where id=%d and val != '' order by date;",self.vo.vid];
+        // 6.ii.2013 implement maxGraphDays
+        let sql = String(format: "select date,val from voData where id=%ld and val != '' and date >= %d and date <= %d order by date;", Int(vo?.vid ?? 0), myTOGD?.firstDate ?? 0, myTOGD?.lastDate ?? 0)
+        #if GRAPHDBG
+        DBGLog("graph points sql: %@", sql)
+        #endif
+        myTracker?.toQry2AryID(&i1, d1: &d1, sql: sql)
+        //sql = nil;
+
+        let e = (d1 as NSArray).objectEnumerator()
+
+        for ni in i1 {
+            guard let ni = ni as? NSNumber else {
+                continue
+            }
+
+            let nv = e.nextObject() as? NSNumber
+
+            #if GRAPHDBG
+            DBGLog("i: %@  f: %@", ni, nv)
+            #endif
+            var d = ni.doubleValue // date as int secs cast to float
+            var v = nv?.doubleValue ?? 0.0 // val as float
+
+            d -= Double(myTOGD?.firstDate ?? 0.0) // self.firstDate;
+            d *= myTOGD?.dateScale ?? 0.0
+            v -= minVal
+            v *= vScale
+
+            //d+= border; //BORDER;
+            //v+= border; //BORDER;
+            // fixed by doDrawGraph ? : why does this code run again after rotate to portrait?
+
+            //DBGLog(@"num final: %f %f",d,v);
+
+            mxdat.append(NSNumber(value: d))
+            mydat.append(NSNumber(value: v))
+        }
+
+
+        xdat = mxdat
+        ydat = mydat
+
+        return self
+    }
+
+    func initAsNote(_ inVO: valueObj?) -> vogd? {
+        super.init()
+        vo = inVO
+        yZero = 0.0
+
+        let myTracker = vo?.parentTracker as? trackerObj
+        let myTOGD = myTracker?.togd as? togd
+
+        vScale = d(myTOGD?.rect.size.height) / d(1.1 + GRAPHSCALE) // (self.maxVal - self.minVal);
+        //self.vScale = d(myTOGD.rect.size.height); // / d(1.05) ;  // (self.maxVal - self.minVal);
+
+        var mxdat: [AnyHashable] = []
+        var mydat: [AnyHashable] = []
+
+        var i1: [AnyHashable] = []
+
+        //NSMutableArray *s1 = [[NSMutableArray alloc] init];
+
+        //myTracker.sql = [NSString stringWithFormat:@"select date,val from voData where id=%d and val not NULL and val != '' and date >= %d and date <= %d order by date;",self.vo.vid,myTOGD.firstDate,myTOGD.lastDate];
+        //[myTracker toQry2AryIS:i1 s1:s1];
+        //NSEnumerator *e = [s1 objectEnumerator];
+        let sql = String(format: "select date,val from voData where id=%ld and val not NULL and val != '' and date >= %d and date <= %d order by date;", Int(vo?.vid ?? 0), myTOGD?.firstDate ?? 0, myTOGD?.lastDate ?? 0)
+        myTracker?.toQry2AryI(&i1, sql: sql)
+        //sql = nil;
+
+        for ni in i1 {
+            guard let ni = ni as? NSNumber else {
+                continue
+            }
+
+            //DBGLog(@"i: %@  ",ni);
+            var d = ni.doubleValue // date as int secs cast to float
+
+            d -= Double(myTOGD?.firstDate ?? 0.0)
+            d *= myTOGD?.dateScale ?? 0.0
+            //d+= border;
+
+            mxdat.append(NSNumber(value: d))
+            mydat.append(NSNumber(value: vScale)) //[e nextObject]];
+        }
+
+
+        //[s1 release];
+
+        xdat = mxdat
+        ydat = mydat
+
+        return self
+
+    }
+
+    //- (vogd*) initAsBool:(valueObj*)vo;
+
+    // not used - boolean treated as number
+    /*
+    - (id) initAsBool:(valueObj*)inVO {
+        if ((self = [super init])) {
+
+            self.vo = inVO;
+            self.yZero = 0.0F;
+
+            trackerObj *myTracker = self.vo.parentTracker;
+            togd *myTOGD = myTracker.togd;
+
+            NSMutableArray *mxdat = [[NSMutableArray alloc] init];
+            //NSMutableArray *mydat = [[NSMutableArray alloc] init];
+
+            NSMutableArray *i1 = [[NSMutableArray alloc] init];
+           sql = [NSString stringWithFormat:@"select date from voData where id=%d and val !='' and date >= %d and date <= %d order by date;",self.vo.vid,myTOGD.firstDate,myTOGD.lastDate];
+            [myTracker toQry2AryI:i1];
+          //sql = nil;
+
+            for (NSNumber *ni in i1) {
+
+                //DBGLog(@"i: %@  ",ni);
+                double d = [ni doubleValue];		// date as int secs cast to float
+
+                d -= (double) myTOGD.firstDate;
+                d *= myTOGD.dateScale;
+                //d+= border;
+
+                [mxdat addObject:[NSNumber numberWithDouble:d]];
+
+            }
+            [i1 release];
+
+
+            self.xdat = [NSArray arrayWithArray:mxdat];
+            //ydat = [NSArray arrayWithArray:mydat];
+
+            [mxdat release];
+            //[mydat release];
+        }
+
+        return self;
+
+    }
+    */
+
+    func initAsTBoxLC(_ inVO: valueObj?) -> vogd? {
+
+        super.init()
+        vo = inVO
+        yZero = 0.0
+
+        let myTracker = vo?.parentTracker as? trackerObj
+        let myTOGD = myTracker?.togd as? togd
+
+        minVal = 0.0
+        maxVal = minVal
+
+        var i1: [AnyHashable] = []
+        var s1: [AnyHashable] = []
+        var i2: [AnyHashable] = []
+
+        let sql = String(format: "select date,val from voData where id=%ld and val not NULL and val != '' and date >= %d and date <= %d order by date;", Int(vo?.vid ?? 0), myTOGD?.firstDate ?? 0, myTOGD?.lastDate ?? 0)
+        myTracker?.toQry2AryIS(&i1, s1: &s1, sql: sql)
+        //sql = nil;
+
+        // TODO: nicer to cache tbox linecounts somehow 
+        for s in s1 {
+            guard let s = s as? String else {
+                continue
+            }
+            var v = d(rTracker_resource.countLines(s))
+            if v > maxVal {
+                maxVal = v
+            }
+            i2.append(NSNumber(value: v))
+        }
+
+        if maxVal < d(YTICKS) {
+            maxVal = d(YTICKS)
+        }
+
+        vScale = d(myTOGD?.rect.size.height) / (maxVal - minVal)
+
+        var mxdat: [AnyHashable] = []
+        var mydat: [AnyHashable] = []
+
+        let e = (i2 as NSArray).objectEnumerator()
+
+        for ni in i1 {
+            guard let ni = ni as? NSNumber else {
+                continue
+            }
+
+            //DBGLog(@"i: %@  ",ni);
+            var d = ni.doubleValue // date as int secs cast to float
+            var v = (e.nextObject() as? NSNumber)?.doubleValue ?? 0.0
+
+            d -= Double(myTOGD?.firstDate ?? 0.0)
+            d *= myTOGD?.dateScale ?? 0.0
+
+            v -= minVal
+            v *= vScale
+
+            mxdat.append(NSNumber(value: d))
+            mydat.append(NSNumber(value: v))
+        }
+
+
+
+        xdat = mxdat
+        ydat = mydat
+
+        return self
+
+    }
+
+    func myGraphColor() -> UIColor? {
+        if 0 > (vo?.vcolor ?? 0) {
+            return .white // VOT_CHOICE, VOT_INFO
+        }
+
+        let cs = rTracker_resource.colorSet()
+        if (cs?.count ?? 0) <= (vo?.vcolor ?? 0) {
+            // paranoid due to crashlytics report error in gtYAxV:drawYAxis but expect due to vcolor=-1
+            DBGErr("myGraphColor: vcolor out of range: %ld cs count= %lu vtype= %ld", Int(vo?.vcolor ?? 0), UInt(cs?.count ?? 0), Int(vo?.vtype ?? 0))
+            vo?.vcolor = 0
+        }
+
+        return cs?[vo?.vcolor ?? 0] as? UIColor
+
+    }
+}

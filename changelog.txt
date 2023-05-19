@@ -1,0 +1,2075 @@
+26 jan 2011
+  - moved to macbook pro, though not ssd yet.
+  - after refactoring and migrating svn repository, privacy subview working again
+  - fixed bug in re-ordering valobjs in a tracker, must check if toRow > array count
+  - bug in fn defn, somehow not updating ep ids? ... should add to updateVORefs, recheck also fn setup fix for crash 13/01
+
+02 feb 2011
+  - can draw privacy view, tictacview
+  - shifted line drawing routine defns to gfx.h
+  - added this file to scm
+  
+--- check in ---
+
+
+02 mar 2011
+  - set, change privacy val all in place, not yet used by tracker display
+  
+--- check in ---
+
+11 mar -plane to uk-
+  - initial export xls working, can open file and write data for each tracker and valobj
+  - privacy view restriction implemented for both tracker and value level
+  
+--- check in ---
+
+21 Mar 2011
+  - switch to xcode 4
+  - instead of .xls implement .csv
+  - moved export button from configTList to useTracker when save not pending
+  - minor refactoring to fix 'analyze' issues
+
+22 Mar 2011
+  - refactored so access of vo.value triggers [vos update] causing function update, result string set
+  - initial csv output working, need to check formatting for input
+
+23 Mar 2011
+  - testing, minor bug fixes
+
+24 Mar 2011
+  - found bug where fn ep not set to default after load, refactored to make vos' handle clean and set default for optdict
+  - optdict defaults now handled in voState objs
+  - added voState update(), only active for fn to re-calc .value on read
+
+25 Mar 2011
+  - factored out doc, db path creation to (new) rtracker-resource.m
+  - option on del tracker to just del data
+  - added CSVParser class from Matt Gallagher
+  - csv input working -- can't yet save/restore schema
+  - default privacy = 1 or can't differentiate priv=0 / not found on load csv
+  - TrkrData store min privacy level for date valobjs
+  - trying to fix flicker on updatetableview; fixed choice ok, slider broken
+
+26 Mar 2011
+  - reverted flicker changes (*check in more often!!*) except for choice 
+  - show historical actively would not have enable checkbox on slider, choice; why not? changed
+
+--- check in ---
+
+26 Mar 2011
+  - rationalize min/max/big/default privacy values. min for tictac setting is MINPRIV+1
+
+28 Mar 2011
+  - flicker fix is to not re-alloc vo displays constantly; fixed messed up slider to get spurious val=0 actions on table reload data
+  - changed table reloadData for val changed to just reload fn cells
+  - tweak display of slider value for checkbox dis/enable
+  - choice value +1 so disabled=0, all selections are positive value
+  - voNumber startwithlast picks previous entry by current tracker date, not just last by date
+  - start cleaning up NSLog's - need #if debug control
+
+30 Mar 2011
+  - tracked down problem in slider to check for useVO on [update], caused wipe of data to set useVO
+  + need to clean up either enableVO/disableVO everywhere, or get rid of unused checkbuttonusevo
+
+--- check in ---
+
+  - fixed a memory leak - setVtypes
+  + need way to control debug NSLog()s but only option seems to be #if DEBUG wrappers...
+
+31 Mar 2011
+  - converted all NSLog to #if DEBUG... controlled 
+
+--- check in ---
+
+09 April 2011
+  - error because choice value +1 => not voDisplay'd correctly : added getSegmentIndexForValue routine
+  --> bug appearance was all subviews buggered after segmentedControl set to invalid index
+  - further complexity: UIControlEventValueCHanged gen'd when val set, not just when user activates -- but slider not this way!
+  - privacy cancel from setpass triggered toptf resignfirstresponder, same as setp -> set pass to ""; fixed by rewrite setp, cancelp
+  - assuming not null autoscale (= not default) meant errors in graph scale - fixed -- TODO: search for more of these
+
+10 April 2011
+  - fixed problem shrinking choice buttons, width was reset when style set.  TODO: seg control needs to be centered in subview in this case
+
+--- check in ---
+
+13 April 2011
+  - fixed crash on delete new vo in new tracker - tdb=null
+  - fixed bug where kybd notification listen turned on/off in configtvobjvc viewDid(Un)load -- switched to viewWill(Dis)Appear -- so was handling in 2 places
+  - moved keyboardIsShown to rtracker-resource so just 1
+
+--- check in ---
+
+13 April 2011
+  - fixed bug not clearing text field for number entry if val == @""
+
+14 April 2011
+  - fixed bug fnCalcValueFromCurrent post-inc ndx on read, inc again if process token for value so missed + in 's + s2'
+
+--- check in ---
+
+27 April 2011
+  - (previous) comments, work out pre/post/sum workings
+  - fix problem deleting vo from tracker that had no data stored (e.g. function)
+  - add code to not load csv data for calculated function value
+
+29 April 2011
+  - working on shifting transformVO's into voState's from graphTrackerV, then get voFunction to set its values[]
+
+04 May 2011
+  - changed saveData so always save fn values
+  - added setFnVals to voFunc to set all ; need some 'dirty' test to improve efficiency
+  - fixed bug using ngmin/ngmax not gmin/gmax to display graph min/max in configvo  ??
+
+05 May 2011
+  - configTVO: tfDone sets activeField=nil, if not nil when tf_finishEditing then [tfDone:activeField] (fix tap next field not saving changed val)
+  - voNumber: typo in setOptDictDflts, was setting nswll not nswl
+  - voState: typo in (super) setOptDictDflts, was setting autoscale=dflt if graph==nil (fix autoscale not being saved, was actually set dflt after load)
+  - voState:transformVO_num - fixed bug reading autostate, again assumed @"0" would test correctly as !autoscale
+  - voChoice:segmentedControl - same test error on shrinkb
+  - voTextBox:segmentChanged,voGraphSet - same test error on tbhi,tbni,tbnl
+  - voTextBox:segmentChanged - release picker view so gets rebuilt (fix bugs on people, history pickers incl crash on switch)
+  - added graphTrackerV:doDrawGraph controlling [drawRect] action, so graph not redrawn for return to utc
+  - changed trackerObj so fn results (=value) *are* saved,loaded to speed graphing, but issues remain for updating, saving in db
+
+--- check in ---
+
+06 May 2011
+  - added CGRects to divide up graph screen
+
+10 May 2011
+  - replaced dbg-defs defines with args... forms
+
+13 May 2011
+  - finished re-org of graphing to use UIScrollView for zoom etc, separate windows for title, axes.  still need work for axis labels
+
+--- check in ---
+
+18 May 2011
+  - finished axis labels
+  - tap on y axis label to change vo displayed
+  - tap on graph to mark and set tracker date, double tap to clear
+  - return to graph with current date marked 
+  - factored dpRslt out of datePickerVC to facilitate this
+
+--- check in ---
+
+18 May 2011
+  - changed tf fin edit to not call tfDone -- incompatible with vot_choice ????  what was it needed for ????
+  - fixed graphing for vot_choice colors, implemented y axis labels for vot_choice
+
+19 May 2011
+  - added currVO to gtv class; double line widths for selected vo
+  - tbox linecount set maxVal to at least YTICKS to get int vals on y axis labels
+  - clean y axis for non-numeric entries
+
+20 May 2011
+  - added processingTfDone flag for voChoices and configTVObjVC so tfDone/ctfDone (see 18 may, 05 may) can process multiple events without recursing inadvertently
+
+25 May 2011
+  - starting history, names picker indices; default on for names
+
+27 May 2011
+  - finished history, names picker indices.
+
+--- check in ---
+
+08 June 2011
+  - modified name picker & ndx to use ABRecordCopyCompositeName if ABRecordCopyValue(sortProp) gets nil result - e.g. sortProp=firstname and record is company
+
+03 August 2011
+  - added icon.png
+  - fixed private/dismiss label on rootview privacy button label not returned to private on cancel from create pass
+  - limit privacy setting for val or tracker to current privacy level: trkrs/valobjs don't disappear, easier than disable priv setting when no password
+  --- seems basically done?
+
+--- check in ---
+
+08 August 2011
+  - change colors to gray for privacy stuff; still want some curves
+  - somehow set privacy for blank tt... privacy set to 0 on start priv then quit...
+
+14 September 2011
+  - [setPrivacyValue:tictacvalue] scaled to +MINPRIV to solve problem above
+  - made < and > shift through tictacvalues take to min, max set value if before or after min,max
+
+02 October 2011
+  - renamed rTracker-Info.plist to Info.plist
+  - several check-ins attempting to fix issues of renamed files
+  - changed 'private' button to lock image
+  - reload toolbar on refresh to change lock/unlock image
+
+--- check in ---
+
+04 October 2011
+  - curved up privacy/password view, buttons, etc.
+  - replaced checkbox png's with own created images
+  - replaced 'setup' buttons with iOS 'i' button
+
+13 October 2011
+  - create, add Default.png initial screen image
+
+24 October 2011
+  - delete _in.csv iput file
+  - trackerobj loadData check for nil [enumerator next] instead of intval=0 -- spurious 0 data from csv load ?
+
+25 October 2011
+  - remove Image from rt-types.plist, valueObj.h - not able to test yet; various VOT_IMAGE comment-out points
+  - set DBACCESS false so can't see sqlite db files from itunes
+
+06 December 2011
+  - DbgNAssert to replace NAssert
+  - submit to Apple; 10 Dec accepted   version 1.0.0
+
+11 December 2011
+  - fix DbgNAssert so doesn't log message every time, just when first arg is 0
+  - save valid tracker when create tracker -> save while keyboard still up (skip done) [thanks Pat]
+  - hide privacy view, password view so not at bottom when scroll up long list of trackers -- still need to hook to superview not scroll
+  - submit to apple v 1.0.1
+
+17 December 2011
+  - move to xcode 4.2, ios sdk 5.0
+  - fix various warnings from migration
+  - fix error not retain on deleteindexpath for deleting tracker
+  - big problem on rotation, this version works for ios < 5.0
+--- check in ---
+
+17 December 2011
+  - hacked a version that works for both pre and post 5.0
+  - validated for release as 1.0.2
+  --> next step remove changelog from archive
+  
+27 December 2011
+  - bugfix crash on calendar access
+  - 'value' -> 'item'; 'add another thing' on add/edit tracker page
+  - 'new tracker' and 'edit trackers' button labels
+  - don't allow save from add value without a name
+  - date picker buttons: new entry / set date / goto date
+  - fix Icon.png svn issue
+--- check in ---
+  - change privacy icon from lock to sunglasses
+  - bugfix: datepicker buttons not acutally working
+  - graph: touch line snap to nearest data point
+  - set default Y axis width for d(99) (y axis labels wrong for textbox)
+  - fix scrollview error for textbox
+  - reset privacy password state on app to background
+  - update toolbar privacy icon on know password
+  - capitalization fixes
+  - addValObj down keyboard on picker select (Pat fix)
+
+29 December 2011
+  - failed attempts to fix so scrolling works with privacy controls up
+  - archive and submit 1.0.3
+--- check in ---
+
+30 December 2011
+  - fix scroll/privacy issue by disable scrolling, other buttons, table select
+  - change button to blue when priv up, to highlight it is only option
+    besides 'help'
+  - fix spurious 'password changed' message when 1st pass password check
+
+09 January 2012
+  - added dictFromVO/TO, initWithDict for vo and to; compiles, no testing or use
+
+10 January 2012
+  - fixed crash from spurious keyboardwillshow message - textbox observer not removed, 
+    fix was to simply remove all observers for that self. Extended to all removeobservers,
+    no longer specify which one being removed just remove all.
+  - write tracker plist appears to work
+
+11 January 2012
+ - put name: back into removeObserver calls, ensured all object:'s set to nil;
+ - initial testing goes through, can load tracker plist & corresponding csv file
+--- check in ---
+ 
+12 January 2012
+ - modified vos:update() for number and text so textfield value saved if don't done keyboard
+ 
+15 January 2012
+ - initial code to display "<owner>'s tracks" as main title 
+
+17 January 2012
+ - moved help and privacy icons to right so not first thing picked
+ - start on controlling width of owner's name in title, 'rTracker' if too long
+
+18 January 2012
+ - finish handling owner's name
+ - update Default.png
+ - fix bug from vos:update on empty vos-num field -- dtf.text not init to @"" but was for vos-text
+ - fix bug in priv button staying blue after cancel from create pass -- moved refreshTooBar to end of priv:setShowing instead of beginning
+
+--- check in ---
+
+19 January 2012
+ - change setMaxWidth to rescanMaxWidth, put in loadconfig for fix - but turns out is xcode 4.2 bug with 4.2 devices.  used hack.
+ - made checkbox frames slightly bigger in configVT 
+
+20 January 2012
+ - add minUniquev to tObjBase, use for dictionary loads to avoid dup values
+ - set minValue to 0 for autoscale
+ - added shake in graph view to recalculate function values.
+ - added activity indicator while recalculating 
+
+21 January 2012
+ - initial add time funcs : elapsed hours/days/weeks 
+   - initial tests work for hrs
+
+22 January 2012
+ - prep for 1.0.4
+
+--- check in ---
+
+ - resign first responder from graph on graph disappears, else text boxes stop working
+ - update problem for next date -> current, not wiping values; added vos.resetData to handle
+ - submitted to app store
+
+27 January 2012
+ - 1.0.4 in review
+
+28 January 2012
+ - 1.04 approved and in app store
+
+05 February 2012
+ - changed debug messages to show func and line no
+ - commented all DBG messages which might slow display of privacy stuff
+ - crash on 4.3 when 'done' out of set password with no text
+   - moved 'activeField' to ppwV object instead of class global
+   - various release's added in attempt to placate static analyzer
+   - turned out to be keyboard bug in simulator
+ - commented ttv tap response dbg messages which slow tap id - make unable to tap all cells
+ - fixed privacy disappearing on delete records -- had not implemented topLevelPriv completely
+ 
+06 february 2012
+ - added retain / uncommented release in dealloc for bool and tbButton vos to stop crash on scroll tracker
+
+07 february 2012
+ - made so vo/vos resetData did not unintentionally instantiate dtf if
+   not already defined - caused empty number / text fields for historical data
+ - fixed static analyzer complaints by alloc to local var, copy to self.var, release local var
+
+08 february 2012
+ - fixed memory leak in setVType / setVos -- voNumber did not call [super dealloc], voText did not even have dealloc
+ 
+--- commit ---
+
+12 february 2012
+ - fixed keyboard bad state when enter/leave graph on 4.3 ios
+ - moved export fn to trackerObj from useTrackerController
+ - added 'Export all' button on edit page
+ - moved loadInputFiles to refreshView so called after set priv level
+ - implemented thread start for activity indicator tasks so spinner works
+ - -- problem with refresh front screen on file load
+
+13 february 2012
+ - reloadData on rvc tableview after file load works for refresh 
+
+17 february 2012
+ - confirmTopLayoutEntry fix default privacy value to 1 instead of 0 from failed valueForKey:
+ - reorderFromTLT, reloadFromTLT use nrank+1 so db rank always > 0
+ - reorderTLT - crash bug due to copy-paste error: topLayoutPriv field not inserted
+
+--- commit ---
+
+17 februrary cont
+ - add tracker plists for Attitude, Car, Exercise, Sleep, Weight\ stats, Menus\ \&\ Guests
+
+18 feburary 2012
+ - disable userinteraction, navbar btns when loading and exporting files
+
+19 february
+ - add preferences bundle for reload sample trackers and reset password
+ - working on privacy view still!
+
+21 february
+ - FINALLY solved problem of privacy / password views all over;
+ problem was race condition between init privacyV and completion of
+ parent UITableViewController layout.  Solution was to delay
+ instantiation of privacy view until needed, then parent frame not
+ changing before frame actually comes up.
+
+--- commit ---
+
+22 february
+ - finished implementation of reset password pref
+ - located sample tracker files, next step loading ...
+
+23 february
+ - fixed ? multiple entry on refreshView() due to skipped name
+ duplicate _in.plist; used flag for lock, nonatomic, race vulnerable
+ but seems like lots of time to spare -- perhaps delete skipped
+ _in.plist ?
+
+25 february
+ - implemented atomic test-and-set flags to control refresh and
+ recalculateFns thread routines so not re-entered while running
+ - made circle primitive move back to center so dotsLines should look
+ better
+ - load sample plists according to prefs
+ - de-conflict sample plists against topLayoutTable
+ - fix rvc:scrollState to allow scroll if privacyObj not yet
+ instantiated
+ - set ppwV to hidden in hide() as otherwise comes up on scroll
+
+--- commit ---
+
+26 february
+ - change warning to log for 'no data for date' message
+ - disable 'should autorotate' while shakeLock on so can't leave until
+ done
+ - call setTOGD after recalculate fns to recreate graph (shake to redo
+ graph)
+ - fixed failure to set slider init val to 0.95 by using [setValue]
+ instead of .value=
+ - removed set autoscale to start from 0; TODO: option
+ - gtYAxV only print yAx val once if unchanged; TODO: to be closest to
+ accurate tick
+ - fixed timeFns to work like numbers, e.g. can use +-/*() 
+
+27 february
+ - added toSqlStr and fromSqlStr calls throughout to enable 's in strs
+ ... but not working
+
+28 february
+ - found escape seq : '' for '
+ - stuck getting default values in for prefs -- maybe not
+ appdidfinishlaunching but handleprefs instead
+
+29 february
+ - added flag for initial prefs load, now sample trackers added once.
+
+01 March
+ - added updateTrackerTableView() and updateToolBar() for utc/dpa_new
+ (datepicker create new entry), that seems to work now
+
+02 March 
+ - work on sample trackers - attitude-> self (earlier notes); tweak car
+ - move colorset to rtracker-resource save mem for all trackers)
+ - enable add/edit tracker shows voType-graphType-colour
+ - fixed 'del' on fn defn caused crash when removed more than present
+ - add display 'no graph' for add/edit tracker as appropriate
+
+03 March
+ - graphs autoscale min or max if not set to value
+ - add addToTopLayoutTable(tObj) to fix problem of initial rank for loaded trackers
+ - eliminated other trackerObjs notified when value changed (was notifying all)
+ - added zero line for graphs which span y=0
+ - fixed multiple sample trackers being added on restart (possibly only issue for simulator restarts)
+ - fixed error on deconflict samples, needed to set to:optdict:name to trackername
+ - copy new versions of trackers into rtracker dir, change tids to
+ consecutive numbers.
+
+--- commit ---
+
+04 march 2012
+ - hours tracking down vcolor for choice =-1 so broke detail display
+ in edit table above
+ - added vo.validate(), probably not needed as there were no
+ problems...
+ - fixed problem with textbox save not updating tracker due to not
+ notifying all trackers after change above (voTextbox needs to know
+ parentUTC)
+ - consolidate activityIndicators to rtracker-resource, saving LOC
+ - add activityIndicator to tracker export
+
+05 March 2012
+ - changed csv record load to be more efficient, think working ok!
+ - moved refreshviewPart2 to occur if plist load found nothing, to
+ handle private csv file waiting for load.
+
+06 March 2002
+ - changed activity indicators to progress bars
+
+07 March 2002
+
+--- commit ---
+
+08 March 2012
+ - updated sleep tracker to not graph quality
+ - added stashProgressBarMax and bumpProgressBar, plus code to csv load 
+   so progress bar shows while reading csv file
+
+09 March 2012
+ - skip graphing numbers=='' by modifying sql select
+ - trackerObj receiveRecord (csv load) sets date, so can tell if
+ failed timestamp read and therefore not delete input file
+ - xcode 4.3.1, so tested on ios 5.1
+ - fix NSScanner with nil argument when drawing graph (check for nil)
+ - fix getMinMax for graph detecting '' as 0, so autoscale works with
+ '' data
+
+--- commit ---
+
+10 March 2012
+ - changed back to install samples directly instead of just copy
+ plists in as need this to avoid name, tid conflicts.  changed so
+ implemented in loadPlists, add count of samples so progressBar works
+ - ios5 won't tolerate display change outside main thread: fix so
+ finishProgressBar uses performSelectorOnMainThread
+ - added (only on privObj == noshow) to refreshView on priv button
+ press, as was messing up when new password needed
+ - changed tictacV updateTT to always draw all cells, under 5.1
+ otherwise some cells disappear on taps.
+ - changed closed tdb already closed to log instead of warning
+ - changed voTextBox historyArray to correctly break lines and present
+ correct historical set
+
+11 march 2012
+ - started make choice csv imp/exp work with text vals, create new as
+ needed
+
+12 march 2012
+ - continue on csv load choice by text string not value
+
+13 march 2012
+ - completed choice as text string to/from csv
+   - save and load appropriate text strings
+   - create new optDict entries on load if string not matched
+   - correctly insert new val into intervening blank space in dict if
+   avail
+ - fix dot appearing on graph for text='' 
+ - fixed background not clear on utc
+   -- but bad table cell labels on return from graph with selected date.
+
+14 march 2012
+ - fixed problem with cell labels needing redraw by adding additional
+ [updatetrackertableview]s in viewWillAppear (to set controls
+ correctly so next not noticed) and viewDidAppear (to update labels)
+ - utc now disappears in ios5 if app regains active and tracker is
+ private
+ - clear privacy setting on open/close privacy view in < 0.6 sec
+
+19 march 2012
+ - make more space around privacy button
+ - fix finishProgressBar not working for <5.0 - don't use performSelectorOnMainThread
+ - update Default png views
+
+20 march 2012
+ - disallow setting tracker/value privacy to < privdflt
+
+24 march 2012
+ - rectify various issues around 'null'/"" choice entries save to /
+ read from csv files after change above for choice val as text in csv
+
+--- commit ---
+
+ - trim \n or \r from textbox data when writing csv file
+
+25 march 2012
+ - change message for fn config page to 'not configured yet' instead
+ of 'vid 0 not found' (source was tracker voGetNameForVID)
+ - loadFnArray skip if db entry is "" (was inserting 0 causing problem above)
+ - disallow fn to choose self for vo to compute on
+ - fix set choice vcolor to not -1 in btnSave for addValObjcontroller
+ - submit as 1.0.5
+
+--- commit ---
+
+01 April 2012
+ - (late evening Sunday) in review ... ready for sale.
+
+05 June 2012
+ - more code around detect owner name so no Rob's's tracks
+
+--- commit ---
+
+10 June 2012
+ - fix crash due to missing retain/release on NSIndexPath for deleting
+ value within a tracker
+ - no 's tracks if owners' name ends in '
+
+--- commit ---
+
+12 June 2012
+ - change 'use last value' colours from red on gray to yellow on
+ darkGray to improve visibility
+ - change 'edit values' button to 'edit items'
+ - added rtdb_version value in tracker list info table, start value is
+ '1'
+ - more robustness work around apostrophes in owners' name
+
+--- commit for submit v 1.0.6 ---
+
+16 june 2012
+ - working on constant in function
+ - changed 'delta' to 'change_in'
+
+17 june 2012
+ - fn constant, text field and label appear/hide on pick 'constant';
+ scroll on keyboard appear not sufficient
+
+20 june 2012
+ - fix keyboard scroll to not include toolbar height so toolbar not
+ shown
+ - crash if change value type then cancel out .. actually bug is
+ change value type, go into config for that type, done, cancel -- val
+ type has been changed
+
+21 june 2012 
+ - added tmp(Vtype,Vcolor,VGraphType) to private addValObjController
+ interface, plus stashVals() and retrieveVals methods to better
+ support cancel out
+ - back to constant, need work on logic because fn1arg expecting arg
+ but inline const already there... also need to go back to calcFnVal
+ because of change to bound constant on both sides by token -- needed
+ to make deleting const robust
+
+22 june 2012
+ - problem was not logic but had 'constant' in wrong place in picker
+ list
+ - add btn downs keyboard
+ - updateFnTitles hides constant tf after wiping array
+ -> constant initial implementation seems to work.
+
+--- commit ---
+
+04 july 2012
+ - constant code messes up previous fns; re-work so symbol defines
+ don't change; probably need to do a version change on fns so can add
+ more 1-arg, 2-arg etc. operators one day?
+ - float constants not staying, get truncated - change load string
+ from db was getting values as ints, now double
+
+05 july 2012
+  - mileage fn calc not respecting 'tank full', add "and val <> 0 and
+  val <> ''" to selection of start date endpoint
+
+07 july 2012
+  - added rtfn_version symbol to support later changing available
+  functions
+  - db_ver, n_ver, cfbundle_ver and a build counter now read at load
+  - db, fn, cfbundle, build count all stored for each tracker on
+  create or save if not present already.
+  - test on iOS 6.0 / xCode 4.5b2
+  - allow calc fn if ep0=0 (first entry) and ep0 is entry or nil
+
+--- commit ---
+
+08 july 2012
+  - if needed, version info written to tracker db immediately on load
+  - restructure so sampleTrackers is real subdir, not copied
+  - change colour back on number field for 'init from last' for iOS < 5
+  - ready for version 1.0.7
+
+--- commit --- many times to fix sampleTrackers changes ---
+
+08 july 2012
+  - change to using CFBundleVersion for build counter, not own entry
+  in Info.plist
+  - submitted as 1.0.7
+  
+--- commit ---
+
+11 sept 2012
+  - csv reader will now accept 'date only' timestamps, sets time to
+  00:00:00
+
+... nice if it would scroll to top for scroll bars as not visible and
+freezes...
+
+20 oct 2012
+   - fixes for iphone 5
+     - new default screen image
+     - group table background color deprecated (fixed in xib)
+     - fix 'Application windows are expected to have a root view controller at the end of application launch' with setRootViewController: in rTrackerAppDelegate.m
+
+     - above helped with detecting rotation but not there yet...
+
+03 nov 2012
+   - removed code to check version >= 5 on 'will rotate', graph shows now
+   - some race condition (?) on presenting graph vc, changed viewDidAppear() to call super before becomeFirstResponder...  nope.... Ah! depends on rotate left or right..
+
+   -- unable to set background color on gtXAxV, gtYAxV, gtVONameV (gtVoNameV not used?)
+   - remove punctuation chars from end of date string for x axis label, us region setting
+
+04 nov 2012
+   todo for ios6 -- see release notes esp uikit
+     - re-work rotation code ?
+     - check auth to access addressbook and handle better
+     -view(did|will)unload now deprecated
+     - ensure setting rootviewcontroller where was addSubview'ing
+     -- problem with pushing vodataedit viewcontroller / nav controller
+     -> pushnavigationitem instead?
+
+06 nov 2012
+   - vodataedit problem was with xib file, see 
+     		http://stackoverflow.com/questions/12434937
+
+07 nov 2012
+   - replaced ios6 deprecated uiviewcontroller calls, suspect need to re-enable if ios5
+   - still no solution for left/rigt rotation differences
+
+20 nov 2012
+   - finally solved left/right landscape issue, was 'full screen at start' flag in MainWindow.xib -- found because looking for issue with bottom buttons not working.
+   - changed behaviour so rotating upside down and on to landscape does not return to normal view
+   - put ios 5 checks back in so works on ios5 devices.  4.2 no longer supported, need to test for 4.3
+
+21 nov 2012
+   - removed graphTracker.xib
+   - commit because think most things working for ios6 except drawing graphs
+ 
+--- commit ---
+
+++ working on graph not drawing problem
+   - problem is change in rotation calls -- old ones not being called, so doDrawGraph flag not gettting set.
+   + still problem with graph geometry on 6.0
+
+23 nov 2012
+   - solved graph geometry problem by removing ios5 hack to modify bounds
+
+26 nov 2012
+   - working on .rtrk file support:
+   -- created method tlist:updateTID(old,new) which moves existing tracker with tid=new out of way and updates existing tracker with tid=old to be tid=new
+   -- changed tlist:fixDictTID to use this instead of modify dict
+   -- working on loadTrackerPlistFiles to update existing tracker on load plist with existing name
+   TODO: ?  change filemanager usage to use defaultFileManager see
+http://mobiledevelopertips.com/data-file-management/iphone-file-system-creating-renaming-and-deleting-files.html
+
+27 nov 2012
+   - implemented voUpdateVID(old, new) and most of trackerObj:confirmDict
+   -- need to handle optDict
+
+29 nov 2012
+   - think finished for processing input plists including optdict
+   -- next is receiving .rtrk files
+
+09 dec 2012
+   - added doc for rvc:loadTrackerDict
+   - loadInputFiles look for .rtrk and add to csv and plist sets
+   - modified rvc:loadTrackerPlistFiles to list input files, rename to _reading, load TOdicts as seen
+   -- still working, need to rm _reading files or hand off to csv load for data
+   -- rvc:refreshView() will check for _reading files, offer to delete or try again
+
+14 dec 2012
+   - implemented trackerObj:loadDataDict -- think that is it, now to debug...
+
+18 dec 2012
+   - successful load of csv data and plists as before
+   - finished update of dev certs provision etc can run on iphone, hoepfully can submit
+   - implemented specify values for choices
+
+19 dec 2012
+   - minor tweaks to choices, ignore if empty field
+
+23 dec 2012 (24 dec computer time)
+   - set empty field for choice value removes that key
+   - write _out.rtrk file on tracker export, ignore when reading -- debug
+   - lots of debugging choice changes
+   - completed initial loadFromFileURL !
+
+todo: if change vid, must change in fn!
+
+--- commit ---
+
+24 dec 2012
+   - openTracker for url opened
+   - implemented updateVIDinFns()
+   - added calendar day/week/month/year endpoints in response to user request
+
+27 dec 2012
+   - attempting to disallow selecting self as fn endpoint when editing existing function, getting 'unrecognized selector sent' error on creating picker
+
+28 dec 2012 (clock says 29 dec)
+   - debugged errors on disallow selecting self as fn endpoint, root cause was not recognising NSArray +arrayWithArray puts in autorelease pool instead of alloc
+
+--- commit ----
+
+07 jan 2013 / 08 jan on clock, crossed dateline from hawaii
+   - enlarged field for 'cal xxxx' in drawFuncOptsRange
+   - fixed crash (due to ios6 keeping views ?) when return to fn range view
+   - implemented graph last only for cal fn range ep units
+   - implemented dirtyFns bool for tracker - dirty on fn save, clear from db on recalc
+   - implemented copy for valueObj
+
+--- commit ---
+
+15 jan 2013
+   - fixed problem of multiple open of .rtrk from url, apparently due to no permission to rename file in Documents/Inbox
+   -- new problem is display stack if open .rtrk url, open again without returning to list.
+
+
+16 jan 2013
+   - fixed display stack for loading rtrk with popToRootViewControllerAnimated
+   - clean up old TODO: comments
+
+06 feb 2013
+   - added graphMaxDays limit tracker option for Pat
+   -- now select graph points betweekn 2 dates
+   - added apparently necessary (int) cast on tracker date for trackerObj saveData()
+
+07 feb 2013
+   - started on making dots more visible if only 1 or 2 data points 
+   -- draw bigger but some issue with initial bounding box
+
+09 feb 2013
+   - graph x-axis = 24h if only 1 data point
+   - make function defn view 4 lines instead of 2 - is scrollable but can't tell
+   - scroll to top for progress bars on file loading
+   - copy button bigger but can only grey, can't make disappear
+
+12 feb 2013
+   - add 2% to graph x&y axes to inprove vilibility of endpoints
+
+
+13 feb 2013
+   - filesToProcess leaked in loadTrackerPlistFiles ?  added release
+   - added alert handling for failed rtrkr read
+   - review/clean breakpoints
+
+14 feb 2013
+   - tested 'delete' and 'try again' for finding rtrk_reading file
+
+19 feb 2013
+   - fixed bug empty tracker -> fn = sum of 2 -> show graph => voData for fn created with date=0
+   - fixed bug def fn constant position bad now
+
+20 feb 2013
+   - added few releases as suggested by analyze - test esp graph per cal unit
+   - #if removed genRtrk due to warnings on potential leaks 
+
+--- commit ---
+
+21 feb 2013
+   - problem : calculate miles/month gets start dates that don't exist so delta doesn't work.
+ + need to get prev val or next val from date, but is it for all epd0 or just on delta?
+
+13 mar 2013
+   - tested / passed no memory leaks loading .rtrk from web page
+   - for problem above, get prev date value or skip for beginning - tested ok
+   - no graph y scale expand (min, max) if specified (min, max)
+  
+14 mar 2013
+   - ready for 1.0.8 release
+
+--- commit ---
+
+07 apr 2013
+   - fixed bug in y axis title for choices introduced with changing graph edges
+   - fixed problem with choice colour in yaxis, same cause as above
+   - fixed  problem displaying prev choices for no default value, nothing to match against in optdict
+   - fixed problem displaying choice graph points in wrong colours
+   - changed vtEnable checkbox to constant 30x30
+   - make graphMaxDays input field wider 
+   - ready for 1.0.9 release (bugfix)
+
+--- commit ---
+
+09 apr 2013
+   - remove release of rtrk obj as think not needed and apparently caused crash (trackerObj.m:export - rtrk_export section
+   - re-enable export rtrk, now to outbox dir
+   + after export rtrk, not getting odometer reloaded
+   + sadly cannot get to outbox in iTunes, but can save entire dir
+
+26 may 2013
+   - fix confirmTOdict() typo so wasn't loading valObjTable - affects both rtrk load and plist load
+   - comment out various noisy dbglog calls
+   - add kViewTag after voDisplay() return, so -all- cells get tag : solved problem of dity cells in tableview after scroll
+   - solved problem of always scrolling to top on main list - was just for me, part of EXPORT_RTRK
+
+--- commit ---
+
+   - few more DBGLog()s removed, fix debugFunction messages
+   - lockdown does not set state to pvquery if state is pwneedprivok
+   - submitted as 1.0.10
+
+--- commit ---
+
+02 jul 2013
+   - change to DateTime picker with preference option 
+
+03 jul 2013
+   - change useTracker 'export' button to menu button, initial actionSheet implementation
+
+06 jul 2013
+   - implement actionsheet methods - email csv, tracker, tracker+data
+
+07 jul 2013
+   - resignFirstResponder on textfield for add value on exit, was possible to leave with keyboard still up
+   - to/from sqlStr around trackerName save/load so can have tracker names with apostrophes
+
+10 jul 2013
+   - fixed bug in genRtrk : tid saved as 'toid' key not 'tid' key
+TODO: regen all .rtrks on website
+    - fixed loadTrackerDict to correctly go through all trackers with same name
+    - implemented 'accept' for supplied tracker - old tracker stashed and recovered or discarded as appropriate ; not tested yet
+
+11 jul 2013
+    + added more TODOs around rtrk valObj import!
+
+12/13/14 Jul 2013
+    - reworked confirmTOdict, think have all rtrk load implemented now except for sort valueObjs to match input after merge
+--- commit ---
+
+15 jul 2013
+   - added sort valueObjs to match input rtrk
+
+16 jul 2013
+   - debugging input rtrk
+
+17 jul 2013
+   - added wipeOrphans button in place of 'export all' if RELEASE=0 - wipe both files without toplevel entries and toplevel entries without files
+
+19 jul 2013
+   - implemented getter/setter for trackerName, maxLabel
+
+20 jul 2013
+   - implemented getter/setter for prevTID
+   - input rtrk - reject of completely new seems to work; fail on reject new version of existing
+
+21 jul 2013
+   -?
+
+25 jul 2013  [travel to US]
+   - seems to work for variations of accept/reject with existing tracker, merges changes.
+   - implemented default email
+   - checked through todos
+   - removed file manager alloc/init/release's, replaced with defaultManager
+   - fixed copy tracker to copy valObj optDicts as well
+   - make confirmTOdict rescan vid-vo dictionary on changing vid
+   - make confirmTOdict search by name if doesn't find anything for vid - was just if vid does not match
+   - delete input trkr db on reject (solve orphan problem?)
+   - make wipeOrphans delete stash_trlrs
+   - delete db data from voConfig, voInfo in saveConfig in case input rtrk has changed some vids
+   - added goGraph bool to useTrackerController so do not reject input tracker & delete db when go to graph
+   - improved replacement of vids in fnStr -- need to break into component parts
+   - made voUpdateVID write to database as well -- data was lost
+   - confirmed working if bringing in fn with same name as data, should move data to _data
+
+--- commit ---
+
+26 jul 2013
+   - reject action happens on resign active, so attempting to reload multiple rtrks not a problem 
+
+27 jul 2013
+   - added jumpMaxPriv, restorePriv in rootViewController so privacy is non-issue when loading rtrks
+**   + toplevel privacy not set to match loaded rtrk -- ** document that need to edit & tap 'save' button to set this -- private stays private even if loaded someone elses
+
+--- commit ---
+
+29 jul 2013
+   - added sort to match incoming rtrk
+   - added create eVO for case of diff vid, voName match, old is data, new is fn ... was commented out, tested
+   - added noFileLoad flag to stop main thread from loading files while progressBar'd thread is running -- caused privacy bug until realised need to clear refreshLock when skipping load due to this flag
+   - enabled progressBar for loading rtrk from url -- wanted activity indicator but could not get displayed; bar updates for each valobj in config, then each date in data
+
+30 jul 2013
+   - added wipeOrphans to rootViewController viewDidLoad
+   - added vos:update now returns "" if vo is disabled -- corrects fn recalc when disable/enable slider or choice
+   - change valObj init to useVO=YES, voChoice and voSlider init overloads to set to NO 
+   - add alert if accepting tracker with tracker priv or valObj priv >PRIVDFLT
+   - add stashedPrivLock to stop race if tracker shown when rtrk import starts (jumpMaxPriv(), but other thread closes shown tracker which calls restorePriv() -- stashedPrivLock on until end of openTracker)
+
+31 jul 2013
+   - change noFileLoad, stashedPrivLock to openUrlLock
+   - refactor openUrl so openUrlLock always goes off
+   - refactor loadInputFiles so refreshViewPart2 called if openUrlLock is on
+
+01 aug 2013
+   - move genrtrk into writeRtrk in attempt to quell analyse complaints; failed, but at least got alloc/release warnings together
+   - fix memory leak on create/destroy rtrk
+   - ready to submit as 1.1.0
+
+--- commit ---
+
+02 aug 2013
+   - problem with useVO initialisation for normal use, reject binary at app store
+   - add privacy warning alert if modify a rejectable tracker and save
+   - re-submit as 1.1.0
+
+--- commit ---
+
+06 aug 2013
+   - initial implementation notifyReminderViewController
+   - oops, extraneous graph limit: label; removed
+   - replace wipeOrphans with recoverOrphans
+   - submit as 1.1.1
+
+--- commit ---
+
+09 aug 2013
+   - 1.1.1 on sale now
+   - created recoverValues routine, but was mistake - better to simply load a saved plist
+   - moved simple 'ok' UIAlerts to rTracker_resource:alert
+   
+   + see TODO - leave a stash file when loading plist
+
+26 aug 2013
+   - working on notifyReminderView
+   - build for ios7
+
+27 aug 2013
+   - set cell color for tables - root and utc - to clearColor
+   - remove spiral from notebook page -- remove '   ' before tracker label
+   - functionality seems to be there for ios7?
+
+28 aug 2013
+   - icons for retina
+   - added test for ios7 to color bars in rootViewController for pre-ios7
+   - implemented min, max, count functions
+
+02 sept 2013 
+   - add alternate ios7 xib for addValObj
+   - add section header spec for edit tracker - ios 7
+
+03 sept 2013
+   - add  alternate ios7 xib for configTList
+   - working on glasses graphic for ios 7
+
+04 sept 2013
+   - re-worked glasses icons for ios7
+   - made top and bottom bars show graph paper background image but would really like bottom bar to really be translucent ... enough for image now though.
+
+05 sept 2013
+   - launch images done for all versions
+   - several .xib files set to open in 4.6 for compiles
+
+10 sept 2013
+   - ios7 gm build xcode
+   - fix avg divisor to not count null value entries 
+   - add graph paper background image on most screens some table cells still need (?)
+
+11 sept 2013
+   - privacy view background set to graph paper
+   - changed size params for password requester
+   - started on preferred font but actually think better with selected pt sizes
+   - fix enable cell if choice value = 0 but selected
+   -- binary submit & reject
+   - fix 'edit' btn has no view so don't set "owner's tracks" title
+   - count/min/max fns f'd up previous function defns!!!
+
+12 sept 2013
+   - working on fn token re-work, not there yet.  result will be having more function_id space to add easily in future
+
+15 sept 2013
+   - fn token re-work appears to be done, testing.
+   - handle exceptions on restoreTracker if trackerName is nil - may have only reached this config due to testing but safer now
+   - fix readCSV to escape apostrophes in voName
+   - fix updateVIDinFns() bug - 'func without final apostrophe
+   - condense sql errors to subroutine
+   - breakpoints on all DBGErr messages
+   - fix loadDataDict needed toSqlStr ; also csvReceiveRecord, setFnVal (prob only numeric but safer)
+   - move to.from sqlStr to rTracker_resource
+   - fromSqlStr when testing priv password
+   - clean up load input files - jumpPriv/restorePriv around plist, rtrk, csv loads; plist load dumps stashed tracker
+
+--- commit ---
+    - submit as 1.1.2
+
+18 sept 2013
+   - back to notifyReminderVC
+
+19 sept 2013
+   -bit further on ui - week/month/every
+
+26 sept 2013
+   - got keyboard bits working from interfaceBuilder, still need to implement scroll up for keyboard
+
+06 oct 2013
+   - fix text field did not scroll up from keyboard as needed under ios7
+
+08 oct 2013
+   - move keyboard will show / will hide to rTracker resource
+   - more on notification ui - keyboards working in textfields, hightlight some buttons
+
+09 oct 2013
+   - fixed notification view for 3.5 and 4 inc devices
+   - textfields working with keyboard
+   - all hide/unhide appropriately (? does at/until make sense for 'every hours/days' ?)
+   - still need slider response in at/until textfields, fix checkboxes
+
+10 oct 2013
+   - fixed checkboxes
+
+   + need to hide sliders etc - need outlets to ref - for 'every'
+   + need to link sliders to hrs/mins
+
+15 oct 2013
+   - start on slider -> hr, min textfields
+
+17 oct 2013
+   - mostly finished gui
+   -- still need decisions on how 'every' works, hiding start/finish times
+   - start data structure for notification
+
+22 oct 2013
+   - implemented display rules for everyBtn
+   - think gui finished
+
+07 nov 2013
+   - starting to implement notifyReminder class
+   - textboxes disappeared from configTOopts - not in 1.1.2 release, only tested in simulator
+
+--- commit ---
+
+12 nov 2013
+   - fix textboxes disappeard from configTOopts - problem from refactoring rTrackerResource rrConfigTextField
+
+13 nov 2013
+   - implement dbInfo button, recoverItems if there are vo datapoints with item IDs not in voConfig
+   - change to:laodFromDict to overwrite if name is recover%d and vID matches
+
+17 nov 2013
+   - tested db values recover; added loadConfig, else seems ot work.
+   - start export value option
+
+19 nov 2013
+   - completed and tested 'CSV read/write values (not labels)' option for choices
+   - implemented and tested 'integer steps' option for slider
+   - renewed iOS developer certificate (60 quid Order Number: W465913770
+
+20 nov 2013
+
+--- commit ---
+
+21 nov 2013
+   - working on notifyReminder class
+
+25 nov 2013
+   - submit as 1.1.3 (notifyReminders disabled)
+
+--- commit ---
+
+03 dec 2013
+   - begin implementing load NotifyReminder code from nr obj
+
+10 dec 2013
+   - fixed loss of hidden valObjs on edit/save tracker config (introduced with rtrk load)
+   - fixed crash on loading _in.plist if no existing VOs
+
+11 dec 2013
+   - fixed problem of progressbar not displaying in ios7 for useTrackerController (hidden by nav bar because navbar not in xib) and graph
+   - fixed crash when recalculating graph and rotate back to tracker - implement trackerObj.goRecalculate boolean ; not needed when rootVC recalcs on url load because processing paused
+
+--- commit ---
+
+12 dec 2013
+   - fix crash when enter recalculateFns while already running
+   - show progress bar when recalc fns runs if detect dirty fns on graph entry
+   - add alerts and handle no history, contacts access
+   - handle user may or may not have provided access to contacts
+
+17 dec 2013
+   - added alert before leaving dirty record
+   - tweaked style, color on next and prev buttons
+
+   - ready to submit as 1.1.4
+
+--- commit ---
+
+18 Dec 2013
+   - tweak alert handler for leaving dirty record to ignore other alert causes
+   - new distribution profile
+   - submit as 1.1.4
+
+19 dec
+   - working on get NR from current GUI
+   + need to handle user preferred first day of week [[NSCalendar currentCalendar] firstWeekday] -- think gives integers 1=sun 2=mon
+
+09 jan 2014
+   - implement weekday button names from users calendar
+   - further work on get NR from current GUI
+
+11 jan 2014
+   - changed reminder GUI to support 'from last : tracker / value' instead of 'from save'
+   - implement everyMode bit flags instead of checking button title
+   - further on get NR from current GUI
+
+12 jan 2014
+   - r/w from db implemented, now debugging save/restore one nr
+
+15 jan 2014
+   - load/save from db apparently working but not fully tested. 
+   - working on next/prev buttons
+
+18 jan 2014
+   - detour for user Steve with crash on 50-100 valueObjs
+   - modify CSV load so creates new VO in database on datapoint for column where header name does not match existing VO
+
+19 jan 2014
+   - spinner while saving >20 valobj tracker from addTracker
+   - modify addTracker save so just does changes instead of previous delete config and re-write
+
+21 jan 2012
+   - leaving useTrackerController on reappear - only if privacy not high enough, give option to save
+   - checked for memory leaks 
+
+--- commit ---
+
+22 jan 2014
+   - csv loader will now detect line 1 with/without timestamp for configuring new VO (18 jan) with voType and voColor
+
+23 jan 2014
+   - implemented read, use vid from rtcsv data if specified and valid
+   - change csv reader to pass 'header:<pos>' so can order new valObjs
+
+24 jan 2014
+   - think debugged csv load to get rank, type, choices, color
+
+25 jan 2014
+   - initial implementation store/use value for yes/no
+   - make y/n, text, textb values display at top of graph not bottom
+   - make dots on graph filled and bigger for selectec vo
+   - draw selected vo last on graph so can see highlighting
+   - implement pref for 'offer to save private after exit', tested ok
+   - implement pref for save rtcsv - works, tested ok
+
+26 jan 2014
+   - alert user on problems loading csv files
+   - initial implementation of recognise, create tracker for, load .rtcsv files - works for recognise existing, create new
+
+28 jan 2014
+   - reviewed choice load when exportvalb set true -> just stores value in db, up to user to supply choice for that value
+   - found that db saving val='' entries, not sure where/when; added code to clean out and log with warning message
+   - just starting on rtcsv file type
+
+29 jan 2014
+   - .rtcsv working as loadable file type
+   - working on various activity indicators for loading big files
+
+30 jan 2014
+   - think have activity indicators running at all delay points when loading big files
+
+--- commit ---
+
+01 feb 2014
+   - moved openURL code from appDelegate to rootViewController
+   - fixed progress bar for openURL (was simply displaying at wrong yloc)
+   - think made icon bigger for email, web page .rtrk .rtcsv files
+
+02 feb 2014
+   - flag readingFile so don't offer to delete .rtk_reading if left and came back
+   - re-enable idle timer if app resigning active
+   - disable idle timer if reading file and rootViewController did appear
+   -> realised all openURL stuff not needed as input file goes to inbox, which dirEnum finds
+
+05 feb 2014
+   - removed openurl code, all handled by dirEnum.
+   - added array for stashed TIDs, so rtrks queue up for approval even if loaded through itunes
+
+06 feb 2014 
+   - re-worked rt/csv, rtrk/plist file loaders - tested
+
+--- commit ---
+
+   - fixed crash bug saving colour for vot_choice in rtcsv 
+
+08 feb 2014
+   - 'set date' no longer modifies db immediately, instead enables save button and updates db at beginning of saveData
+   - updateTracker - notification handler when a vo changes - only updates vot_functions and tapped vo (was any vo with nil vo.display)
+   - added csvHeaderDict to speed up csv loading
+   - check for memory leaks on csv load
+   change 'save for itunes' to 'save for PC (iTunes)'
+
+   - ready for 1.1.5 release
+
+--- commit ---
+
+    - submit for release as 1.1.5
+
+11 feb 2014
+   - revert filled circles out of linesdots graph drawing, somehow messes up lines; use 'BigCircle' to highlight current VO instead
+
+
+12 feb 2014
+   - guiFromNr -> non-zero not treated as bool true:
+    ((UIButton*)[self.weekdayBtns objectAtIndex:i]).selected = (BOOL) (0 != (self.nr.weekDays & (0x01 << self->weekdays[i])));
+
+18 feb 2014
+   - add info valObj type with URL
+   - fix default value for voBoolean (1 if not set)
+   - fix error with csv header dictionary loading privacy and voType
+
+--- commit ---
+
+    - submit for release as 1.1.6
+
+24 feb 2014
+   - addTracker: add saving flag to lock out starting save again; reduce min for spinner from 20 to 8
+
+25 feb 2014 
+   - new notifyReminder init, work with trackerObj to load reminders array
+
+26 feb 2014
+   - worked on shifting reminder navigation (next/prev/delete) to work with NSMutable array of NRs on trackerObj
+
+27 feb 2014
+   - still on reminder navigation
+   -- problem getting 2 copies of nr in reminders array, so 2x tap forward but 1x tap back
+   - clear carrier / time / battery row from launch image
+
+01 Mar 2014
+   - enable prev btn checks (0==nr.rid and haveCurr()) in case showing tmp reminder after last in reminders[]
+   -- still some problem duplicating entries in reminders[]
+
+02 Mar 2014
+   - fixed problem moving forward through reminders
+   -- issue with deleting 0th, move to next, back < is enabled
+
+03 mar 2014
+   - reminder navigation seems to be working
+   - initial implementation write/read reminders[] but not working yet 
+
+04 mar 2014
+   - read as new plist ok for reminders
+   -- work on trackerObj:confirmTOdict -- update tid, vid as needed
+
+06 mar 2014
+   - trackerObj:voUpdateVid handles vid and tid change in reminders
+   -- updates work on first test
+   -- still problem dropping a reminder on normal navigation/save
+
+09 mar 2014
+   - re-work recalculate fns so loop over dates is at tracker level rather than valObj level
+   - discover privacy config view not showing for some variants of ios7 ... change so ppwV inserts at (subview count -2) instead of (subview count -1) - probably due to keyboard being up, seems to work for all models, 6.1/7.0
+   - discover and fix bug loading plist handle as stash/accept, due to not completing implemntation of plistFile bool in rvc:loadTrackerPlistFiles
+
+13 mar 2014
+   - initial work on on setting localNotifications when tracker saved
+
+01 apr 2014
+   - release as 1.1.7 to get 09 mar fixes in place
+   - working on setNotification - start time; 
+
+02 apr 2014
+   - re-work gui to handle fromLast explicitly not if start=-1
+   - starting setNotification multi-time array
+
+13 apr 2014
+   - working on setReminder
+   - added description method to notifyReminder for display with %@
+   - added saveDate column for notifyReminder, probably must drop those tables
+
+18 apr 2014
+   - first draft reminders all working
+
+--- commit ---
+   
+19,20,21 apr 2014
+   - more tweaks on reminders 
+   -- specify sound file with test -- but unable to write to appbundle/sounds from outside e.g. iexplorer or osxfuse
+   -- specify start date
+
+26 apr 2014
+   - implement elapsed mins, secs per user request
+   - added more reminder sounds, formatted sound names better
+   - added report reminders / scheduled reminders to dbInfo
+   - fixed clearOptDictDflts to check nsdictionary for keys not stored in database
+   - change to isSelected(), isHidden(), setSelected:, setHidden: throughout notifyReminder controller -- but initial problem probably due to running under optimiser not clear on if() branch until +2 steps in
+
+27 apr 2014
+   - clean up analyze warnings -- all but addTrackerController->configureToolbarItems() problem with self.copyBtn
+   -- also affect notifyReminder, writeTrkr but seem ok
+   - review response on notification while rTracker is active
+   - make so openTracker() just returns if already showing that tracker
+
+29 apr 2014
+   - fixed elapsed mins, secs so don't mess up old fn defns -- added comment to avoid in future too
+   - added weekdays to 'every' reminders
+
+30 apr 2014
+   - add trackerObj confirmReminders() to ensure all enabled reminders are scheduled -- call on leaving tracker without save
+   -- required adding rid to notification dictionary
+
+--- commit ---
+
+   - add reminderCount to trackerList, rootViewController counts scheduled for each tracker and highlights any with missing scheduled reminders (means reminder fired but tracker not looked at)
+
+01 may 2014
+   - fix error in timefn defns
+   - ev_hours not trigger correctly, may have fixed
+
+04 may 2014
+   - re-work, fix errors in setReminders
+
+05 may 2014
+   - re-work GUI, code to remove weekdays, can implement as 'every' 
+
+06 may 2014
+   - further work to remove weekdays mode, need to cut everyButton state, have same choices for all
+
+07 may 2014
+   - think gui done removing weekdays
+
+08 may 2014
+   - worked through setReminder for 'no weekdays' changed -- no testing
+
+11 may 2014
+   - testing, fixing setReminders
+   - clearScheduledReminders() when deleting tracker
+   - cancel matching tid,rid scheduled reminder when scheduling new
+
+18 may 2014
+   - more work on setReminder around change to delay
+   - added help alerts
+
+19 may 2014
+   - fixed bug stored enable state not being shown on re-entry
+   - fixed prevReminder not shifting after delete
+   - fixed monthday reminder triggering on reset (add +1 month)
+
+--- commit ---
+
+20 may 2014
+   - setReminders:
+   -- revert to no time window for delay days/weeks/months as cannot distinguish 'started and in window' from 'already done so wait another (delay)'
+   -- if random < start, set to start + delta/2
+   -- add check for past window start go to tstart
+   - remove RELEASE restrictions around reminders (think no restrictions now)
+   - revert preference to 'hide reminder times' -- just show in db info if user looks
+
+21 may 2014
+   - add 'set reminders' button under 'database info' button so user can modify and check, or see random changing
+   - various more bug fixes around setting reminders
+   -- think ready for release
+
+22 may 2014
+   - distinguish between app active or not when receiving local notification while app launched
+   - still trying on setrimniders
+
+28 may 2014
+   - last testing and debug on setReminders
+   - set version to 1.1.8
+   - ready to submit
+
+--- commit ---
+
+    - submit as 1.1.8
+
+07 june 2014
+   - importing TimesSquare calendar view code
+
+14 june 2014
+   - updating to newer coding standards esp around class properties, ARC
+   - fixed privacy rets to use @class instead of id or creating circular import problems
+   - added swipe gesture recogniser to useTracker for prev/post date -- not happy yet with visual feedback of change!
+   - finished updating class properties for main views
+
+15 june 2014
+   - change deleteIndexPath to property in configTlist and addTracker, lose deleteTableView; change deleteVOs to property in addTracker 
+   - finish updating class properties for graphing, datePicker, privacy -- main view folder done
+   - finished for trackerObj and valueObj classes
+   - hide toolbar in configTlist
+   - convert to ARC done and apparently working, still wanings on performSelector calls
+
+16 june 2014
+   - fixed warnings on performSelector calls, need to test csv load
+   - added badge for notification, can only set to '1' and not count pending until user opens app
+
+--- commit ---
+
+    - convert to 'Modern Objective C syntax'  -- mostly box format for NSArrays, NSDictionarys
+    - added reloadSections to indicate date swipe in useTracker
+
+17 june 2014
+   - implement click on date in calendar -> load tracker
+
+20 june 2014
+   - hide toolbar in configTlist viewWillAppear as well
+
+21 june 2014
+   - move sounds out of 'sounds' subdir, into Resources top level -- notification sounds working again on phone
+   - add more sounds
+   - problem with 'ping' sound -- eventually sorted with 'ad hoc' distribution, install via iTunes - replace app bundle like app store install
+   -- gen for ad hoc release, use different (not app store) certificate / distribution profile
+   -- add to library in iTunes (file menu), then drag app icon to iPhone menu (from app icon can right-click -> get info and see update date)
+   -- wait for app icon on iphone to update 
+
+22 june 2014
+   - confirm version on app store has problem of not finding sound files, so does not play on notification event
+   - timesSquare calendar with color days by 1 ordered valObj
+   -- still some problem with privacy pulling out dates that shoudn't
+
+23 june 2014
+   - worked out date selection, problem was Fns calc'd over all days and need to only report when have non-private data for day
+
+24 june 2014
+   - switched 'i' info buttons to unicode gear, also 'Done' and 'Del' to unicode images
+
+25 June 2014
+   - Done buttons for notifyReminder forms to unicode checkboxes
+   - one-off alert to inform to swipe to earlier data records
+   - use tracker: trashcan icon for delete, skip2end, move buttons around
+   - change 'default email' text field to be letters instead of number keyboard
+   - remove RELEASE #if's for next release
+
+02 july 2014
+   - reminder 'until' time text boxes scroll up with keyboard
+   - fix graph paper background for tracker 'i' config -- why only configtvobjvc?
+   - set to no color ("") for calendar day color for choice button (outside 0..[colorset count]) -- ideally should go and get color for button
+
+19 July 2014
+   - add label '(Save to enable reminders)' when creating tracker before save
+
+20 July 2014:
+   - set to v 1.1.9, prep for release
+
+--- commit ---
+
+02 Aug 2014
+   - added 'if not RELEASE, do not delete .rtrk on email' so can gen .rtrks from simulator
+
+15 aug 2014
+   - removed 'one last chance' fn reload from db if fnArray empty on voFnDefnStr -- caused problems for del btn when deleting 0th item
+   -- added (refactored) reloadEmptyFnArray in voDrawOptions so fnArray reloaded from db on entry if array empty
+   - added 'voOptDictStash' to configValObj so cancel out of configValObj restores options (esp freps and fnarray) as were on entry 
+
+18 sept 2014
+   - working on having correct launch screen sizes for all devices - launchScreen.xib for ios8 and later
+   - min supported now ios6 (iphone 3gs, 4th gen ipod touch)
+
+23 sep 2014
+   - switch to fixing ios8 keyboard scroll error asap -- yet another superview count for ios8! only problem in useTracker
+   - oops graph view generation now fast enough (?) that do not swap width and height at startup (ios8)
+   - release as 1.1.10
+
+05 oct 2014
+   - add launch screens for different devices
+   
+09 oct 2014
+   - enable file encryption on databases  SQLITE_OPEN_FILEPROTECTION_COMPLETE
+
+15 oct 2014
+   - fill out icons for different devices (universal app)
+   - set 'toldAboutSwipe' in appDelegate if responding to notification but do not synchronise -- just want to avoid requester
+
+28 oct 2014
+   - implemented 'temp tracker data' file save, load, remove -- hopefully solve problem of losing unsaved data when leave/return to app
+
+02 nov 2014
+   - add safety 'temp tracker names' file parallel with 'temp tracker data' -- names array must match valueNames, or delete files and return false
+   - highlight voTVEnabledCell and voTVCell where need to work on to set cell width for different hardware screens
+   
+27 nov 2014
+28 nov 2014
+   - working on background size for tableviews in bigger devices .. useTrackerController looks right and matches initial loaded image, rootViewController not right...
+29 nov 2014
+   - problem was selecting wrong (landscape) background image name because orientation returns 'unknown' when just starting up ... now some issues around cell lines
+
+30 nov 2014
+   - now trying to get rid of lines between cells - esp unused cells at end .. only rootview not useTracker...
+   -- got it!  MainWindow.xib still had tableview defined -- so two table views; removed
+   - getLaunchImageName does not know about all models (iphone 6's) .. also wrong for ipad2 (non-retina ipad)
+
+03 dec 2014
+04 dec 2014
+   - got all launch images correct for ios 7,8 -- still not named right for iphone 6+
+   - not getting simulator working for 6...
+
+10 dec 2014
+   - tested on Sam iPhone 5 with iOS 8.1.1, does not allow / suggest notifications as user reported
+   
+12 dec 2014
+   - added code to enable notifications under 8.1.1 -- not yet tested on Sam's phone but expect ok
+   - Database info reports if all notifications disabled in System Preferences
+   - work on LaunchImage code BUT at startup ios7.1 orientation unknown, when is known cannot seem to refresh tableView background
+   - progressing on useTrackerController display full width, but have crash now in ios 7 but not 8 -- utc viewDidLoad
+
+13 dec 2014
+   - fixed ios 7 crash -- setting maxLabel to 1/3 screen for bigger screens reulted in non-int coordinate somewhere, set to int and no crash
+   - fixed view problem on reloading launchImage - was that tableview still had old frame
+   - voDataEdit - lose xib; get frame width from key window;
+   - privacy password set up fucked up
+   - iOS 7 crash came back...
+
+14 dec 2014
+   - concluded will not support earlier iOS versions, current minimum will go to 7 (or maybe 8 if can't sort current 7.1 problem)
+   - got it! add -(void)loadView {  self.view = [UIView new]; }      // Ensure that we don't load an .xib file for this viewcontroller  [ after changing from .xib to programmatic view ]
+   - figured out problems with xibs resizing - remove red 'fix' bars, don't add them
+   - worked out main problem with seeing ppw view, need to re-work geometries
+
+15 dec 2014
+   - switch all .xibs to current Xcode, iOS - autolayout etc. re-work start
+
+16 dec 2014
+   - remove separate date/time pref as date picker has resolution now [ oops, did not notice cannot set year now .. but can scoll back to previous year ]
+   - after many hours playing, got date picker view satisfactory with autolayout - see: http://stackoverflow.com/questions/20864823/springs-in-auto-layout-distribute-views-evenly-with-constraints-in-xcode-5
+   -- (1) anchor end objects; (2) spacer views between, all with width (height) equal to each other, leading/trailing (top/bottom) set to 0
+   - fix deprecated sizeWithFont -> [string sizeWithAttributes:@{NSFontAttributeName: [UIFont systemFontOfSize:17.0f]}];  [ use ceilf( )  on width, height results because result may be fractional ]
+
+17 dec 2014
+   - on creating replacement nib was unable to link referencing outlets because new xib does not know about class;
+   -- select file's owner, command-option-3 ( -> 'identity inspector'), set class to relevant string (addTrackerController)
+   - finished(?) addTrackerController xib init instead of programmatic setup
+   - updated certificates  ** note on updating provisioning profiles, do NOT delete any profiles, just revoke expired signing certs in member center, and request new from xcode (preferences / accounts / details)
+   - xib updated for addValObjController
+
+18 dec 2014
+   - got background image showing through for addTracker and addVaObj controllers ( spacer views not hidden / clearColor, addTracker worked when did not set background for tableview but set to clearColor)
+   - completed addValObjController xib update on code side
+   - completed notifyReminder, notifyReminderVC2 xib updates
+   - cleared ios7 change warnings on trackerObj
+   
+19 dec 2014
+   - clearing warnings
+   -- NSFontAttributeName:self.myFont -->  drawAtPoint:tpos withAttributes:@{NSFontAttributeName:self.myFont,NSForegroundColorAttributeName:[UIColor whiteColor]}
+   -- [str drawInRect:self.currRect withFont:self.myFont lineBreakMode:NSLineBreakByClipping alignment:NSTextAlignmentCenter] -->
+   ---
+       NSMutableParagraphStyle *paragraphStyle = [[NSMutableParagraphStyle defaultParagraphStyle] mutableCopy];
+       paragraphStyle.lineBreakMode = NSLineBreakByClipping;
+       paragraphStyle.alignment = NSTextAlignmentCenter;
+       [str drawInRect:self.currRect withAttributes:@{NSFontAttributeName:self.myFont, NSParagraphStyleAttributeName: paragraphStyle}];
+   ---
+   - cleared all ios7 update warnings!
+   - graphs not labelled - suspect drawAtPoint withAttributes needs color?
+
+20 dec 2014
+   - yes on withAttributes:NSForegroundColorAttributeName, corrected above, corrected throughout
+   - status bar showing through graph title appears to be ios7 bug, not there in ios8 .. except for iPads
+   
+23 dec 2014
+   - have working fix for privacy views; not pretty, but same size for all devices. will fail on large keyboards....
+   - removed ppwV.xib as does not seem to be used
+   - check on deleteFileAtPath to avoid iOS error message
+   - tried to add 'default enabled' to slider but can't work out how to work with 'visited tracker but no change' action
+   - added 'swipe left to exit' for all views except useTrackerController (which is already swipe for previous entry -- can't get swipeUp to leave tracker to work)
+   - tweaked trackerlist table size so bottom entry accessible
+
+24 dec 2014
+   - added split 'enabled cell' (slider and multichoice) titles if contain '|' character
+   - fixed problem for larger displays, specifying 'autoresizingmask' for utc cells causes them to autoresize after initial rendering!
+
+25 dec 2014
+   - start on extra buttons for textbox edit -> search
+   - fix bugs handling addressbook access not granted
+   - more implementation on textbox searching
+
+26 dec 2014
+   - implemented search results in calendar, search result icon/alert report in utc, no exit on save if searchSet exists
+   - 'export all' now ignores privacy, goes to maxpriv (moved jumpMaxpriv into privacyV from rvc)
+   - implemented search results in graph
+   
+---commit ---
+
+27 dec 2014
+   - graph y-axis labels format without decimals if step > 2
+   - fixed various width problems for vo config fields
+   - remove back button spec for utc, so says "<name>'s tracks" -- iOS changes to 'Back' if insufficient space
+   -- oops, makes it so cannot specify action - catch in viewWillDisappear
+   - fix choice button width for shrinkbutton=true
+   - enabled cells now use dynamic font like other cells
+
+28 dec 2014
+   - changes to make db access thread safe:
+   -- recalculateFns now has testAndSet lock
+   -- trackerObj.sql removed, local NSString *sql everywhere and as argument to all tObjBase db routines
+   -- @synchronized(self) around all tObjBase db routines
+   - tweaked mimetypes, now can open in google drive and dropbox but convoluted - may have worked before but rTracker not 'top level' choice
+   - tweaked fn defn windows for bigger devices
+   - added optional decimal places to voNumber, -1 for 'auto'
+   - added demo tracker load and versioning support - not tested, demo tracker not done
+   - demo tracker links to app store for review, realidata comments page done.
+
+29 dec 2014
+   - implementing load demoTracker with versioning
+   - fixed: default value not returned correctly from voInfo
+   - load demoTracker rtrk (including data) with versioning works
+
+30 dec 2014
+   - had to give up on default back button, instead grab title from rvc (else can't catch and offer to save)
+   - maxLabel problems - trying to get number field to handle '<enter number>' in 4s
+
+31 dec 2014
+   - improve axis for choice valObj to match specified values
+   - setNeedsLayout to set textbox button title to redisplay/change !
+   - fixed 'actionSheet display from toolbar' problem for ios 7+ -- kept from deleting valObjs
+   - further tweaks to demo tracker
+   - can't copy .rtrk to Documents/Inbox, copy to Documents instead
+
+01 jan 2015
+   - test on ipad1, ipad mini, iphone 5
+   - ready for 2.0 release
+   
+---commit ---
+
+08 jan 2015
+   - addTrackerController call toggleEdit:segcEditTrackerEditItems to confirm table editing and segmented control in agreement
+
+10 jan 2015
+   - cancel from addValObjController wiping vo.optDict by overwriting with voStashDict - but stashDict only created if edit dict; fixed, only noticed if saved or causes crash for textbox with linecount opt because graphTypes array different
+   - make 'search position' lines in graph dashed
+   - make current vo line,bar in graph wider
+   - add emojis to titles for sample trackers
+   - shift graph title 140 units to right to avoid status bar bleed through on pre-iOS 8.1.1
+
+11 jan 2015
+   - set NSFileProtectionComplete flag after all file writes -- oops not needed
+   - enable data protection in capabilities in xcode, entitlements on dev portal for both(?) app IDs -- seems to activate data protection app-wide, so all files protected automatically
+   - add lines to demo tracker re: delete sample trackers and reload in system settings
+
+--- commit ---
+
+    - tweaks to bundle for app store submission
+    - submitted as 2.0.0
+
+--- commit ---
+
+18 jan 2015
+   - bugfix: skipping e.g. choice in maxLabel resulted in maxLabel.height not set, needed for choice and slider (cell presented as single line)
+   - bugfix: not setting values for choices led to NaN for graph yZero setting and crash when drawing graph
+   - added alert to explain why privacy value reset if user tries to set tracker/value to privacy below 1 or above current privacy level
+   - remove emoji from 'Edit this tracker to see how it works' in demo tracker
+   - refactored call to setup of addValObj controller
+   - bugfix: Maciej problem - handle row out of bounds for addvalobj from didSelectRowAtIndexPath -- green '+' does not go this way, but does if select 'add another item to track' bottom row
+   + should disable select row to edit valobj but seems convenient - just makes edit items redundant
+   - release as 2.0.1
+   
+08 feb 2015
+   - bugfix: reduce vertical content compression priority for notifyReminderVC2 datepicker and sound picker, make equal height - iPhone 4s could not access 'sample' button or toolbar buttons
+   - bugfix: count reminders in rvc viewDidLoad so '>' do not appear briefly for reminded trackers at startup
+   - change to 'red arrow' for activated reminded tracker
+   - ready to release as 2.0.2
+
+--- commit ---
+
+21 feb 2015
+   - add GSTouches code so can see finger touches for creating preview video for app store
+   -- SHOWTOUCHES in dbg-defs.h (gens issue: Application windows are expected to have a root view controller at the end of application launch)
+   - make selected row in tracker list highlight before leaving view
+   - make note scale max 1.12 instead of 1.02 - so can make notes be eyes in smiley face graph
+    
+08 mar 2015
+   - found bug in voChoice:voDisplay causing default values not handled to display selected choice; blanks data for csv for choice as well
+
+09 mar 2015
+   - build for release as 2.0.3
+
+--- commit ---
+
+15 mar 2015
+   - add rTrackerA target for add supported version
+   - detect with [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleName"]
+
+22 mar 2015
+   - add ADVERSION symbol, alert + DbgErr + breakpoints if mismatch to bundle name
+   - request apple approve iAd network contract ('pending banking')
+   - Vera agreed I can point Realidata address to Wandella
+
+24 mar 2015
+   - starting ADVERSION code
+   - seem to have initial functionality in place...
+
+03 apr 2015
+   - moved adversion to separate class, working state
+
+--- commit ---
+
+06 apr 2015
+   - got iAd working on both rvc and utc views - use get_visible_size in adSupport layoutAnimated
+
+14 apr 2015
+   - add requester to buy rTracker on reaching limit of 8 trackers or 8 items
+   - fix tracker name not saved when addTrackerObj view disappears (previously only saved on green '+' insert button, holdover from 18 jan 2015 bugfix)
+--- commit ---
+   - implement symbol PrefBodyFont for [UIFont preferredFontForTextStyle:UIFontTextStyleBody]
+   - make getLabelSize for voTvCell use PrefBodyFont
+   - work through fonts for all vo classes, change to prefBodyFont as needed
+
++ still going on fonts, lots there but not for biggest accessibility -- configs off screen
+
+30 apr 2015
+--- commit ---
+    - save everything before trying UIScrollview for configs
+    - works!
+    - put in xib to get offsets right
+    - removed code to linewrap config options when needed - instead enable scroll horizontally
+    - now keyboard scroll for text field in scrollview not working...
+
+01 may 2015
+   - textfield keyboard scroll detecting and handling uiscrollview as well as view
+   - polished for smallest text size
+
+05 may 2015
+   - happy with longTitle presentation for all text sizes on iphone 5, need to check other sizes
+   - starting on set active colour for bool button -- option done, need to implement display
+
+06 may 215
+   - implemented new bool button with color
+
+08 may 2015
+   - move bool button to rTracker_resource so can use elsewhere
+
+09 may 2015
+   - start implementation of in-app upgrade
+
+10 may 2015
+   - continue implementation of in-app upgrade, ready to handle purchase
+
+12 may 2015
+   - think fully implemented, need to set up test account and try
+
+13 may 2015
+   - changed purchased test to use bool in rTracker_resource
+   - implemented 'restore in-app upgrade'
+   - created testuser@realidata.com / Test1User account
+
+16 may 2015
+   - new company secretary Rob Drummond !
+
+22 may 2015
+--- commit ---
+
+14 june 2015
+   - disable long titles in voState:voDrawOptions() because of issues below and want to release free version
+   - found tracker name field in addTrackerController.m not config'd in cell correctly, also different alignment ios7 vs. ios8; various fixes, key was setting background colours so could see
+
+25 july 2015
+   - put background colours above under '#if !RELEASE' control
+   - testing, need to release
+
+28 july 2015
+   - change colour 'Name this tracker'
+   - change background colour tracker name field (add tracker)
+   - fix problem add/delete buttons not visiblie iphone 4s
+   - added line around password field to improve visibility
+   - fixed so 2nd 'setup' tap does not bypass password query if software keyboard not shown
+   - bring privacyV to front on parent after shoing (iAd obscures on ipad2)
+
+29 july 2015
+   - fixed problem with keyboard scroll for password field on ipads
+   - release as 2.0.4
+
+--- commit ---
+
+01 august 2015
+   - change userGuide link on website to point to QandA pages
+   - add 'improved help pages' to new 2.0.4 features
+
+05 august 2015
+   - 2.0.4 accepted, released both versions
+
+06 august 2015
+   - added Fabric Crashlytics to rTracker and rTrackerA
+   - rTrackerA slow to propagate to e.g. UK store! -- later tweaked release date on/off on iTunes Connect, worked then
+
+20 aug 2015
+   - textbox textview setUserInteractionEnabled:YES to fix bug with not seeing textbox contents in various cases.
+   - change numeric valueObjs to use UIKeyboardDecimalPad plus accessoryView hack to add done button from stackoverflow
+   - implement 'starts with last' for slider
+   - implement UIKeyboardDecimalPad as above for num configTextFields
+
+21 aug 2015
+   - added scrollRangeTovisible for textbox contents as not working yet
+   - added old/new and new/old ratios as function components (to monitor exchange rates)
+   
+25 aug 2015
+   - deep (?) problem ios 8 and dismissing graph view leaves black at some level(s) of view hierarchy
+   - fixed gXAxV size to not go off bottom of screen
+
+27 aug 2015
+   - make voDataEdit use voTextBox textView property, this was adding substantial confusion
+
+01 sep 2015
+   - found ppwv being instantiated on AppWillResignActive, added 'watch for keyboard notification', caused keyboardIsShown erroneously true after return to app, broke keyboard scroll in useTrackerController after return to app.
+   - tweak cancel icon to 'X' in datePickerVC.xib
+   - add/implement 'duplicate entry to now' in UseTrackerController menu
+
+--- commit ---
+
+   - fix 'dark bars' problem by setting navigation controller background color (to background image)
+
+02 sep 2015
+   - change version to 2.0.5 ready for release
+   
+--- commit ---
+
+    - submit as 2.0.5
+
+04 sep 2015
+   - crashlytics reports issue in voFunction.m:calcFnValueWithCurrent -- run off end of array.  add checks and just return current result, should do something to test fn validity
+
+12 sep 2015
+   - crashlytics reports issue in gtYAxV:drawYAxis -- looks like vcolor=-1 (from vot_info ? should not get there?) - changed myGraphColor to check for vcolor=-1 instead of vtype to return white, also dbgErr if outside array
+   - tweak rTracker demo to change colour of text - history (DEMOS_VERSION now 2)
+   - add cross to highlight selected valueObj dots in addition to filled circle
+   - add crashlytics and fabric frameworks to source control
+   - start converting UIAlertView to UIAlertController for iOS 8
+   - set ADVERSION as preprocessor setting for specific project, so automatically matches rTracker / rTrackerA choice !
+   - add red 'X' and alerts for incomplete functions
+
+13 sep 2015
+   - all UIActionSheet references removed, replaced by UIAlertView for < iOS8, UIAlertController for >= iOS8
+   - all UIAlertView modifiect to be UIAlertController for >= iOS8
+
+--- commit ---
+
+   - all deprecations for iOS8.4 handled -- calendar units; will/didRotateTo/From -- NSCalendarUnitWeek* not finished
+
+14 sep 2015
+   - finished NSCalendarUnitWeek* fixes/debug for TimesSquare calendar and functions
+
+--- commit ---
+
+15 sep 2015
+   - crashlytics reports 5x crashes user trying to create function without variables; put up alerts and disallow
+   -- one odd situation where delete button not shown -- then can't leave !
+   - add '-' button to decimal keypad (oops); subclass UITextField -> numField -- easy!
+
+16 sep 2015
+   - fixed ctvovc pickers and dynamically added textfields in function config (constant and -[] frep time units) not scrolling for keyboard - was adding to ctvovcp.view instead of ctvovcp.scroll
+
+    - trim newlines and whitespace from textbox data on save - had cases where newline first char so do not see in useTracker
+    - last before Xcode 7
+
+17 sep 2015
+--- commit ---
+    - switch to Xcode 7
+
+18 sep 2015
+   - ios 9 race condition in rvc caused InstallSamples=NO in viewDidLoad too early; removed, initialise in HandlePrefs(), rework logic for install samples and demos
+   - ios 9 race condition causes doLoadInputfiles re-entry; add bool flag to disallow
+   - xcode7 change removed (libz,libc++,libsqlite3).dylib; SenTestingKit.framework - replaced with .tbd files except for SenTestingKit which is apparently gone/old/redundant?
+   - comment out many dbglog messages
+   - update rtdb_ver to 2, add unique constraint on info table column name
+   - items above were not problem, rvc tlist used for db query without being initialised in viewDidLoad() -- added separate initialisation routine
+
+19 sep 2015
+   - need to add Launch Screen storyboard for iOS9, seem to have that working
+
+20 sep 2015
+   - crashlytics crash on 0 index to empty array in voTextBox picker -- also managed to get once for addressbook without access; added checks with return on empty addressBook and historyarray
+   - new simulator crash: "This application is modifying the autolayout engine from a background thread, which can lead to engine corruption and weird crashes. This will cause an exception in a future release."
+   -- got in rvc viewWillAppear first, then later in configTlist viewWillAppear -- added dispatch_async(dispatch_get_main_queue(), ^(void){ <code> }); around all viewWillAppear doing anything with interface
+   --- hmmm, got hit more, all uikit calls (at least which modify UI) must be on main thread ... searching...
+
+21 sep 2015
+   - added pspdf library suggested by StackOverflow response, crash on any UIKit call outside main thread
+   - fixed issue above
+   - finding many more ui modified not on main thread, yayyy
+   
+--- commit ---
+
+    - add alert for saving for iTunes, say is done and reference possible actions with files.
+    - various thread interaction issues from changes to put ui work all on main thread; added lock for csv loading
+    - begin freeze for next release
+
+--- commit ---
+
+    - create testtzuser@realidata.com / Test1User in TZ store
+
+22 sep 2015
+   - successful in-app activation on iphone tunneling to uk; various problems getting on to app store
+   - implemented rtPurchasedNotification, thank-you alert and immediately update UI to reflect purchased 
+
+23 sep 2015
+   - more improvements to demo tracker,  DEMOS_VERSION still at 2
+   - make load demos wipe existing tracker with same tid and name
+   - releasing as 2.0.6 - rTracker build 5789  rTrackerA build 557
+
+--- commit ---
+
+26 sept 2015
+   - found bug in fn checking, removed and resubmit rTracker 2.0.6(5795)  rTrackerA 2.0.6(5759)
+
+18 oct 2015
+   - earlier changes around number and text entries to enable 'save' button as soon as start editing, but too much background updating with each edit without further work.
+   - xcode update
+   - fix iphone 6plus issue with view for date picker
+   - release as 2.0.7
+
+--- commit ---
+
+  - submit rTacker 2.0.7(5825)
+  - submit rTackerA 2.0.7(5661)
+
+14 dec 2015
+   - think have correctly created new, revoked old developer and distrbution profiles.  may have problems with next release for this...
+
+19 jan 2016
+   - add <none> for function previous endpoint to enable counting used vs. unused choices and sliders
+   - added 167x167 main app icon for ipad pro / ios 9.0
+
+20 jan 2016
+   - fix 'tap to write me a note' link in demo rTracker
+
+22 jan 2016
+   - fix inaccessible trackers at bottom of tracker list after rotate from graph view
+   - add url scheme handler rTracker://tid=%d or rTracker://
+   - fixed crash on display graph with only info values
+   - implemented shortcut items (first four public trackers) for iphone 6s/6s+
+
+23 jan 2016
+   - fixed copy VO bug where VOT_INFO url still pointed to old string
+     -- was just plain copy, now is CFPropertyListCreateDeepCopy - kCFPropertyListMutableContainersAndLeaves
+
+24 jan 2016
+   - removed rt-types.plist and to.votArray - replaced with rTracker_resource:vtypeNames constant NSArray
+   - added info to crashlytics report - fn:voDisplay logs debug versions of fnDefnStr and fnRangeStr with types instead of names
+   - make so can clear textbox fully
+   - change text for vo_textbox option 'use number of lines for graph value' as can't do cleanly for function value (can't get in sql)
+   - changed text for email csv to 'rtCSV' if that option set 
+   - add links to help pages for choice and function configuration pages
+
+25 jan 2016
+   - add spaces to string in 'maxLabelFromArray' so vo type names and graph types do not get truncated in addValObj picker
+   - changed delta and ratio functions to be date >= epd0 as this is consistent with other functions (?)
+
+26 jan 2016
+   - add text to rTracker upgrade alert to highlight costs more and slower updates
+   - add help button for vot_info config
+
+27 jan 2016
+   - add check for info url == "" so don't go off to localhost on tap
+   - re-work to:rescanMaxLabel to improve which labels cause taller cells in useTracker
+
+28 jan 2016
+   - delete tracker row from toplevel in tlist.deleteTrackerAllRow() : old callers (delTracker and orphans code) all did reloadFromTLT() after delete, fix problem new demo tracker not wiping old
+   - add one-time alert to say 'enable notifications for reminders' before requesting to enable notifications on startup
+   - add alert when reminder enabled if notifications disabled
+   - add bundle display name, version and build to database info
+
+--- commit ---
+
+   - archived rTracker 2.0.8 5944
+   - archived rTrackerA 2.0.8 5708
+
+08 feb 2016
+   - oops looks like crashes on iOS 8 at least according to simulator, due to shortcut items
+   -- added check and avoid
+   - user Hakan Durgat reports display bug for trackers with only choice or slider entries -- due to rescanMaxLabel skipping these; changed to always get height value
+
+22 feb 2016
+   - oops!  25 jan 2016 change to make delta, ratios consistent >= start date broke those functions because needed to change desc->asc -- fixed
+   - implemented elapsed_units : weeks, days, hours, minutes, seconds : 1-arg function reporting elapsed time for specific value in database within range - improves accuracy for values/<time>
+   - fixed function calculations converting '' to 0.00 on () calculation and Fn2argOp calculations -- stops many fn graphs from arbitrarily starting at 0
+   - fixed lines+dots first point not drawn correctly -- dumped dotslines(), replaced with flag for lines() plotter
+   - filter bad filename characters from write file names and when creating tracker
+
+23 feb 2016
+   - bad csv date file left spinner running, fixed
+   - tried to improve date/timestamp format for excel but seems basically hopeless
+   - fix FnTimeOp values to return nil for first entry
+
+27 feb 2016
+   - archived rTracker 2.0.9 6037
+   - archived rTrackerA 2.09 5710
+
+13 apr 2016
+   - added new license alert to rTracker with preference to accept permanently
+   - added 'rTrackerA is going away' alert to rTrackerA
+
+14 apr 2016
+   - fixed display of startup alerts to eliminate warning messages
+   - disable badging application if notifications not allowed (fix warning)
+   - remove GSTouches and Fabric/Crashlytics for Github release
+   - add Apache license text, README.md and put website under Documentation/realidata-website
+
+18 apr 2016
+   - final changes to 3.0.0, submitted to Apple
+   
+03 may 2016
+   - fix display license agreement at every restart -- typo and race condition
+   - release as 3.0.1
+   
+* try application loader for app submission - xcode -> open developer tool -> application loader
+ - in organizer window, choose 'export' after creating archive, then ... for app store deployment
+ 
+todo: make csv split date and time columns so excel can handle — need to read in old version 
+
+todo: replace all export gui stuff with share menu and maybe airdrop
+todo: add 'no graph' as graph type and lose 'draw graph' checkbox
+
++ add -[n] entries thing
++ add entry_count as a fn piece -- count of entries over range, so avg could be sum()/entry_count
+
+
+
+
