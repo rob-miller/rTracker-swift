@@ -22,28 +22,36 @@
 //
 
 import Foundation
+import UIKit
 
-let MyTracker = vo.parentTracker as? trackerObj
+
 
 class voState: NSObject, voProtocol {
+    func voDrawOptions(_ ctvovc: Any?) {
+    }
+    
     /*{
 
     	valueObj *vo;
         CGRect vosFrame;
 
     }*/
-    var vo: valueObj?
+    var vo: valueObj
+    var MyTracker: trackerObj
     var vosFrame = CGRect.zero
     weak var vc: UIViewController?
 
-    convenience init() {
+        /*
+    override convenience init() {
         self.init(vo: nil)
     }
-
-    init(vo valo: valueObj?) {
-        super.init()
+         */
+    init(vo valo: valueObj) {
         vo = valo
-        vo?.useVO = true
+        MyTracker = vo.parentTracker
+        super.init()
+
+        vo.useVO = true
     }
 
     func getValCap() -> Int {
@@ -51,10 +59,10 @@ class voState: NSObject, voProtocol {
         return 10
     }
 
-    func update(_ instr: String?) -> String? {
+    func update(_ instr: String) -> String {
         // place holder so fn can update on access; also confirm textfield updated
         // added return "" if disabled 30.vii.13
-        if vo?.useVO ?? false {
+        if vo.useVO {
             return instr
         } else {
             return ""
@@ -66,14 +74,14 @@ class voState: NSObject, voProtocol {
 
     func setOptDictDflts() {
 
-        if nil == (vo?.optDict)?["graph"] {
-            (vo?.optDict)?["graph"] = GRAPHDFLT ? "1" : "0"
+        if nil == vo.optDict["graph"] {
+            vo.optDict["graph"] = GRAPHDFLT ? "1" : "0"
         }
-        if nil == (vo?.optDict)?["privacy"] {
-            (vo?.optDict)?["privacy"] = "\(PRIVDFLT)"
+        if nil == vo.optDict["privacy"] {
+            vo.optDict["privacy"] = "\(PRIVDFLT)"
         }
-        if nil == (vo?.optDict)?["longTitle"] {
-            (vo?.optDict)?["longTitle"] = ""
+        if nil == vo.optDict["longTitle"] {
+            vo.optDict["longTitle"] = ""
         }
 
 
@@ -81,15 +89,15 @@ class voState: NSObject, voProtocol {
 
     }
 
-    func cleanOptDictDflts(_ key: String?) -> Bool {
+    func cleanOptDictDflts(_ key: String) -> Bool {
 
-        let val = (vo?.optDict)?[key ?? ""] as? String
+        let val = vo.optDict[key]
         if nil == val {
             return true
         }
 
-        if ((key == "graph") && (val == GRAPHDFLT ? "1" : "0")) || ((key == "privacy") && (Int(val ?? "") ?? 0 == PRIVDFLT)) || ((key == "longTitle") && (val == "")) {
-            vo?.optDict?.removeValue(forKey: key)
+        if ((key == "graph") && (val == (GRAPHDFLT ? "1" : "0"))) || ((key == "privacy") && (Int(val ?? "") ?? 0 == PRIVDFLT)) || ((key == "longTitle") && (val == "")) {
+            vo.optDict.removeValue(forKey: key)
             return true
         }
 
@@ -132,8 +140,8 @@ class voState: NSObject, voProtocol {
     }
 
     @objc func longTitleSave(_ str: String?) {
-        DBGLog("lts: %@", str)
-        (vo?.optDict)?["longTitle"] = str?.trimmingCharacters(in: .whitespaces)
+        DBGLog(String("lts: \(str)"))
+        vo.optDict["longTitle"] = str?.trimmingCharacters(in: .whitespaces)
     }
 
     func longTitleBtn() {
@@ -143,49 +151,49 @@ class voState: NSObject, voProtocol {
         vde.vo = nil
         vde.saveClass = self
         vde.saveSelector = #selector(longTitleSave(_:))
-        vde.text = (vo?.optDict)?["longTitle"] as? String
+        vde.text = vo.optDict["longTitle"]
 
         //[self performSelector:vde.saveSelector withObject:@"foo" afterDelay:(NSTimeInterval)0];
         let navCon = UINavigationController(rootViewController: vde)
         vc?.present(navCon, animated: true)
     }
 
-    func voDrawOptions(_ ctvovc: configTVObjVC?) {
-        var frame = CGRect(x: MARGIN, y: ctvovc?.lasty ?? 0.0, width: 0.0, height: 0.0)
-        var labframe = ctvovc?.configLabel("Draw graph:", frame: frame, key: "ggLab", addsv: true)
-        frame = CGRect(x: (labframe?.size.width ?? 0.0) + MARGIN + SPACE, y: frame.origin.y, width: labframe?.size.height ?? 0.0, height: labframe?.size.height ?? 0.0)
+    func voDrawOptions(_ ctvovc: configTVObjVC) {
+        var frame = CGRect(x: MARGIN, y: ctvovc.lasty, width: 0.0, height: 0.0)
+        var labframe = ctvovc.configLabel("Draw graph:", frame: frame, key: "ggLab", addsv: true)
+        frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
 
         //-- draw graphs button
 
-        ctvovc?.configCheckButton(
+        _ = ctvovc.configCheckButton(
             frame,
             key: "ggBtn",
-            state: !((vo?.optDict)?["graph"] == "0"),
+            state: !(vo.optDict["graph"] == "0"),
             addsv: true)
 
         //-- privacy level label
 
         frame.origin.x += frame.size.width + MARGIN + SPACE
         //frame.origin.y += MARGIN + frame.size.height;
-        labframe = ctvovc?.configLabel("Privacy level:", frame: frame, key: "gpLab", addsv: true)
+        labframe = ctvovc.configLabel("Privacy level:", frame: frame, key: "gpLab", addsv: true)
 
         //-- privacy level textfield
 
-        frame.origin.x += (labframe?.size.width ?? 0.0) + SPACE
+        frame.origin.x += labframe.size.width + SPACE
         var tfWidth = "9999".size(withAttributes: [
             NSAttributedString.Key.font: PrefBodyFont
         ]).width
         frame.size.width = tfWidth
-        frame.size.height = ctvovc?.lfHeight ?? 0.0 // self.labelField.frame.size.height; // lab.frame.size.height;
+        frame.size.height = ctvovc.lfHeight  // self.labelField.frame.size.height; // lab.frame.size.height;
 
-        ctvovc?.configTextField(
+        _ = ctvovc.configTextField(
             frame,
             key: "gpTF",
             target: nil,
             action: nil,
             num: true,
             place: "\(PRIVDFLT)",
-            text: (vo?.optDict)?["privacy"] as? String,
+            text: vo.optDict["privacy"],
             addsv: true)
 
         //------
@@ -193,23 +201,23 @@ class voState: NSObject, voProtocol {
         frame.origin.x = MARGIN
         frame.origin.y += MARGIN + frame.size.height
 
-        labframe = ctvovc?.configLabel("Line at Y=", frame: frame, key: "gyLab", addsv: true)
-        frame = CGRect(x: (labframe?.size.width ?? 0.0) + MARGIN + SPACE, y: frame.origin.y, width: labframe?.size.height ?? 0.0, height: labframe?.size.height ?? 0.0)
+        labframe = ctvovc.configLabel("Line at Y=", frame: frame, key: "gyLab", addsv: true)
+        frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
 
         tfWidth = "9999999.99".size(withAttributes: [
             NSAttributedString.Key.font: PrefBodyFont
         ]).width
         frame.size.width = tfWidth
-        frame.size.height = ctvovc?.lfHeight ?? 0.0 // self.labelField.frame.size.height; // lab.frame.size.height;
+        frame.size.height = ctvovc.lfHeight // self.labelField.frame.size.height; // lab.frame.size.height;
 
-        ctvovc?.configTextField(
+        _ = ctvovc.configTextField(
             frame,
             key: "gyTF",
             target: nil,
             action: nil,
             num: true,
             place: "0",
-            text: (vo?.optDict)?["yline1"] as? String,
+            text: vo.optDict["yline1"],
             addsv: true)
 
         //------
@@ -225,14 +233,14 @@ class voState: NSObject, voProtocol {
 
         //------
 
-        ctvovc?.lasty = frame.origin.y + frame.size.height + MARGIN
-        ctvovc?.lastx = ((ctvovc?.lastx ?? 0.0) < frame.origin.x + frame.size.width + MARGIN ? frame.origin.x + frame.size.width + MARGIN : ctvovc?.lastx) ?? 0.0
+        ctvovc.lasty = frame.origin.y + frame.size.height + MARGIN
+        ctvovc.lastx = (ctvovc.lastx < frame.origin.x + frame.size.width + MARGIN ? frame.origin.x + frame.size.width + MARGIN : ctvovc.lastx)
 
     }
 
-    func voDisplay(_ bounds: CGRect) -> UIView? {
-        dbgNSAssert(0, "viDisplay failed to dispatch")
-        return nil
+    func voDisplay(_ bounds: CGRect) -> UIView {
+        dbgNSAssert(false, "voDisplay failed to dispatch")
+        return UIView()
     }
 
     let LMARGIN = 60.0
@@ -242,12 +250,12 @@ class voState: NSObject, voProtocol {
 
     static let voTVEnabledCellCellIdentifier = "Cell1"
 
-    func voTVEnabledCell(_ tableView: UITableView?) -> UITableViewCell? {
+    func voTVEnabledCell(_ tableView: UITableView?) -> UITableViewCell {
 
-        let bounds: CGRect
+        var bounds: CGRect = CGRect.zero
         var cell: UITableViewCell?
-        let maxLabel = (vo?.parentTracker as? trackerObj)?.maxLabel
-        DBGLog("votvenabledcell maxLabel= w= %f h= %f", maxLabel?.width, maxLabel?.height)
+        let maxLabel = vo.parentTracker.maxLabel
+        DBGLog(String("votvenabledcell maxLabel= w= \(maxLabel.width) h= \(maxLabel.height)"))
 
         cell = tableView?.dequeueReusableCell(withIdentifier: voState.voTVEnabledCellCellIdentifier)
         if cell == nil {
@@ -256,9 +264,9 @@ class voState: NSObject, voProtocol {
             cell?.backgroundColor = nil
         } else {
             // the cell is being recycled, remove old embedded controls
-            var viewToRemove: UIView? = nil
-            while (viewToRemove = cell?.contentView.viewWithTag(kViewTag)) {
-                viewToRemove?.removeFromSuperview()
+            //var viewToRemove: UIView? = nil
+            while let viewToRemove = cell?.contentView.viewWithTag(kViewTag) {
+                viewToRemove.removeFromSuperview()
             }
         }
 
@@ -279,17 +287,17 @@ class voState: NSObject, voProtocol {
         bounds.size.height = 30.0
 
 
-        vo?.checkButtonUseVO?.frame = bounds
-        vo?.checkButtonUseVO?.tag = kViewTag
-        vo?.checkButtonUseVO?.backgroundColor = cell?.backgroundColor
+        vo.checkButtonUseVO?.frame = bounds
+        vo.checkButtonUseVO?.tag = kViewTag
+        vo.checkButtonUseVO?.backgroundColor = cell?.backgroundColor
 
         //if (! self.vo.retrievedData) {  // only show enable checkbox if this is data entry mode (not show historical)  
         // 26 mar 2011 -- why not show for historical ?
         // 30 mar 2011 -- seems like checkbuttonusevo should be correct state if use enablevo everywhere; else don't use it
-        let image = ((vo?.useVO) ?? false) ? checkImage : UIImage(named: "unchecked.png")
+        let image = vo.useVO ? checkImage : UIImage(named: "unchecked.png")
         let newImage = image?.stretchableImage(withLeftCapWidth: Int(12.0), topCapHeight: Int(0.0))
-        vo?.checkButtonUseVO?.setImage(newImage, for: .normal)
-        if let aCheckButtonUseVO = vo?.checkButtonUseVO {
+        vo.checkButtonUseVO?.setImage(newImage, for: .normal)
+        if let aCheckButtonUseVO = vo.checkButtonUseVO {
             cell?.contentView.addSubview(aCheckButtonUseVO)
         }
         //}
@@ -303,10 +311,10 @@ class voState: NSObject, voProtocol {
         // [rTracker_resource getKeyWindowWidth] - maxLabel.width - LMARGIN - RMARGIN;
         let screenSize = UIScreen.main.bounds.size
         bounds.size.width = screenSize.width - (checkImage?.size.width ?? 0.0) - (2.0 * MARGIN) //cell.frame.size.width - checkImage.size.width - (2.0*MARGIN);
-        bounds.size.height = (maxLabel?.height ?? 0.0) + MARGIN //CELL_HEIGHT_TALL/2.0; //self.tracker.maxLabel.height + BMARGIN;
+        bounds.size.height = maxLabel.height + MARGIN //CELL_HEIGHT_TALL/2.0; //self.tracker.maxLabel.height + BMARGIN;
 
 
-        let splitStrArr = vo?.valueName?.components(separatedBy: "|")
+        let splitStrArr = vo.valueName?.components(separatedBy: "|")
         if 1 < (splitStrArr?.count ?? 0) {
             bounds.size.width /= 2.0
         }
@@ -331,7 +339,7 @@ class voState: NSObject, voProtocol {
         label.contentMode = .topLeft
         label.text = splitStrArr?[0] //self.vo.valueName;
         //label.enabled = YES;
-        DBGLog("enabled text= %@", label.text)
+        DBGLog(String("enabled text= \(label.text)"))
 
 
         cell?.contentView.addSubview(label)
@@ -359,37 +367,37 @@ class voState: NSObject, voProtocol {
             label.text = splitStrArr?[1] //self.vo.valueName;
 
             //label.enabled = YES;
-            DBGLog("enabled text2= %@", label.text)
+            DBGLog(String("enabled text2= \(label.text)"))
 
             cell?.contentView.addSubview(label)
         }
 
-        bounds.origin.y = (maxLabel?.height ?? 0.0) + (3.0 * MARGIN) //CELL_HEIGHT_TALL/2.0 + MARGIN; // 38.0f; //bounds.size.height; // + BMARGIN;
-        bounds.size.height = /*CELL_HEIGHT_TALL/2.0 ; // */ (maxLabel?.height ?? 0.0) + (1.5 * MARGIN)
+        bounds.origin.y = maxLabel.height + (3.0 * MARGIN) //CELL_HEIGHT_TALL/2.0 + MARGIN; // 38.0f; //bounds.size.height; // + BMARGIN;
+        bounds.size.height = /*CELL_HEIGHT_TALL/2.0 ; // */ maxLabel.height + (1.5 * MARGIN)
 
         bounds.size.width = screenSize.width - (2.0 * MARGIN) // cell.frame.size.width - (2.0f * MARGIN);
         bounds.origin.x = MARGIN // 0.0f ;  //= bounds.origin.x + RMARGIN;
 
         //DBGLog(@"votvenabledcell adding subview");
-        if let aDisplay = vo?.display(bounds) {
+        if let aDisplay = vo.display(bounds) {
             cell?.contentView.addSubview(aDisplay)
         }
-        return cell
+        return cell!
 
     }
 
     func voTVCellHeight() -> CGFloat {
-        var labelSize = vo?.getLabelSize()
-        labelSize?.height += vo?.getLongTitleSize().height ?? 0.0
-        let maxLabel = (vo?.parentTracker as? trackerObj)?.maxLabel
+        var labelSize = vo.getLabelSize()
+        labelSize.height += vo.getLongTitleSize().height
+        let maxLabel = vo.parentTracker.maxLabel
 
-        if (labelSize?.width ?? 0.0) <= (maxLabel?.width ?? 0.0) || VOT_INFO == vo?.vtype {
+        if labelSize.width <= maxLabel.width || VOT_INFO == vo.vtype {
             //return CELL_HEIGHT_NORMAL;
             //return maxLabel.height + (2*MARGIN);
-            return (labelSize?.height ?? 0.0) + (2 * MARGIN)
+            return labelSize.height + (2 * MARGIN)
         } else {
             //return CELL_HEIGHT_TALL;
-            return (labelSize?.height ?? 0.0) + (maxLabel?.height ?? 0.0) + (2 * MARGIN)
+            return labelSize.height + maxLabel.height + (2 * MARGIN)
         }
     }
 
@@ -397,14 +405,14 @@ class voState: NSObject, voProtocol {
 
     static let voTVCellCellIdentifier = "Cell2"
 
-    func voTVCell(_ tableView: UITableView?) -> UITableViewCell? {
+    func voTVCell(_ tableView: UITableView) -> UITableViewCell {
 
-        var bounds: CGRect
+        var bounds: CGRect = CGRect.zero
         var cell: UITableViewCell?
 
-        let maxLabel = (vo?.parentTracker as? trackerObj)?.maxLabel
+        let maxLabel = vo.parentTracker.maxLabel
 
-        cell = tableView?.dequeueReusableCell(withIdentifier: voState.voTVCellCellIdentifier)
+        cell = tableView.dequeueReusableCell(withIdentifier: voState.voTVCellCellIdentifier)
         if cell == nil {
             cell = UITableViewCell(style: .default, reuseIdentifier: voState.voTVCellCellIdentifier)
             cell?.selectionStyle = .none
@@ -421,10 +429,10 @@ class voState: NSObject, voProtocol {
                     }
                     */
 
-            var viewToRemove: UIView? = nil
-            while (viewToRemove = cell?.contentView.viewWithTag(kViewTag)) {
+            //var viewToRemove: UIView? = nil
+            while let viewToRemove = cell?.contentView.viewWithTag(kViewTag) {
                 //DBGLog(@"removing");
-                viewToRemove?.removeFromSuperview()
+                viewToRemove.removeFromSuperview()
             }
 
             // removes too much [cell.contentView removeFromSuperview];
@@ -451,17 +459,17 @@ class voState: NSObject, voProtocol {
         bounds.origin.x = MARGIN
         bounds.origin.y = MARGIN
 
-        let labelSize = vo?.getLabelSize()
-        let longTitleSize = vo?.getLongTitleSize()
+        let labelSize = vo.getLabelSize()
+        let longTitleSize = vo.getLongTitleSize()
 
         //bounds.origin.y = labelSize.height - (MARGIN);
 
-        if (labelSize?.width ?? 0.0) <= (maxLabel?.width ?? 0.0) {
-            bounds.size.width = maxLabel?.width ?? 0.0
+        if labelSize.width <= maxLabel.width {
+            bounds.size.width = maxLabel.width
         } else {
             bounds.size.width = rTracker_resource.getKeyWindowWidth() - MARGIN - RMARGIN
         }
-        bounds.size.height = labelSize?.height ?? 0.0 // maxLabel.height; // labelSize.height;
+        bounds.size.height = labelSize.height // maxLabel.height; // labelSize.height;
 
         var label = UILabel(frame: bounds)
         label.tag = kViewTag
@@ -479,18 +487,18 @@ class voState: NSObject, voProtocol {
 
         //don't use - messes up for loarger displays -- label.autoresizingMask = UIViewAutoresizingFlexibleRightMargin; // | UIViewAutoresizingFlexibleHeight;
         label.contentMode = .topLeft
-        label.text = vo?.valueName
+        label.text = vo.valueName
         //label.enabled = YES;
 
-        DBGLog("cell text= %@ label width= %f  maxLabel width= %f", label.text, labelSize?.width, maxLabel?.width)
+        DBGLog(String("cell text= \(label.text) label width= \(labelSize.width)  maxLabel width= \(maxLabel.width)"))
 
         cell?.contentView.addSubview(label)
 
-        if longTitleSize?.height != nil {
-            DBGLog("longTitle:%@", (vo?.optDict)?["longTitle"])
+        if longTitleSize.height > 0 {
+            DBGLog(String("longTitle:\(vo.optDict["longTitle"])"))
 
             bounds.origin.y += 3 * MARGIN // maxLabel.height + (3*MARGIN); // labelSize.height + MARGIN;
-            bounds.size = longTitleSize ?? CGSize.zero
+            bounds.size = longTitleSize
 
             label = UILabel(frame: bounds)
             label.tag = kViewTag
@@ -505,44 +513,44 @@ class voState: NSObject, voProtocol {
             //don't use - messes up for loarger displays -- label.autoresizingMask = UIViewAutoresizingFlexibleRightMargin; // | UIViewAutoresizingFlexibleHeight;
             label.contentMode = .topLeft
 
-            label.text = (vo?.optDict)?["longTitle"] as? String
+            label.text = vo.optDict["longTitle"]
 
             cell?.contentView.addSubview(label)
         }
 
-        if ((labelSize?.width ?? 0.0) > (maxLabel?.width ?? 0.0)) || longTitleSize?.height != nil {
+        if (labelSize.width > maxLabel.width) || longTitleSize.height > 0 {
             bounds.origin.x = (cell?.frame.origin.x ?? 0.0) + MARGIN
             bounds.origin.y += bounds.size.height + MARGIN //   maxLabel.height + (2*MARGIN);
             bounds.size.width = rTracker_resource.getKeyWindowWidth() - MARGIN - RMARGIN
-            bounds.size.height = (maxLabel?.height ?? 0.0) + MARGIN
+            bounds.size.height = maxLabel.height + MARGIN
         } else {
             //CGSize screenSize = [[UIScreen mainScreen] bounds].size;
-            bounds.origin.x = (cell?.frame.origin.x ?? 0.0) + (maxLabel?.width ?? 0.0) + LMARGIN
+            bounds.origin.x = cell!.frame.origin.x + maxLabel.width + LMARGIN
             //bounds.origin.x = cell.frame.origin.x + (cell.frame.size.width )
             //bounds.origin.y = maxLabel.height - (MARGIN*1.5);
             bounds.origin.y = MARGIN
-            bounds.size.width = rTracker_resource.getKeyWindowWidth() - (maxLabel?.width ?? 0.0) - LMARGIN - RMARGIN // cell.frame.size.width - maxLabel.width - LMARGIN - RMARGIN;
+            bounds.size.width = rTracker_resource.getKeyWindowWidth() - maxLabel.width - LMARGIN - RMARGIN // cell.frame.size.width - maxLabel.width - LMARGIN - RMARGIN;
             //bounds.size.width = screenSize.width - maxLabel.width - LMARGIN - RMARGIN;
-            bounds.size.height = (maxLabel?.height ?? 0.0) + MARGIN
+            bounds.size.height = maxLabel.height + MARGIN
 
             //DBGLog(@"maxLabel: % f %f",self.tracker.maxLabel.width, self.tracker.maxLabel.height);
             //bounds.origin.y = bounds.size.height;// - BMARGIN;
         }
 
         //DBGLog(@"bounds= %f %f %f %f",bounds.origin.x,bounds.origin.y,bounds.size.width, bounds.size.height)	;
-        if let aDisplay = vo?.display(bounds) {
+        if let aDisplay = vo.display(bounds) {
             cell?.contentView.addSubview(aDisplay)
         }
-        return cell
+        return cell!
     }
 
-    func dataEditVDidLoad(_ vc: UIViewController?) {
+    func dataEditVDidLoad(_ vc: UIViewController) {
     }
 
-    func dataEditVWAppear(_ vc: UIViewController?) {
+    func dataEditVWAppear(_ vc: UIViewController) {
     }
 
-    func dataEditVWDisappear(_ vc: UIViewController?) {
+    func dataEditVWDisappear(_ vc: UIViewController) {
     }
 
     /*
@@ -553,7 +561,7 @@ class voState: NSObject, voProtocol {
     //- (void) dataEditFinished {
     //}
 
-    func voGraphSet() -> [AnyHashable]? {
+    func voGraphSet() -> [String] {
         return ["dots"]
     }
 
@@ -580,7 +588,7 @@ class voState: NSObject, voProtocol {
                       border:(float)border 
                    firstDate:(int)firstDate;
     */
-    class func voGraphSetNum() -> [AnyHashable]? {
+    class func voGraphSetNum() -> [String] {
         return ["dots", "bar", "line", "line+dots"]
     }
 
@@ -588,9 +596,9 @@ class voState: NSObject, voProtocol {
         // subclass overrides if need to do anything
     }
 
-    func newVOGD() -> Any? {
+    func newVOGD() -> vogd {
         DBGErr("newVOGD with no handler!")
-        return vogd?.initAsNum(vo)
+        return vogd(vo).initAsNum(vo)
     }
 
     /*
@@ -609,14 +617,14 @@ class voState: NSObject, voProtocol {
 
     func resetData() {
         // subclass overrides if need to do anything
-        vo?.useVO = true
+        vo.useVO = true
     }
 
-    func mapValue2Csv() -> String? {
-        return vo?.value // subclass overrides if need to do anything - specifically for choice, textbox
+    func mapValue2Csv() -> String {
+        return vo.value! // subclass overrides if need to do anything - specifically for choice, textbox
     }
 
-    func mapCsv2Value(_ inCsv: String?) -> String? {
+    func mapCsv2Value(_ inCsv: String) -> String {
         return inCsv // subclass overrides if need to do anything - specifically for choice
     }
     /*

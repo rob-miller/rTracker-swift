@@ -94,39 +94,13 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
         Thread.detachNewThreadSelector(#selector(startExport), toTarget: self, with: nil)
     }
 
-    #if ADVERSION
-
-    @objc func btnUpgrade() {
-        //[rTracker_resource buy_rTrackerAlert];
-        rTracker_resource.replaceRtrackerA(self)
-    }
-
-    #endif
-
     func getExportBtn() -> UIBarButtonItem? {
         var exportBtn: UIBarButtonItem?
-        #if ADVERSION
-        if !rTracker_resource.getPurchased() {
-
-            exportBtn = UIBarButtonItem(
-                title: "Upgrade",
-                style: .plain,
-                target: self,
-                action: #selector(btnUpgrade))
-        } else {
-            exportBtn = UIBarButtonItem(
-                title: "Export all",
-                style: .plain,
-                target: self,
-                action: #selector(btnExport))
-        }
-        #else
         exportBtn = UIBarButtonItem(
             title: "Export all",
             style: .plain,
             target: self,
             action: #selector(btnExport))
-        #endif
         return exportBtn
     }
 
@@ -203,15 +177,6 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
     }
     */
 
-    #if ADVERSION
-    // handle rtPurchasedNotification
-    @objc func updatePurchased(_ n: Notification?) {
-        rTracker_resource.doQuickAlert("Purchase Successful", msg: "Thank you!", delay: 2, vc: self)
-        navigationItem.setRightBarButton(getExportBtn(), animated: false)
-    }
-
-    #endif
-
     override func viewWillAppear(_ animated: Bool) {
 
         DBGLog("ctlc: viewWillAppear")
@@ -219,16 +184,6 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
 
         tableView.reloadData()
         selSegNdx = SegmentEdit // because mode select starts with default 'modify' selected
-
-        #if ADVERSION
-        if !rTracker_resource.getPurchased() {
-            NotificationCenter.default.addObserver(
-                self,
-                selector: #selector(RootViewController.updatePurchased(_:)),
-                name: NSNotification.Name(rtPurchasedNotification),
-                object: nil)
-        }
-        #endif
 
         super.viewWillAppear(animated)
     }
@@ -240,14 +195,6 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
 
         //self.tlist = nil;
 
-        #if ADVERSION
-        //unregister for purchase notices
-        NotificationCenter.default.removeObserver(
-            self,
-            name: NSNotification.Name(rtPurchasedNotification),
-            object: nil)
-        #endif
-
         super.viewWillDisappear(animated)
     }
 
@@ -257,9 +204,9 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
     // MARK: button press action methods
 
 
-    @IBAction func modeChoice(_ sender: Any) {
-
-        switch selSegNdx = sender.selectedSegmentIndex {
+    @IBAction func modeChoice(_ sender: UISegmentedControl) {
+        let selSegNdx = sender.selectedSegmentIndex
+        switch selSegNdx {
         case SegmentEdit:
             //DBGLog(@"ctlc: set edit mode");
             tableView.setEditing(false, animated: true)
@@ -270,12 +217,8 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
             //DBGLog(@"ctlc: set move/delete mode");
             tableView.setEditing(true, animated: true)
         default:
-            dbgNSAssert(0, "ctlc: segment index not handled")
+            dbgNSAssert(false, "ctlc: segment index not handled")
         }
-
-
-
-
     }
 
     // MARK: -
@@ -283,7 +226,7 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
 
     func delTracker() {
         let row = deleteIndexPath?.row ?? 0
-        DBGLog("checkTrackerDelete: will delete row %lu ", UInt(row))
+        DBGLog(String("checkTrackerDelete: will delete row \(UInt(row)) "))
         tlist?.deleteTrackerAllRow(row)
         //[self.deleteTableView deleteRowsAtIndexPaths:[NSArray arrayWithObject:self.deleteIndexPath]
         //					   withRowAnimation:UITableViewRowAnimationFade];
@@ -295,7 +238,7 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
 
     func delTrackerRecords() {
         let row = deleteIndexPath?.row ?? 0
-        DBGLog("checkTrackerDelete: will delete records only for row %lu ", UInt(row))
+        DBGLog(String("checkTrackerDelete: will delete records only for row \(UInt(row))"))
         tlist?.deleteTrackerRecordsRow(row)
         tlist?.reloadFromTLT()
     }
@@ -337,37 +280,24 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
     }
 
     // Customize the appearance of table view cells.
-    //DBGLog(@"rvc table cell at index %d label %@",[indexPath row],[self.tlist.topLayoutNames objectAtIndex:[indexPath row]]);
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        //DBGLog(@"rvc table cell at index %d label %@",[indexPath row],[self.tlist.topLayoutNames objectAtIndex:[indexPath row]]);
 
-    static var tableViewCellIdentifier: String?
-
-    func tableView(
-        _ tableView: UITableView,
-        cellForRowAt indexPath: IndexPath
-    ) -> UITableViewCell {
-
+        var cellIdentifier: String
         if selSegNdx == SegmentMoveDelete {
-            configTlistController.tableViewCellIdentifier = "DeleteCell"
+            cellIdentifier = "DeleteCell"
         } else {
-            configTlistController.tableViewCellIdentifier = "Cell"
+            cellIdentifier = "Cell"
         }
 
-        var cell = tableView.dequeueReusableCell(withIdentifier: configTlistController.tableViewCellIdentifier)
-        if cell == nil {
-            cell = UITableViewCell(style: .default, reuseIdentifier: configTlistController.tableViewCellIdentifier)
-            cell?.backgroundColor = .clear
-        }
+        let cell = tableView.dequeueReusableCell(withIdentifier: cellIdentifier) ?? UITableViewCell(style: .default, reuseIdentifier: cellIdentifier)
+        cell.backgroundColor = .clear
 
         // Configure the cell.
         let row = indexPath.row
-        cell?.textLabel?.text = (tlist?.topLayoutNames)?[row] as? String
-        if #available(iOS 13.0, *) {
-            cell?.textLabel?.textColor = .label
-        } else {
-            cell?.textLabel?.textColor = .black
-        }
-        return cell!
-
+        cell.textLabel?.text = tlist!.topLayoutNames![row] as? String
+        cell.textLabel?.textColor = .label
+        return cell
     }
 
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
@@ -392,7 +322,7 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
         let fromRow = fromIndexPath.row
         let toRow = toIndexPath.row
 
-        DBGLog("ctlc: move row from %lu to %lu", UInt(fromRow), UInt(toRow))
+        DBGLog(String("ctlc: move row from \(UInt(fromRow)) to \(UInt(toRow))"))
         tlist?.reorderTLT(fromRow, toRow: toRow)
         tlist?.reorderFromTLT()
 
@@ -467,7 +397,7 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
 
         if selSegNdx == SegmentEdit {
             let toid = tlist?.getTIDfromIndex(row) ?? 0
-            DBGLog("will config toid %ld", toid)
+            DBGLog(String("will config toid \(toid)"))
 
             let atc = addTrackerController(nibName: "addTrackerController", bundle: nil)
             atc.tlist = tlist
@@ -479,11 +409,11 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
             //[atc.tempTrackerObj release]; // rtm 05 feb 2012 +1 alloc/init, +1 atc.temptto retain
         } else if selSegNdx == SegmentCopy {
             let toid = tlist?.getTIDfromIndex(row) ?? 0
-            DBGLog("will copy toid %ld", toid)
+            DBGLog(String("will copy toid \(toid)"))
 
             let oTO = trackerObj(toid)
             let nTO = tlist?.copy(toConfig: oTO)
-            tlist?.add(toTopLayoutTable: nTO)
+            tlist?.add(toTopLayoutTable: nTO!)
             //[self.tlist loadTopLayoutTable];
             DispatchQueue.main.async(execute: { [self] in
                 self.tableView.reloadData()

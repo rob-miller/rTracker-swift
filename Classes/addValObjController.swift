@@ -50,7 +50,7 @@ import UIKit
 var sizeVOTLabel = CGSize.zero
 var sizeGTLabel = CGSize.zero
 var colorCount = 0 // count of entries to show in center color picker spinner.
-    let FONTSIZE = 20.0
+    // rtm swift let FONTSIZE = 20.0
     //#define FONTSIZE [UIFont labelFontSize]
 
 
@@ -61,7 +61,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
     var tempValObj: valueObj?
     var parentTrackerObj: trackerObj? // this makes a retain cycle....
     var graphTypes: [AnyHashable]?
-    var voOptDictStash: [AnyHashable : Any]?
+    var voOptDictStash: [String : String]?
     // UI element properties 
     @IBOutlet var labelField: UITextField!
     @IBOutlet var votPicker: UIPickerView!
@@ -75,14 +75,13 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
     // setting to _foo breaks size calc for picker, think because is iboutlet?
     deinit {
         DBGLog("avoc dealloc")
-
-
-
-
-
-
     }
-
+    init(nibName: String, bundle: Bundle?) {
+        super.init(nibName: nibName, bundle: bundle)
+    }
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
     // MARK: -
     // MARK: view support
 
@@ -135,12 +134,12 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
         let allGraphs = valueObj.allGraphs()
         sizeGTLabel = addValObjController.maxLabel(fromArray: allGraphs)
 
-        colorCount = rTracker_resource.colorSet()?.count ?? 0
+        colorCount = rTracker_resource.colorSet().count
 
         // no effect after ios7 self.votPicker.showsSelectionIndicator = YES;
 
         if tempValObj == nil {
-            tempValObj = valueObj(parentOnly: parentTrackerObj)
+            tempValObj = valueObj(parentOnly: parentTrackerObj!)
             //self.graphTypes = nil;
             graphTypes = voState.voGraphSetNum() //[valueObj graphsForVOT:VOT_NUMBER];
             //[self updateScrollView:(NSInteger)VOT_NUMBER];
@@ -148,12 +147,12 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
                 votPicker.selectRow(parentTrackerObj?.nextColor ?? 0, inComponent: 1, animated: false)
             })
         } else {
-            labelField.text = tempValObj?.valueName
-            if 0 > (tempValObj?.vcolor ?? 0) {
-                tempValObj?.vcolor = 0 // paranoid in case switched from vot_info or vot_choice
+            labelField.text = tempValObj!.valueName
+            if 0 > tempValObj!.vcolor {
+                tempValObj!.vcolor = 0 // paranoid in case switched from vot_info or vot_choice
             }
-            votPicker.selectRow(tempValObj?.vcolor ?? 0, inComponent: 1, animated: false) // first as no picker update effects
-            votPicker.selectRow(tempValObj?.vtype ?? 0, inComponent: 0, animated: false)
+            votPicker.selectRow(tempValObj!.vcolor, inComponent: 1, animated: false) // first as no picker update effects
+            votPicker.selectRow(tempValObj!.vtype, inComponent: 0, animated: false)
             update(forPickerRowSelect: tempValObj?.vtype ?? 0, inComponent: 0)
             votPicker.selectRow(tempValObj?.vGraphType ?? 0, inComponent: 2, animated: false)
             update(forPickerRowSelect: tempValObj?.vGraphType ?? 0, inComponent: 2)
@@ -161,7 +160,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
                 let g = allGraphs?[tempValObj?.vGraphType ?? 0] as? String
                 graphTypes = tempValObj?.vos?.voGraphSet()
 
-                let row = 0
+                var row = 0
                 //while ( s = (NSString *) [e nextObject]) {
                 for s in graphTypes ?? [] {
                     guard let s = s as? String else {
@@ -290,7 +289,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
         //DBGLog(@"addVObjC: btnCancel was pressed!");
         retrieveVals()
         if voOptDictStash != nil {
-            tempValObj?.optDict = voOptDictStash // copyItems: true
+            tempValObj!.optDict = voOptDictStash! // copyItems: true
             voOptDictStash = nil
         }
         leave()
@@ -305,20 +304,20 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
         }
         voOptDictStash = nil
 
-        tempValObj?.valueName = labelField.text // in case neglected to 'done' keyboard
+        tempValObj!.valueName = labelField.text // in case neglected to 'done' keyboard
         labelField.resignFirstResponder()
 
         var row = votPicker.selectedRow(inComponent: 0)
-        tempValObj?.vtype = row // works because vtype defs are same order as vtypeNames array entries
+        tempValObj!.vtype = row // works because vtype defs are same order as vtypeNames array entries
         row = votPicker.selectedRow(inComponent: 1)
-        if (VOT_CHOICE == tempValObj?.vtype) || (VOT_INFO == tempValObj?.vtype) {
-            tempValObj?.vcolor = -1 // choice color set in optDict per choice
+        if (VOT_CHOICE == tempValObj!.vtype) || (VOT_INFO == tempValObj!.vtype) {
+            tempValObj!.vcolor = -1 // choice color set in optDict per choice
         } else {
-            tempValObj?.vcolor = row // works because vColor defs are same order as trackerObj.colorSet creator
+            tempValObj!.vcolor = row // works because vColor defs are same order as trackerObj.colorSet creator
         }
 
-        if VOT_FUNC == tempValObj?.vtype {
-            (parentTrackerObj?.optDict)?["dirtyFns"] = "1"
+        if VOT_FUNC == tempValObj!.vtype {
+            parentTrackerObj?.optDict["dirtyFns"] = "1"
         }
 
         row = votPicker.selectedRow(inComponent: 2)
@@ -336,32 +335,31 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
 
         // no default fdlc so if set stays set - delete on del cons from fn
 
-        var v = ((tempValObj?.optDict)?["frep0"] as? NSNumber)?.intValue ?? 0
-        if v >= FREPDFLT {
-            tempValObj?.optDict?.removeValue(forKey: "frv0")
+        var v = Int((tempValObj?.optDict["frep0"]!)!)
+        if v! >= FREPDFLT {
+            tempValObj?.optDict.removeValue(forKey: "frv0")
         }
 
-        v = ((tempValObj?.optDict)?["frep1"] as? NSNumber)?.intValue ?? 0
-        if v >= FREPDFLT {
-            tempValObj?.optDict?.removeValue(forKey: "frv1")
+        v = Int(tempValObj!.optDict["frep1"]!)
+        if v! >= FREPDFLT {
+            tempValObj?.optDict.removeValue(forKey: "frv1")
         }
 
         if ((tempValObj?.optDict)?["autoscale"] as? String) == "0" {
 
             // override no autoscale if gmin, gmax both set and equal
-            var gmn: Double
-            var gmx: Double
-
-            if (Scanner.localizedScanner(with: (tempValObj?.optDict)?["gmin"] as? String ?? "").scanDouble(UnsafeMutablePointer<Double>(mutating: &gmn))) && (Scanner.localizedScanner(with: (tempValObj?.optDict)?["gmax"] as? String ?? "").scanDouble(UnsafeMutablePointer<Double>(mutating: &gmx))) {
-                if gmn == gmx {
-                    (tempValObj?.optDict)?["autoscale"] = "1"
-                }
+            if let gminStr = self.tempValObj!.optDict["gmin"],
+               let gmaxStr = self.tempValObj!.optDict["gmax"],
+               let gmn = Double(gminStr),
+               let gmx = Double(gmaxStr),
+               gmn == gmx {
+                self.tempValObj!.optDict["autoscale"] = "1"
             }
         }
 
         #if DEBUGLOG
-        let selected = rTracker_resource.vtypeNames()?[row] as? String // [self.parentTrackerObj.votArray objectAtIndex:row];
-        DBGLog("save label: %@ id: %ld row: %lu = %@", tempValObj?.valueName, Int(tempValObj?.vid ?? 0), UInt(row), selected)
+        let selected = rTracker_resource.vtypeNames()[row]// [self.parentTrackerObj.votArray objectAtIndex:row];
+        DBGLog(String("save label: \(tempValObj!.valueName) id: \(Int(tempValObj!.vid)) row: \(UInt(row)) = \(selected)"))
         #endif
 
         parentTrackerObj?.addValObj(tempValObj)
@@ -379,14 +377,14 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
         //DBGLog(@"addVObjC: config was pressed!");
 
         let ctvovc = configTVObjVC(nibName: "configTVObjVC", bundle: nil)
-        ctvovc?.to = parentTrackerObj
+        ctvovc.to = parentTrackerObj
         //[parentTrackerObj retain];
-        ctvovc?.vo = tempValObj
+        ctvovc.vo = tempValObj
         if nil == voOptDictStash {
             voOptDictStash = tempValObj?.optDict // copyItems: true
         }
         //[tempValObj retain];
-        ctvovc?.modalTransitionStyle = .flipHorizontal
+        ctvovc.modalTransitionStyle = .flipHorizontal
         //[self presentModalViewController:ctvovc animated:YES];
         present(ctvovc, animated: true)
     }
@@ -394,7 +392,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
     // MARK: -
     // MARK: textField support Methods
 
-    @IBAction func labelFieldDone(_ sender: Any) {
+    @IBAction func labelFieldDone(_ sender: UITextField) {
         sender.resignFirstResponder()
         tempValObj?.valueName = labelField.text
     }
@@ -419,8 +417,8 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
             tsize = s1.size(withAttributes: [
                 NSAttributedString.Key.font: PrefBodyFont
             ])
-            tsize.width = ceilf(tsize.width)
-            tsize.height = ceilf(tsize.height)
+            tsize.width = ceil(tsize.width)
+            tsize.height = ceil(tsize.height)
             //}
             if tsize.width > rsize.width {
                 rsize = tsize
@@ -433,21 +431,21 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
     // MARK: -
     // MARK: Picker Data Source Methods
 
-    func numberOfComponents(in pickerView: UIPickerView?) -> Int {
+    func numberOfComponents(in pickerView: UIPickerView) -> Int {
         return 3
     }
 
     func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
         switch component {
         case 0:
-            return rTracker_resource.vtypeNames()?.count ?? 0 //[self.parentTrackerObj.votArray count];
+            return rTracker_resource.vtypeNames().count//[self.parentTrackerObj.votArray count];
         case 1:
             //return [self.parentTrackerObj.colorSet count];
             return colorCount
         case 2:
             return graphTypes?.count ?? 0
         default:
-            dbgNSAssert(0, "bad component for avo picker")
+            dbgNSAssert(false, "bad component for avo picker")
             return 0
         }
     }
@@ -478,41 +476,42 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
 
     #else
 
-    let COLORSIDE = FONTSIZE
-
+    //let COLORSIDE = FONTSIZE
+    let cgfFONTSIZE = CGFloat(FONTSIZE)
+    let cgfCOLORSIDE = CGFloat(FONTSIZE)
+    
     func pickerView(_ pickerView: UIPickerView, viewForRow row: Int, forComponent component: Int, reusing view: UIView?) -> UIView {
         var label: UILabel? = nil
-        var frame: CGRect
-
+        var frame: CGRect = CGRect.zero
 
         switch component {
         case 0:
             frame.size = sizeVOTLabel
-            frame.size.width += FONTSIZE
+            frame.size.width += cgfFONTSIZE
             frame.origin.x = 0.0
             frame.origin.y = 0.0
             label = UILabel(frame: frame)
             label?.backgroundColor = .clear //]greenColor];
-            label?.text = rTracker_resource.vtypeNames()?[row] as? String // (self.parentTrackerObj.votArray)[row];
-            label?.font = .boldSystemFont(ofSize: FONTSIZE)
+            label?.text = rTracker_resource.vtypeNames()[row] // (self.parentTrackerObj.votArray)[row];
+            label?.font = .boldSystemFont(ofSize: cgfFONTSIZE)
         case 1:
-            frame.size.height = 1.2 * COLORSIDE
-            frame.size.width = 2.0 * COLORSIDE
+            frame.size.height = 1.2 * cgfCOLORSIDE
+            frame.size.width = 2.0 * cgfCOLORSIDE
             frame.origin.x = 0.0
             frame.origin.y = 0.0
             label = UILabel(frame: frame)
-            label?.backgroundColor = rTracker_resource.colorSet()?[row] as? UIColor
+            label?.backgroundColor = rTracker_resource.colorSet()[row]
         case 2:
             frame.size = sizeGTLabel
-            frame.size.width += FONTSIZE
+            frame.size.width += cgfFONTSIZE
             frame.origin.x = 0.0
             frame.origin.y = 0.0
             label = UILabel(frame: frame)
             label?.backgroundColor = .clear //greenColor];
             label?.text = (graphTypes)?[row] as? String
-            label?.font = .boldSystemFont(ofSize: FONTSIZE)
+            label?.font = .boldSystemFont(ofSize: cgfFONTSIZE)
         default:
-            dbgNSAssert(0, "bad component for avo picker")
+            dbgNSAssert(false, "bad component for avo picker")
             label = UILabel() // fix analysis warning
         }
         return label!
@@ -523,13 +522,13 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
         //CGSize siz;
         switch component {
         case 0:
-            return sizeVOTLabel.width + (2.0 * FONTSIZE)
+            return sizeVOTLabel.width + (2.0 * cgfFONTSIZE)
         case 1:
-            return 3.0 * COLORSIDE
+            return 3.0 * cgfCOLORSIDE
         case 2:
-            return sizeGTLabel.width + (2.0 * FONTSIZE)
+            return sizeGTLabel.width + (2.0 * cgfFONTSIZE)
         default:
-            dbgNSAssert(0, "bad component for avo picker")
+            dbgNSAssert(false, "bad component for avo picker")
             return 0.0
         }
     }
@@ -546,7 +545,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
         } else if tempValObj?.vGraphType == VOG_NONE {
             colorCount = 0
         } else if colorCount == 0 {
-            colorCount = rTracker_resource.colorSet()?.count ?? 0
+            colorCount = rTracker_resource.colorSet().count
         }
 
         if oldcc != colorCount {

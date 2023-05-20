@@ -72,13 +72,8 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
     var vo: valueObj?
     var voOptDictStash: [AnyHashable : Any]?
 
-    private var _wDict: [AnyHashable : Any]?
-    var wDict: [AnyHashable : Any]? {
-        if _wDict == nil {
-            _wDict = [:]
-        }
-        return _wDict
-    }
+    var wDict: [String : Any] = [:]
+    
     var lasty: CGFloat = 0.0
     var lastx: CGFloat = 0.0
     var saveFrame = CGRect.zero
@@ -98,12 +93,15 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
     // MARK: -
     // MARK: core object methods and support
 
-    override init() {
-        super.init()
+    // override init() {
+    //    super.init()
+    override init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) {
+        super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)
         processingTfDone = false
         rDates = []
     }
 
+    
     // MARK: -
     // MARK: view support
 
@@ -179,9 +177,9 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
 
 
         if (name == nil) || (name == "") {
-            if let vtypeNames = rTracker_resource.vtypeNames()?[vo?.vtype ?? 0] {
-                name = "<\(vtypeNames)>"
-            } // (self.to.votArray)[self.vo.vtype]];
+            let vtypeNames = rTracker_resource.vtypeNames()[vo?.vtype ?? 0]
+            name = "<\(vtypeNames)>"
+             // (self.to.votArray)[self.vo.vtype]];
         }
         navBar.items?.last?.title = "Configure \(name ?? "")"
         name = nil
@@ -240,7 +238,13 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
                 fnHelpButtonItem = UIBarButtonItem(title: "Help", style: .plain, target: self, action: #selector(btnInfoHelp))
             }
 
-            toolBar.items = [doneBtn, flexibleSpaceButtonItem, fnHelpButtonItem]
+            var items: [UIBarButtonItem] = [doneBtn, flexibleSpaceButtonItem]
+
+            if let fnHelpButtonItem = fnHelpButtonItem {
+                items.append(fnHelpButtonItem)
+            }
+
+            toolBar.items = items
         } else {
             toolBar.items = [doneBtn]
         }
@@ -342,7 +346,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         #if DEBUGLOG
         let touch = touches.first as? UITouch
         let touchPoint = touch?.location(in: view)
-        DBGLog("I am touched at %f, %f.", touchPoint?.x, touchPoint?.y)
+        DBGLog(String("I am touched at \(touchPoint!.x), \(touchPoint!.y)."))
         #endif
 
         activeField?.resignFirstResponder()
@@ -444,19 +448,21 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
 
     // MARK: newWidget methods
 
-    func configLabel(_ text: String?, frame: CGRect, key: String?, addsv: Bool) -> CGRect {
+    func configLabel(_ text: String, frame: CGRect, key: String, addsv: Bool) -> CGRect {
         var frame = frame
         //frame.size = [text sizeWithAttributes:@{NSFontAttributeName:[UIFont systemFontOfSize:[UIFont labelFontSize]]}];
-        frame.size = text?.size(withAttributes: [
+        frame.size = text.size(withAttributes: [
             NSAttributedString.Key.font: PrefBodyFont
-        ]) ?? CGSize.zero
+        ])
 
         let rlab = UILabel(frame: frame)
         rlab.font = PrefBodyFont
         rlab.text = text
         rlab.backgroundColor = .clear
 
-        (wDict)?[key ?? ""] = rlab
+        // wDict[key] = rlab
+        wDict[key] = rlab
+        
         if addsv {
             scroll.addSubview(rlab)
         }
@@ -474,10 +480,10 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         var img: String?
         var dfltState = AUTOSCALEDFLT
 
-        if btn == ((wDict)?["nasBtn"] as? UIButton) {
+        if btn == (wDict["nasBtn"] as? UIButton) {
             okey = "autoscale"
             dfltState = AUTOSCALEDFLT
-            if ((vo?.optDict)?[okey ?? ""] as? String) == "0" {
+            if ((vo?.optDict)?[okey!] as? String) == "0" {
                 // will switch on
                 removeGraphMinMax()
                 //[self addGraphFromZero];  // ASFROMZERO
@@ -485,50 +491,50 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
                 //[self removeGraphFromZero];
                 addGraphMinMax() // ASFROMZERO
             }
-        } else if btn == ((wDict)?["csbBtn"] as? UIButton) {
+        } else if btn == (wDict["csbBtn"] as? UIButton) {
             okey = "shrinkb"
             dfltState = SHRINKBDFLT
-        } else if btn == ((wDict)?["cevBtn"] as? UIButton) {
+        } else if btn == (wDict["cevBtn"] as? UIButton) {
             okey = "exportvalb"
             dfltState = EXPORTVALBDFLT
-        } else if btn == ((wDict)?["stdBtn"] as? UIButton) {
+        } else if btn == (wDict["stdBtn"] as? UIButton) {
             okey = "setstrackerdate"
             dfltState = SETSTRACKERDATEDFLT
-        } else if btn == ((wDict)?["sisBtn"] as? UIButton) {
+        } else if btn == (wDict["sisBtn"] as? UIButton) {
             okey = "integerstepsb"
             dfltState = INTEGERSTEPSBDFLT
-        } else if btn == ((wDict)?["sdeBtn"] as? UIButton) {
+        } else if btn == (wDict["sdeBtn"] as? UIButton) {
             okey = "defaultenabledb"
             dfltState = DEFAULTENABLEDBDFLT
-        } else if btn == ((wDict)?["sswlBtn"] as? UIButton) {
+        } else if btn == (wDict["sswlBtn"] as? UIButton) {
             okey = "slidrswlb"
             dfltState = SLIDRSWLBDFLT
-        } else if btn == ((wDict)?["tbnlBtn"] as? UIButton) {
+        } else if btn == (wDict["tbnlBtn"] as? UIButton) {
             okey = "tbnl"
             dfltState = TBNLDFLT
-        } else if btn == ((wDict)?["tbniBtn"] as? UIButton) {
+        } else if btn == (wDict["tbniBtn"] as? UIButton) {
             okey = "tbni"
             dfltState = TBNIDFLT
-        } else if btn == ((wDict)?["tbhiBtn"] as? UIButton) {
+        } else if btn == (wDict["tbhiBtn"] as? UIButton) {
             okey = "tbhi"
             dfltState = TBHIDFLT
-        } else if btn == ((wDict)?["ggBtn"] as? UIButton) {
+        } else if btn == (wDict["ggBtn"] as? UIButton) {
             okey = "graph"
             dfltState = GRAPHDFLT
-        } else if btn == ((wDict)?["swlBtn"] as? UIButton) {
+        } else if btn == (wDict["swlBtn"] as? UIButton) {
             okey = "nswl"
             dfltState = NSWLDFLT
-        } else if btn == ((wDict)?["srBtn"] as? UIButton) {
+        } else if btn == (wDict["srBtn"] as? UIButton) {
             okey = "savertn"
             dfltState = SAVERTNDFLT
-        } else if btn == ((wDict)?["graphLastBtn"] as? UIButton) {
+        } else if btn == (wDict["graphLastBtn"] as? UIButton) {
             okey = "graphlast"
             dfltState = GRAPHLASTDFLT
-        } else if btn == ((wDict)?["infosaveBtn"] as? UIButton) {
+        } else if btn == (wDict["infosaveBtn"] as? UIButton) {
             okey = "infosave"
             dfltState = INFOSAVEDFLT
         } else {
-            dbgNSAssert(0, "ckButtonAction cannot identify btn")
+            dbgNSAssert(false, "ckButtonAction cannot identify btn")
             okey = "x" // make analyze happy
         }
 
@@ -541,19 +547,19 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         }
 
         if vo == nil {
-            if ((to?.optDict)?[okey ?? ""] as? String) == ndflt {
-                (to?.optDict)?[okey ?? ""] = dflt
+            if (to!.optDict[okey!] as! String) == ndflt {
+                to!.optDict[okey!] = dflt
                 img = dfltState ? "checked.png" : "unchecked.png" // going to default state
             } else {
-                (to?.optDict)?[okey ?? ""] = ndflt
+                to!.optDict[okey!] = ndflt
                 img = dfltState ? "unchecked.png" : "checked.png" // going to not default state
             }
         } else {
-            if ((vo?.optDict)?[okey ?? ""] as? String) == ndflt {
-                (vo?.optDict)?[okey ?? ""] = dflt
+            if (vo!.optDict[okey!]) == ndflt {
+                vo!.optDict[okey!] = dflt
                 img = dfltState ? "checked.png" : "unchecked.png" // going to default state
             } else {
-                (vo?.optDict)?[okey ?? ""] = ndflt
+                vo!.optDict[okey!] = ndflt
                 img = dfltState ? "unchecked.png" : "checked.png" // going to not default state
             }
         }
@@ -575,7 +581,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         imageButton.contentVerticalAlignment = .center
         imageButton.contentHorizontalAlignment = .right //Center;
 
-        (wDict)?[key ?? ""] = imageButton
+        wDict[key ?? ""] = imageButton
         imageButton.addTarget(self, action: #selector(checkBtnAction(_:)), for: .touchUpInside)
 
         imageButton.setImage(
@@ -590,7 +596,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         return frame
     }
 
-    func configActionBtn(_ frame: CGRect, key: String?, label: String?, target: Any?, action: Selector) -> CGRect {
+    func configActionBtn(_ pframe: CGRect, key: String?, label: String?, target: Any?, action: Selector) -> CGRect {
         /*
             if (frame.origin.x + frame.size.width > [rTracker_resource getKeyWindowWidth]) {
                 frame.origin.x = MARGIN;
@@ -599,6 +605,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
             */
 
         let button = UIButton(type: .roundedRect)
+        var frame = pframe
         button.titleLabel?.font = PrefBodyFont
         if let font = button.titleLabel?.font {
             frame.size.width = (label?.size(withAttributes: [
@@ -615,7 +622,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         //imageButton.contentHorizontalAlignment = UIControlContentHorizontalAlignmentRight; //Center;
 
         if nil != key {
-            (wDict)?[key ?? ""] = button
+            wDict[key ?? ""] = button
         }
 
         button.addTarget(target, action: action, for: .touchUpInside)
@@ -634,26 +641,26 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
 
         var okey: String? = nil
         var nkey: String? = nil
-        if tf == ((wDict)?["nminTF"] as? UITextField) {
+        if tf == (wDict["nminTF"] as? UITextField) {
             okey = "gmin"
             nkey = "nmaxTF"
-        } else if tf == ((wDict)?["nmaxTF"] as? UITextField) {
+        } else if tf == (wDict["nmaxTF"] as? UITextField) {
             okey = "gmax"
             nkey = nil
-        } else if tf == ((wDict)?["sminTF"] as? UITextField) {
+        } else if tf == (wDict["sminTF"] as? UITextField) {
             okey = "smin"
             nkey = "smaxTF"
-        } else if tf == ((wDict)?["smaxTF"] as? UITextField) {
+        } else if tf == (wDict["smaxTF"] as? UITextField) {
             okey = "smax"
             nkey = "sdfltTF"
-        } else if tf == ((wDict)?["sdfltTF"] as? UITextField) {
+        } else if tf == (wDict["sdfltTF"] as? UITextField) {
             okey = "sdflt"
             nkey = nil
-        } else if tf == ((wDict)?["gpTF"] as? UITextField) {
+        } else if tf == (wDict["gpTF"] as? UITextField) {
             okey = "privacy"
             nkey = nil
 
-            let currPriv = privacyV.getPrivacyValue()
+            let currPriv = privacyValue
             var newPriv = Int(tf?.text ?? "") ?? 0
             if newPriv > currPriv {
                 //newPriv = currPriv;
@@ -667,37 +674,37 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
                 let msg = "Setting a privacy level below \(PRIVDFLT) is disallowed."
                 rTracker_resource.alert("Privacy setting too low", msg: msg, vc: self)
             }
-        } else if tf == ((wDict)?["gyTF"] as? UITextField) {
+        } else if tf == (wDict["gyTF"] as? UITextField) {
             okey = "yline1"
             nkey = nil
-        } else if tf == ((wDict)?["gmdTF"] as? UITextField) {
+        } else if tf == (wDict["gmdTF"] as? UITextField) {
             okey = "graphMaxDays"
             nkey = nil
-        } else if tf == ((wDict)?["deTF"] as? UITextField) {
+        } else if tf == (wDict["deTF"] as? UITextField) {
             okey = "dfltEmail"
             nkey = nil
-        } else if tf == ((wDict)?["fr0TF"] as? UITextField) {
+        } else if tf == (wDict["fr0TF"] as? UITextField) {
             okey = "frv0"
             nkey = nil
-        } else if tf == ((wDict)?["fr1TF"] as? UITextField) {
+        } else if tf == (wDict["fr1TF"] as? UITextField) {
             okey = "frv1"
             nkey = nil
-        } else if tf == ((wDict)?["fnddpTF"] as? UITextField) {
+        } else if tf == (wDict["fnddpTF"] as? UITextField) {
             okey = "fnddp"
             nkey = nil
-        } else if tf == ((wDict)?["numddpTF"] as? UITextField) {
+        } else if tf == (wDict["numddpTF"] as? UITextField) {
             okey = "numddp"
             nkey = nil
-        } else if tf == ((wDict)?["bvalTF"] as? UITextField) {
+        } else if tf == (wDict["bvalTF"] as? UITextField) {
             okey = "boolval"
             nkey = nil
-        } else if tf == ((wDict)?["ivalTF"] as? UITextField) {
+        } else if tf == (wDict["ivalTF"] as? UITextField) {
             okey = "infoval"
             nkey = nil
-        } else if tf == ((wDict)?["iurlTF"] as? UITextField) {
+        } else if tf == (wDict["iurlTF"] as? UITextField) {
             okey = "infourl"
             nkey = nil
-        } else if tf == ((wDict)?[CTFKEY] as? UITextField) {
+        } else if tf == (wDict[CTFKEY] as? UITextField) {
             okey = LCKEY
             nkey = nil
         } else {
@@ -707,16 +714,16 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
 
         if vo == nil {
             // tracker config
-            DBGLog("to set %@: %@", okey, tf?.text)
-            (to?.optDict)?[okey ?? ""] = tf?.text
+            DBGLog(String("to set \(okey): \(tf?.text)"))
+            to!.optDict[okey!] = tf?.text
         } else {
             // valobj config
-            DBGLog("vo set %@: %@", okey, tf?.text)
-            (vo?.optDict)?[okey ?? ""] = tf?.text
+            DBGLog(String("vo set \(okey): \(tf?.text)"))
+            vo!.optDict[okey!] = tf?.text
         }
 
         if let nkey {
-            (wDict)?[nkey]?.becomeFirstResponder()
+            (wDict[nkey] as! UITextField).becomeFirstResponder()
         } else {
             tf?.resignFirstResponder()
         }
@@ -727,7 +734,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
 
     }
 
-    func configTextField(_ frame: CGRect, key: String?, target: Any?, action: Selector, num: Bool, place: String?, text: String?, addsv: Bool) -> CGRect {
+    func configTextField(_ pframe: CGRect, key: String?, target: Any?, action: Selector?, num: Bool, place: String?, text: String?, addsv: Bool) -> CGRect {
         /*
             if (frame.origin.x + frame.size.width > [rTracker_resource getKeyWindowWidth]) {
                 frame.origin.x = MARGIN;
@@ -735,6 +742,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
             }
             */
 
+        var frame = pframe
         frame.origin.y -= TFXTRA
         let rtf = rTracker_resource.rrConfigTextField(
             frame,
@@ -746,7 +754,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
             place: place,
             text: text)
 
-        (wDict)?[key ?? ""] = rtf
+        wDict[key ?? ""] = rtf
 
         if addsv {
             if let rtf {
@@ -767,7 +775,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
             */
         let rtv = UITextView(frame: frame)
         rtv.isEditable = false
-        (wDict)?[key ?? ""] = rtv
+        wDict[key ?? ""] = rtv
 
         rtv.text = text
         //[rtv scrollRangeToVisible: (NSRange) { (NSUInteger) ([text length]-1), (NSUInteger)1 }];  // works 1st time but text is cached so doesn't work subsequently
@@ -794,7 +802,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         myPickerView.delegate = caller as? UIPickerViewDelegate
         myPickerView.dataSource = caller as? UIPickerViewDataSource
 
-        (wDict)?[key ?? ""] = myPickerView
+        wDict[key ?? ""] = myPickerView
         scroll.addSubview(myPickerView)
 
         return frame
@@ -808,10 +816,10 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         // [UIView setAnimationDuration:kAnimationDuration];
 
         UIView.animate(withDuration: 0.2, animations: { [self] in
-            (wDict)?["nminLab"]?.removeFromSuperview()
-            (wDict)?["nminTF"]?.removeFromSuperview()
-            (wDict)?["nmaxLab"]?.removeFromSuperview()
-            (wDict)?["nmaxTF"]?.removeFromSuperview()
+            (wDict["nminLab"] as? UIView)?.removeFromSuperview()
+            (wDict["nminTF"] as? UIView)?.removeFromSuperview()
+            (wDict["nmaxLab"] as? UIView)?.removeFromSuperview()
+            (wDict["nmaxTF"] as? UIView)?.removeFromSuperview()
         })
 
         // [UIView commitAnimations];
@@ -831,16 +839,16 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         	*/
 
         UIView.animate(withDuration: 0.2, animations: { [self] in
-            if let aWDict = (wDict)?["nminLab"] as? UIView {
+            if let aWDict = wDict["nminLab"] as? UIView {
                 scroll.addSubview(aWDict)
             }
-            if let aWDict = (wDict)?["nminTF"] as? UIView {
+            if let aWDict = wDict["nminTF"] as? UIView {
                 scroll.addSubview(aWDict)
             }
-            if let aWDict = (wDict)?["nmaxLab"] as? UIView {
+            if let aWDict = wDict["nmaxLab"] as? UIView {
                 scroll.addSubview(aWDict)
             }
-            if let aWDict = (wDict)?["nmaxTF"] as? UIView {
+            if let aWDict = wDict["nmaxTF"] as? UIView {
                 scroll.addSubview(aWDict)
             }
         })
@@ -859,10 +867,10 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         labframe = configLabel("Auto Scale:", frame: frame, key: "nasLab", addsv: true)
         frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
 
-        configCheckButton(
+        _ = configCheckButton(
             frame,
             key: "nasBtn",
-            state: !((vo?.optDict)?["autoscale"] == "0"),
+            state: !((vo!.optDict["autoscale"]) == "0"),
             addsv: true)
 
         //if (! autoscale) {  still need to calc lasty, make room before general options
@@ -878,7 +886,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         frame.size.width = tfWidth
         frame.size.height = lfHeight // self.labelField.frame.size.height; // lab.frame.size.height;
 
-        configTextField(
+        _ = configTextField(
             frame,
             key: "nminTF",
             target: nil,
@@ -895,7 +903,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         frame.size.width = tfWidth
         frame.size.height = lfHeight // self.labelField.frame.size.height; // lab.frame.size.height;
 
-        configTextField(
+        _ = configTextField(
             frame,
             key: "nmaxTF",
             target: nil,
@@ -905,7 +913,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
             text: (vo?.optDict)?["gmax"] /* was ngmax */ as? String,
             addsv: false)
 
-        if (vo?.optDict)?["autoscale"] == "0" {
+        if (vo!.optDict["autoscale"]) == "0" {
             addGraphMinMax()
         }
 
@@ -919,8 +927,8 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         DBGLog("notify reminder view!")
         let nrvc = notifyReminderViewController(nibName: "notifyReminderViewController", bundle: nil)
         //nrvc.view.hidden = NO;
-        nrvc?.tracker = to
-        nrvc?.modalTransitionStyle = .flipHorizontal
+        nrvc.tracker = to
+        nrvc.modalTransitionStyle = .flipHorizontal
         //if ( SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"6.0") ) {
         present(nrvc, animated: true)
         //} else {
@@ -936,20 +944,13 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
     // prefer don't do this - better to just reload plist
     // added plist/dict load code so match on vid and valueName='recover%d' will overwrite
     func recoverValuesBtn() {
-        let recoverCount = 0
-        var Ids: [AnyHashable] = []
-        var sql = "select distinct id from voData order by id"
-        to?.toQry2AryI(&Ids, sql: sql)
+        var recoverCount = 0
+        let Ids = to!.toQry2AryI(sql: "select distinct id from voData order by id")
         for ni in Ids {
-            guard let ni = ni as? NSNumber else {
-                continue
-            }
-            let i = ni.intValue
-            sql = "select id from voConfig where id=\(i)"
-            if i != to?.toQry2Int(sql) {
-                let recoverName = "recover\(i)"
-                sql = "insert into voConfig (id, rank, type, name, color, graphtype,priv) values (\(i), \(0), \(VOT_NUMBER), '\(recoverName)', \(0), \(VOG_DOTS), \(PRIVDFLT));"
-                to?.toExecSql(sql)
+            if ni != to!.toQry2Int(sql:"select id from voConfig where id=\(ni)") {
+                let recoverName = "recover\(ni)"
+                let sql = "insert into voConfig (id, rank, type, name, color, graphtype,priv) values (\(ni), \(0), \(VOT_NUMBER), '\(recoverName)', \(0), \(VOG_DOTS), \(PRIVDFLT));"
+                to?.toExecSql(sql:sql)
                 recoverCount += 1
             }
         }
@@ -981,23 +982,23 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         var titleStr: String?
         rTracker_resource.setNotificationsEnabled()
         var sql = "select count(*) from trkrData"
-        let dateEntries = to?.toQry2Int(sql) ?? 0
+        let dateEntries = to?.toQry2Int(sql:sql) ?? 0
         sql = "select count(*) from voData"
-        let dataPoints = to?.toQry2Int(sql) ?? 0
+        let dataPoints = to?.toQry2Int(sql:sql) ?? 0
         sql = "select count(*) from voConfig"
-        let itemCount = to?.toQry2Int(sql) ?? 0
+        let itemCount = to?.toQry2Int(sql:sql) ?? 0
 
         titleStr = String(format: "tracker number %ld\n%d items\n%d date entries\n%d data points", Int(to?.toid ?? 0), itemCount, dateEntries, dataPoints)
 
         sql = "select count(*) from (select * from voData where id not in (select id from voConfig))"
-        let orphanDatapoints = to?.toQry2Int(sql) ?? 0
+        let orphanDatapoints = to?.toQry2Int(sql:sql) ?? 0
 
         if 0 < orphanDatapoints {
             titleStr = (titleStr ?? "") + "\n\(orphanDatapoints) missing item data points"
         }
 
         sql = "select count(*) from reminders"
-        let reminderCount = to?.toQry2Int(sql) ?? 0
+        let reminderCount = to?.toQry2Int(sql:sql) ?? 0
 
         let scheduledReminderCount = rDates?.count ?? 0
         titleStr = (titleStr ?? "") + "\n\n\(reminderCount) stored reminders\n\(scheduledReminderCount) scheduled reminders"
@@ -1062,12 +1063,12 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
 
         let center = UNUserNotificationCenter.current()
         center.getPendingNotificationRequests(completionHandler: { [self] notifications in
-            for i in 0..<(notifications?.count ?? 0) {
-                let oneEvent = notifications?[i] as? UNNotificationRequest
-                let userInfoCurrent = oneEvent?.content.userInfo
+            for i in 0..<notifications.count {
+                let oneEvent = notifications[i]
+                let userInfoCurrent = oneEvent.content.userInfo
                 //DBGLog(@"pending reminder for %ld my tid %ld", (long) [userInfoCurrent[@"tid"] integerValue], (long) self.to.toid);
-                if (userInfoCurrent?["tid"] as? NSNumber)?.intValue ?? 0 == to?.toid {
-                    let nextTD = (oneEvent?.trigger as? UNCalendarNotificationTrigger)?.nextTriggerDate()
+                if (userInfoCurrent["tid"] as? NSNumber)!.intValue == to?.toid {
+                    let nextTD = (oneEvent.trigger as? UNCalendarNotificationTrigger)?.nextTriggerDate()
                     //DBGLog(@"td = %@", nextTD);
                     if let nextTD {
                         rDates?.append(nextTD)
@@ -1100,7 +1101,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         frame = configCheckButton(
             frame,
             key: "srBtn",
-            state: !((to?.optDict)?["savertn"] == "0"),
+            state: !((to!.optDict["savertn"] as? String) == "0"),
             addsv: true)
 
         //-- privacy level label
@@ -1242,14 +1243,14 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
     }
 
     func removeSVFields() {
-        for key in wDict ?? [:] {
-            guard let key = key as? String else {
-                continue
-            }
-            //DBGLog(@"removing %@",key);
-            (wDict?[key] as? UIView)?.removeFromSuperview()
-        }
-        wDict?.removeAll()
+        /*
+         for key in wDict {
+             //DBGLog(@"removing %@",key);
+             (wDict[key] as? UIView).removeFromSuperview()
+         }
+         */
+        wDict.values.compactMap({ $0 as? UIView }).forEach({ $0.removeFromSuperview() })
+        wDict.removeAll()
         lasty = navBar.frame.origin.y + navBar.frame.size.height + MARGIN
     }
 

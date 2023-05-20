@@ -22,6 +22,7 @@
 //
 
 import Foundation
+import UIKit
 
 class voSlider: voState {
     /*{
@@ -54,20 +55,16 @@ class voSlider: voState {
             // in case the parent view draws with a custom color or gradient, use a transparent color
             _sliderCtl?.backgroundColor = .clear
 
-            let nsmin = (vo?.optDict)?["smin"] as? NSNumber
-            let nsmax = (vo?.optDict)?["smax"] as? NSNumber
-            let nsdflt = (vo?.optDict)?["sdflt"] as? NSNumber
+            let smin = vo.optDict["smin"] != nil ? Double(vo.optDict["smin"]!) : SLIDRMINDFLT
+            let smax = vo.optDict["smax"] != nil ? Double(vo.optDict["smax"]!) : SLIDRMAXDFLT
+            //let sdflt = vo.optDict["sdflt"] != nil ? Double(vo.optDict["sdflt"]!) : SLIDRDFLTDFLT
 
-            let smin = nsmin != nil ? Double(nsmin?.floatValue ?? 0.0) : SLIDRMINDFLT
-            let smax = nsmax != nil ? Double(nsmax?.floatValue ?? 0.0) : SLIDRMAXDFLT
-            sdflt = nsdflt != nil ? Double(nsdflt?.floatValue ?? 0.0) : SLIDRDFLTDFLT
-
-            _sliderCtl?.minimumValue = Float(smin)
-            _sliderCtl?.maximumValue = Float(smax)
+            _sliderCtl?.minimumValue = Float(smin!)
+            _sliderCtl?.maximumValue = Float(smax!)
             _sliderCtl?.isContinuous = true
             // Add an accessibility label that describes the slider.
             //[sliderCtl setAccessibilityLabel:NSLocalizedString(@"StandardSlider", @"")];
-            _sliderCtl?.accessibilityLabel = "\(vo?.valueName ?? "") slider"
+            _sliderCtl?.accessibilityLabel = "\(vo.valueName ?? "") slider"
 
             //sliderCtl.tag = kViewTag;	// tag this view for later so we can remove it from recycled table cells
 
@@ -86,27 +83,27 @@ class voSlider: voState {
     }
     var sdflt: CGFloat = 0.0
 
-    override init(vo valo: valueObj?) {
+    override init(vo valo: valueObj) {
         super.init(vo: valo)
-        vo?.useVO = false
+        vo.useVO = false
     }
 
     override func resetData() {
-        vo?.useVO = false
+        vo.useVO = false
     }
 
-    override func voTVCell(_ tableView: UITableView?) -> UITableViewCell? {
+    override func voTVCell(_ tableView: UITableView) -> UITableViewCell {
         return super.voTVEnabledCell(tableView)
     }
 
     override func voTVCellHeight() -> CGFloat {
         //return CELL_HEIGHT_TALL;
-        DBGLog("%f %f %f %f", sliderCtl?.frame.size.height, (3 * MARGIN), vo?.getLabelSize().height, vo?.getLongTitleSize().height)
-        return (sliderCtl?.frame.size.height ?? 0.0) + (3 * MARGIN) + (vo?.getLabelSize().height ?? 0.0) + (vo?.getLongTitleSize().height ?? 0.0)
+        DBGLog(String("\(sliderCtl!.frame.size.height) \(3 * MARGIN) \(vo.getLabelSize().height) \(vo.getLongTitleSize().height)"))
+        return sliderCtl!.frame.size.height + (3 * MARGIN) + vo.getLabelSize().height + vo.getLongTitleSize().height
     }
 
     @objc func sliderAction(_ sender: UISlider?) {
-        DBGLog("slider action value = %f", (sender)?.value)
+        DBGLog(String("slider action value = \((sender)?.value ?? 0.0)"))
         /*
         	//
         	//[self.vo.value setString:[NSString stringWithFormat:@"%f",sender.value]];
@@ -121,16 +118,16 @@ class voSlider: voState {
             }
             */
 
-        if !(vo?.useVO ?? false) {
-            vo?.enableVO()
+        if !vo.useVO {
+            vo.enableVO()
         }
 
-        if ((vo?.optDict)?["integerstepsb"] as? String) == "1" {
+        if vo.optDict["integerstepsb"] == "1" {
             let slider = sender
             let ival = Int(Double(Int(slider?.value ?? 0)) + 0.5)
             slider?.setValue(Float(ival), animated: true)
         }
-        vo?.value = "\(sliderCtl?.value ?? 0.0)"
+        vo.value = "\(sliderCtl?.value ?? 0.0)"
 
         //DBGLog(@"slider action value = %f valstr= %@ vs dbl= %f", ((UISlider *)sender).value, self.vo.value, [self.vo.value doubleValue]);
 
@@ -152,46 +149,46 @@ class voSlider: voState {
     */
 
     @objc func sliderTouchUp(_ sender: UISlider?) {
-        (vo?.parentTracker as? trackerObj)?.swipeEnable = true
+        vo.parentTracker.swipeEnable = true
         DBGLog("*********slider up")
     }
 
     @objc func sliderTouchDown(_ sender: UISlider?) {
-        (vo?.parentTracker as? trackerObj)?.swipeEnable = false
+        vo.parentTracker.swipeEnable = false
         DBGLog("********slider down")
     }
 
-    override func voDisplay(_ bounds: CGRect) -> UIView? {
+    override func voDisplay(_ bounds: CGRect) -> UIView {
         vosFrame = bounds
 
         #if DEBUGLOG
-        let vals = vo?.value
-        let valf = CGFloat(Float(vo?.value ?? "") ?? 0.0)
+        let vals = vo.value
+        let valf = CGFloat(Float(vo.value ?? "") ?? 0.0)
         //trackerObj *pto = self.vo.parentTracker;
 
-        DBGLog("voDisplay slider %@ vals= %@ valf= %f -> slider.valf= %f", vo?.valueName, vals, valf, sliderCtl?.value)
+        DBGLog(String("voDisplay slider \(vo.valueName ?? "") vals= \(vals) valf= \(valf) -> slider.valf= \(sliderCtl?.value ?? 0.0)"))
         #endif
 
         //DBGLog(@"parent tracker date= %@",pto.trackerDate);
-        if vo?.value == "" {
-            if (vo?.optDict)?["slidrswlb"] == "1" {
-                let to = vo?.parentTracker as? trackerObj
-                var sql = String(format: "select count(*) from voData where id=%ld and date<%d", Int(vo?.vid ?? 0), Int(to?.trackerDate?.timeIntervalSince1970 ?? 0))
-                let v = to?.toQry2Int(sql) ?? 0
+        if vo.value == "" {
+            if vo.optDict["slidrswlb"] == "1" {
+                let to = vo.parentTracker
+                var sql = String(format: "select count(*) from voData where id=%ld and date<%d", Int(vo.vid), Int(to.trackerDate!.timeIntervalSince1970))
+                let v = to.toQry2Int(sql:sql) ?? 0
                 if v > 0 {
-                    sql = String(format: "select val from voData where id=%ld and date<%d order by date desc limit 1;", Int(vo?.vid ?? 0), Int(to?.trackerDate?.timeIntervalSince1970 ?? 0))
-                    sliderCtl?.value = to?.toQry2Float(sql) ?? 0.0
+                    sql = String(format: "select val from voData where id=%ld and date<%d order by date desc limit 1;", Int(vo.vid), Int(to.trackerDate!.timeIntervalSince1970))
+                    sliderCtl?.value = to.toQry2Float(sql:sql) ?? 0.0
                 }
             } else {
                 sliderCtl?.setValue(Float(sdflt), animated: false)
             }
-        } else if sliderCtl?.value != Float(vo?.value ?? "") ?? 0.0 {
+        } else if sliderCtl?.value != Float(vo.value ?? "") ?? 0.0 {
             //self.sliderCtl.value = [self.vo.value floatValue];
-            sliderCtl?.setValue(Float(vo?.value ?? "") ?? 0.0, animated: false)
+            sliderCtl?.setValue(Float(vo.value ?? "") ?? 0.0, animated: false)
         }
-        DBGLog("sliderCtl voDisplay: %f", sliderCtl?.value)
+        DBGLog(String("sliderCtl voDisplay: \(sliderCtl?.value ?? 0.0)"))
         //NSLog(@"sliderCtl voDisplay: %f", self.sliderCtl.value);
-        return sliderCtl
+        return sliderCtl!
     }
 
     /*
@@ -234,59 +231,60 @@ class voSlider: voState {
      */
 
 
-    override func voGraphSet() -> [AnyHashable]? {
+    override func voGraphSet() -> [String] {
         return voState.voGraphSetNum()
     }
 
     override func setOptDictDflts() {
-        if nil == (vo?.optDict)?["smin"] {
-            (vo?.optDict)?["smin"] = String(format: "%3.1f", SLIDRMINDFLT)
+        if nil == vo.optDict["smin"] {
+            vo.optDict["smin"] = String(format: "%3.1f", SLIDRMINDFLT)
         }
-        if nil == (vo?.optDict)?["smax"] {
-            (vo?.optDict)?["smax"] = String(format: "%3.1f", SLIDRMAXDFLT)
+        if nil == vo.optDict["smax"] {
+            vo.optDict["smax"] = String(format: "%3.1f", SLIDRMAXDFLT)
         }
-        if nil == (vo?.optDict)?["sdflt"] {
-            (vo?.optDict)?["sdflt"] = String(format: "%3.1f", SLIDRDFLTDFLT)
-        }
-
-        if nil == (vo?.optDict)?["integerstepsb"] {
-            (vo?.optDict)?["integerstepsb"] = INTEGERSTEPSBDFLT ? "1" : "0"
-        }
-        if nil == (vo?.optDict)?["defaultenabledb"] {
-            (vo?.optDict)?["defaultenabledb"] = DEFAULTENABLEDBDFLT ? "1" : "0"
+        if nil == vo.optDict["sdflt"] {
+            vo.optDict["sdflt"] = String(format: "%3.1f", SLIDRDFLTDFLT)
         }
 
-        if nil == (vo?.optDict)?["slidrswlb"] {
-            (vo?.optDict)?["slidrswlb"] = SLIDRSWLBDFLT ? "1" : "0"
+        if nil == vo.optDict["integerstepsb"] {
+            vo.optDict["integerstepsb"] = INTEGERSTEPSBDFLT ? "1" : "0"
+        }
+        if nil == vo.optDict["defaultenabledb"] {
+            vo.optDict["defaultenabledb"] = DEFAULTENABLEDBDFLT ? "1" : "0"
+        }
+
+        if nil == vo.optDict["slidrswlb"] {
+            vo.optDict["slidrswlb"] = SLIDRSWLBDFLT ? "1" : "0"
         }
 
         return super.setOptDictDflts()
     }
 
-    override func cleanOptDictDflts(_ key: String?) -> Bool {
+    override func cleanOptDictDflts(_ key: String) -> Bool {
 
-        let val = (vo?.optDict)?[key ?? ""] as? String
-        if nil == val {
+        guard let val = vo.optDict[key] else {
             return true
         }
 
-        if ((key == "smin") && (Float(val ?? "") ?? 0.0 == f(SLIDRMINDFLT))) || ((key == "smax") && (Float(val ?? "") ?? 0.0 == f(SLIDRMAXDFLT))) || ((key == "sdflt") && (Float(val ?? "") ?? 0.0 == f(SLIDRDFLTDFLT))) {
-            vo?.optDict?.removeValue(forKey: key)
+        if ((key == "smin") && (Float(val) == f(SLIDRMINDFLT)))
+            || ((key == "smax") && (Float(val) == f(SLIDRMAXDFLT)))
+            || ((key == "sdflt") && (Float(val) == f(SLIDRDFLTDFLT))) {
+            vo.optDict.removeValue(forKey: key)
             return true
         }
 
-        if (key == "integerstepsb") && (val == INTEGERSTEPSBDFLT ? "1" : "0") {
-            vo?.optDict?.removeValue(forKey: key)
+        if (key == "integerstepsb") && (val == (INTEGERSTEPSBDFLT ? "1" : "0")) {
+            vo.optDict.removeValue(forKey: key)
             return true
         }
 
-        if (key == "defaultenabledb") && (val == DEFAULTENABLEDBDFLT ? "1" : "0") {
-            vo?.optDict?.removeValue(forKey: key)
+        if (key == "defaultenabledb") && (val == (DEFAULTENABLEDBDFLT ? "1" : "0")) {
+            vo.optDict.removeValue(forKey: key)
             return true
         }
 
-        if (key == "slidrswlb") && (val == SLIDRSWLBDFLT ? "1" : "0") {
-            vo?.optDict?.removeValue(forKey: key)
+        if (key == "slidrswlb") && (val == (SLIDRSWLBDFLT ? "1" : "0")) {
+            vo.optDict.removeValue(forKey: key)
             return true
         }
 
@@ -319,7 +317,7 @@ class voSlider: voState {
             action: nil,
             num: true,
             place: String(format: "%3.1f", SLIDRMINDFLT),
-            text: (vo?.optDict)?["smin"] as? String,
+            text: vo.optDict["smin"],
             addsv: true) ?? CGRect.zero
 
         frame.origin.x += tfWidth + MARGIN
@@ -336,7 +334,7 @@ class voSlider: voState {
             action: nil,
             num: true,
             place: String(format: "%3.1f", SLIDRMAXDFLT),
-            text: (vo?.optDict)?["smax"] as? String,
+            text: vo.optDict["smax"],
             addsv: true) ?? CGRect.zero
 
         frame.origin.y += frame.size.height + MARGIN
@@ -355,7 +353,7 @@ class voSlider: voState {
             action: nil,
             num: true,
             place: String(format: "%3.1f", SLIDRDFLTDFLT),
-            text: (vo?.optDict)?["sdflt"] as? String,
+            text: vo.optDict["sdflt"],
             addsv: true) ?? CGRect.zero
 
         frame.origin.y += frame.size.height + MARGIN
@@ -375,7 +373,7 @@ class voSlider: voState {
         frame = ctvovc?.configCheckButton(
             frame,
             key: "sisBtn",
-            state: ((vo?.optDict)?["integerstepsb"] == "1") /* default:0 */,
+            state: (vo.optDict["integerstepsb"] == "1") /* default:0 */,
             addsv: true) ?? CGRect.zero
 
         frame.origin.x = MARGIN
@@ -388,7 +386,7 @@ class voSlider: voState {
         frame = ctvovc?.configCheckButton(
             frame,
             key: "sswlBtn",
-            state: ((vo?.optDict)?["slidrswlb"] == "1") /* default:0 */,
+            state: (vo.optDict["slidrswlb"] == "1") /* default:0 */,
             addsv: true) ?? CGRect.zero
 
 
@@ -417,9 +415,9 @@ class voSlider: voState {
         super.voDrawOptions(ctvovc)
     }
 
-    override func update(_ instr: String?) -> String? {
+    override func update(_ instr: String) -> String {
         // place holder so fn can update on access
-        if vo?.useVO ?? false {
+        if vo.useVO {
             return instr
         }
         return ""
@@ -432,7 +430,7 @@ class voSlider: voState {
 
     }
     */
-    override func newVOGD() -> Any? {
-        return vogd?.initAsNum(vo)
+    override func newVOGD() -> vogd {
+        return vogd(vo).initAsNum(vo)
     }
 }

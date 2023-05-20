@@ -1,4 +1,6 @@
 //  Converted to Swift 5.7.2 by Swiftify v5.7.25331 - https://swiftify.com/
+
+import UIKit
 ///************
 /// RootViewController.swift
 /// Copyright 2010-2021 Robert T. Miller
@@ -54,45 +56,43 @@
 //  Copyright Robert T. Miller 2010. All rights reserved.
 //
 
-// deprecaed ios 10  #import <libkern/OSAtomic.h>
-var tableView: UITableView?
-var tlist: trackerList?
-var privacyObj: privacyV?
-var int32_t: _Atomic?
-var initialPrefsLoad = false
-var readingFile = false
-var stashedTIDs: [AnyHashable]?
-var scheduledReminderCounts: [AnyHashable : Any]?
-var privateBtn: UIBarButtonItem?
-var helpBtn: UIBarButtonItem?
-var addBtn: UIBarButtonItem?
-var editBtn: UIBarButtonItem?
-var flexibleSpaceButtonItem: UIBarButtonItem?
-var aAdSupport: adSupport?
-//loadInputFiles
-//refreshView
-//animated
-//refreshEditBtn
-//tname
-//tid
-//rejectable
-//nsnTid
-//pendingNotificationCount
+import UserNotifications
 
-#if ADVERSION
-// MARK: -
+import Foundation
+
+public class RootViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, UNUserNotificationCenterDelegate {
+    var tableView: UITableView?
+    
+    //var _privacyObj: privacyV?
+    //var int32_t: _Atomic?
+    var initialPrefsLoad = false
+    var readingFile = false
+
+    //var refreshLock: Bool = false
+    let atomicLock = AtomicTestAndSet(initialValue: false)
+    
+    //var aAdSupport: adSupport?
+    //loadInputFiles
+    //refreshView
+    //animated
+    //refreshEditBtn
+    //tname
+    //tid
+    //rejectable
+    //nsnTid
+    //pendingNotificationCount
+
+    // MARK: -
     // MARK: load CSV files waiting for input
     var csvLoadCount = 0
-var plistLoadCount = 0
-var csvReadCount = 0
-var plistReadCount = 0
-var InstallSamples = false
-var InstallDemos = false
-var loadingCsvFiles = false
-var loadingInputFiles = false
-var stashAnimated = false
-
-class RootViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, UNUserNotificationCenterDelegate, ADBannerViewDelegate {
+    var plistLoadCount = 0
+    var csvReadCount = 0
+    var plistReadCount = 0
+    var InstallSamples = false
+    var InstallDemos = false
+    var loadingCsvFiles = false
+    var loadingInputFiles = false
+    var stashAnimated = false
 
     //openUrlLock, inputURL,
 
@@ -101,6 +101,20 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
 
     deinit {
         DBGLog("rvc dealloc")
+    }
+    
+    var _tlist: trackerList?
+    var tlist: trackerList {
+        if _tlist == nil {
+            let tmptlist = trackerList()
+            _tlist = tmptlist
+            
+            if self.tlist.recoverOrphans() {
+                rTracker_resource.alert("Recovered files", msg: "One or more tracker files were recovered, please delete if not needed.", vc: self)
+            }
+            self.tlist.loadTopLayoutTable()
+        }
+        return _tlist!
     }
 
     //
@@ -118,12 +132,12 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
 
     func doCSVLoad(_ csvString: String?, to: trackerObj?, fname: String?) {
 
-        DBGLog("start csv parser %@", to?.trackerName)
+        DBGLog(String("start csv parser \(to?.trackerName)"))
         let parser = CSVParser(string: csvString, separator: ",", hasHeader: true, fieldNames: nil)
         to?.csvProblem = nil
         to?.csvReadFlags = 0
         parser.parseRows(forReceiver: to, selector: #selector(trackerObj.receiveRecord(_:))) // receiveRecord in trackerObj.m
-        DBGLog("csv parser done %@", to?.trackerName)
+        DBGLog(String("csv parser done \(to?.trackerName)"))
 
         to?.loadConfig()
 
@@ -132,7 +146,7 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
             to?.goRecalculate = true
             to?.recalculateFns() // updates fn vals in database
             to?.goRecalculate = false
-            DBGLog("functions recalculated %@", to?.trackerName)
+            DBGLog(String("functions recalculated \(to?.trackerName)") )
 
             to?.saveChoiceConfigs() // in case csv data had unrecognised choices
 
@@ -168,72 +182,68 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
         //DBGLog(@"loadTrackerCsvFiles");
         let docsDir = rTracker_resource.ioFilePath(nil, access: true)
         let localFileManager = FileManager.default
-        let dirEnum = localFileManager.enumerator(atPath: docsDir ?? "")
+        let dirEnum = localFileManager.enumerator(atPath: docsDir)
         var newRtcsvTracker = false
         var rtcsv = false
 
-        var file: String?
+        // var file: String?
 
-        privacyV.jumpMaxPriv()
-        while (file = dirEnum?.nextObject() as? String) {
+        jumpMaxPriv()
+        while let file = dirEnum?.nextObject() as? URL {
             var to: trackerObj? = nil
-            let fname = file?.lastPathComponent
+            let fname = file.lastPathComponent
             var tname: String? = nil
-            var inmatch: NSRange
+            var inmatch: NSRange?
             var validMatch = false
-            #if DEBUGLOG
             var loadObj: String?
-            #endif
 
-            if URL(fileURLWithPath: file ?? "").pathExtension == "csv" {
+            if file.pathExtension == "csv" {
                 #if DEBUGLOG
                 loadObj = "csv"
                 #endif
-                if let range = (fname as NSString?)?.range(of: "_in.csv", options: [.backwards, .anchored]) {
-                    inmatch = range
-                }
+                let range = (fname as NSString?)!.range(of: "_in.csv", options: [.backwards, .anchored])
+                inmatch = range
+                
                 //DBGLog(@"consider input: %@",fname);
 
-                if (inmatch.location != NSNotFound) && (inmatch.length == 7) {
+                if (inmatch!.location != NSNotFound) && (inmatch!.length == 7) {
                     // matched all 7 chars of _in.csv at end of file name  (must test not _out.csv)
                     validMatch = true
                 }
-            } else if URL(fileURLWithPath: file ?? "").pathExtension == "rtcsv" {
+            } else if file.pathExtension == "rtcsv" {
                 rtcsv = true
-                #if DEBUGLOG
                 loadObj = "rtcsv"
-                #endif
-                if let range = (fname as NSString?)?.range(of: ".rtcsv", options: [.backwards, .anchored]) {
-                    inmatch = range
-                }
+                let range = (fname as NSString?)?.range(of: ".rtcsv", options: [.backwards, .anchored])
+                inmatch = range!
+                
                 //DBGLog(@"consider input: %@",fname);
 
-                if (inmatch.location != NSNotFound) && (inmatch.length == 6) {
+                if (inmatch!.location != NSNotFound) && (inmatch!.length == 6) {
                     // matched all 6 chars of .rtcsv at end of file name  (unlikely to fail but need inmatch to get tname)
                     validMatch = true
                 }
             }
 
             if validMatch {
-                tname = (fname as NSString?)?.substring(to: inmatch.location)
-                DBGLog("%@ load input: %@ as %@", loadObj, fname, tname)
+                tname = (fname as NSString?)?.substring(to: inmatch!.location)
+                DBGLog(String("\(loadObj) load input: \(fname) as \(tname)"))
                 //[rTracker_resource startActivityIndicator:self.view navItem:nil disable:NO str:@"loading data..."];
                 //safeDispatchSync(^{
                 //    [rTracker_resource startActivityIndicator:self.view navItem:nil disable:NO str:[NSString stringWithFormat:@"loading %@...", tname]];
                 //});
 
-                let tid = tlist()?.getTIDfromName(tname) ?? 0
+                let tid = tlist.getTIDfromName(tname)
                 if tid != 0 {
                     to = trackerObj(tid)
-                    DBGLog(" found existing tracker tid %ld with matching name", tid)
+                    DBGLog(String(" found existing tracker tid \(tid) with matching name"))
                 } else if rtcsv {
                     to = trackerObj()
                     to?.trackerName = tname
-                    to?.toid = tlist()?.getUnique() ?? 0
+                    to?.toid = tlist.getUnique()
                     to?.saveConfig()
-                    tlist()?.add(toTopLayoutTable: to)
+                    tlist.add(toTopLayoutTable: to!)
                     newRtcsvTracker = true
-                    DBGLog("created new tracker for rtcsv, id= %ld", Int(to?.toid ?? 0))
+                    DBGLog(String("created new tracker for rtcsv, id= \(to?.toid)"))
                 }
 
                 if nil != to {
@@ -241,17 +251,17 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
                         rTracker_resource.startActivityIndicator(view, navItem: nil, disable: false, str: "loading \(tname ?? "")...")
                     })
 
-                    let target = URL(fileURLWithPath: docsDir ?? "").appendingPathComponent(file ?? "").path
+                    let target = file // URL(fileURLWithPath: docsDir ?? "").appendingPathComponent(file ?? "").path
                     var csvString: String? = nil
                     do {
-                        csvString = try String(contentsOfFile: target, encoding: .utf8)
+                        csvString = try String(contentsOfFile: target.absoluteString, encoding: .utf8)
 
                         safeDispatchSync({ [self] in
                             UIApplication.shared.isIdleTimerDisabled = true
                             doCSVLoad(csvString, to: to, fname: fname)
                             UIApplication.shared.isIdleTimerDisabled = false
                         })
-                        rTracker_resource.deleteFile(atPath: target)
+                        _ = rTracker_resource.deleteFile(atPath: target.absoluteString)
                     } catch {
                     }
 
@@ -265,7 +275,7 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
             }
         }
 
-        privacyV.restorePriv()
+        restorePriv()
 
         if newRtcsvTracker {
             refreshViewPart2()
@@ -290,24 +300,21 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
     func loadTrackerDict(_ tdict: [AnyHashable : Any]?, tname: String?) -> Int {
 
         // get input tid
-        let newTID = tdict?["tid"] as? NSNumber
-        DBGLog("load input: %@ tid %@", tname, newTID)
+        let newTID = (tdict?["tid"])! as! Int
+        DBGLog(String("load input: \(tname) tid \(newTID)"))
 
-        let newTIDi = newTID?.intValue ?? 0
+        let newTIDi = newTID
         var matchTID = -1
-        let tida = tlist()?.getTIDFromNameDb(tname)
+        let tida = tlist.getTIDFromNameDb(tname)
 
         // find tracker with same name and tid, or just same name
-        for tid in tida ?? [] {
-            guard let tid = tid as? NSNumber else {
-                continue
-            }
+        for tid in tida {
             if (-1 == matchTID) || (tid == newTID) {
-                matchTID = tid.intValue
+                matchTID = tid
             }
         }
 
-        DBGLog("matchTID= %d", matchTID)
+        DBGLog(String("matchTID= \(matchTID)"))
 
         var inputTO: trackerObj?
         if -1 != matchTID {
@@ -315,7 +322,7 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
             if !loadingDemos {
                 rTracker_resource.stashTracker(matchTID) // make copy of current tracker so can reject newTID later
             }
-            tlist()?.updateTID(matchTID, new: newTIDi) // change existing tracker tid to match new (restore if we discard later)
+            tlist.updateTID(matchTID, new: newTIDi) // change existing tracker tid to match new (restore if we discard later)
 
             inputTO = trackerObj(newTIDi) // load up existing tracker config
 
@@ -323,17 +330,17 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
             inputTO?.prevTID = matchTID
             inputTO?.saveConfig() // write to db -- probably redundant as confirmTOdict writes to db as well
 
-            DBGLog("updated %@", tname)
+            DBGLog(String("updated \(tname)"))
 
             //DBGLog(@"skip load plist file as already have %@",tname);
         } else {
             // new tracker coming in
-            tlist()?.fixDictTID(tdict) // move any existing TIDs out of way
+            tlist.fixDictTID(tdict) // move any existing TIDs out of way
             inputTO = trackerObj(dict: tdict) // create new tracker with input data
             inputTO?.prevTID = matchTID
             inputTO?.saveConfig() // write to db
-            tlist()?.add(toTopLayoutTable: inputTO) // insert in top list
-            DBGLog("loaded new %@", tname)
+            tlist.add(toTopLayoutTable: inputTO!) // insert in top list
+            DBGLog(String("loaded new \(tname)"))
         }
 
 
@@ -346,12 +353,12 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
     func handleOpenFileURL(_ url: URL?, tname: String?) -> Int {
         var tname = tname
         var tdict: [AnyHashable : Any]? = nil
-        var dataDict: [AnyHashable : Any]? = nil
+        var dataDict: [String : [String : String]]? = nil
         var tid: Int
 
-        DBGLog("open url %@", url)
+        DBGLog(String("open url \(url)"))
 
-        privacyV.jumpMaxPriv()
+        jumpMaxPriv()
         if nil != tname {
             // if tname set it is just a plist
             if let url {
@@ -365,9 +372,9 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
             }
             tname = rtdict?["trackerName"] as? String
             tdict = rtdict?["configDict"] as? [AnyHashable : Any]
-            dataDict = rtdict?["dataDict"] as? [AnyHashable : Any]
+            dataDict = rtdict?["dataDict"] as? [String : [String : String]]
             if loadingDemos {
-                tlist()?.deleteTrackerAllTID(tdict?["tid"] as? NSNumber, name: tname) // wipe old demo tracker otherwise starts to look ugly
+                tlist.deleteTrackerAllTID(tdict?["tid"] as? NSNumber, name: tname) // wipe old demo tracker otherwise starts to look ugly
             }
         }
 
@@ -377,10 +384,10 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
         if nil != dataDict {
             let to = trackerObj(tid)
 
-            to.loadDataDict(dataDict) // vids ok because confirmTOdict updated as needed
-            to?.goRecalculate = true
+            to.loadDataDict(dataDict!) // vids ok because confirmTOdict updated as needed
+            to.goRecalculate = true
             to.recalculateFns() // updates fn vals in database
-            to?.goRecalculate = false
+            to.goRecalculate = false
             to.saveChoiceConfigs() // in case input data had unrecognised choices
 
             DBGLog("datadict loaded for open file url:")
@@ -391,9 +398,9 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
 
         DBGLog("ltd/ldd finish")
 
-        privacyV.restorePriv()
-        DBGLog("removing file %@", url?.path)
-        rTracker_resource.deleteFile(atPath: url?.path)
+        restorePriv()
+        DBGLog(String("removing file \(url?.path)"))
+        _ = rTracker_resource.deleteFile(atPath: url?.path)
 
         return tid
     }
@@ -406,47 +413,44 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
 
         let docsDir = rTracker_resource.ioFilePath(nil, access: true)
         let localFileManager = FileManager.default
-        let dirEnum = localFileManager.enumerator(atPath: docsDir ?? "")
-
-        var file: String?
+        let dirEnum = localFileManager.enumerator(atPath: docsDir)
 
         var filesToProcess: [AnyHashable] = []
-        while (file = dirEnum?.nextObject() as? String) {
-            let fname = file?.lastPathComponent
-            if URL(fileURLWithPath: file ?? "").pathExtension == "plist" {
+        while let file = dirEnum?.nextObject() as? URL {
+            let fname = file.lastPathComponent
+            if file.pathExtension == "plist" {
                 let inmatch = (fname as NSString?)?.range(of: "_in.plist", options: [.backwards, .anchored])
                 //DBGLog(@"consider input: %@",fname);
                 if (inmatch?.location != NSNotFound) && ((inmatch?.length ?? 0) == 9) {
                     // matched all 9 chars of _in.plist at end of file name
-                    filesToProcess.append(file ?? "")
+                    filesToProcess.append(file)
                 }
-            } else if URL(fileURLWithPath: file ?? "").pathExtension == "rtrk" {
-                filesToProcess.append(file ?? "")
+            } else if file.pathExtension == "rtrk" {
+                filesToProcess.append(file)
             }
         }
 
         for file in filesToProcess {
-            guard let file = file as? file else {
+            guard let file = file as? URL else {
                 continue
             }
-            var target: String?
+            //var target: String?
             var newTarget: String?
             var plistFile = false
 
-            let fname = file?.lastPathComponent
-            DBGLog("process input: %@", fname)
+            let fname = file.lastPathComponent
+            DBGLog(String("process input: \(fname)"))
 
-            target = URL(fileURLWithPath: docsDir ?? "").appendingPathComponent(file ?? "").path
+            //target = file // URL(fileURLWithPath: docsDir ?? "").appendingPathComponent(file ?? "").path
 
-            newTarget = (target ?? "") + "_reading".replacingOccurrences(of: "Documents/Inbox/", with: "Documents/")
+            newTarget = file.absoluteString + "_reading".replacingOccurrences(of: "Documents/Inbox/", with: "Documents/")
 
             var err: Error?
             do {
-                if try localFileManager.moveItem(atPath: target ?? "", toPath: newTarget ?? "") != true {
-                    DBGErr("Error on move %@ to %@: %@", target, newTarget, err)
-                }
+                try localFileManager.moveItem(atPath: file.absoluteString, toPath: newTarget ?? "")
             } catch let e {
                 err = e
+                DBGErr(String("Error on move \(file) to \(newTarget): \(err)"))
             }
 
             readingFile = true
@@ -471,7 +475,7 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
             if plistFile {
                 rTracker_resource.rmStashedTracker(0) // 0 means rm last stashed tracker, in this case the one stashed by handleOpenFileURL
             } else {
-                stashedTIDs()?.append(NSNumber(value: rtrkTid))
+                stashedTIDs.append(NSNumber(value: rtrkTid))
             }
 
             readingFile = false
@@ -480,7 +484,7 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
             plistReadCount += 1
         }
 
-        return Bool(rtrkTid)
+        return (rtrkTid != 0)
     }
 
     @objc func doLoadCsvFiles() {
@@ -498,14 +502,15 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
             })
 
             // give up lock
-            refreshLock = 0
+            //refreshLock = false
+            _ = atomicLock.testAndSet(newValue: false)
             loadingCsvFiles = false
             DispatchQueue.main.async(execute: { [self] in
                 refreshToolBar(true)
             })
-            DBGLog("csv data loaded, UI enabled, CSV lock off stashedTIDs= %@", stashedTIDs())
+            DBGLog(String("csv data loaded, UI enabled, CSV lock off stashedTIDs= \(stashedTIDs)"))
 
-            if 0 < (stashedTIDs()?.count ?? 0) {
+            if 0 < stashedTIDs.count {
                 doRejectableTracker()
             }
         }
@@ -515,10 +520,10 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
 
     func refreshViewPart2() {
         //DBGLog(@"entry");
-        tlist()?.confirmToplevelTIDs()
-        tlist()?.loadTopLayoutTable()
+        tlist.confirmToplevelTIDs()
+        tlist.loadTopLayoutTable()
         DispatchQueue.main.async(execute: { [self] in
-            tableView.reloadData()
+            tableView!.reloadData()
             refreshEditBtn()
             refreshToolBar(true)
             view.setNeedsDisplay()
@@ -537,19 +542,19 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
         autoreleasepool {
 
             if InstallDemos {
-                loadDemos(true)
+                _ = loadDemos(true)
                 InstallDemos = false
             }
 
             if InstallSamples {
-                loadSamples(true)
+                _ = loadSamples(true)
                 InstallSamples = false
             }
 
             if loadTrackerPlistFiles() {
                 // this thread now completes updating rvc display of trackerList as next step is load csv data and trackerlist won't change (unless rtrk files)
-                tlist()?.loadTopLayoutTable() // called again in refreshviewpart2, but need for re-order to set ranks
-                tlist()?.reorderFromTLT()
+                tlist.loadTopLayoutTable() // called again in refreshviewpart2, but need for re-order to set ranks
+                tlist.reorderFromTLT()
             }
 
             safeDispatchSync({ [self] in
@@ -570,21 +575,20 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
     }
 
     func countInputFiles(_ targ_ext: String?) -> Int {
-        let retval = 0
+        var retval = 0
 
         let docsDir = rTracker_resource.ioFilePath(nil, access: true)
         let localFileManager = FileManager.default
-        let dirEnum = localFileManager.enumerator(atPath: docsDir ?? "")
+        let dirEnum = localFileManager.enumerator(atPath: docsDir)
 
-        var file: String?
-
-        while file = dirEnum?.nextObject() as? String {
-            let fname = file?.lastPathComponent
+        while let file = dirEnum?.nextObject() as? URL {
+            let fname = file.lastPathComponent
             //DBGLog(@"consider input file %@",fname);
             let inmatch = (fname as NSString?)?.range(of: targ_ext ?? "", options: [.backwards, .anchored])
             if inmatch?.location != NSNotFound {
-                DBGLog("existsInputFiles: match on %@", fname)
+                DBGLog(String("existsInputFiles: match on \(fname)"))
                 retval += 1
+                
             }
         }
 
@@ -620,7 +624,7 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
         plistReadCount = 1
 
         if 0 < (plistLoadCount + csvLoadCount) {
-            tableView.scrollRectToVisible(CGRect(x: 0, y: 0, width: 1, height: 1), animated: true) // ScrollToTop so can see bars
+            tableView!.scrollRectToVisible(CGRect(x: 0, y: 0, width: 1, height: 1), animated: true) // ScrollToTop so can see bars
             rTracker_resource.startActivityIndicator(view, navItem: nil, disable: false, str: "loading trackers...")
             rTracker_resource.startProgressBar(view, navItem: navigationItem, disable: true, yloc: 0.0)
 
@@ -635,7 +639,8 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
         // if here (did not return above), no files to load, this thread set the lock and refresh is done now
 
         refreshViewPart2()
-        refreshLock = 0
+        //refreshLock = false
+        _ = atomicLock.testAndSet(newValue: false)
         DBGLog("finished, no files to load - lock off")
 
         return
@@ -645,6 +650,7 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
     let SUPPLY_SAMPLES = 1
 
     func loadSuppliedTrackers(_ doLoad: Bool, set: Int) -> Int {
+        // loads sample tracker plist files which are slurped in as dicts.  demo tracker is .rtrk (rtcsv) file and loaded differently
         let bundle = Bundle.main
         var paths: [AnyHashable]?
         if SUPPLY_DEMOS == set {
@@ -652,7 +658,7 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
         } else {
             paths = bundle.paths(forResourcesOfType: "plist", inDirectory: "sampleTrackers")
         }
-        let count = 0
+        var count = 0
 
         /* copy plists over version
              NSString *docsDir = [rTracker_resource ioFilePath:nil access:YES];
@@ -670,30 +676,30 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
             if doLoad {
                 // load now into trackerObj - needs progressBar
                 let tdict = NSDictionary(contentsOfFile: p) as Dictionary?
-                tlist()?.fixDictTID(tdict)
+                tlist.fixDictTID(tdict)
                 let newTracker = trackerObj(dict: tdict)
 
-                tlist()?.deConflict(newTracker) // add _n to trackerName so we don't overwrite user's existing if any .. could just merge now?
+                tlist.deConflict(newTracker) // add _n to trackerName so we don't overwrite user's existing if any .. could just merge now?
 
                 newTracker.saveConfig()
-                tlist()?.add(toTopLayoutTable: newTracker)
+                tlist.add(toTopLayoutTable: newTracker)
 
                 rTracker_resource.setProgressVal((Float(plistReadCount)) / (Float(plistLoadCount)))
                 plistReadCount += 1
 
-                DBGLog("finished loadSample on %@", p)
+                DBGLog(String("finished loadSample on \(p)"))
             }
             count += 1
         }
 
         if doLoad {
-            var sql: String?
+            var sql: String
             if SUPPLY_DEMOS == set {
                 sql = String(format: "insert or replace into info (val, name) values (%i,'demos_version')", DEMOS_VERSION)
             } else {
                 sql = String(format: "insert or replace into info (val, name) values (%i,'samples_version')", SAMPLES_VERSION)
             }
-            tlist()?.toExecSql(sql)
+            tlist.toExecSql(sql:sql)
         }
 
         return count
@@ -713,33 +719,40 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
     func loadDemos(_ doLoad: Bool) -> Int {
 
         //return [self loadSuppliedTrackers:doLoad set:SUPPLY_DEMOS];
-        var newp: String?
+        //var newp: String?
         let bundle = Bundle.main
         let paths = bundle.paths(forResourcesOfType: "rtrk", inDirectory: "demoTrackers")
-        let count = 0
+        let urls = paths.map { URL(fileURLWithPath: $0) }
+        
+        let fm = FileManager.default
+        let documentsURL = fm.urls(for: .documentDirectory, in: .userDomainMask).first!
+        
+        var count = 0
 
         loadingDemos = true
-        for p in paths {
+        for p in urls {
             if doLoad {
                 let file = p.lastPathComponent
                 //newp = [rTracker_resource ioFilePath:[NSString stringWithFormat:@"Inbox/%@",file] access:YES];
-                newp = rTracker_resource.ioFilePath("\(file)", access: true)
-                do {
-                    try FileManager.default.copyItem(atPath: p, toPath: newp ?? "")
+                //newp = rTracker_resource.ioFilePath("\(file)", access: true)
 
-                    handleOpenFileURL(URL(fileURLWithPath: newp ?? ""), tname: nil)
+                let destinationURL = documentsURL.appendingPathComponent(file)
+
+                do {
+                    try fm.copyItem(atPath: p.path, toPath: destinationURL.path)  // FileManager.default.copyItem(atPath: p.absoluteString, toPath: newp ?? "")
+
+                    _ = handleOpenFileURL(URL(fileURLWithPath: destinationURL.path), tname: nil)
                     //DBGLog(@"stashedTIDs= %@",self.stashedTIDs);
                 } catch let err {
-                    DBGErr("Error copying file: %@ to %@ error: %@", p, newp, err)
+                    DBGErr(String("Error copying file: \(p.path) to \(destinationURL.path) error: \(err)"))
                     count -= 1
                 }
             }
             count += 1
         }
         if doLoad && count != 0 {
-            var sql: String?
-            sql = String(format: "insert or replace into info (val, name) values (%i,'demos_version')", DEMOS_VERSION)
-            tlist()?.toExecSql(sql)
+            let sql = String(format: "insert or replace into info (val, name) values (%i,'demos_version')", DEMOS_VERSION)
+            tlist.toExecSql(sql:sql)
         }
         loadingDemos = false
         return count
@@ -749,12 +762,12 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
     // MARK: view support
 
     func scrollState() {
-        if _privacyObj && privacyObj()?.showing != PVNOSHOW {
+        if let privacyObj = _privacyObj, privacyObj.showing != PVNOSHOW {
             // test backing ivar first -- don't instantiate if not there
-            tableView.isScrollEnabled = false
+            tableView!.isScrollEnabled = false
             //DBGLog(@"no");
         } else {
-            tableView.isScrollEnabled = true
+            tableView!.isScrollEnabled = true
             //DBGLog(@"yes");
         }
     }
@@ -762,20 +775,65 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
     func refreshToolBar(_ animated: Bool) {
         //DBGLog(@"refresh tool bar, noshow= %d",(PVNOSHOW == self.privacyObj.showing));
         setToolbarItems(
-            [flexibleSpaceButtonItem(), helpBtn(),         //self.payBtn, 
-        privateBtn()].compactMap { $0 },
+            [flexibleSpaceButtonItem, helpBtn, privateBtn].compactMap { $0 },
             animated: animated)
     }
 
     func initTitle() {
 
-        // set up the title 
+        // set up the window title, try to get owner's name
 
         let devname = UIDevice.current.name
         //DBGLog(@"name = %@",devname);
         let words = devname.components(separatedBy: " ")
+        let bname = Bundle.main.infoDictionary?["CFBundleName"] as? String // @"rTracker";  default title
+        var rtitle = bname
+        
+        // if devname looks like "foo bar's iPhone" then title is "foo bar's tracks"
+        var owner: String? = nil
+        var foundOwner = false
+        for w in words {
+            if owner != nil {
+                owner! += " \(w)"
+            } else {
+                owner = w
+            }
+            if w.hasSuffix("'s") {
+                foundOwner = true
+                break
+            }
+        }
+        if foundOwner {
+            rtitle = "\(owner!) tracks"
+        }
+        
+        // if rtitle is too long go back to rTracker
+        var bw1: CGFloat = 0.0
+        var bw2: CGFloat = 0.0
+        let view = editBtn.value(forKey: "view") as? UIView
+        bw1 = view != nil ? ((view?.frame.size.width ?? 0.0) + (view?.frame.origin.x ?? 0.0)) : CGFloat(53.0) // hardcode after change from leftBarButton to backBarButton
+        let view2 = addBtn.value(forKey: "view") as? UIView
+        bw2 = (view2 != nil ? view2?.frame.origin.x : CGFloat(282.0)) ?? 0.0
 
-        var i = 0
+        if (0.0 == bw1) || (0.0 == bw2) {
+            rtitle = bname // "rTracker"
+        } else {
+            let maxWidth = (bw2 - bw1) - 8 //self.view.bounds.size.width - btnWidths;
+            //DBGLog(@"view wid= %f bw1= %f bw2= %f",self.view.bounds.size.width ,bw1,bw2);
+
+            let namesize = rtitle!.size(withAttributes: [
+                NSAttributedString.Key.font: UIFont.boldSystemFont(ofSize: 20.0)
+            ])
+            let nameWidth = ceil(namesize.width)
+            if nameWidth >= maxWidth {
+                rtitle = bname // "rTracker"
+            }
+        }
+        
+        title = rtitle
+        DBGLog("title= \(rtitle!)")
+        
+        /*
         let c = words.count
         var name: String? = nil
 
@@ -787,7 +845,8 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
             }
         }
 
-        var prodNdx = 0
+
+        let prodNdx = 0
         var longName = words[0]
 
         for prodNdx in 0..<c {
@@ -802,19 +861,33 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
         } else if (0 == prodNdx) || (prodNdx >= c) {
             longName = ""
         }
-
-        if (nil == name) || (name == "iPhone") || (name == "iPad") || (0 == (name?.count ?? 0)) || true {
+        #if RELEASE
+        let ReleaseFlag = true
+        #else
+        let ReleaseFlag = false
+        #endif
+        #if NONAME
+        let NoNameFlag = true
+        #else
+        let NoNameFlag = false
+        #endif
+        
+        if (nil == name)
+            || (ReleaseFlag && ((name == "iPhone") || (name == "iPad")))
+            || (0 == (name?.count ?? 0))
+            || NoNameFlag  {
             title = Bundle.main.infoDictionary?["CFBundleName"] as? String // @"rTracker";
         } else {
+         
             var bw1: CGFloat = 0.0
             var bw2: CGFloat = 0.0
-            let view = editBtn()?.value(forKey: "view") as? UIView
+            let view = editBtn.value(forKey: "view") as? UIView
             bw1 = view != nil ? ((view?.frame.size.width ?? 0.0) + (view?.frame.origin.x ?? 0.0)) : CGFloat(53.0) // hardcode after change from leftBarButton to backBarButton
-            let view2 = addBtn()?.value(forKey: "view") as? UIView
+            let view2 = addBtn.value(forKey: "view") as? UIView
             bw2 = (view2 != nil ? view2?.frame.origin.x : CGFloat(282.0)) ?? 0.0
 
             if (0.0 == bw1) || (0.0 == bw2) {
-                title = "rTracker"
+                rtitle = "rTracker"
             } else {
                 var tname: String? = nil
                 var tn2: String?
@@ -824,7 +897,7 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
                     let len = name?.count ?? 0
                     let pos = (r0?.location ?? 0) + (r0?.length ?? 0)
                     if pos == (len - 1) {
-                        let c = unichar(name?[name?.index(name?.startIndex, offsetBy: UInt(pos))] ?? 0)
+                        let c = name?[name!.index(name!.startIndex, offsetBy: pos)]  // unichar(from: name?[(name?.index(name!.startIndex, offsetBy: UInt(pos)))!] ?? 0)
                         if ("s" == c) || ("S" == c) {
                             tname = (name ?? "") + " tracks"
                             tn2 = (name ?? "") + "  tracks"
@@ -840,8 +913,7 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
                     tn2 = (name ?? "") + " ’s tracks"
                 }
 
-                DBGLog("tname= %@", tname)
-                DBGLog("longName= %@", longName)
+                DBGLog(String("tname= \(tname) longname = \(longName)"))
 
                 let ltname = longName + " tracks"
                 let ltn2 = longName + "  tracks"
@@ -852,16 +924,16 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
                 let namesize = tn2?.size(withAttributes: [
                     NSAttributedString.Key.font: UIFont.boldSystemFont(ofSize: 20.0)
                 ])
-                let nameWidth = ceilf(namesize?.width)
+                let nameWidth = ceil(namesize!.width)
 
                 let lnamesize = ltn2.size(withAttributes: [
                     NSAttributedString.Key.font: UIFont.boldSystemFont(ofSize: 20.0)
                 ])
 
-                let lnameWidth = ceilf(lnamesize.width)
+                let lnameWidth = ceil(lnamesize.width)
 
                 //DBGLog(@"name wid= %f  maxwid= %f  name= %@",nameWidth,maxWidth,tname);
-                if (nil != longName) && (lnameWidth < maxWidth) {
+                if ("" != longName) && (lnameWidth < maxWidth) {
                     title = ltname
                 } else if nameWidth < maxWidth {
                     title = tname
@@ -870,43 +942,12 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
                 }
             }
         }
+         */
     }
-
-    #if ADVERSION
-
-    override func viewDidLayoutSubviews() {
-        if !rTracker_resource.getPurchased() {
-            adSupport()?.layoutAnimated(self, tableview: tableView, animated: UIView.areAnimationsEnabled)
-        }
-    }
-
-    func bannerViewDidLoadAd(_ banner: ADBannerView?) {
-        adSupport()?.layoutAnimated(self, tableview: tableView, animated: true)
-    }
-
-    func bannerView(_ banner: ADBannerView?, didFailToReceiveAdWithError error: Error?) {
-        adSupport()?.layoutAnimated(self, tableview: tableView, animated: true)
-    }
-
-    func bannerViewActionShouldBegin(_ banner: ADBannerView?, willLeaveApplication willLeave: Bool) -> Bool {
-        //[self.adSupport stopTimer];
-        return true
-    }
-
-    func adSupport() -> adSupport? {
-        if !rTracker_resource.getPurchased() {
-            if _adSupport == nil {
-                _adSupport = adSupport?.init()
-            }
-        }
-        return _adSupport
-    }
-
-    #endif
 
 
     // handle notification while in foreground
-    func userNotificationCenter(
+    public func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
@@ -916,13 +957,14 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
         // nice to make this work again
         //[self doQuickAlert:notification.request.content.title msg:notification.request.content.body delay:2];
         // Play a sound.
-        completionHandler(UNNotificationPresentationOptionSound)
-        tableView.reloadData() // redundant but waiting for countScheduledReminders to complete
+
+        completionHandler(UNNotificationPresentationOptions.sound)
+        tableView!.reloadData() // redundant but waiting for countScheduledReminders to complete
         view.setNeedsDisplay()
     }
 
     // handle notification while in background
-    func userNotificationCenter(
+    public func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
@@ -948,40 +990,29 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
         if #available(iOS 13.0, *) {
             if traitCollection.userInterfaceStyle == .dark {
                 // if darkMode
-                tableView.backgroundColor = UIColor.systemBackground
+                tableView!.backgroundColor = UIColor.systemBackground
                 return
             }
         }
 
-        tableView.backgroundColor = UIColor.clear
+        tableView!.backgroundColor = UIColor.clear
     }
 
-    override func viewDidLoad() {
+    public override func viewDidLoad() {
 
         super.viewDidLoad()
         UNUserNotificationCenter.current().delegate = self
 
-        #if ADVERSION
-        #if !RELEASE
-        rTracker_resource.setPurchased(false)
-        #endif
-        if !rTracker_resource.getPurchased() {
-            #if !DISABLE_ADS
-            adSupport()?.initBannerView(self)
-            #endif
-        }
-        //[self.view addSubview:self.adSupport.bannerView];
-        #endif
+        //DBGLog(@"rvc: viewDidLoad privacy= %d",[privacyObj getPrivacyValue]);
 
-        //DBGLog(@"rvc: viewDidLoad privacy= %d",[privacyV getPrivacyValue]);
-
-        refreshLock = 0
+        //refreshLock = false
+        _ = atomicLock.testAndSet(newValue: false)
         readingFile = false
 
         let vsize = rTracker_resource.get_visible_size(self)
 
-        navigationItem.rightBarButtonItem = addBtn()
-        navigationItem.leftBarButtonItem = editBtn()
+        navigationItem.rightBarButtonItem = addBtn
+        navigationItem.leftBarButtonItem = editBtn
 
         // toolbar setup
         refreshToolBar(false)
@@ -989,29 +1020,20 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
         // title setup
         initTitle()
 
-        #if ADVERSION
-        if !rTracker_resource.getPurchased() {
-            #if !DISABLE_ADS
-            tableFrame.size.height -= adSupport()?.bannerView?.frame.size.height ?? 0.0
-            DBGLog("ad h= %f  tfh= %f ", adSupport()?.bannerView?.frame.size.height, tableFrame.size.height)
-            #endif
-        }
-        #endif
-
-        let tableFrame: CGRect
+        var tableFrame: CGRect = CGRect.zero
         tableFrame.origin.x = 0.0
         tableFrame.origin.y = 0.0
         tableFrame.size.height = vsize.height
         tableFrame.size.width = vsize.width
 
-        DBGLog("tvf origin x %f y %f size w %f h %f", tableFrame.origin.x, tableFrame.origin.y, tableFrame.size.width, tableFrame.size.height)
+        DBGLog(String("tvf \(tableFrame)"))  // origin x %f y %f size w %f h %f"), tableFrame.origin.x, tableFrame.origin.y, tableFrame.size.width, tableFrame.size.height)
         tableView = UITableView(frame: tableFrame, style: .plain)
 
-        //self.tableView.translatesAutoresizingMaskIntoConstraints = NO;
-        tableView.dataSource = self
-        tableView.delegate = self
+        //self.tableView!.translatesAutoresizingMaskIntoConstraints = NO;
+        tableView!.dataSource = self
+        tableView!.delegate = self
 
-        tableView.separatorStyle = .none
+        tableView!.separatorStyle = .none
 
         let bg = UIImageView(image: rTracker_resource.get_background_image(self))
         bg.tag = BGTAG
@@ -1019,47 +1041,33 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
         view.sendSubviewToBack(bg)
 
         setViewMode()
-        view.addSubview(tableView)
+        view.addSubview(tableView!)
 
         if SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO("9.0") {
             let existingShortcutItems = UIApplication.shared.shortcutItems
             if 0 == (existingShortcutItems?.count ?? 0) /*|| ([rTracker_resource getSCICount] != [existingShortcutItems count]) */ {
-                // can#'t set more than 4 or prefs messed up
-                tlist()?.updateShortcutItems()
+                // can't set more than 4 or prefs messed up
+                tlist.updateShortcutItems()
             }
         }
 
     }
 
-    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+    public override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         setViewMode()
-        tableView.setNeedsDisplay()
+        tableView!.setNeedsDisplay()
         view.setNeedsDisplay()
-    }
-
-    func tlist() -> trackerList? {
-        if nil == _tlist {
-            let tmptlist = trackerList()
-            self.tlist() = tmptlist
-
-            if self.tlist()?.recoverOrphans() ?? false {
-                // added 07.viii.13
-                rTracker_resource.alert("Recovered files", msg: "One or more tracker files were recovered, please delete if not needed.", vc: self)
-            }
-            self.tlist()?.loadTopLayoutTable()
-        }
-        return _tlist
     }
 
     func refreshEditBtn() {
 
-        if (tlist()?.topLayoutNames?.count ?? 0) == 0 {
+        if (tlist.topLayoutNames?.count ?? 0) == 0 {
             if navigationItem.leftBarButtonItem != nil {
                 navigationItem.leftBarButtonItem = nil
             }
         } else {
             if navigationItem.leftBarButtonItem == nil {
-                navigationItem.leftBarButtonItem = editBtn()
+                navigationItem.leftBarButtonItem = editBtn
                 //[editBtn release];
             }
         }
@@ -1067,16 +1075,14 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
     }
 
     func samplesNeeded() -> Bool {
-        let sql = "select val from info where name = 'samples_version'"
-        let rslt = tlist()?.toQry2Int(sql) ?? 0
-        DBGLog("samplesNeeded if %d != %d", SAMPLES_VERSION, rslt)
+        let rslt = tlist.toQry2Int(sql:"select val from info where name = 'samples_version'")
+        DBGLog(String("samplesNeeded if \(SAMPLES_VERSION) != \(rslt)"))
         return SAMPLES_VERSION != rslt
     }
 
     func demosNeeded() -> Bool {
-        let sql = "select val from info where name = 'demos_version'"
-        let rslt = tlist()?.toQry2Int(sql) ?? 0
-        DBGLog("demosNeeded if %d != %d", DEMOS_VERSION, rslt)
+        let rslt = tlist.toQry2Int(sql:"select val from info where name = 'demos_version'")
+        DBGLog(String("demosNeeded if \(DEMOS_VERSION) != \(rslt)"))
         #if !RELEASE
         //rslt=0;
         if 0 == rslt {
@@ -1108,7 +1114,7 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
         //DBGLog(@"entry prefs-- resetPass: %d  reloadsamples: %d",resetPassPref,reloadSamplesPref);
 
         if resetPassPref {
-            privacyObj()?.resetPw()
+            privacyObj.resetPw()
         }
 
         InstallSamples = false
@@ -1126,7 +1132,7 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
             }
         }
 
-        DBGLog("InstallSamples %d  InstallDemos %d", InstallSamples, InstallDemos)
+        DBGLog(String("InstallSamples \(InstallSamples)  InstallDemos \(InstallDemos)"))
 
         if resetPassPref {
             sud.set(false, forKey: "reset_password_pref")
@@ -1165,7 +1171,7 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
     func refreshView() {
 
         // deprecated ios 10 - if (0 != OSAtomicTestAndSet(0, &(_refreshLock))) {
-        if 0 != atomic_fetch_or_explicit(0x0, 0, memory_order_relaxed) {
+        if atomicLock.testAndSet(newValue: true) {  // was 0 in objective-c ? this should be where take the lock?
             // wasn't 0 before, so we didn't get lock, so leave because refresh already in process
             return
         }
@@ -1181,56 +1187,14 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
 
     }
 
-    #if ADVERSION
-    // handle rtPurchasedNotification
-    @objc func updatePurchased(_ n: Notification?) {
-        if n != nil {
-            rTracker_resource.doQuickAlert("Purchase Successful", msg: "Thank you!", delay: 2, vc: self)
-        }
+    public override func viewWillAppear(_ animated: Bool) {
 
-        if nil != _adSupport {
-            if adSupport()?.bannerView?.isDescendantOf(view) {
-                adSupport()?.bannerView?.removeFromSuperview()
-            }
-            adSupport() = nil
-        }
-        let bg = UIImageView(image: UIImage(named: rTracker_resource.getLaunchImageName() ?? ""))
-        let tableFrame = bg.frame
-        tableFrame.size.height = rTracker_resource.get_visible_size(self).height // - ( 2 * statusBarHeight ) ;
-        tableView.frame = tableFrame
-        tableView.backgroundView = bg
-        tableView.setNeedsDisplay()
-        //[self.tableView reloadData];
-    }
-
-    #endif
-
-    override func viewWillAppear(_ animated: Bool) {
-
-        DBGLog("rvc: viewWillAppear privacy= %d", privacyV.getPrivacyValue())
+        DBGLog(String("rvc: viewWillAppear privacy= \(privacyValue)"))
         countScheduledReminders()
 
-        privacyV.restorePriv()
+        restorePriv()
 
         navigationController?.setToolbarHidden(false, animated: false)
-
-        #if ADVERSION
-        if !rTracker_resource.getPurchased() {
-            #if !DISABLE_ADS
-            adSupport()?.initBannerView(self)
-            if let aBannerView = adSupport()?.bannerView {
-                view.addSubview(aBannerView)
-            }
-            #endif
-            NotificationCenter.default.addObserver(
-                self,
-                selector: #selector(updatePurchased(_:)),
-                name: NSNotification.Name(rtPurchasedNotification),
-                object: nil)
-        } else if _adSupport {
-            updatePurchased(nil)
-        }
-        #endif
 
         super.viewWillAppear(animated)
     }
@@ -1239,30 +1203,27 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
         let docsDir = rTracker_resource.ioFilePath(nil, access: true)
 
         let localFileManager = FileManager.default
-        let dirEnum = localFileManager.enumerator(atPath: docsDir ?? "")
+        let dirEnum = localFileManager.enumerator(atPath: docsDir)
 
-        var file: String?
 
-        while (file = dirEnum?.nextObject() as? String) {
-            if URL(fileURLWithPath: file ?? "").pathExtension == "rtrk_reading" {
+        while let file = dirEnum?.nextObject() as? String {
+            if URL(fileURLWithPath: file).pathExtension == "rtrk_reading" {
                 var err: Error?
                 var target: String?
-                target = URL(fileURLWithPath: docsDir ?? "").appendingPathComponent(file ?? "").path
+                target = URL(fileURLWithPath: docsDir).appendingPathComponent(file).path
 
                 if 0 == choice {
                     // delete it
-                    rTracker_resource.deleteFile(atPath: target)
+                    _ = rTracker_resource.deleteFile(atPath: target)
                 } else {
                     // try again -- rename from .rtrk_reading to .rtrk
                     var newTarget: String?
                     newTarget = target?.replacingOccurrences(of: "rtrk_reading", with: "rtrk")
                     do {
-                        if try localFileManager.moveItem(atPath: target ?? "", toPath: newTarget ?? "") != true {
-                            DBGLog("Error on move %@ to %@: %@", target, newTarget, err)
-                            //DBGLog(@"Unable to move file: %@", [err localizedDescription]);
-                        }
+                        try localFileManager.moveItem(atPath: target ?? "", toPath: newTarget ?? "")
                     } catch let e {
                         err = e
+                        DBGLog(String("Error on move \(target) to \(newTarget): \(err)"))
                     }
                 }
             }
@@ -1280,14 +1241,6 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
     func viewDidAppearRestart() {
         refreshView()
 
-        #if ADVERSION
-        if !rTracker_resource.getPurchased() {
-            #if !DISABLE_ADS
-            adSupport()?.layoutAnimated(self, tableview: tableView, animated: false)
-            #endif
-        }
-        #endif
-
         super.viewDidAppear(stashAnimated)
     }
 
@@ -1301,29 +1254,28 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
 
     func doRejectableTracker() {
         //DBGLog(@"stashedTIDs= %@",self.stashedTIDs);
-        let nsntid = stashedTIDs()?.last as? NSNumber
+        let nsntid = stashedTIDs.last as? NSNumber
         performSelector(onMainThread: #selector(doOpenTrackerRejectable(_:)), with: nsntid, waitUntilDone: true)
-        stashedTIDs()?.removeLast()
+        stashedTIDs.removeLast()
     }
 
-    override func viewDidAppear(_ animated: Bool) {
+    public override func viewDidAppear(_ animated: Bool) {
 
-        //DBGLog(@"rvc: viewDidAppear privacy= %d", [privacyV getPrivacyValue]);
+        //DBGLog(@"rvc: viewDidAppear privacy= %d", [privacyObj getPrivacyValue]);
 
         if !readingFile {
-            if 0 < (stashedTIDs()?.count ?? 0) {
+            if 0 < stashedTIDs.count {
                 doRejectableTracker()
             } else {
                 let docsDir = rTracker_resource.ioFilePath(nil, access: true)
                 let localFileManager = FileManager.default
-                let dirEnum = localFileManager.enumerator(atPath: docsDir ?? "")
+                let dirEnum = localFileManager.enumerator(atPath: docsDir)
 
-                var file: String?
-
-                while (file = dirEnum?.nextObject() as? String) {
-                    if URL(fileURLWithPath: file ?? "").pathExtension == "rtrk_reading" {
-                        let fname = file?.lastPathComponent
-                        let rtrkName = URL(fileURLWithPath: fname ?? "").deletingPathExtension().path
+                while let file = dirEnum?.nextObject() as? String {
+                    let fu = URL(fileURLWithPath: file)
+                    if fu.pathExtension == "rtrk_reading" {
+                        //let fname = fu.lastPathComponent
+                        let rtrkName = fu.deletingPathExtension().path
                         let title = "Problem reading .rtrk file?"
                         let msg = "There was a problem while loading the \(rtrkName) rtrk file"
                         let btn0 = "Delete it"
@@ -1363,22 +1315,14 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
         // [super viewDidApeear] called in [self viewDidAppearRestart]
     }
 
-    override func viewWillDisappear(_ animated: Bool) {
+    public override func viewWillDisappear(_ animated: Bool) {
         DBGLog("rvc viewWillDisappear")
-
-        #if ADVERSION
-        //unregister for purchase notices
-        NotificationCenter.default.removeObserver(
-            self,
-            name: NSNotification.Name(rtPurchasedNotification),
-            object: nil)
-        #endif
 
         UIApplication.shared.applicationIconBadgeNumber = pendingNotificationCount()
         super.viewWillDisappear(animated)
     }
 
-    override func didReceiveMemoryWarning() {
+    public override func didReceiveMemoryWarning() {
         // Releases the view if it doesn't have a superview.
 
         DBGWarn("rvc didReceiveMemoryWarning")
@@ -1396,7 +1340,7 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
 
     func privBtnSetImg(_ pbtn: UIButton?, noshow: Bool) {
         //BOOL shwng = (self.privacyObj.showing == PVNOSHOW); 
-        let minprv = privacyV.getPrivacyValue() > MINPRIV
+        let minprv = privacyValue > MINPRIV
         let btnImg = noshow
             ? (minprv ? "shadeview-button-7.png" : "closedview-button-7.png")
             : (minprv ? "shadeview-button-blue-7.png" : "closedview-button-blue-7.png")
@@ -1406,7 +1350,8 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
         })
     }
 
-    func privateBtn() -> UIBarButtonItem? {
+    var _privateBtn: UIBarButtonItem?
+    var privateBtn: UIBarButtonItem {
         //
         if _privateBtn == nil {
             let pbtn = UIButton()
@@ -1417,28 +1362,29 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
             pbtn.addTarget(self, action: #selector(btnPrivate), for: .touchUpInside)
             _privateBtn = UIBarButtonItem(
                 customView: pbtn)
-            privBtnSetImg(_privateBtn.customView as? UIButton, noshow: true)
+            privBtnSetImg(_privateBtn!.customView as? UIButton, noshow: true)
         } else {
             var noshow = true
-            if _privacyObj {
-                noshow = PVNOSHOW == privacyObj()?.showing
+            if _privacyObj != nil {
+                noshow = PVNOSHOW == privacyObj.showing
             }
-            if !(noshow) && (PWKNOWPASS == privacyObj()?.pwState) {
+            if !(noshow) && (PWKNOWPASS == privacyObj.pwState) {
                 //DBGLog(@"unlock btn");
-                (_privateBtn.customView as? UIButton)?.setImage(
+                (_privateBtn!.customView as? UIButton)?.setImage(
                     UIImage(named: "fullview-button-blue-7.png"),
                     for: .normal)
             } else {
                 //DBGLog(@"lock btn");
-                privBtnSetImg(_privateBtn.customView as? UIButton, noshow: noshow)
+                privBtnSetImg(_privateBtn!.customView as? UIButton, noshow: noshow)
             }
         }
 
 
-        return _privateBtn
+        return _privateBtn!
     }
 
-    func helpBtn() -> UIBarButtonItem? {
+    var _helpBtn: UIBarButtonItem?
+    var helpBtn: UIBarButtonItem {
         if _helpBtn == nil {
             _helpBtn = UIBarButtonItem(
                 title: "Help",
@@ -1446,41 +1392,44 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
                 target: self,
                 action: #selector(btnHelp))
         }
-        return _helpBtn
+        return _helpBtn!
     }
 
-    func addBtn() -> UIBarButtonItem? {
+    var _addBtn: UIBarButtonItem?
+    var addBtn: UIBarButtonItem {
         if _addBtn == nil {
             _addBtn = UIBarButtonItem(
                 barButtonSystemItem: .add,
                 target: self,
                 action: #selector(btnAddTracker))
 
-            _addBtn.style = UIBarButtonItem.Style.done
+            _addBtn!.style = UIBarButtonItem.Style.done
         }
-        return _addBtn
+        return _addBtn!
     }
 
-    func editBtn() -> UIBarButtonItem? {
+    var _editBtn: UIBarButtonItem?
+    var editBtn: UIBarButtonItem {
         if _editBtn == nil {
             _editBtn = UIBarButtonItem(
                 barButtonSystemItem: .edit,
                 target: self,
                 action: #selector(btnEdit))
 
-            _editBtn.style = UIBarButtonItem.Style.plain
+            _editBtn!.style = UIBarButtonItem.Style.plain
         }
-        return _editBtn
+        return _editBtn!
     }
 
-    func flexibleSpaceButtonItem() -> UIBarButtonItem? {
+    var _flexibleSpaceButtonItem: UIBarButtonItem?
+    var flexibleSpaceButtonItem: UIBarButtonItem {
         if _flexibleSpaceButtonItem == nil {
             _flexibleSpaceButtonItem = UIBarButtonItem(
                 barButtonSystemItem: .flexibleSpace,
                 target: nil,
                 action: nil)
         }
-        return _flexibleSpaceButtonItem
+        return _flexibleSpaceButtonItem!
     }
 
     /*
@@ -1498,71 +1447,47 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
 
     // MARK: -
 
-    func privacyObj() -> privacyV? {
+    var _privacyObj: privacyV?
+    var privacyObj: privacyV {
         if _privacyObj == nil {
             _privacyObj = privacyV(parentView: view)
-            _privacyObj.parent = self
+            _privacyObj!.parent = self
         }
-        _privacyObj.tob = tlist() // not set at init
-        return _privacyObj
+        _privacyObj!.tob = tlist // not set at init
+        return _privacyObj!
     }
 
-    func stashedTIDs() -> [AnyHashable]? {
-        if _stashedTIDs == nil {
-            _stashedTIDs = [AnyHashable]()
-        }
-        return _stashedTIDs
-    }
+    var stashedTIDs: [AnyHashable] = []
 
     func countScheduledReminders() {
-
+        
         let center = UNUserNotificationCenter.current()
-        center.getPendingNotificationRequests(completionHandler: { [self] notifications in
-            scheduledReminderCounts()?.removeAll()
-
-            for i in 0..<(notifications?.count ?? 0) {
-                let oneEvent = notifications?[i] as? UNNotificationRequest
-                let userInfoCurrent = oneEvent?.content.userInfo
-                DBGLog("%d uic: %@", i, userInfoCurrent)
-                let tid = userInfoCurrent?["tid"] as? NSNumber
-                var c: Int? = nil
-                if let tid {
-                    c = ((scheduledReminderCounts())?[tid] as? NSNumber)?.intValue ?? 0
-                }
-                c = (c ?? 0) + 1
-                if let tid {
-                    (scheduledReminderCounts())?[tid] = NSNumber(value: c ?? 0)
+        center.getPendingNotificationRequests { notifications in
+            self.scheduledReminderCounts.removeAll()
+            
+            for i in 0..<notifications.count {
+                let oneEvent = notifications[i]
+                let userInfoCurrent = oneEvent.content.userInfo
+                DBGLog(String("\(i) uic: \(userInfoCurrent)"))
+                if let tid = userInfoCurrent["tid"] as? NSNumber {
+                    var c = (self.scheduledReminderCounts[tid] as? Int) ?? 0
+                    c += 1
+                    self.scheduledReminderCounts[tid] = c
                 }
             }
-        })
-
-    }
-
-    func scheduledReminderCounts() -> [AnyHashable : Any]? {
-        if nil == _scheduledReminderCounts {
-            _scheduledReminderCounts = [AnyHashable : Any]()
         }
-        return _scheduledReminderCounts
     }
 
     // MARK: -
     // MARK: button action methods
 
     @objc func btnAddTracker() {
-        if PVNOSHOW != privacyObj()?.showing {
+        if PVNOSHOW != privacyObj.showing {
             return
         }
-        #if ADVERSION
-        if !rTracker_resource.getPurchased() {
-            if ADVER_TRACKER_LIM <= (tlist()?.topLayoutIDs?.count ?? 0) {
-                //[rTracker_resource buy_rTrackerAlert];
-                rTracker_resource.replaceRtrackerA(self)
-                return
-            }
-        }
-        #endif
+
         let atc = addTrackerController(nibName: "addTrackerController", bundle: nil)
-        atc?.tlist = tlist()
+        atc.tlist = tlist
         navigationController?.pushViewController(atc, animated: true)
         //[rTracker_resource myNavPushTransition:self.navigationController vc:atc animOpt:UIViewAnimationOptionTransitionCurlUp];
 
@@ -1571,12 +1496,12 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
 
     @IBAction func btnEdit() {
 
-        if PVNOSHOW != privacyObj()?.showing {
+        if PVNOSHOW != privacyObj.showing {
             return
         }
         var ctlc: configTlistController?
         ctlc = configTlistController(nibName: "configTlistController", bundle: nil)
-        ctlc?.tlist = tlist()
+        ctlc?.tlist = tlist
         if let ctlc {
             navigationController?.pushViewController(ctlc, animated: true)
         }
@@ -1587,24 +1512,19 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
     }
 
     @objc func btnPrivate() {
-        tableView.scrollRectToVisible(CGRect(x: 0, y: 0, width: 1, height: 1), animated: true) // ScrollToTop
-        privacyObj()?.togglePrivacySetter()
-        if PVNOSHOW == privacyObj()?.showing {
+        tableView!.scrollRectToVisible(CGRect(x: 0, y: 0, width: 1, height: 1), animated: true) // ScrollToTop
+        privacyObj.togglePrivacySetter()
+        if PVNOSHOW == privacyObj.showing {
             refreshView()
         }
     }
 
     @objc func btnHelp() {
-        #if ADVERSION
-        if let url = URL(string: "http://rob-miller.github.io/rTracker/rTracker/iPhone/replace_rTrackerA.html") {
-            UIApplication.shared.openURL(url)
-        }
-        #else
+
         //[[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"http://rob-miller.github.io/rTracker/rTracker/iPhone/userGuide/"]];  // deprecated ios 9
         if let url = URL(string: "http://rob-miller.github.io/rTracker/rTracker/iPhone/userGuide/") {
             UIApplication.shared.open(url, options: [:])
         }
-        #endif
     }
 
     func btnPay() {
@@ -1614,30 +1534,33 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
 
     // MARK: -
     // MARK: Table view methods
+    
 
-    func numberOfSections(in tableView: UITableView) -> Int {
+    var scheduledReminderCounts: [AnyHashable : Any] = [:]
+
+
+    public func numberOfSections(in tableView: UITableView) -> Int {
         return 1
     }
 
     // Customize the number of rows in the table view.
-    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return tlist()?.topLayoutNames?.count ?? 0
+    public func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return tlist.topLayoutNames?.count ?? 0
     }
 
     func pendingNotificationCount() -> Int {
         var erc = 0
         var src = 0
-        for nsn in tlist()?.topLayoutReminderCount ?? [] {
+        for nsn in tlist.topLayoutReminderCount ?? [] {
             guard let nsn = nsn as? NSNumber else {
                 continue
             }
             erc += nsn.intValue
         }
-        for tid in scheduledReminderCounts() ?? [:] {
-            guard let tid = tid as? NSNumber else {
-                continue
+        for (tid, _) in scheduledReminderCounts {
+            if let count = scheduledReminderCounts[tid] as? NSNumber {
+                src += count.intValue
             }
-            src += ((scheduledReminderCounts())?[tid] as? NSNumber)?.intValue ?? 0
         }
 
         return erc > src ? erc - src : 0
@@ -1648,7 +1571,7 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
 
     static let tableViewCellIdentifier = "Cell"
 
-    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+    public func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
 
         var cell = tableView.dequeueReusableCell(withIdentifier: RootViewController.tableViewCellIdentifier)
         if cell == nil {
@@ -1659,15 +1582,15 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
 
         // Configure the cell.
         let row = indexPath.row
-        let tid = (tlist()?.topLayoutIDs)?[row] as? NSNumber
+        let tid = (tlist.topLayoutIDs)?[row] as? NSNumber
         let cellLabel = NSMutableAttributedString()
 
-        let erc = ((tlist()?.topLayoutReminderCount)?[row] as? NSNumber)?.intValue ?? 0
+        let erc = ((tlist.topLayoutReminderCount)?[row] as? NSNumber)?.intValue ?? 0
         var src: Int? = nil
         if let tid {
-            src = ((scheduledReminderCounts())?[tid] as? NSNumber)?.intValue ?? 0
+            src = (scheduledReminderCounts[tid] as? NSNumber)?.intValue ?? 0
         }
-        DBGLog("src: %d  erc:  %d  %@ (%@)", src, erc, (tlist()?.topLayoutNames)?[row], tid)
+        DBGLog(String("src: \(src)  erc:  \(erc) \(tlist.topLayoutNames![row]) (\(tid))"))
         //NSString *formatString = @"%@";
         //UIColor *bg = [UIColor clearColor];
         if erc != src {
@@ -1684,18 +1607,18 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
         //DBGLog(@"erc= %d  src= %d",erc,src);
         //[cellLabel appendAttributedString:
         // [[NSAttributedString alloc]initWithString:(self.tlist.topLayoutNames)[row] attributes:@{NSForegroundColorAttributeName: [UIColor blackColor]}]] ;
-        cellLabel.append(NSAttributedString(string: (tlist()?.topLayoutNames)?[row] as? String ?? ""))
+        cellLabel.append(NSAttributedString(string: (tlist.topLayoutNames)?[row] as? String ?? ""))
 
         cell?.textLabel?.attributedText = cellLabel
 
         return cell!
     }
 
-    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+    public func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         var tn: String?
         let row = indexPath.row
         if NSNotFound != row {
-            tn = (tlist()?.topLayoutNames)?[row] as? String
+            tn = (tlist.topLayoutNames)?[row] as? String
         } else {
             tn = "Sample"
         }
@@ -1706,7 +1629,7 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
     }
 
     func exceedsPrivacy(_ tid: Int) -> Bool {
-        return privacyV.getPrivacyValue() < (tlist()?.getPrivFromLoadedTID(tid) ?? 0)
+        return privacyValue < (tlist.getPrivFromLoadedTID(tid))
     }
 
     func openTracker(_ tid: Int, rejectable: Bool) {
@@ -1720,7 +1643,7 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
 
         if topController?.responds(to: rtSelector) ?? false {
             // top controller is already useTrackerController, is it this tracker?
-            if tid == (topController as? useTrackerController)?.tracker.toid {
+            if tid == (topController as? useTrackerController)?.tracker!.toid {
                 return
             }
         }
@@ -1729,41 +1652,31 @@ class RootViewController: UIViewController, UITableViewDelegate, UITableViewData
         to.describe()
 
         let utc = useTrackerController()
-        utc?.tracker = to
-        utc?.rejectable = rejectable
-        utc?.tlist = tlist() // required so reject can fix topLevel list
-        utc?.saveFrame = view.frame // self.tableView.frame; //  view.frame;
-        utc?.rvcTitle = title
-        #if ADVERSION
-        #if !DISABLE_ADS
-        if !rTracker_resource.getPurchased() {
-            utc?.adSupport() = adSupport()
-        } else {
-            utc?.adSupport() = nil
-        }
-        #endif
-        #endif
+        utc.tracker = to
+        utc.rejectable = rejectable
+        utc.tlist = tlist // required so reject can fix topLevel list
+        utc.saveFrame = view.frame // self.tableView.frame; //  view.frame;
+        utc.rvcTitle = title
 
         navigationController?.pushViewController(utc, animated: true)
 
     }
 
     // Override to support row selection in the table view.
-    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+    public func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
 
-        if PVNOSHOW != privacyObj()?.showing {
+        if PVNOSHOW != privacyObj.showing {
             return
         }
 
         //NSUInteger row = [indexPath row];
         //DBGLog(@"selected row %d : %@", row, [self.tlist.topLayoutNames objectAtIndex:row]);
         tableView.cellForRow(at: indexPath)?.isSelected = false
-        openTracker(tlist()?.getTIDfromIndex(indexPath.row) ?? 0, rejectable: false)
+        openTracker(tlist.getTIDfromIndex(indexPath.row), rejectable: false)
 
     }
 }
 
-#endif
 /*
  {
 

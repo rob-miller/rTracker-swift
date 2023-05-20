@@ -22,6 +22,7 @@
 //
 
 import Foundation
+import UIKit
 
 class voBoolean: voState {
     /*{
@@ -30,7 +31,7 @@ class voBoolean: voState {
 
     private var _checkButton: UIButton?
     var checkButton: UIButton? {
-        let frame = vosFrame
+        var frame = vosFrame
 
         frame.origin.x = (frame.origin.x + frame.size.width) - (frame.size.height)
         frame.size.width = frame.size.height
@@ -100,19 +101,19 @@ class voBoolean: voState {
 
     @objc func boolBtnAction(_ checkButton: UIButton?) {
         // default is unchecked or nil // 25.i.14 use assigned val // was "so only certain is if =1" ?
-        if vo?.value == "" {
-            let bv = (vo?.optDict)?["boolval"] as? String
+        if vo.value == "" {
+            let bv = vo.optDict["boolval"]
             //if (nil == bv) {
             //bv = BOOLVALDFLTSTR;
             //[self.vo.optDict setObject:bv forKey:@"boolval"];
             //}
-            vo?.value = bv
-            rTracker_resource.setCheck(self.checkButton, colr: rTracker_resource.colorSet()?[((vo?.optDict)?["btnColr"] as? NSNumber)?.intValue ?? 0] as? UIColor)
-            if "1" == (vo?.optDict)?["setstrackerdate"] {
-                vo?.setTrackerDateToNow()
+            vo.value = bv
+            rTracker_resource.setCheck(self.checkButton, colr: rTracker_resource.colorSet()[Int(vo.optDict["btnColr"]!)!])
+            if "1" == vo.optDict["setstrackerdate"] {
+                vo.setTrackerDateToNow()
             }
         } else {
-            vo?.value = ""
+            vo.value = ""
             if #available(iOS 13.0, *) {
                 rTracker_resource.clrCheck(self.checkButton, colr: .tertiarySystemBackground)
             } else {
@@ -124,24 +125,24 @@ class voBoolean: voState {
         NotificationCenter.default.post(name: NSNotification.Name(rtValueUpdatedNotification), object: self)
     }
 
-    override func voDisplay(_ bounds: CGRect) -> UIView? {
+    override func voDisplay(_ bounds: CGRect) -> UIView {
         vosFrame = bounds
 
-        if vo?.value == "" {
+        if vo.value == "" {
             if #available(iOS 13.0, *) {
                 rTracker_resource.clrCheck(checkButton, colr: .tertiarySystemBackground)
             } else {
                 rTracker_resource.clrCheck(checkButton, colr: .white)
             }
         } else {
-            rTracker_resource.setCheck(checkButton, colr: rTracker_resource.colorSet()?[((vo?.optDict)?["btnColr"] as? NSNumber)?.intValue ?? 0] as? UIColor)
+            rTracker_resource.setCheck(checkButton, colr: rTracker_resource.colorSet()[Int(vo.optDict["btnColr"]!)!])
         }
 
-        DBGLog("bool data= %@", vo?.value)
-        return checkButton
+        DBGLog(String("bool data= \(vo.value)"))
+        return checkButton!
     }
 
-    override func voGraphSet() -> [AnyHashable]? {
+    override func voGraphSet() -> [String] {
         return ["dots", "bar"]
     }
 
@@ -155,38 +156,40 @@ class voBoolean: voState {
     }
     */
 
-    override func newVOGD() -> Any? {
-        return vogd?.initAsNum(vo)
+    override func newVOGD() -> vogd {
+        return vogd(vo).initAsNum(vo)
     }
 
     // MARK: -
     // MARK: options page
 
     override func setOptDictDflts() {
-        let bv = (vo?.optDict)?["boolval"] as? String
+        let bv = vo.optDict["boolval"]
         if (nil == bv) || ("" == bv) {
-            (vo?.optDict)?["boolval"] = BOOLVALDFLTSTR
+            vo.optDict["boolval"] = BOOLVALDFLTSTR
         }
-        let std = (vo?.optDict)?["setstrackerdate"] as? String
+        let std = vo.optDict["setstrackerdate"]
         if (nil == std) || ("" == std) {
-            (vo?.optDict)?["setstrackerdate"] = SETSTRACKERDATEDFLT ? "1" : "0"
+            vo.optDict["setstrackerdate"] = SETSTRACKERDATEDFLT ? "1" : "0"
         }
-        let bc = (vo?.optDict)?["btnColr"] as? String
+        let bc = vo.optDict["btnColr"]
         if (nil == bc) || ("" == bc) {
-            (vo?.optDict)?["btnColr"] = BOOLBTNCOLRDFLTSTR
+            vo.optDict["btnColr"] = BOOLBTNCOLRDFLTSTR
         }
         return super.setOptDictDflts()
     }
 
-    override func cleanOptDictDflts(_ key: String?) -> Bool {
+    override func cleanOptDictDflts(_ key: String) -> Bool {
 
-        let val = (vo?.optDict)?[key ?? ""] as? String
+        let val = vo.optDict[key]
         if nil == val {
             return true
         }
 
-        if ((key == "boolval") && (Float(val ?? "") ?? 0.0 == f(BOOLVALDFLT))) || ((key == "setstrackerdate") && (val == SETSTRACKERDATEDFLT ? "1" : "0")) || ((key == "btnColr") && (val == BOOLBTNCOLRDFLTSTR)) {
-            vo?.optDict?.removeValue(forKey: key)
+        if ((key == "boolval") && (Float(val!) == Float(BOOLVALDFLT)))
+            || ((key == "setstrackerdate") && (val == (SETSTRACKERDATEDFLT ? "1" : "0")))
+            || ((key == "btnColr") && (val == BOOLBTNCOLRDFLTSTR)) {
+            vo.optDict.removeValue(forKey: key)
             //DBGLog(@"cleanDflt for bool: %@",key);
             return true
         }
@@ -195,14 +198,13 @@ class voBoolean: voState {
     }
 
     @objc func boolColorButtonAction(_ btn: UIButton?) {
-        let bc = (vo?.optDict)?["btnColr"] as? NSNumber
-        var col = bc?.intValue ?? 0
+        var col = Int(vo.optDict["btnColr"]!)!
         col += 1
-        if col >= (rTracker_resource.colorSet()?.count ?? 0) {
+        if col >= rTracker_resource.colorSet().count {
             col = 0
         }
-        (vo?.optDict)?["btnColr"] = String(format: "%ld", col)
-        btn?.backgroundColor = rTracker_resource.colorSet()?[col] as? UIColor
+        vo.optDict["btnColr"] = String(format: "%ld", col)
+        btn?.backgroundColor = rTracker_resource.colorSet()[col]
     }
 
     override func voDrawOptions(_ ctvovc: configTVObjVC?) {
@@ -224,7 +226,7 @@ class voBoolean: voState {
             action: nil,
             num: true,
             place: BOOLVALDFLTSTR,
-            text: (vo?.optDict)?["boolval"] as? String,
+            text: vo.optDict["boolval"],
             addsv: true) ?? CGRect.zero
 
 
@@ -241,7 +243,7 @@ class voBoolean: voState {
         frame = ctvovc?.configCheckButton(
             frame,
             key: "stdBtn",
-            state: ((vo?.optDict)?["setstrackerdate"] == "1") /* default:0 */,
+            state: (vo.optDict["setstrackerdate"] == "1") /* default:0 */,
             addsv: true) ?? CGRect.zero
 
         frame.origin.x = MARGIN
@@ -257,19 +259,19 @@ class voBoolean: voState {
         btn.layer.cornerRadius = 8.0
         btn.layer.masksToBounds = true
         btn.layer.borderWidth = 1.0
-        var bc = (vo?.optDict)?["btnColr"] as? String
+        var bc = vo.optDict["btnColr"]
         if bc == nil {
             bc = BOOLBTNCOLRDFLTSTR
-            (vo?.optDict)?["btnColr"] = BOOLBTNCOLRDFLTSTR
+            vo.optDict["btnColr"] = BOOLBTNCOLRDFLTSTR
         }
-        btn.backgroundColor = rTracker_resource.colorSet()?[Int(bc ?? "") ?? 0] as? UIColor
+        btn.backgroundColor = rTracker_resource.colorSet()[Int(bc!)!]
 
         btn.titleLabel?.font = PrefBodyFont
 
         btn.addTarget(self, action: #selector(boolColorButtonAction(_:)), for: .touchDown)
-        (ctvovc?.wDict)?["boolColrBtn"] = btn
+        ctvovc!.wDict["boolColrBtn"] = btn
         //[ctvovc.view addSubview:btn];
-        ctvovc?.scroll.addSubview(btn)
+        ctvovc!.scroll.addSubview(btn)
 
 
         //-----
@@ -282,10 +284,10 @@ class voBoolean: voState {
     /* rtm here : export value option -- need to parse and match value if choice did not match
      */
 
-    override func mapCsv2Value(_ inCsv: String?) -> String? {
+    override func mapCsv2Value(_ inCsv: String) -> String {
 
-        if ((vo?.optDict)?["boolval"] as? NSNumber)?.doubleValue ?? 0.0 != Double(inCsv ?? "") ?? 0.0 {
-            (vo?.optDict)?["boolval"] = inCsv
+        if Float(vo.optDict["boolval"]!) != Float(inCsv) {
+            vo.optDict["boolval"] = inCsv
         }
         return inCsv
     }

@@ -91,7 +91,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     override func viewDidLoad() {
 
-        DBGLog("atc: vdl tlist dbname= %@", tlist?.dbName) // use backing ivar because don't want dbg msg to instantiate
+        DBGLog(String("atc: vdl tlist dbname= \(tlist?.dbName)")) // use backing ivar because don't want dbg msg to instantiate
 
         // cancel / save buttons on top nav bar -- can't seem to do in IB
 
@@ -156,31 +156,12 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         view.setNeedsDisplay()
     }
 
-    #if ADVERSION
-    // handle rtPurchasedNotification
-    @objc func updatePurchased(_ n: Notification?) {
-        rTracker_resource.doQuickAlert("Purchase Successful", msg: "Thank you!", delay: 2, vc: self)
-    }
-
-    #endif
-
     override func viewWillAppear(_ animated: Bool) {
 
-        DBGLog("atc: viewWillAppear, valObjTable count= %lu", UInt(tempTrackerObj?.valObjTable?.count ?? 0))
+        DBGLog(String("atc: viewWillAppear, valObjTable count= \(tempTrackerObj?.valObjTable.count)"))
 
         tableView.reloadData()
-        toggleEdit(segcEditTrackerEditItems)
-
-        #if ADVERSION
-        if !rTracker_resource.getPurchased() {
-            NotificationCenter.default.addObserver(
-                self,
-                selector: #selector(RootViewController.updatePurchased(_:)),
-                name: NSNotification.Name(rtPurchasedNotification),
-                object: nil)
-        }
-        #endif
-
+        toggleEdit(segcEditTrackerEditItems!)
 
         super.viewWillAppear(animated)
 
@@ -199,23 +180,14 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     }
 
     override func viewWillDisappear(_ animated: Bool) {
-        DBGLog("atc: viewWillDisappear, tracker name = %@", tempTrackerObj?.trackerName)
+        DBGLog(String("atc: viewWillDisappear, tracker name = \(tempTrackerObj?.trackerName)"))
 
         safeDispatchSync({ [self] in
             if (nameField.text?.count ?? 0) > 0 {
                 tempTrackerObj?.trackerName = nameField.text
-                DBGLog("adding val, save tf: %@ = %@", tempTrackerObj?.trackerName, nameField.text)
+                DBGLog(String("adding val, save tf: \(tempTrackerObj?.trackerName) = \(nameField.text)"))
             }
         })
-
-
-        #if ADVERSION
-        //unregister for purchase notices
-        NotificationCenter.default.removeObserver(
-            self,
-            name: NSNotification.Name(rtPurchasedNotification),
-            object: nil)
-        #endif
 
         super.viewWillDisappear(animated)
 
@@ -247,9 +219,9 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     @IBAction func btnCopy(_ sender: Any) {
         DBGLog("copy!")
 
-        let lastVO = tempTrackerObj?.valObjTable?.last as? valueObj
-        let newVO = valueObj(dict: tempTrackerObj, dict: lastVO?.dictFromVO())
-        newVO?.vid = tempTrackerObj?.getUnique() ?? 0
+        let lastVO = tempTrackerObj?.valObjTable.last as? valueObj
+        let newVO = valueObj(dict: tempTrackerObj!, dict: lastVO?.dictFromVO())
+        newVO.vid = (tempTrackerObj?.getUnique())!
         tempTrackerObj?.addValObj(newVO)
         tableView.reloadData()
 
@@ -284,9 +256,9 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     @IBAction func btnSetup(_ sender: Any) {
         let ctvovc = configTVObjVC()
-        ctvovc?.to = tempTrackerObj
-        ctvovc?.vo = nil
-        ctvovc?.modalTransitionStyle = .flipHorizontal
+        ctvovc.to = tempTrackerObj
+        ctvovc.vo = nil
+        ctvovc.modalTransitionStyle = .flipHorizontal
         //io6 [self presentModalViewController:ctvovc animated:YES];
         present(ctvovc, animated: true)
         // rtm 05 feb 2012 
@@ -348,7 +320,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     }
 
     //@property (nonatomic,retain) UIActivityIndicatorView *spinner;
-    @IBAction func toggleEdit(_ sender: Any) {
+    @IBAction func toggleEdit(_ sender: UISegmentedControl) {
         editMode = sender.selectedSegmentIndex
         //[table reloadData];
         if editMode == 0 {
@@ -383,9 +355,9 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     func delVOdb(_ vid: Int) {
         var sql = String(format: "delete from voData where id=%ld;", vid)
-        tempTrackerObj?.toExecSql(sql)
+        tempTrackerObj?.toExecSql(sql:sql)
         sql = String(format: "delete from voConfig where id=%ld;", vid)
-        tempTrackerObj?.toExecSql(sql)
+        tempTrackerObj?.toExecSql(sql:sql)
     }
 
     @objc func btnSaveSlowPart() {
@@ -394,7 +366,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
             tempTrackerObj?.saveConfig()
 
-            tlist?.add(toTopLayoutTable: tempTrackerObj)
+            tlist?.add(toTopLayoutTable: tempTrackerObj!)
             tlist?.loadTopLayoutTable()
 
             DispatchQueue.main.async(execute: { [self] in
@@ -409,22 +381,11 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     }
 
     @IBAction func btnSave() {
-        DBGLog("btnSave was pressed! tempTrackerObj name= %@ toid= %ld tlist= %x", tempTrackerObj?.trackerName, Int(tempTrackerObj?.toid ?? 0), UInt(tlist ?? 0))
+        DBGLog(String("btnSave was pressed! tempTrackerObj name= \(tempTrackerObj?.trackerName) toid= \(tempTrackerObj?.toid) tlist= \(tlist)"))
 
         if saving {
             return
         }
-
-        #if ADVERSION
-        if !rTracker_resource.getPurchased() {
-            // can trigger on editing an existing tracker with more than 8 items
-            if ADVER_ITEM_LIM < (tempTrackerObj?.valObjTable?.count ?? 0) {
-                //[rTracker_resource buy_rTrackerAlert];
-                rTracker_resource.replaceRtrackerA(self)
-                return
-            }
-        }
-        #endif
 
         saving = true
 
@@ -446,7 +407,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             if tempTrackerObj?.toid == nil {
                 tempTrackerObj?.toid = tlist?.getUnique() ?? 0
             }
-            if 8 < (tempTrackerObj?.valObjTable?.count ?? 0) {
+            if 8 < (tempTrackerObj?.valObjTable.count ?? 0) {
                 rTracker_resource.startActivityIndicator(view, navItem: navigationItem, disable: true, str: "Saving...")
             }
 
@@ -466,7 +427,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     // MARK: -
     // MARK: nameField, privField support Methods
 
-    @IBAction func nameFieldDone(_ sender: Any) {
+    @IBAction func nameFieldDone(_ sender: UIResponder) {
         sender.resignFirstResponder()
         if nameField.text != nil {
             tempTrackerObj?.trackerName = rTracker_resource.sanitizeFileNameString(nameField.text)
@@ -477,7 +438,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     // MARK: deleteValObj methods
 
     func delVOlocal(_ row: Int) {
-        tempTrackerObj?.valObjTable?.remove(at: row)
+        tempTrackerObj?.valObjTable.remove(at: row)
         tableView.deleteRows(
             at: [deleteIndexPath].compactMap { $0 },
             with: .fade)
@@ -499,7 +460,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             // yes delete
             let row = deleteIndexPath?.row ?? 0
             let vo = (tempTrackerObj?.valObjTable)?[row] as? valueObj
-            DBGLog("checkValObjDelete: will delete row %lu name %@ id %ld", UInt(row), vo?.valueName, Int(vo?.vid ?? 0))
+            DBGLog(String("checkValObjDelete: will delete row \(row) name \(vo?.valueName) id \(vo?.vid)"))
             //[self delVOdb:vo.vid];
             addDelVO(vo)
             delVOlocal(row)
@@ -524,7 +485,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         if section == 0 {
             return Int(1)
         } else {
-            let rval = tempTrackerObj?.valObjTable?.count ?? 0
+            var rval = tempTrackerObj?.valObjTable.count ?? 0
             if editMode == 0 {
                 rval += 1
             }
@@ -558,7 +519,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             ])
             return tns.height + (2 * MARGIN)
         } else {
-            if row == (tempTrackerObj?.valObjTable?.count ?? 0) {
+            if row == (tempTrackerObj?.valObjTable.count ?? 0) {
                 let vons = "add another thing to track".size(withAttributes: [
                     NSAttributedString.Key.font: PrefBodyFont
                 ])
@@ -590,9 +551,9 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 cell?.backgroundColor = nil
             } else {
                 // the cell is being recycled, remove old embedded controls
-                var viewToRemove: UIView? = nil
-                while (viewToRemove = cell?.contentView.viewWithTag(kViewTag)) {
-                    viewToRemove?.removeFromSuperview()
+                //var viewToRemove: UIView? = nil
+                while let viewToRemove = cell?.contentView.viewWithTag(kViewTag) {
+                    viewToRemove.removeFromSuperview()
                 }
             }
 
@@ -602,7 +563,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             //self.nameField = nil;
             //[_nameField release];
             //self.nameField = [[UITextField alloc] initWithFrame:CGRectMake(10,10,250,25) ];
-            let rect = cell?.contentView.frame
+            var rect = cell?.contentView.frame
             rect?.size.width = rTracker_resource.getKeyWindowWidth() // because ios 7.1 gets different width for cell
             #if !RELEASE
             // debug layout:
@@ -672,7 +633,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                     reuseIdentifier: addTrackerController.tableViewValCellID)
             }
             let row = indexPath.row
-            if row == (tempTrackerObj?.valObjTable?.count ?? 0) {
+            if row == (tempTrackerObj?.valObjTable.count ?? 0) {
                 if 0 == row {
                     cell?.detailTextLabel?.text = "Add an item or value to track"
                 } else {
@@ -691,22 +652,22 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                             DBGLog(@"color %@",[rTracker_resource colorNames][vo.vcolor]);
                             */
 
-                if "0" == (vo?.optDict)?["graph"] {
-                    if let vtypeNames = rTracker_resource.vtypeNames()?[vo?.vtype ?? 0] {
-                        cell?.detailTextLabel?.text = "\(vtypeNames) - no graph"
-                    }
-                } else if VOT_CHOICE == vo?.vtype {
-                    if let vtypeNames = rTracker_resource.vtypeNames()?[vo?.vtype ?? 0], let voGraphSet = (vo?.vos?.voGraphSet())?[vo?.vGraphType ?? 0] {
-                        cell?.detailTextLabel?.text = "\(vtypeNames) - \(voGraphSet)"
-                    }
-                } else if VOT_INFO == vo?.vtype {
-                    if let vtypeNames = rTracker_resource.vtypeNames()?[vo?.vtype ?? 0] {
-                        cell?.detailTextLabel?.text = "\(vtypeNames)"
-                    }
+                if "0" == vo!.optDict["graph"] {
+                    let vtypeNames = rTracker_resource.vtypeNames()[vo!.vtype]
+                    cell?.detailTextLabel?.text = "\(vtypeNames) - no graph"
+                    
+                } else if VOT_CHOICE == vo!.vtype {
+                    let vtypeNames = rTracker_resource.vtypeNames()[vo!.vtype]
+                    let voGraphSet = (vo?.vos?.voGraphSet())?[vo!.vGraphType]
+                    cell?.detailTextLabel?.text = "\(vtypeNames) - \(voGraphSet!)"
+                } else if VOT_INFO == vo!.vtype {
+                    let vtypeNames = rTracker_resource.vtypeNames()[vo!.vtype]
+                    cell?.detailTextLabel?.text = "\(vtypeNames)"
                 } else {
-                    if let vtypeNames = rTracker_resource.vtypeNames()?[vo?.vtype ?? 0], let voGraphSet = (vo?.vos?.voGraphSet())?[vo?.vGraphType ?? 0], let colorNames = rTracker_resource.colorNames()?[vo?.vcolor ?? 0] {
-                        cell?.detailTextLabel?.text = "\(vtypeNames) - \(voGraphSet) - \(colorNames)"
-                    }
+                    let vtypeNames = rTracker_resource.vtypeNames()[vo!.vtype]
+                    let voGraphSet = (vo?.vos?.voGraphSet())?[vo!.vGraphType]
+                    let colorNames = rTracker_resource.colorNames()[vo!.vcolor]
+                    cell?.detailTextLabel?.text = "\(vtypeNames) - \(voGraphSet!) - \(colorNames)"
                 }
             }
 
@@ -728,7 +689,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             return false
         }
         let row = indexPath.row
-        if row >= (tempTrackerObj?.valObjTable?.count ?? 0) {
+        if row >= (tempTrackerObj?.valObjTable.count ?? 0) {
             return false
         }
 
@@ -746,16 +707,16 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         #if DEBUGLOG
         let fromSection = fromIndexPath.section
         let toSection = toIndexPath.section
-        DBGLog("atc: move row from %lu:%lu to %lu:%lu", UInt(fromSection), UInt(fromRow), UInt(toSection), UInt(toRow))
+        DBGLog(String("atc: move row from \(UInt(fromSection)):\(UInt(fromRow)) to \(UInt(toSection)):\(UInt(toRow))"))
         #endif
 
         let vo = (tempTrackerObj?.valObjTable)?[fromRow] as? valueObj
-        tempTrackerObj?.valObjTable?.remove(at: fromRow)
-        if toRow > (tempTrackerObj?.valObjTable?.count ?? 0) {
-            toRow = tempTrackerObj?.valObjTable?.count ?? 0
+        tempTrackerObj?.valObjTable.remove(at: fromRow)
+        if toRow > (tempTrackerObj?.valObjTable.count ?? 0) {
+            toRow = tempTrackerObj?.valObjTable.count ?? 0
         }
         if let vo {
-            tempTrackerObj?.valObjTable?.insert(vo, at: toRow)
+            tempTrackerObj?.valObjTable.insert(vo, at: toRow)
         }
 
         // fail
@@ -768,7 +729,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             return .none
         } else {
             let row = indexPath.row
-            if row >= (tempTrackerObj?.valObjTable?.count ?? 0) {
+            if row >= (tempTrackerObj?.valObjTable.count ?? 0) {
                 return .insert
             } else {
                 return .delete
@@ -784,7 +745,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         let row = indexPath.row
         // NSUInteger section = [indexPath section];  // in theory this only called on vals section
         if editingStyle == .delete {
-            DBGLog("atc: delete row %lu ", UInt(row))
+            DBGLog(String("atc: delete row \(row) "))
             deleteIndexPath = indexPath
 
             let vo = (tempTrackerObj?.valObjTable)?[row] as? valueObj
@@ -818,24 +779,14 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 present(alert, animated: true)
             }
         } else if editingStyle == .insert {
-            DBGLog("atc: insert row %lu ", UInt(row))
+            DBGLog(String("atc: insert row \(row) "))
             addValObj(nil)
             // else ??
         }
     }
 
     func addValObj(_ vo: valueObj?) {
-        #if ADVERSION
-        if !rTracker_resource.getPurchased() {
-            if vo == nil {
-                if ADVER_ITEM_LIM <= (tempTrackerObj?.valObjTable?.count ?? 0) {
-                    //[rTracker_resource buy_rTrackerAlert];
-                    rTracker_resource.replaceRtrackerA(self)
-                    return
-                }
-            }
-        }
-        #endif
+
         var avc: addValObjController?
         //if (kIS_LESS_THAN_IOS7) {
         //    avc = [[addValObjController alloc] initWithNibName:@"addValObjController" bundle:nil ];
@@ -852,8 +803,8 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     }
 
     func addValObjR(_ row: Int) {
-        DBGLog("row= %lu count= %lu", UInt(row), UInt(tempTrackerObj?.valObjTable?.count ?? 0))
-        if row < (tempTrackerObj?.valObjTable?.count ?? 0) {
+        DBGLog(String("row= \(row) count= \(tempTrackerObj?.valObjTable.count)"))
+        if row < (tempTrackerObj?.valObjTable.count ?? 0) {
             addValObj((tempTrackerObj?.valObjTable)?[row] as? valueObj)
         } else {
             addValObj(nil)
@@ -865,7 +816,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
         let row = indexPath.row
         let section = indexPath.section
-        DBGLog("selected section %lu row %lu ", UInt(section), UInt(row))
+        DBGLog(String("selected section \(section) row \(row) "))
         if 0 == section {
             nameField.becomeFirstResponder()
         } else {

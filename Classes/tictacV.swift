@@ -66,7 +66,7 @@ class tictacV: UIView {
             return theKey
         }
         set(k) {
-            DBGLog("setKey: %u -> %u", theKey, k)
+            DBGLog("setKey: \(theKey) -> \(k)")
             theKey = k
         }
     }
@@ -93,7 +93,8 @@ class tictacV: UIView {
     //    return self;
     //}
 
-    init(pFrame ttf: CGRect) {
+    init(pFrame pttf: CGRect) {
+        var ttf = pttf
         ttf.origin.x = TICTACHRZFRAC * ttf.size.width
         ttf.origin.y = TICTACVRTFRAC * ttf.size.height
         ttf.size.width *= TICTACWIDFRAC
@@ -111,7 +112,7 @@ class tictacV: UIView {
     let TTSF = 0.2667
 
     func drawTicTac() {
-        var i: Int
+        //var i: Int
         safeDispatchSync({ [self] in
             vborder = TTBF * frame.size.height
             hborder = TTBF * frame.size.width
@@ -124,39 +125,39 @@ class tictacV: UIView {
         let context = self.context
 
         UIColor.green.set()
-        MoveTo(hborder, vborder)
-        AddLineTo(hborder + hlen, vborder)
-        AddLineTo(hborder + hlen, vborder + vlen)
-        AddLineTo(hborder, vborder + vlen)
-        AddLineTo(hborder, vborder)
+        MoveTo(context!, hborder, vborder)
+        AddLineTo(context!, hborder + hlen, vborder)
+        AddLineTo(context!, hborder + hlen, vborder + vlen)
+        AddLineTo(context!, hborder, vborder + vlen)
+        AddLineTo(context!, hborder, vborder)
         //Stroke
 
         UIColor.black.set()
 
         for i in 1...2 {
             // horiz lines
-            MoveTo(hborder, vborder + (CGFloat(i) * vstep))
-            AddLineTo(hborder + hlen, vborder + (CGFloat(i) * vstep))
+            MoveTo(context!, hborder, vborder + (CGFloat(i) * vstep))
+            AddLineTo(context!, hborder + hlen, vborder + (CGFloat(i) * vstep))
         }
 
         for i in 1...2 {
             // vert lines
-            MoveTo(hborder + (CGFloat(i) * hstep), vborder)
-            AddLineTo(hborder + (CGFloat(i) * hstep), vborder + vlen)
+            MoveTo(context!, hborder + (CGFloat(i) * hstep), vborder)
+            AddLineTo(context!, hborder + (CGFloat(i) * hstep), vborder + vlen)
         }
         //Stroke
     }
 
     // MARK: bitfuncs to get selected bits from key
 
-    func REGIONMASK(_ x: Any, _ y: Any) -> UInt {
-        ((UInt(0x03)) << (y << 1)) << (x * 2 * 3)
+    func REGIONMASK(_ x: Int, _ y: Int) -> UInt {
+        return ((UInt(0x03)) << (y << 1)) << (x * 2 * 3)
     }
-    func REGIONINC(_ x: Any, _ y: Any) -> UInt {
-        ((UInt(0x01)) << (y << 1)) << (x * 2 * 3)
+    func REGIONINC(_ x: Int, _ y: Int) -> UInt {
+        return ((UInt(0x01)) << (y << 1)) << (x * 2 * 3)
     }
-    func REGIONVAL(_ v: Any, _ x: Any, _ y: Any) -> Int {
-        (Int((0x0 as? v) ?? 0) >> (y << 1)) >> (x * 2 * 3)
+    func REGIONVAL(_ v: UInt, _ x: Int, _ y: Int) -> UInt {
+        return ((v & REGIONMASK(x, y)) >> (y << 1)) >> (x * 2 * 3)
     }
 
     // MARK: translate tic-tac-toe regions to view coords upper left corner
@@ -199,7 +200,7 @@ class tictacV: UIView {
     }
 
     func setCurrPt(_ x: Int, y: Int) {
-        var rect: CGRect
+        var rect: CGRect = CGRect.zero
         currX = x
         currY = y
         rect.origin = tt2vc()
@@ -236,7 +237,7 @@ class tictacV: UIView {
             //DBGLog(@"11");
             sDraw("+")
         default:
-            dbgNSAssert(0, "drawCell bad region val")
+            dbgNSAssert(false, "drawCell bad region val")
         }
     }
 
@@ -245,8 +246,8 @@ class tictacV: UIView {
         //		DBGLog(@"updateTT: draw cell %d %d",self.currX,self.currY);
         //		[self drawCell];
         //	} else {  
-        var i: Int
-        var j: Int
+        //var i: Int
+        //var j: Int
         //DBGLog(@"updateTT: draw all cells");
         for i in 0..<3 {
             for j in 0..<3 {
@@ -262,14 +263,7 @@ class tictacV: UIView {
 
     func press(_ x: Int, y: Int) {
         setCurrPt(x, y: y)
-        DBGLog(
-            "press: %d,%d  => %f %f %f %f",
-            x,
-            y,
-            currRect.origin.x,
-            currRect.origin.y,
-            currRect.size.width,
-            currRect.size.height)
+        DBGLog(String("press: (x),(y) => (currRect.origin.x) (currRect.origin.y) (currRect.size.width) (currRect.size.height)"))
 
         //unsigned int rmask = REGIONMASK(x,y);
         //unsigned int rinc =  REGIONINC(x,y);
@@ -288,7 +282,7 @@ class tictacV: UIView {
     // MARK: translate view coords to tic-tac-toe regions
 
     func ttx(_ x: Int) -> Int {
-        var i: Int
+        let i: Int = 0
         for i in 1..<3 {
             if CGFloat(x) < hborder + (CGFloat(i) * hstep) {
                 return i - 1
@@ -298,7 +292,7 @@ class tictacV: UIView {
     }
 
     func tty(_ y: Int) -> Int {
-        var i: Int
+        let i: Int = 0
         for i in 1..<3 {
             if CGFloat(y) < vborder + (CGFloat(i) * vstep) {
                 return i - 1
@@ -329,14 +323,14 @@ class tictacV: UIView {
         context = UIGraphicsGetCurrentContext()
         context?.setLineWidth(1.0)
         context?.setAlpha(1.0)
-        myFont = UIFont(name: String(utf8String: FONTNAME) ?? "", size: CGFloat(FONTSIZE))
+        myFont = UIFont(name: String(FONTNAME), size: CGFloat(FONTSIZE))
         updateTT()
         drawTicTac()
 
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        let touch = touches.first as? UITouch
+        let touch = touches.first
         let touchPoint = touch?.location(in: self)
         //DBGLog(@"ttv: I am touched at %f, %f => x:%d y:%d",touchPoint.x, touchPoint.y,[self ttx:touchPoint.x], [self tty:touchPoint.y]);
         press(ttx(Int(touchPoint?.x ?? 0)), y: tty(Int(touchPoint?.y ?? 0)))

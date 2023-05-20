@@ -26,7 +26,7 @@
 
 import Foundation
 
-class togd: NSObject {
+class Togd: NSObject {
     /*{
         trackerObj *pto;
         CGRect rect;
@@ -44,22 +44,21 @@ class togd: NSObject {
     var dateScale = 0.0
     var dateScaleInv = 0.0
 
-    convenience init() {
-        return self.init(data: nil, rect: .zero)
+    override convenience init() {
+        self.init(data: nil, rect: .zero)
     }
 
     init(data pTracker: trackerObj?, rect inRect: CGRect) {
-        var sql: String?
 
         super.init()
         pto = pTracker
         rect = inRect
         bbox = inRect
 
-        sql = "select max(date) from voData;"
-        lastDate = pto?.toQry2Int(sql) ?? 0
+        var sql = "select max(date) from voData;"
+        lastDate = pto?.toQry2Int(sql:sql) ?? 0
 
-        var gmd = (pto?.optDict?["graphMaxDays"] as? NSNumber)?.intValue ?? 0
+        var gmd = (pto?.optDict["graphMaxDays"] as? NSNumber)?.intValue ?? 0
         if 0 != gmd {
             var tFirstDate: Int
             gmd *= 60 * 60 * 24 // secs per day
@@ -68,8 +67,8 @@ class togd: NSObject {
         } else {
             sql = "select min(date) from voData;"
         }
-        firstDate = pto?.toQry2Int(sql) ?? 0
-        sql = nil
+        firstDate = pto?.toQry2Int(sql:sql) ?? 0
+        //sql = nil
 
         if firstDate == lastDate {
             firstDate -= 60 * 60 * 24 // secs per day -- single data point so arbitrarily set scale to 1 day
@@ -85,9 +84,6 @@ class togd: NSObject {
 
     func fillVOGDs() {
         for vo in pto?.valObjTable ?? [] {
-            guard let vo = vo as? valueObj else {
-                continue
-            }
             let tvogd = vo.vos?.newVOGD()
             vo.vogd = tvogd as? (vogd & voProtocol)
             //[vo.vogd release]; // rtm 05 feb 2012  +1 for new (alloc), +1 for vo retain

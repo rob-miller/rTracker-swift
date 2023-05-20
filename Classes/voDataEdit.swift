@@ -56,9 +56,9 @@ class voDataEdit: UIViewController, UITextViewDelegate {
     var vo: valueObj?
     var textView: UITextView?
     //@property (nonatomic) CGRect saveFrame;
-    weak var saveClass: Any?
+    var saveClass: voState?  // Any?
     var saveSelector: Selector?
-    weak var text: String?
+    var text: String?
 
     /*
      // The designated initializer.  Override if you create the controller programmatically and want to perform customization that is not appropriate for viewDidLoad.
@@ -76,7 +76,7 @@ class voDataEdit: UIViewController, UITextViewDelegate {
 
         super.viewDidLoad()
 
-        let f = view.frame
+        var f = view.frame
         f.size.width = rTracker_resource.getKeyWindowWidth()
         view.frame = f
 
@@ -165,18 +165,18 @@ class voDataEdit: UIViewController, UITextViewDelegate {
         super.viewWillDisappear(animated)
     }
 
-    class func getInitTVF(_ vc: UIViewController?) -> CGRect {
-        let frame = vc?.view.frame
-        let frame2 = vc?.navigationController?.navigationBar.frame
-        DBGLog("nvb rect: %f %f %f %f", frame2?.origin.x, frame2?.origin.y, frame2?.size.width, frame2?.size.height)
-        let frame3 = vc?.navigationController?.toolbar.frame
-        DBGLog("tb rect: %f %f %f %f", frame3?.origin.x, frame3?.origin.y, frame3?.size.width, frame3?.size.height)
+    class func getInitTVF(_ vc: UIViewController) -> CGRect {
+        var frame = vc.view.frame
+        let frame2 = vc.navigationController!.navigationBar.frame
+        DBGLog(String("nvb rect: \(frame2)"))
+        let frame3 = vc.navigationController!.toolbar.frame
+        DBGLog(String("tb rect: \(frame3))"))
 
-        frame?.origin.y += (frame2?.size.height ?? 0.0) + (frame2?.origin.y ?? 0.0)
-        frame?.size.height -= (frame?.origin.y ?? 0.0) + (frame3?.size.height ?? 0.0)
+        frame.origin.y += frame2.size.height  + frame2.origin.y 
+        frame.size.height -= frame.origin.y + frame3.size.height
 
-        DBGLog("initTVF rect: %f %f %f %f", frame?.origin.x, frame?.origin.y, frame?.size.width, frame?.size.height)
-        return frame ?? CGRect.zero
+        DBGLog(String("initTVF rect: \(frame.origin.x) \(frame.origin.y) \(frame.size.width) \(frame.size.height)"))
+        return frame
     }
 
     @objc func keyboardWillShow(_ aNotification: Notification?) {
@@ -188,8 +188,9 @@ class voDataEdit: UIViewController, UITextViewDelegate {
 
         // the keyboard is showing so resize the table's height
         //self.saveFrame = self.textView.frame;
-        let keyboardRect = aNotification?.userInfo?[UIResponder.keyboardFrameEndUserInfoKey]?.cgRectValue
-        DBGLog("keyboard rect: %f %f %f %f", keyboardRect?.origin.x, keyboardRect?.origin.y, keyboardRect?.size.width, keyboardRect?.size.height)
+        let userInfo = aNotification?.userInfo
+        let keyboardRect = userInfo![UIResponder.keyboardFrameEndUserInfoKey] as! CGRect // ?.cgRectValue
+        DBGLog(String("keyboard rect: \(keyboardRect.origin.x) \(keyboardRect.origin.y) \(keyboardRect.size.width) \(keyboardRect.size.height)"))
         /*
             if (self.vo) {
                 keyboardRect = [self.vo.vos.vc.view convertRect:keyboardRect fromView:nil];
@@ -200,16 +201,16 @@ class voDataEdit: UIViewController, UITextViewDelegate {
         //DBGLog(@"keyboard rect conv: %f %f %f %f",keyboardRect.origin.x,keyboardRect.origin.y,keyboardRect.size.width,keyboardRect.size.height);
 
         //NSTimeInterval animationDuration = [[aNotification userInfo][UIKeyboardAnimationDurationUserInfoKey] doubleValue];
-        let frame = voDataEdit.getInitTVF(self)
-        frame.size.height -= keyboardRect?.size.height ?? 0.0
+        var frame = voDataEdit.getInitTVF(self)
+        frame.size.height -= keyboardRect.size.height
         //UIView *iav = ((voTextBox*)self.vo.vos).textView.inputAccessoryView;
         //CGRect avframe = iav.frame;
         let avframe = textView?.inputAccessoryView?.frame
-        DBGLog("acc view frame rect: %f %f %f %f", avframe?.origin.x, avframe?.origin.y, avframe?.size.width, avframe?.size.height)
+        DBGLog(String("acc view frame rect: \(avframe!.origin.x) \(avframe!.origin.y) \(avframe!.size.width) \(avframe!.size.height)"))
 
         frame.size.height += avframe?.size.height ?? 0.0
 
-        DBGLog("keyboard TVF: %f %f %f %f", frame.origin.x, frame.origin.y, frame.size.width, frame.size.height)
+        DBGLog(String("keyboard TVF: \(frame.origin.x) \(frame.origin.y) \(frame.size.width) \(frame.size.height)"))
 
         //[UIView beginAnimations:@"ResizeForKeyboard" context:nil];
         //[UIView setAnimationDuration:animationDuration];
@@ -244,11 +245,20 @@ class voDataEdit: UIViewController, UITextViewDelegate {
 
         keyboardIsShown = false
     }
+    /*
+    func saveAction(sender: Any) {
+        print("save me")
+        // Use performSelector, if needed
+        // saveClass.perform(self.saveSelector, with: "FOOOO", afterDelay: 0)
+        saveClass!.perform(self.saveSelector!, with: self.textView!.text, afterDelay: 0)
+        self.dismiss(animated: true, completion: nil)
+    }
+     */
 
     @objc func saveAction(_ sender: Any?) {
         DBGLog("save me")
         //[self.saveClass performSelector:self.saveSelector withObject:@"FOOOO" afterDelay:(NSTimeInterval)0];
-        saveClass?.perform(saveSelector, with: textView?.text, afterDelay: TimeInterval(0))
+        saveClass!.perform(saveSelector!, with: textView?.text, afterDelay: TimeInterval(0))
         dismiss(animated: true)
     }
 

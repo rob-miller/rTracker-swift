@@ -72,12 +72,12 @@ class ppwV: UIView, UITextFieldDelegate {
 
     }*/
     var tob: tObjBase?
-    var parent: Any?
+    var parent: UIView?
     var parentAction: Selector?
     var topy: CGFloat = 0.0
     var ok: UInt = 0
     var cancel: UInt = 0
-    var next: UInt = 0
+    var nextState: UInt = 0
     var parentView: UIView?
     var activeField: UITextField?
     //@property (nonatomic) CGRect saveFrame;
@@ -135,7 +135,7 @@ class ppwV: UIView, UITextFieldDelegate {
             ])
             _cancelBtn?.frame = f
             //DBGLog(@"cancel frame: x: %f  y: %f  w: %f  h: %f",f.origin.x,f.origin.y,f.size.width,f.size.height);
-            _cancelBtn?.addTarget(self, action: Selector("cancelp"), for: .touchDown)
+            _cancelBtn?.addTarget(self, action: #selector(cancelp), for: .touchDown)
 
             if let _cancelBtn {
                 addSubview(_cancelBtn)
@@ -153,17 +153,17 @@ class ppwV: UIView, UITextFieldDelegate {
 
     init(parentView pv: UIView?) {
 
-        var frame: CGRect
+        var frame: CGRect = CGRect.zero
         safeDispatchSync({
             frame = pv?.frame ?? CGRect.zero
         })
-        DBGLog("ppwV parent: x=%f y=%f w=%f h=%f", frame.origin.x, frame.origin.y, frame.size.width, frame.size.height)
+        DBGLog(String("ppwV parent: x=\(frame.origin.x) y=\(frame.origin.y) w=\(frame.size.width) h=\(frame.size.height)"))
 
         frame.origin.x = 0.0
         frame.origin.y = 372.0
         frame.size.width = 320.0
         frame.size.height = 130.0
-        DBGLog("ppwV: x=%f y=%f w=%f h=%f", frame.origin.x, frame.origin.y, frame.size.width, frame.size.height)
+        DBGLog(String("ppwV: x=\(frame.origin.x) y=\(frame.origin.y) w=\(frame.size.width) h=\(frame.size.height)"))
 
         super.init(frame: frame)
         let bg = UIImageView(image: UIImage(named: rTracker_resource.getLaunchImageName() ?? ""))
@@ -227,7 +227,7 @@ class ppwV: UIView, UITextFieldDelegate {
 
     func hide() {
 
-        let f = frame
+        var f = frame
         //f.origin.y = ((UIView*)self.parent).frame.origin.y + ((UIView*)self.parent).frame.size.height;  // why different with privacyV ????
         //f.origin.y = ((UIView*)self.parent).frame.origin.y + ((UIView*)self.parent).frame.size.height;  // why different with privacyV ????
 
@@ -241,9 +241,9 @@ class ppwV: UIView, UITextFieldDelegate {
 
     func show() {
 
-        let f = frame
+        var f = frame
         isHidden = false
-        DBGLog("show: topy= %f  f= %f %f %f %f", topy, f.origin.x, f.origin.y, f.size.width, f.size.height)
+        DBGLog(String("show: topy= \(topy)  f= \(f.origin.x) \(f.origin.y) \(f.size.width) \(f.size.height)"))
 
         //[rTracker_resource willShowKeyboard:n view:self.view boty:boty];
 
@@ -325,8 +325,8 @@ class ppwV: UIView, UITextFieldDelegate {
         //DBGLog(@"ppwv check pass");
         setUpPass(okState, cancel: cancelState)
         topLabel?.text = "Please enter password:"
-        topTF?.addTarget(self, action: Selector("testp"), for: .editingDidEnd)
-        cancelBtn?.addTarget(self, action: Selector("cancelp"), for: .touchDown)
+        topTF?.addTarget(self, action: #selector(testp), for: .editingDidEnd)
+        cancelBtn?.addTarget(self, action: #selector(cancelp), for: .touchDown)
 
         showPassRqstr()
     }
@@ -338,8 +338,8 @@ class ppwV: UIView, UITextFieldDelegate {
         setUpPass(okState, cancel: cancelState)
 
         topLabel?.text = SetPassTxt
-        topTF?.addTarget(self, action: Selector("setp"), for: .editingDidEnd)
-        cancelBtn?.addTarget(self, action: Selector("cancelp"), for: .touchDown)
+        topTF?.addTarget(self, action: #selector(setp), for: .editingDidEnd)
+        cancelBtn?.addTarget(self, action: #selector(cancelp), for: .touchDown)
 
         showPassRqstr()
 
@@ -384,15 +384,15 @@ class ppwV: UIView, UITextFieldDelegate {
 
     func dbExistsPass() -> Bool {
         var sql = "create table if not exists priv0 (key integer primary key, val text);"
-        tob?.toExecSql(sql)
+        tob?.toExecSql(sql:sql)
         sql = "select count(*) from priv0 where key=0;"
-        if tob?.toQry2Int(sql) != nil {
+        if tob?.toQry2Int(sql:sql) != nil {
             DBGLog("password exists")
             return true
         } else {
             DBGLog("password does not exist")
             sql = "create table if not exists priv1 (key integer primary key, lvl integer unique);"
-            tob?.toExecSql(sql)
+            tob?.toExecSql(sql:sql)
 
             return false
         }
@@ -405,12 +405,12 @@ class ppwV: UIView, UITextFieldDelegate {
             return false
         }
 
-        let dbPass = rTracker_resource.fromSqlStr(tob?.toQry2Str(sql))
+        let dbPass = rTracker_resource.fromSqlStr(tob?.toQry2Str(sql:sql))
         if dbPass == "" {
             return false // if here then dbquery failed
         }
 
-        if `try` == rTracker_resource.fromSqlStr(tob?.toQry2Str(sql)) {
+        if `try` == rTracker_resource.fromSqlStr(tob?.toQry2Str(sql:sql)) {
             return true
         } else {
             return false
@@ -423,34 +423,34 @@ class ppwV: UIView, UITextFieldDelegate {
         }
 
         let sql = "insert or replace into priv0 (key,val) values (0,'\(rTracker_resource.toSqlStr(pass) ?? "")');"
-        tob?.toExecSql(sql)
+        tob?.toExecSql(sql:sql)
     }
 
     func dbResetPass() {
         let sql = "delete from priv0 where key=0;"
-        tob?.toExecSql(sql)
+        tob?.toExecSql(sql:sql)
         DBGLog("password reset")
     }
 
     // MARK: button Actions
 
     @objc func setp() {
-        DBGLog("enter tf= .%@.", topTF?.text)
+        DBGLog(String("enter tf= .\(topTF?.text ?? "")."))
         if !((topTF?.text?.trimmingCharacters(in: .whitespaces).count ?? 0) > 0) {
             // "" not valid password, or cancel
-            next = cancel
+            nextState = cancel
         } else {
             dbSetPass(topTF?.text)
-            next = ok
+            nextState = ok
         }
         if (topLabel?.text != ChangePassTxt) && (topLabel?.text != SetPassTxt) {
             hide()
         }
 
         //[self.parent performSelector:self.parentAction];
-        let imp = parent?.method(for: parentAction)
-        let `func`: ((Any?, Selector) -> Void)? = imp
-        `func`?(parent, parentAction)
+        let imp = parent!.method(for: parentAction)
+        let funcp = unsafeBitCast(imp, to: (@convention(c) (AnyObject, Selector) -> Void).self) // : ((Any?, Selector) -> Void)? = imp
+        funcp(parent!, parentAction!)
     }
 
     @objc func cancelp() {
@@ -461,25 +461,25 @@ class ppwV: UIView, UITextFieldDelegate {
     @objc func testp() {
         //DBGLog(@"testp: %@",self.topTF.text);
         if dbTestPass(topTF?.text) {
-            next = ok
+            nextState = ok
         } else {
-            next = cancel
+            nextState = cancel
             hide()
         }
 
         topTF?.resignFirstResponder() // ???
 
         //[self.parent performSelector:self.parentAction];
-        let imp = parent?.method(for: parentAction)
-        let `func`: ((Any?, Selector) -> Void)? = imp
-        `func`?(parent, parentAction)
+        let imp = parent!.method(for: parentAction)
+        let funcp = unsafeBitCast(imp, to: (@convention(c) (AnyObject, Selector) -> Void).self)  // : ((Any?, Selector) -> Void)? = imp
+        funcp(parent!, parentAction!)
     }
 
     // MARK: -
     // MARK: UI element getters
 
     func genFrame(_ vert: CGFloat) -> CGRect {
-        let f = frame
+        var f = frame
         f.origin.x = 0.05 * f.size.width
         f.origin.y = vert * f.size.height
         f.size.width *= 0.9
@@ -506,7 +506,7 @@ class ppwV: UIView, UITextFieldDelegate {
 
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         // the user pressed the "Done" button, so dismiss the keyboard
-        DBGLog("textField done: %@", textField.text)
+        DBGLog(String("textField done: \(textField.text ?? "")"))
         //[target ppwvResponse];
         //[target performSelector:action];
 
@@ -516,9 +516,9 @@ class ppwV: UIView, UITextFieldDelegate {
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         #if DEBUGLOG
-        let touch = touches.first as? UITouch
+        let touch = touches.first
         let touchPoint = touch?.location(in: self)
-        DBGLog("I am touched at %f, %f.", touchPoint?.x, touchPoint?.y)
+        DBGLog(String("I am touched at \(touchPoint!.x), \(touchPoint!.y)."))
         #endif
 
         resignFirstResponder()

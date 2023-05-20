@@ -13,6 +13,9 @@
 //  appreciated but not required.
 //
 
+import ObjectiveC
+import Foundation
+
 //#import <Cocoa/Cocoa.h>
 
 //
@@ -29,7 +32,7 @@
 //  appreciated but not required.
 //
 
-import UIKIt
+//import UIKIt
 
 class CSVParser: NSObject {
     var csvString: String?
@@ -125,7 +128,7 @@ class CSVParser: NSObject {
         receiver = aReceiver
         receiverSelector = aSelector
 
-        parseFile()
+        _ = parseFile()
 
         scanner = nil
         receiver = nil
@@ -139,7 +142,7 @@ class CSVParser: NSObject {
     // returns the parsed results if successful and receiver is nil, otherwise
     //	returns nil when done or on failure.
     //
-    func parseFile() -> [AnyHashable]? {
+    func parseFile() -> [[String:String]]? {
         if hasHeader {
 
             fieldNames = parseHeader()
@@ -148,7 +151,7 @@ class CSVParser: NSObject {
             }
         }
 
-        var records: [AnyHashable]? = nil
+        var records: [[String : String]]? = nil
         if receiver == nil {
             records = []
         }
@@ -158,14 +161,22 @@ class CSVParser: NSObject {
             return nil
         }
 
-        while record {
+    var readRecords = true
+    while readRecords, record != nil {
             autoreleasepool {
 
                 if let receiver {
                     //[receiver performSelector:receiverSelector withObject:record];
-                    let imp = receiver.method(for: receiverSelector)
+                    /*
+                    let imp = (receiver as AnyObject).method(for: receiverSelector!)
+
                     let `func`: ((Any?, Selector, [AnyHashable : Any]?) -> Void)? = imp
                     `func`?(receiver, receiverSelector!, record)
+                     */
+                    let imp = (receiver as AnyObject).method(for: receiverSelector!)  // receiver.method(for: receiverSelector)
+                    let funcPointer = unsafeBitCast(imp, to: (@convention(c) (Any?, Selector, NSDictionary) -> Void).self)
+                    funcPointer(receiver, receiverSelector!, record! as NSDictionary)
+
                 } else {
                     if let record {
                         records?.append(record)
@@ -173,7 +184,7 @@ class CSVParser: NSObject {
                 }
 
                 if parseLineSeparator() == nil {
-                    break
+                    readRecords = false  // break recordLoop
                 }
 
                 record = parseRecord()
@@ -190,14 +201,14 @@ class CSVParser: NSObject {
     //
     // returns the array of parsed field names or nil on parse failure.
     //
-    func parseHeader() -> [AnyHashable]? {
+    func parseHeader() -> [String]? {
         var name = parseName()
         if name == nil {
             return nil
         }
 
-        var names: [AnyHashable] = []
-        while name {
+        var names: [String] = []
+        while name != nil {
             names.append(name ?? "")
 
             if parseSeparator() == nil {
@@ -218,7 +229,7 @@ class CSVParser: NSObject {
     //
     // returns the parsed record as a dictionary, or nil on failure. 
     //
-    func parseRecord() -> [AnyHashable : Any]? {
+    func parseRecord() -> [String : String]? {
         //
         // Special case: return nil if the line is blank. Without this special case,
         // it would parse as a single blank field.
@@ -232,11 +243,11 @@ class CSVParser: NSObject {
             return nil
         }
 
-        let fieldNamesCount = fieldNames?.count ?? 0
-        let fieldCount = 0
+        var fieldNamesCount = fieldNames?.count ?? 0
+        var fieldCount = 0
 
-        var record = [AnyHashable : Any](minimumCapacity: (fieldNames?.count ?? 0))
-        while field {
+        var record = [String : String](minimumCapacity: (fieldNames?.count ?? 0))
+        while field != nil {
             var fieldName: String?
             if fieldNamesCount > fieldCount {
                 fieldName = fieldNames?[fieldCount] as? String
@@ -293,12 +304,12 @@ class CSVParser: NSObject {
         // Special case: if the current location is immediately
         // followed by a separator, then the field is a valid, empty string.
         //
-        let currentLocation = scanner?.scanLocation ?? 0
-        if parseSeparator() != nil || parseLineSeparator() != nil || scanner?.isAtEnd ?? false {
-            scanner?.scanLocation = currentLocation
-            return ""
+        if let currentLocation = scanner?.currentIndex {// scanLocation ?? 0
+            if parseSeparator() != nil || parseLineSeparator() != nil || scanner?.isAtEnd ?? false {
+                scanner?.currentIndex = currentLocation
+                return ""
+            }
         }
-
         return nil
     }
 
@@ -360,7 +371,11 @@ class CSVParser: NSObject {
     // returns a string containing two double quotes or nil.
     //
     func parseTwoDoubleQuotes() -> String? {
-        if scanner?.scanString("\"\"", into: nil) ?? false {
+        let currentIndex = scanner?.currentIndex
+            let string = scanner?.string ?? ""
+
+            if string[currentIndex!] == "\"" && string[scanner!.string.index(after: currentIndex!)] == "\"" {
+                scanner?.currentIndex = scanner!.string.index(currentIndex!, offsetBy: 2)
             return "\"\""
         }
         return nil
@@ -374,7 +389,8 @@ class CSVParser: NSObject {
     // returns @"\"" or nil.
     //
     func parseDoubleQuote() -> String? {
-        if scanner?.scanString("\"", into: nil) ?? false {
+        if scanner?.string[scanner!.currentIndex] == "\"" {
+            scanner?.currentIndex = scanner!.string.index(after: scanner!.currentIndex)
             return "\""
         }
         return nil
@@ -388,7 +404,11 @@ class CSVParser: NSObject {
     // returns the separator string or nil.
     //
     func parseSeparator() -> String? {
-        if scanner?.scanString(separator ?? "", into: nil) ?? false {
+        let currentIndex = scanner?.currentIndex
+            let string = scanner?.string ?? ""
+
+            if string[currentIndex!...].hasPrefix(separator ?? "") {
+                scanner?.currentIndex = scanner!.string.index(currentIndex!, offsetBy: separator?.count ?? 0)
             return separator
         }
         return nil
@@ -402,12 +422,18 @@ class CSVParser: NSObject {
     // returns a string containing one or more newline characters or nil.
     //
     func parseLineSeparator() -> String? {
-        var matchedNewlines: String? = nil
-        scanner?.scanCharacters(
-            from: .newlines,
-            into: AutoreleasingUnsafeMutablePointer<NSString?>(mutating: &matchedNewlines))
-        return matchedNewlines
+        let currentIndex = scanner?.currentIndex
+        let string = scanner?.string ?? ""
+        let newlineCharacterSet = CharacterSet.newlines
+
+        if let range = string.rangeOfCharacter(from: newlineCharacterSet, options: [], range: currentIndex!..<string.endIndex) {
+            scanner?.currentIndex = range.upperBound
+            return String(string[range])
+        }
+
+        return nil
     }
+
 
     //
     // parseTextData
@@ -420,12 +446,17 @@ class CSVParser: NSObject {
         var accumulatedData = ""
         while true {
             var fragment: String?
-            if let endTextCharacterSet {
-                if scanner?.scanUpToCharacters(from: endTextCharacterSet, into: AutoreleasingUnsafeMutablePointer<NSString?>(mutating: &fragment)) ?? false {
-                    accumulatedData = accumulatedData + (fragment ?? "")
-                }
+            if let string = scanner?.string,
+               let currentIndex = scanner?.currentIndex,
+               let range = string[currentIndex...].rangeOfCharacter(from: endTextCharacterSet!),
+               let substring = string[currentIndex..<range.lowerBound].removingPercentEncoding {
+                fragment = substring
+                scanner?.currentIndex = range.upperBound
             }
 
+            if let fragment = fragment {
+                accumulatedData += fragment
+            }
             //
             // If the separator is just a single character (common case) then
             // we know we've reached the end of parseable text
@@ -438,23 +469,32 @@ class CSVParser: NSObject {
             // Otherwise, we need to consider the case where the first character
             // of the separator is matched but we don't have the full separator.
             //
-            let location = scanner?.scanLocation ?? 0
-            var firstCharOfSeparator: String?
-            if scanner?.scanString((separator as NSString?)?.substring(to: 1) ?? "", into: AutoreleasingUnsafeMutablePointer<NSString?>(mutating: &firstCharOfSeparator)) ?? false {
-                if scanner?.scanString((separator as NSString?)?.substring(from: 1) ?? "", into: nil) ?? false {
-                    scanner?.scanLocation = location
-                    break
+            if let location = scanner?.currentIndex,
+               let separator = separator,
+               let firstChar = separator.first,
+               scanner?.string[location...].hasPrefix(String(firstChar)) == true
+            {
+                let firstCharOfSeparator: String = String(firstChar)
+                scanner?.currentIndex = scanner?.string.index(after: location) ?? scanner!.string.startIndex
+                
+                if let remainingSeparator = Optional(separator)?.dropFirst().description,
+                   scanner?.string.index(scanner?.currentIndex ?? scanner!.string.startIndex, offsetBy: remainingSeparator.count, limitedBy: (scanner?.string.endIndex)!) == scanner?.string.index(scanner?.currentIndex ?? scanner!.string.startIndex, offsetBy: remainingSeparator.count)
+                {
+                    scanner?.currentIndex = scanner?.string.index(scanner!.currentIndex, offsetBy: remainingSeparator.count, limitedBy: (scanner?.string.endIndex)!) ?? scanner!.string.endIndex
+                } else {
+                    // We have the first char of the separator but not the whole
+                    // separator, so just append the char and continue
+                    accumulatedData += firstCharOfSeparator
+                    continue
                 }
-
-                //
-                // We have the first char of the separator but not the whole
-                // separator, so just append the char and continue
-                //
-                accumulatedData = accumulatedData + (firstCharOfSeparator ?? "")
-                continue
+                
+                // Separator found, exit the loop
+                break
             } else {
                 break
             }
+
+
         }
 
         if accumulatedData.count > 0 {

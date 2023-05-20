@@ -1,4 +1,9 @@
 //  Converted to Swift 5.7.2 by Swiftify v5.7.25331 - https://swiftify.com/
+
+import CoreGraphics
+import UIKit
+
+
 ///************
 /// rTracker-constants.swift
 /// Copyright 2010-2021 Robert T. Miller
@@ -25,16 +30,12 @@
 // 18 dec change MARGIN from 10.0f
 let MARGIN = 8.0
 let SPACE = 3.0
-func TFXTRA() {
-    2.0
-}
+let TFXTRA = 2.0
+
 
 let rtTrackerUpdatedNotification = "rtTrackerUpdatedNotification"
 let rtValueUpdatedNotification = "rtValueUpdatedNotification"
 let rtProgressBarUpdateNotification = "rtProgressBarUpdateNotification"
-#if ADVERSION
-let rtPurchasedNotification = "rtPurchasedNotification"
-#endif
 
 let kAnimationDuration = 0.3
 
@@ -51,12 +52,27 @@ let MAXPRIV = 100
 let BIGPRIV = 1000
 let PRIVDFLT = MINPRIV
 
-func f(_ x: Any) -> CGFloat {
-    CGFloat(x)
+
+func f(_ x: Any) -> Float {
+    if let doubleValue = x as? Double {
+        return Float(doubleValue)
+    } else if let intValue = x as? Int {
+        return Float(intValue)
+    } else {
+        return 0.0 // or some default value
+    }
 }
+
 func d(_ x: Any) -> Double {
-    Double(x)
+    if let doubleValue = x as? Double {
+        return doubleValue
+    } else if let intValue = x as? Int {
+        return Double(intValue)
+    } else {
+        return 0.0 // or some default value
+    }
 }
+
 
 let SAMPLES_VERSION = 1
 
@@ -95,12 +111,14 @@ let RTRKext = ".rtrk"
 let TmpTrkrData = ".tdata"
 let TmpTrkrNames = ".tnames"
 
-let CELL_HEIGHT_NORMAL = ((vo.parentTracker as? trackerObj)?.maxLabel.height ?? 0.0) + (3.0 * MARGIN)
-let CELL_HEIGHT_TALL = 2.0 * CELL_HEIGHT_NORMAL
-
-let ADVER_TRACKER_LIM = 8
-let ADVER_ITEM_LIM = 8
+// rtm swift let CELL_HEIGHT_NORMAL = ((vo.parentTracker as? trackerObj)?.maxLabel.height ?? 0.0) + (3.0 * MARGIN)
+// rtm swift let CELL_HEIGHT_TALL = 2.0 * CELL_HEIGHT_NORMAL
 
 let PrefBodyFont = UIFont.preferredFont(forTextStyle: .body)
 
-let RTA_prodid = "rTrackerA_1"
+let CSVNOTIMESTAMP = 0x01 << 0
+let CSVNOREADDATE = 0x01 << 1
+let CSVCREATEDVO = 0x01 << 2
+let CSVCONFIGVO = 0x01 << 3
+let CSVLOADRECORD = 0x01 << 4
+

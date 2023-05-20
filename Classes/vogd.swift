@@ -39,7 +39,7 @@ class vogd: NSObject {
 
         CGFloat yZero;
     }*/
-    var vo: valueObj?
+    var vo: valueObj
     var xdat: [AnyHashable]?
     var ydat: [AnyHashable]?
     var minVal = 0.0
@@ -47,46 +47,47 @@ class vogd: NSObject {
     var vScale = 0.0
     var yZero: CGFloat = 0.0
 
-    override init() {
-        DBGErr("vogd: invalid init!")
+    
+    init(_ inVO: valueObj) {
+        vo = inVO
         super.init()
+        //DBGErr("vogd: invalid init!")
+
     }
 
-    func getMinMax(_ targ: String?, alt: String?) -> Double {
-        var retval = 0.0
-        if nil != alt {
-            if Scanner.localizedScanner(with: alt ?? "").scanDouble(UnsafeMutablePointer<Double>(mutating: &retval)) {
+    func getMinMax(_ targ: String, alt: String?) -> Double {
+        if let alt {
+            let scanner = Scanner(string: alt)
+            if let retval = scanner.scanDouble() {
                 return retval
             }
         }
-        let myTracker = vo?.parentTracker as? trackerObj
-        let myTOGD = myTracker?.togd as? togd
-        let sql = String(format: "select %@(val collate CMPSTRDBL) from voData where id=%ld and val != '' and date >= %d and date <= %d;", targ ?? "", Int(vo?.vid ?? 0), myTOGD?.firstDate ?? 0, myTOGD?.lastDate ?? 0)
-        return myTracker?.toQry2Double(sql) ?? 0.0
+        let myTracker = vo.parentTracker
+        let myTOGD = myTracker.togd!
+        let sql = String(format: "select %@(val collate CMPSTRDBL) from voData where id=%ld and val != '' and date >= %d and date <= %d;", targ, Int(vo.vid), myTOGD.firstDate, myTOGD.lastDate)
+        return myTracker.toQry2Double(sql:sql) ?? 0.0
     }
 
-    func initAsNum(_ inVO: valueObj?) -> vogd? {
-        super.init()
+    func initAsNum(_ inVO: valueObj) -> vogd {
+        //super.init()
         vo = inVO
         yZero = 0.0
 
         //double dscale = d(self.bounds.size.width - (2.0f*BORDER)) / d(self.lastDate - self.firstDate);
 
-        let myTracker = vo?.parentTracker as? trackerObj
-        let myTOGD = myTracker?.togd as? togd
+        let myTracker = vo.parentTracker
+        let myTOGD = myTracker.togd!
 
-        if (vo?.vtype == VOT_NUMBER || vo?.vtype == VOT_FUNC) && ("0" == (vo?.optDict)?["autoscale"]) {
+        if (vo.vtype == VOT_NUMBER || vo.vtype == VOT_FUNC) && ("0" == vo.optDict["autoscale"]) {
             //DBGLog(@"autoscale= %@", [self.vo.optDict objectForKey:@"autoscale"]);
-            minVal = getMinMax("min", alt: (vo?.optDict)?["gmin"] as? String)
-            maxVal = getMinMax("max", alt: (vo?.optDict)?["gmax"] as? String)
-        } else if vo?.vtype == VOT_SLIDER {
-            let nmin = (vo?.optDict)?["smin"] as? NSNumber
-            let nmax = (vo?.optDict)?["smax"] as? NSNumber
-            minVal = nmin != nil ? nmin?.doubleValue ?? 0.0 : d(SLIDRMINDFLT)
-            maxVal = nmax != nil ? nmax?.doubleValue ?? 0.0 : d(SLIDRMAXDFLT)
-        } else if vo?.vtype == VOT_BOOLEAN {
+            minVal = getMinMax("min", alt: (vo.optDict["gmin"])!)
+            maxVal = getMinMax("max", alt: (vo.optDict["gmax"])!)
+        } else if vo.vtype == VOT_SLIDER {
+            minVal = Double((vo.optDict)["smin", default:String("\(SLIDRMINDFLT)")])!
+            maxVal = Double((vo.optDict)["smax", default:String("\(SLIDRMAXDFLT)")])!
+        } else if vo.vtype == VOT_BOOLEAN {
             let offVal = 0.0
-            let onVal = ((vo?.optDict)?["boolval"] as? NSNumber)?.doubleValue ?? 0.0
+            let onVal = Double((vo.optDict["boolval", default:"0.0"]))!
             if offVal < onVal {
                 minVal = offVal
                 maxVal = onVal
@@ -94,15 +95,15 @@ class vogd: NSObject {
                 minVal = onVal
                 maxVal = offVal
             }
-        } else if vo?.vtype == VOT_CHOICE {
+        } else if vo.vtype == VOT_CHOICE {
             minVal = d(0)
             maxVal = d(0)
-            let c = 0
+            var c = 0
             for i in 0..<CHOICES {
                 let key = "cv\(i)"
-                let tstVal = vo?.optDict?[key] as? String
+                let tstVal = vo.optDict[key]
                 let skey = "c\(i)"
-                let tstStr = vo?.optDict?[skey] as? String
+                let tstStr = vo.optDict[skey]
                 if nil != tstVal {
                     // only do specified choices
                     c += 1
@@ -123,14 +124,14 @@ class vogd: NSObject {
                 maxVal = d(CHOICES)
             }
             #if GRAPHDBG
-            DBGLog("minVal= %lf maxVal= %lf", minVal, maxVal)
+            DBGLog(String("minVal= \(minVal) maxVal= \(maxVal)"))
             #endif
 
             let step = (maxVal - minVal) / Double(c) //  CHOICES;
             minVal -= step //( d( YTICKS - CHOICES ) /2.0 ) * step;   // YTICKS=7, CHOICES=6, so need blank positions at top and bottom
             maxVal += step * d(YTICKS - Double(c)) // step ; //( d( YTICKS - CHOICES ) /2.0 ) * step;
             #if GRAPHDBG
-            DBGLog("minVal= %lf maxVal= %lf", minVal, maxVal)
+            DBGLog(String("minVal= \(minVal) maxVal= \(maxVal)"))
             //DBGLog(@"Foo");
             #endif
         } else {
@@ -154,57 +155,47 @@ class vogd: NSObject {
             maxVal = 1.0
         }
 
-        if VOT_CHOICE != vo?.vtype {
+        if VOT_CHOICE != vo.vtype {
             let yScaleExpand = (maxVal - minVal) * GRAPHSCALE
-            if nil == (vo?.optDict)?["gmax"] {
+            if nil == vo.optDict["gmax"] {
                 maxVal += yScaleExpand // +5% each way for visibility unless specified
             }
-            if nil == (vo?.optDict)?["gmin"] {
+            if nil == vo.optDict["gmin"] {
                 minVal -= yScaleExpand
             }
         }
         #if GRAPHDBG
-        DBGLog("%@ minval= %f  maxval= %f", vo?.valueName, minVal, maxVal)
+        DBGLog(String("\(vo.valueName) minval= \(minVal) maxval= \(maxVal)"))
         #endif
 
         //double vscale = d(self.bounds.size.height - (2.0f*BORDER)) / (maxVal - minVal);
-        vScale = d(myTOGD?.rect.size.height) / (maxVal - minVal)
+        vScale = d(myTOGD.rect.size.height) / (maxVal - minVal)
 
         yZero -= CGFloat(minVal)
         yZero *= CGFloat(vScale)
 
-        var mxdat: [AnyHashable] = []
-        var mydat: [AnyHashable] = []
-
-        var i1: [AnyHashable] = []
-        var d1: [AnyHashable] = []
+        var mxdat: [NSNumber] = []
+        var mydat: [NSNumber] = []
 
         //myTracker.sql = [NSString stringWithFormat:@"select date,val from voData where id=%d and val != '' order by date;",self.vo.vid];
         // 6.ii.2013 implement maxGraphDays
-        let sql = String(format: "select date,val from voData where id=%ld and val != '' and date >= %d and date <= %d order by date;", Int(vo?.vid ?? 0), myTOGD?.firstDate ?? 0, myTOGD?.lastDate ?? 0)
+        let sql = String(format: "select date,val from voData where id=%ld and val != '' and date >= %d and date <= %d order by date;", Int(vo.vid), myTOGD.firstDate, myTOGD.lastDate)
         #if GRAPHDBG
-        DBGLog("graph points sql: %@", sql)
+        DBGLog(String("graph points sql: \(sql)"))
         #endif
-        myTracker?.toQry2AryID(&i1, d1: &d1, sql: sql)
+        let idrslt = myTracker.toQry2AryID(sql: sql)
         //sql = nil;
 
-        let e = (d1 as NSArray).objectEnumerator()
-
-        for ni in i1 {
-            guard let ni = ni as? NSNumber else {
-                continue
-            }
-
-            let nv = e.nextObject() as? NSNumber
+        for (ni, nv) in idrslt {
 
             #if GRAPHDBG
-            DBGLog("i: %@  f: %@", ni, nv)
+            DBGLog(String("i: \(ni)  f: \(nv)"))
             #endif
-            var d = ni.doubleValue // date as int secs cast to float
-            var v = nv?.doubleValue ?? 0.0 // val as float
+            var d = Double(ni) // date as int secs cast to float
+            var v = Double(nv) // val as float
 
-            d -= Double(myTOGD?.firstDate ?? 0.0) // self.firstDate;
-            d *= myTOGD?.dateScale ?? 0.0
+            d -= Double(myTOGD.firstDate) // self.firstDate;
+            d *= myTOGD.dateScale
             v -= minVal
             v *= vScale
 
@@ -225,41 +216,37 @@ class vogd: NSObject {
         return self
     }
 
-    func initAsNote(_ inVO: valueObj?) -> vogd? {
-        super.init()
+    func initAsNote(_ inVO: valueObj) -> vogd {
+        //super.init()
         vo = inVO
         yZero = 0.0
 
-        let myTracker = vo?.parentTracker as? trackerObj
-        let myTOGD = myTracker?.togd as? togd
+        let myTracker = vo.parentTracker
+        let myTOGD = myTracker.togd!
 
-        vScale = d(myTOGD?.rect.size.height) / d(1.1 + GRAPHSCALE) // (self.maxVal - self.minVal);
+        vScale = d(myTOGD.rect.size.height) / d(1.1 + GRAPHSCALE) // (self.maxVal - self.minVal);
         //self.vScale = d(myTOGD.rect.size.height); // / d(1.05) ;  // (self.maxVal - self.minVal);
 
         var mxdat: [AnyHashable] = []
         var mydat: [AnyHashable] = []
 
-        var i1: [AnyHashable] = []
+        var i1: [Int] = []
 
         //NSMutableArray *s1 = [[NSMutableArray alloc] init];
 
         //myTracker.sql = [NSString stringWithFormat:@"select date,val from voData where id=%d and val not NULL and val != '' and date >= %d and date <= %d order by date;",self.vo.vid,myTOGD.firstDate,myTOGD.lastDate];
         //[myTracker toQry2AryIS:i1 s1:s1];
         //NSEnumerator *e = [s1 objectEnumerator];
-        let sql = String(format: "select date,val from voData where id=%ld and val not NULL and val != '' and date >= %d and date <= %d order by date;", Int(vo?.vid ?? 0), myTOGD?.firstDate ?? 0, myTOGD?.lastDate ?? 0)
-        myTracker?.toQry2AryI(&i1, sql: sql)
+        let sql = String(format: "select date,val from voData where id=%ld and val not NULL and val != '' and date >= %d and date <= %d order by date;", Int(vo.vid), myTOGD.firstDate, myTOGD.lastDate)
+        i1 = myTracker.toQry2AryI(sql: sql)
         //sql = nil;
 
         for ni in i1 {
-            guard let ni = ni as? NSNumber else {
-                continue
-            }
-
             //DBGLog(@"i: %@  ",ni);
-            var d = ni.doubleValue // date as int secs cast to float
+            var d = Double(ni) // date as int secs cast to float
 
-            d -= Double(myTOGD?.firstDate ?? 0.0)
-            d *= myTOGD?.dateScale ?? 0.0
+            d -= Double(myTOGD.firstDate)
+            d *= myTOGD.dateScale
             //d+= border;
 
             mxdat.append(NSNumber(value: d))
@@ -324,27 +311,26 @@ class vogd: NSObject {
     }
     */
 
-    func initAsTBoxLC(_ inVO: valueObj?) -> vogd? {
+    func initAsTBoxLC(_ inVO: valueObj) -> vogd {
 
-        super.init()
+        //super.init()
         vo = inVO
         yZero = 0.0
 
-        let myTracker = vo?.parentTracker as? trackerObj
-        let myTOGD = myTracker?.togd as? togd
+        let myTracker = vo.parentTracker
+        let myTOGD = myTracker.togd!
 
         minVal = 0.0
         maxVal = minVal
 
-        var i1: [AnyHashable] = []
-        var s1: [AnyHashable] = []
-        var i2: [AnyHashable] = []
+        //var i2: [Int] = []
 
-        let sql = String(format: "select date,val from voData where id=%ld and val not NULL and val != '' and date >= %d and date <= %d order by date;", Int(vo?.vid ?? 0), myTOGD?.firstDate ?? 0, myTOGD?.lastDate ?? 0)
-        myTracker?.toQry2AryIS(&i1, s1: &s1, sql: sql)
+        let sql = String(format: "select date,val, str_count(val, '\n') from voData where id=%ld and val not NULL and val != '' and date >= %d and date <= %d order by date;", Int(vo.vid), myTOGD.firstDate, myTOGD.lastDate)
+        let rsltISI = myTracker.toQry2AryISI(sql: sql)
         //sql = nil;
 
-        // TODO: nicer to cache tbox linecounts somehow 
+        // TODO: nicer to cache tbox linecounts somehow
+        /*
         for s in s1 {
             guard let s = s as? String else {
                 continue
@@ -355,29 +341,33 @@ class vogd: NSObject {
             }
             i2.append(NSNumber(value: v))
         }
+         */
 
+        for (_, _, i3) in rsltISI {
+            let di3 = Double(i3)
+            if di3 > maxVal {
+                maxVal = di3
+            }
+        }
         if maxVal < d(YTICKS) {
             maxVal = d(YTICKS)
         }
 
-        vScale = d(myTOGD?.rect.size.height) / (maxVal - minVal)
+        vScale = d(myTOGD.rect.size.height) / (maxVal - minVal)
 
-        var mxdat: [AnyHashable] = []
-        var mydat: [AnyHashable] = []
+        var mxdat: [NSNumber] = []
+        var mydat: [NSNumber] = []
 
-        let e = (i2 as NSArray).objectEnumerator()
+        //let e = (i2 as NSArray).objectEnumerator()
 
-        for ni in i1 {
-            guard let ni = ni as? NSNumber else {
-                continue
-            }
+        for (i1, _, i3) in rsltISI {
 
             //DBGLog(@"i: %@  ",ni);
-            var d = ni.doubleValue // date as int secs cast to float
-            var v = (e.nextObject() as? NSNumber)?.doubleValue ?? 0.0
+            var d = Double(i1) // date as int secs cast to float
+            var v = Double(i3)
 
-            d -= Double(myTOGD?.firstDate ?? 0.0)
-            d *= myTOGD?.dateScale ?? 0.0
+            d -= Double(myTOGD.firstDate)
+            d *= myTOGD.dateScale
 
             v -= minVal
             v *= vScale
@@ -395,19 +385,19 @@ class vogd: NSObject {
 
     }
 
-    func myGraphColor() -> UIColor? {
-        if 0 > (vo?.vcolor ?? 0) {
+    func myGraphColor() -> UIColor {
+        if 0 > vo.vcolor {
             return .white // VOT_CHOICE, VOT_INFO
         }
 
         let cs = rTracker_resource.colorSet()
-        if (cs?.count ?? 0) <= (vo?.vcolor ?? 0) {
+        if cs.count <= vo.vcolor {
             // paranoid due to crashlytics report error in gtYAxV:drawYAxis but expect due to vcolor=-1
-            DBGErr("myGraphColor: vcolor out of range: %ld cs count= %lu vtype= %ld", Int(vo?.vcolor ?? 0), UInt(cs?.count ?? 0), Int(vo?.vtype ?? 0))
-            vo?.vcolor = 0
+            DBGErr(String("myGraphColor: vcolor out of range: \(vo.vcolor) cs count= \(cs.count) vtype= \(vo.vtype)"))
+            vo.vcolor = 0
         }
 
-        return cs?[vo?.vcolor ?? 0] as? UIColor
+        return cs[vo.vcolor]
 
     }
 }

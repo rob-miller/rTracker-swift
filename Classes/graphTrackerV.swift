@@ -25,10 +25,6 @@ import QuartzCore
 import UIKit
 
 let NOXMARK = -1.0
-var context = UIGraphicsGetCurrentContext()
-var tm = CGAffineTransform(a: 1.0, b: 0.0, c: 0.0, d: -1.0, tx: 0.0, ty: bounds.size.height)
-var touch = touches.first as? UITouch
-var touchPoint = touch?.location(in: self)
 
 class graphTrackerV: UIScrollView {
     /*{
@@ -45,8 +41,13 @@ class graphTrackerV: UIScrollView {
     var doDrawGraph = false
     var xMark: CGFloat = 0.0
     var parentGTVC: Any?
-    var searchXpoints: [AnyHashable]?
+    var searchXpoints: [NSNumber]?
     //- (void)setTransform:(CGAffineTransform)newValue;
+    
+    var context = UIGraphicsGetCurrentContext()
+    var tm: CGAffineTransform   // (a: 1.0, b: 0.0, c: 0.0, d: -1.0, tx: 0.0, ty: bounds.size.height)
+    //var touch = touches.first as? UITouch
+    //var touchPoint = touch?.location(in: self)
 
     /*
     -(id)initWithFrame:(CGRect)r
@@ -63,6 +64,7 @@ class graphTrackerV: UIScrollView {
     */
 
     override init(frame: CGRect) {
+        tm = CGAffineTransform(a: 1.0, b: 0.0, c: 0.0, d: -1.0, tx: 0.0, ty: 0.0)
         super.init(frame: frame)
         #if USELAYER
         //from scrollview programming guide listing 3-3
@@ -87,38 +89,38 @@ class graphTrackerV: UIScrollView {
     // MARK: -
     // MARK: drawing routines
 
-    func drawBackground(_ context: CGContext?) {
+    func drawBackground(_ context: CGContext) {
         UIColor.purple.set()
-        context?.fill(bounds)
+        context.fill(bounds)
 
     }
 
     // note same name call in gtYAxV
-    func vtChoiceSetColor(_ vogd: vogd?, context: CGContext?, val: CGFloat) {
+    func vtChoiceSetColor(_ vogd: vogd?, context: CGContext, val: CGFloat) {
         var val = val
         // DBGLog(@"vtChoiceSetColor input %f",val);
         val /= vogd?.vScale ?? 0.0
         val += vogd?.minVal ?? 0.0
         // DBGLog(@"vtChoiceSetColor transformed %f",val);
-        let choice = vogd?.vo?.getChoiceIndex(forValue: "\(val)") ?? 0
+        let choice = vogd!.vo.getChoiceIndex(forValue: "\(val)")
         let cc = "cc\(choice)"
-        let col = ((vogd?.vo?.optDict)?[cc] as? NSNumber)?.intValue ?? 0
-        if let colorSet = (rTracker_resource.colorSet()?[col] as? UIColor)?.cgColor {
-            context?.setFillColor(colorSet)
-        }
-        if let colorSet = (rTracker_resource.colorSet()?[col] as? UIColor)?.cgColor {
-            context?.setStrokeColor(colorSet)
-        }
+        let col = Int((vogd!.vo.optDict)[cc]!)
+        let colorSet = rTracker_resource.colorSet()[col!].cgColor
+        context.setFillColor(colorSet)
+        
+        let cSet = rTracker_resource.colorSet()[col!].cgColor
+        context.setStrokeColor(cSet)
+        
     }
 
     let LXNOTSTARTED = -1.0
 
-    func plotVO_lines(_ vogd: vogd?, context: CGContext?, dots: Bool) {
+    func plotVO_lines(_ vogd: vogd?, context: CGContext, dots: Bool) {
 
         let e = (vogd?.ydat as NSArray?)?.objectEnumerator()
-        let bbox = context?.boundingBoxOfClipPath
-        let minX = bbox?.origin.x ?? 0.0
-        let maxX = (bbox?.origin.x ?? 0.0) + (bbox?.size.width ?? 0.0)
+        let bbox = context.boundingBoxOfClipPath
+        let minX = bbox.origin.x
+        let maxX = (bbox.origin.x) + (bbox.size.width)
         let bigger = true
 
         var going = false
@@ -134,11 +136,11 @@ class graphTrackerV: UIScrollView {
             y = CGFloat((e?.nextObject() as? NSNumber)?.floatValue ?? 0.0)
             if going {
                 //DBGLog(@"addline %f %f",x,y);
-                AddLineTo(x, y)
+                AddLineTo(context, x, y)
                 if dots {
-                    AddCircle(x, y)
+                    AddCircle(context, x, y)
                     if selectedVO {
-                        AddBigCircle(x, y)
+                        AddBigCircle(context, x, y)
                     }
                 }
                 if x > maxX {
@@ -155,27 +157,27 @@ class graphTrackerV: UIScrollView {
                     if lastX == LXNOTSTARTED {
                         // 1st time through, 1st point needs showing
                         //DBGLog(@"moveto %f %f",x,y);
-                        MoveTo(x, y)
+                        MoveTo(context, x, y)
                         if dots {
-                            AddCircle(x, y)
+                            AddCircle(context, x, y)
                             if selectedVO {
-                                AddBigCircle(x, y)
+                                AddBigCircle(context, x, y)
                             }
                         }
                     } else {
                         // process starting, need to show lastX plus current
-                        MoveTo(lastX, lastY)
+                        MoveTo(context, lastX, lastY)
                         if dots {
-                            AddCircle(lastX, lastY)
+                            AddCircle(context, lastX, lastY)
                             if selectedVO {
-                                AddBigCircle(lastX, lastY)
+                                AddBigCircle(context, lastX, lastY)
                             }
                         }
-                        AddLineTo(x, y)
+                        AddLineTo(context, x, y)
                         if dots {
-                            AddCircle(x, y)
+                            AddCircle(context, x, y)
                             if selectedVO {
-                                AddBigCircle(x, y)
+                                AddBigCircle(context, x, y)
                             }
                         }
                     }
@@ -185,11 +187,11 @@ class graphTrackerV: UIScrollView {
         }
         if bigger {
             // only 1 point, have moved there
-            AddCircle(x, y)
-            AddBigCircle(x, y)
+            AddCircle(context, x, y)
+            AddBigCircle(context, x, y)
         }
 
-        //Stroke
+        //Stroke(context)
     }
 
     /*
@@ -262,15 +264,15 @@ class graphTrackerV: UIScrollView {
         if (bigger) // only 1 point, have moved there already
             AddBigCircle(x,y);
 
-    	Stroke;
+    	Stroke(context);
     }
     */
 
-    func plotVO_dots(_ vogd: vogd?, context: CGContext?) {
+    func plotVO_dots(_ vogd: vogd?, context: CGContext) {
         let e = (vogd?.ydat as NSArray?)?.objectEnumerator()
-        let bbox = context?.boundingBoxOfClipPath
-        let minX = bbox?.origin.x ?? 0.0
-        let maxX = (bbox?.origin.x ?? 0.0) + (bbox?.size.width ?? 0.0)
+        let bbox = context.boundingBoxOfClipPath
+        let minX = bbox.origin.x
+        let maxX = (bbox.origin.x) + (bbox.size.width)
 
         var lastX = LXNOTSTARTED
         var lastY = LXNOTSTARTED
@@ -283,23 +285,23 @@ class graphTrackerV: UIScrollView {
             }
             let x = CGFloat(nx.floatValue)
             let y = CGFloat((e?.nextObject() as? NSNumber)?.floatValue ?? 0.0)
-            if vogd?.vo?.vtype == VOT_CHOICE {
+            if vogd?.vo.vtype == VOT_CHOICE {
                 vtChoiceSetColor(vogd, context: context, val: y)
             }
             if going {
                 //DBGLog(@"moveto %f %f",x,y);
-                MoveTo(x, y)
+                MoveTo(context, x, y)
                 if selectedVO {
-                    AddCross(x, y)
-                    AddFilledCircle(x, y)
+                    AddCross(context, x, y)
+                    AddFilledCircle(context, x, y)
                 } else {
-                    AddCircle(x, y)
+                    AddCircle(context, x, y)
                 }
                 if bigger && !selectedVO {
-                    AddBigCircle(x, y)
+                    AddBigCircle(context, x, y)
                 }
-                if vogd?.vo?.vtype == VOT_CHOICE {
-                    Stroke
+                if vogd?.vo.vtype == VOT_CHOICE {
+                    Stroke(context)
                 }
                 if x > maxX {
                     break
@@ -312,36 +314,36 @@ class graphTrackerV: UIScrollView {
                 // not started yet, start now
                 if lastX != LXNOTSTARTED {
                     // past 1st data point, need to show lastX 
-                    MoveTo(lastX, lastY)
+                    MoveTo(context, lastX, lastY)
                     if selectedVO {
-                        AddCross(x, y)
-                        AddFilledCircle(lastX, lastY)
+                        AddCross(context, x, y)
+                        AddFilledCircle(context, lastX, lastY)
                     } else {
-                        AddCircle(lastX, lastY)
+                        AddCircle(context, lastX, lastY)
                     }
-                    if vogd?.vo?.vtype == VOT_CHOICE {
-                        Stroke
+                    if vogd?.vo.vtype == VOT_CHOICE {
+                        Stroke(context)
                     }
                 }
                 going = true // going, show current
-                MoveTo(x, y)
+                MoveTo(context, x, y)
                 if selectedVO {
-                    AddCross(x, y)
-                    AddFilledCircle(x, y)
+                    AddCross(context, x, y)
+                    AddFilledCircle(context, x, y)
                 } else {
-                    AddCircle(x, y)
+                    AddCircle(context, x, y)
                 }
                 if bigger && !selectedVO {
-                    AddBigCircle(x, y)
+                    AddBigCircle(context, x, y)
                 }
 
-                if vogd?.vo?.vtype == VOT_CHOICE {
-                    Stroke
+                if vogd?.vo.vtype == VOT_CHOICE {
+                    Stroke(context)
                 }
             }
         }
 
-        //Stroke
+        //Stroke(context)
     }
 
     // TODO: enable putting text on graph
@@ -355,11 +357,11 @@ class graphTrackerV: UIScrollView {
         y+= 3.0f;
         AddLineTo(x,y);
         x+= 3.0f;
-        AddLineTo(x, y);
+        AddLineTo(context, x, y);
         NSString *str = [e nextObject];
         CGContextShowTextAtPoint(context, x, y, [str UTF8String], [str length]);
         //[str drawAtPoint:(CGPoint) {x,y} withFont:((graphTrackerVC*)self.parentGTVC).myFont];
-        //Stroke;
+        //Stroke(context);
     }
     */
 
@@ -410,26 +412,26 @@ class graphTrackerV: UIScrollView {
             }  
         }
 
-    	Stroke;
+    	Stroke(context);
     }
     */
 
-    func plotVO_bar(_ vogd: vogd?, context: CGContext?, barCount: Int) {
+    func plotVO_bar(_ vogd: vogd?, context: CGContext, barCount: Int) {
         if vogd?.vo == gtvCurrVO {
-            context?.setAlpha(STD_ALPHA)
-            context?.setLineWidth(BAR_LINE_WIDTH_SEL)
+            context.setAlpha(STD_ALPHA)
+            context.setLineWidth(BAR_LINE_WIDTH_SEL)
         } else {
-            context?.setAlpha(BAR_ALPHA)
-            context?.setLineWidth(BAR_LINE_WIDTH)
+            context.setAlpha(BAR_ALPHA)
+            context.setLineWidth(BAR_LINE_WIDTH)
         }
 
 
         let barStep = BAR_LINE_WIDTH * CGFloat(barCount)
 
         let e = (vogd?.ydat as NSArray?)?.objectEnumerator()
-        let bbox = context?.boundingBoxOfClipPath
-        let minX = bbox?.origin.x ?? 0.0
-        let maxX = (bbox?.origin.x ?? 0.0) + (bbox?.size.width ?? 0.0) + BAR_LINE_WIDTH
+        let bbox = context.boundingBoxOfClipPath
+        let minX = bbox.origin.x
+        let maxX = (bbox.origin.x) + (bbox.size.width) + BAR_LINE_WIDTH
 
         var lastX = LXNOTSTARTED
         var lastY = LXNOTSTARTED
@@ -441,17 +443,17 @@ class graphTrackerV: UIScrollView {
             }
             let x = CGFloat(nx.floatValue) + barStep
             let y = CGFloat((e?.nextObject() as? NSNumber)?.floatValue ?? 0.0)
-            if vogd?.vo?.vtype == VOT_CHOICE {
+            if vogd?.vo.vtype == VOT_CHOICE {
                 vtChoiceSetColor(vogd, context: context, val: y)
             }
 
             if going {
                 //DBGLog(@"moveto %f %f",x,y);
-                MoveTo(x, 0.0)
-                AddLineTo(x, y)
+                MoveTo(context, x, 0.0)
+                AddLineTo(context, x, y)
                 //AddCircle(x,y);
-                if vogd?.vo?.vtype == VOT_CHOICE {
-                    Stroke
+                if vogd?.vo.vtype == VOT_CHOICE {
+                    Stroke(context)
                 }
                 if x > maxX {
                     break
@@ -464,84 +466,83 @@ class graphTrackerV: UIScrollView {
                 // not started yet, start now
                 if lastX != LXNOTSTARTED {
                     // past 1st data point, need to show lastX 
-                    MoveTo(lastX, 0.0)
-                    AddLineTo(lastX, lastY)
+                    MoveTo(context, lastX, 0.0)
+                    AddLineTo(context, lastX, lastY)
                     //AddCircle(lastX,lastY);
-                    if vogd?.vo?.vtype == VOT_CHOICE {
-                        Stroke
+                    if vogd?.vo.vtype == VOT_CHOICE {
+                        Stroke(context)
                     }
                 }
                 going = true // going, show current
-                MoveTo(x, 0.0)
-                AddLineTo(x, y)
+                MoveTo(context, x, 0.0)
+                AddLineTo(context, x, y)
                 //AddCircle(x,y);
-                if vogd?.vo?.vtype == VOT_CHOICE {
-                    Stroke
+                if vogd?.vo.vtype == VOT_CHOICE {
+                    Stroke(context)
                 }
             }
         }
 
-        if vogd?.vo?.vtype != VOT_CHOICE {
-            Stroke
+        if vogd?.vo.vtype != VOT_CHOICE {
+            Stroke(context)
         }
-        //Stroke;
+        //Stroke(context);
 
-        context?.setAlpha(STD_ALPHA)
-        context?.setLineWidth(STD_LINE_WIDTH)
+        context.setAlpha(STD_ALPHA)
+        context.setLineWidth(STD_LINE_WIDTH)
 
     }
 
-    func plotVO(_ vo: valueObj?, context: CGContext?, barCount: Int) {
+    func plotVO(_ vo: valueObj, context: CGContext, barCount: Int) {
         //[(UIColor *) [self.tracker.colorSet objectAtIndex:vo.vcolor] set];
 
-        let currVogd = vo?.vogd as? vogd
+        let currVogd = vo.vogd
 
         if vo == gtvCurrVO {
-            let ylineS = vo?.optDict?["yline1"] as? String
+            let ylineS = vo.optDict["yline1"]
             if ylineS != nil && (ylineS != "") {
                 let ylineF = CGFloat(Float(ylineS ?? "") ?? 0.0)
                 if ((currVogd?.minVal ?? 0.0) < ylineF) && ((currVogd?.maxVal ?? 0.0) > ylineF) {
                     // draw line at yline if visible
                     let yline = (ylineF * (currVogd?.vScale ?? 0.0)) + (currVogd?.yZero ?? 0.0)
-                    context?.setStrokeColor(UIColor(white: 0.90, alpha: 0.8).cgColor)
-                    MoveTo(0.0, yline)
+                    context.setStrokeColor(UIColor(white: 0.90, alpha: 0.8).cgColor)
+                    MoveTo(context, 0.0, yline)
                     safeDispatchSync({ [self] in
-                        AddLineTo(frame.size.width, yline)
+                        AddLineTo(context, frame.size.width, yline)
                     })
-                    //Stroke
+                    //Stroke(context)
                 }
             } else {
                 // draw zero line if no Y line spcified
                 if ((currVogd?.minVal ?? 0.0) < 0.0) && ((currVogd?.maxVal ?? 0.0) > 0.0) {
                     // draw line at 0 if needed
-                    context?.setStrokeColor(UIColor(white: 0.75, alpha: 0.5).cgColor)
-                    MoveTo(0.0, currVogd?.yZero)
+                    context.setStrokeColor(UIColor(white: 0.75, alpha: 0.5).cgColor)
+                    MoveTo(context, 0.0, currVogd!.yZero)
                     safeDispatchSync({ [self] in
-                        AddLineTo(frame.size.width, currVogd?.yZero)
+                        AddLineTo(context, frame.size.width, currVogd!.yZero)
                     })
-                    //Stroke
+                    //Stroke(context)
                 }
             }
 
-            context?.setLineWidth(DBL_LINE_WIDTH)
+            context.setLineWidth(DBL_LINE_WIDTH)
             selectedVO = true
         } else {
-            context?.setLineWidth(STD_LINE_WIDTH)
+            context.setLineWidth(STD_LINE_WIDTH)
             selectedVO = false
         }
 
-        if vo?.vtype != VOT_CHOICE {
-            if let colorSet = (rTracker_resource.colorSet()?[vo?.vcolor ?? 0] as? UIColor)?.cgColor {
-                context?.setFillColor(colorSet)
-            }
-            if let colorSet = (rTracker_resource.colorSet()?[vo?.vcolor ?? 0] as? UIColor)?.cgColor {
-                context?.setStrokeColor(colorSet)
-            }
+        if vo.vtype != VOT_CHOICE {
+            let colorSet = rTracker_resource.colorSet()[vo.vcolor].cgColor
+            context.setFillColor(colorSet)
+            
+            let cSet = rTracker_resource.colorSet()[vo.vcolor].cgColor
+            context.setStrokeColor(cSet)
         }
 
-        switch vo?.vGraphType {
+        switch vo.vGraphType {
         case VOG_DOTS /* 25.i.14  bool and text/textbox plot as 1 (or boolval) at top of graph */:
-            switch vo?.vtype {
+            switch vo.vtype {
             case VOT_NUMBER, VOT_SLIDER, VOT_CHOICE, VOT_FUNC, VOT_BOOLEAN,                 //[self plotVO_dots:currVogd context:context];
                 //break;
             VOT_TEXT:
@@ -565,18 +566,15 @@ class graphTrackerV: UIScrollView {
         case VOG_NONE /* nothing to do! */:
             break
         default:
-            DBGErr("plotVO: vGraphType %ld not recognised", Int(vo?.vGraphType ?? 0))
+            DBGErr(String("plotVO: vGraphType \(vo.vGraphType) not recognised"))
         }
     }
 
-    func drawGraph(_ context: CGContext?) {
+    func drawGraph(_ context: CGContext) {
         //DBGLog(@"drawGraph");
         var barCount = 0
         for vo in tracker?.valObjTable ?? [] {
-            guard let vo = vo as? valueObj else {
-                continue
-            }
-            if (vo.optDict)?["graph"] != "0" {
+            if vo.optDict["graph"] != "0" {
                 if VOG_BAR == vo.vGraphType {
                     barCount += 1
                 }
@@ -585,11 +583,8 @@ class graphTrackerV: UIScrollView {
         barCount /= -2
 
         for vo in tracker?.valObjTable ?? [] {
-            guard let vo = vo as? valueObj else {
-                continue
-            }
             if vo != gtvCurrVO {
-                if (vo.optDict)?["graph"] != "0" {
+                if vo.optDict["graph"] != "0" {
                     //DBGLog(@"drawGraph %@",vo.valueName);
                     plotVO(vo, context: context, barCount: barCount)
                     if VOG_BAR == vo.vGraphType {
@@ -601,43 +596,40 @@ class graphTrackerV: UIScrollView {
         // plot selected last for best hightlight
         if (gtvCurrVO?.optDict)?["graph"] != "0" {
             //DBGLog(@"drawGraph %@",vo.valueName);
-            plotVO(gtvCurrVO, context: context, barCount: barCount)
+            plotVO(gtvCurrVO!, context: context, barCount: barCount)
             if VOG_BAR == gtvCurrVO?.vGraphType {
                 barCount += 1
             }
         }
 
         if xMark != NOXMARK {
-            context?.setFillColor(UIColor.white.cgColor)
-            context?.setStrokeColor(UIColor.white.cgColor)
-            MoveTo(xMark, 0.0)
+            context.setFillColor(UIColor.white.cgColor)
+            context.setStrokeColor(UIColor.white.cgColor)
+            MoveTo(context, xMark, 0.0)
             safeDispatchSync({ [self] in
-                AddLineTo(xMark, frame.size.height)
+                AddLineTo(context, xMark, frame.size.height)
             })
-            //Stroke
+            //Stroke(context)
         }
         if let searchXpoints {
             //UIColor *smColor = [UIColor colorWithRed:0.2 green:0.5 blue:1.0 alpha:0.7];
             let smColor = UIColor(red: 1.0, green: 0.1, blue: 0.1, alpha: 1.0)
-            context?.setFillColor(smColor.cgColor)
-            context?.setStrokeColor(smColor.cgColor)
+            context.setFillColor(smColor.cgColor)
+            context.setStrokeColor(smColor.cgColor)
 
-            context?.setLineWidth(SRCH_LINE_WIDTH)
-            let lengths = [3.0, 3.0]
-            context?.setLineDash(phase: 0.0, lengths: lengths)
+            context.setLineWidth(SRCH_LINE_WIDTH)
+            let lengths: [CGFloat] = [3.0, 3.0]
+            context.setLineDash(phase: 0.0, lengths: lengths)
 
             for xm in searchXpoints {
-                guard let xm = xm as? NSNumber else {
-                    continue
-                }
-                MoveTo(xm.floatValue, 0.0)
+                MoveTo(context, xm.doubleValue, 0.0)
                 safeDispatchSync({ [self] in
-                    AddLineTo(xm.floatValue, frame.size.height)
+                    AddLineTo(context, xm.doubleValue, frame.size.height)
                 })
-                //Stroke
+                //Stroke(context)
             }
 
-            context?.setLineDash(phase: 0.0, lengths: nil)
+            context.setLineDash(phase: 0.0, lengths: [])
         }
     }
 
@@ -646,7 +638,7 @@ class graphTrackerV: UIScrollView {
 
 
     // using layers is a tiled approach, speedup realized because only needed tiles are redrawn.  plotVO_ routines work out if data in tiles.
-    #if USELAYER
+    //#if USELAYER
 
     override class var layerClass: AnyClass {
         return CATiledLayer.self
@@ -665,11 +657,12 @@ class graphTrackerV: UIScrollView {
 
         //- (void)drawRect:(CGRect)rect {
         //((togd*)self.tracker.togd).bbox = CGContextGetClipBoundingBox(context);
-        #else
-        -
+        //#else
+        //-
     }
 
     required init?(coder aDecoder: NSCoder) {
+        tm = CGAffineTransform(a: 1.0, b: 0.0, c: 0.0, d: -1.0, tx: 0.0, ty: 0.0)
         super.init(coder: aDecoder)
     }
 }

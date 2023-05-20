@@ -22,6 +22,7 @@
 //
 
 import Foundation
+import UIKit
 
 class voInfo: voState {
     //@synthesize imageButton;
@@ -70,7 +71,7 @@ class voInfo: voState {
     }
     */
 
-    override func voDisplay(_ bounds: CGRect) -> UIView? {
+    override func voDisplay(_ bounds: CGRect) -> UIView {
         /*    self.vosFrame = bounds;
         	[self.imageButton setImage:[self boolBtnImage] forState: UIControlStateNormal];
 
@@ -78,11 +79,11 @@ class voInfo: voState {
             DBGLog(@"bool data= %@",self.vo.value);
         	return self.imageButton;
          */
-        return nil
+        return UIView()  // nil
     }
 
-    override func voGraphSet() -> [AnyHashable]? {
-        return nil //[NSArray arrayWithObjects:@"dots", @"bar", nil];
+    override func voGraphSet() -> [String] {
+        return [] //[NSArray arrayWithObjects:@"dots", @"bar", nil];
     }
 
     // MARK: -
@@ -95,51 +96,51 @@ class voInfo: voState {
     }
     */
 
-    override func newVOGD() -> Any? {
-        return vogd?.initAsNum(vo)
+    override func newVOGD() -> vogd {
+        return vogd(vo).initAsNum(vo)
     }
 
     // MARK: -
     // MARK: options page
 
     override func setOptDictDflts() {
-        if nil == (vo?.optDict)?["infoval"] {
-            (vo?.optDict)?["infoval"] = INFOVALDFLTSTR
+        if nil == vo.optDict["infoval"] {
+            vo.optDict["infoval"] = INFOVALDFLTSTR
         }
 
-        if nil == (vo?.optDict)?["infourl"] {
-            (vo?.optDict)?["infourl"] = INFOURLDFLTSTR
+        if nil == vo.optDict["infourl"] {
+            vo.optDict["infourl"] = INFOURLDFLTSTR
         }
 
-        if nil == (vo?.optDict)?["infosave"] {
-            (vo?.optDict)?["infosave"] = INFOSAVEDFLT ? "1" : "0"
+        if nil == vo.optDict["infosave"] {
+            vo.optDict["infosave"] = INFOSAVEDFLT ? "1" : "0"
         }
 
-        (vo?.optDict)?["graph"] = "0"
-        (vo?.optDict)?["privacy"] = "\(PRIVDFLT)"
+        vo.optDict["graph"] = "0"
+        vo.optDict["privacy"] = "\(PRIVDFLT)"
 
         return super.setOptDictDflts()
     }
 
-    override func cleanOptDictDflts(_ key: String?) -> Bool {
+    override func cleanOptDictDflts(_ key: String) -> Bool {
 
-        let val = (vo?.optDict)?[key ?? ""] as? String
+        let val = vo.optDict[key]
         if nil == val {
             return true
         }
 
         if (((key == "infoval") && (INFOVALDFLTSTR == val)) /* ([val floatValue] == f(INFOVALDFLT))) */) {
-            vo?.optDict?.removeValue(forKey: key)
+            vo.optDict.removeValue(forKey: key)
             return true
         }
 
         if (key == "infourl") && (INFOURLDFLTSTR == val?.trimmingCharacters(in: .whitespacesAndNewlines)) {
-            vo?.optDict?.removeValue(forKey: key)
+            vo.optDict.removeValue(forKey: key)
             return true
         }
 
-        if (key == "infosave") && (val == INFOSAVEDFLT ? "1" : "0") {
-            vo?.optDict?.removeValue(forKey: key)
+        if (key == "infosave") && (val == (INFOSAVEDFLT ? "1" : "0")) {
+            vo.optDict.removeValue(forKey: key)
             return true
         }
 
@@ -147,8 +148,8 @@ class voInfo: voState {
         return super.cleanOptDictDflts(key)
     }
 
-    override func update(_ instr: String?) -> String? {
-        let retval = (vo?.optDict)?["infoval"] as? String
+    override func update(_ instr: String) -> String {
+        let retval = vo.optDict["infoval"]
         if let retval {
             return retval
         }
@@ -157,7 +158,7 @@ class voInfo: voState {
 
     override func voDrawOptions(_ ctvovc: configTVObjVC?) {
 
-        DBGLog("ctvovc frame x %f y %f w %f h %f", ctvovc?.view.frame.origin.x, ctvovc?.view.frame.origin.y, ctvovc?.view.frame.size.width, ctvovc?.view.frame.size.height)
+        DBGLog(String("ctvovc frame \(ctvovc?.view.frame)"))
         var frame = CGRect(x: MARGIN, y: ctvovc?.lasty ?? 0.0, width: 0.0, height: 0.0)
 
         var labframe = ctvovc?.configLabel("reported value:", frame: frame, key: "ivLab", addsv: true)
@@ -176,7 +177,7 @@ class voInfo: voState {
             action: nil,
             num: true,
             place: INFOVALDFLTSTR,
-            text: (vo?.optDict)?["infoval"] as? String,
+            text: vo.optDict["infoval"],
             addsv: true) ?? CGRect.zero
 
         frame.origin.y += frame.size.height + MARGIN
@@ -187,7 +188,7 @@ class voInfo: voState {
         frame = ctvovc?.configCheckButton(
             frame,
             key: "infosaveBtn",
-            state: (vo?.optDict)?["infosave"] == "1",
+            state: vo.optDict["infosave"] == "1",
             addsv: true) ?? CGRect.zero
         frame.origin.x = MARGIN
         frame.origin.y += MARGIN + frame.size.height
@@ -199,10 +200,10 @@ class voInfo: voState {
         frame.size.width = rTracker_resource.get_visible_size(ctvovc).width - 2 * MARGIN //ctvovc.view.frame.size.width - (2*MARGIN) ;
         //frame.size.width = 2 * ctvovc.view.frame.size.width ;
 
-        let tsize = (vo?.optDict)?["infourl"]?.size(withAttributes: [
+        let tsize = vo.optDict["infourl"]?.size(withAttributes: [
             NSAttributedString.Key.font: PrefBodyFont
         ])
-        DBGLog("frame width %f  tsize width %f", frame.size.width, tsize?.width)
+        DBGLog(String("frame width \(frame.size.width)  tsize width \(tsize?.width)"))
         if (tsize?.width ?? 0.0) > (frame.size.width - (2 * MARGIN)) {
             frame.size.width = (tsize?.width ?? 0.0) + (4 * MARGIN)
         }
@@ -214,7 +215,7 @@ class voInfo: voState {
             action: nil,
             num: false,
             place: INFOURLDFLTSTR,
-            text: (vo?.optDict)?["infourl"] as? String,
+            text: vo.optDict["infourl"],
             addsv: true) ?? CGRect.zero
 
 
@@ -227,10 +228,10 @@ class voInfo: voState {
     /* rtm here : export value option -- need to parse and match value if choice did not match
      */
 
-    override func mapCsv2Value(_ inCsv: String?) -> String? {
+    override func mapCsv2Value(_ inCsv: String) -> String {
 
-        if ((vo?.optDict)?["infoval"] as? NSNumber)?.doubleValue ?? 0.0 != Double(inCsv ?? "") ?? 0.0 {
-            (vo?.optDict)?["infoval"] = inCsv
+        if Double(vo.optDict["infoval"]!)! != Double(inCsv)! {
+            vo.optDict["infoval"] = inCsv
         }
         return inCsv
     }

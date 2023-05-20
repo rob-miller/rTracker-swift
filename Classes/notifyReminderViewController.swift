@@ -86,12 +86,9 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
     private var _everyTrackerNames: [AnyHashable]?
     var everyTrackerNames: [AnyHashable]? {
         if nil == _everyTrackerNames {
-            var mtnames = [AnyHashable](repeating: 0, count: (tracker?.valObjTable?.count ?? 0) + 1)
+            var mtnames = [AnyHashable](repeating: 0, count: tracker!.valObjTable.count + 1)
             mtnames.append(tracker?.trackerName ?? "")
-            for vo in tracker?.valObjTable ?? [] {
-                guard let vo = vo as? valueObj else {
-                    continue
-                }
+            for vo in tracker!.valObjTable{
                 mtnames.append(vo.valueName ?? "")
             }
             _everyTrackerNames = mtnames
@@ -195,7 +192,6 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
 
         let dateFormatter = DateFormatter()
 
-        var i: Int
         for i in 0..<7 {
             var wd = firstWeekDay + i
             if wd > 7 {
@@ -213,7 +209,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         msgTF.text = tracker?.trackerName
         lastDefaultMsg = msgTF.text
 
-        if 0 < (tracker?.reminders?.count ?? 0) {
+        if 0 < (tracker?.reminders.count ?? 0) {
             nr = tracker?.currReminder()
         } else {
             nr = tracker?.loadReminders()
@@ -289,9 +285,8 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         return false
     }
 
-    @IBAction func btnDone(_ sender: Any) {
-        leaveNR()
-        //ios6 [self dismissModalViewControllerAnimated:YES];
+    @IBAction func btnDone(_ sender: Any?) {
+        _ = leaveNR()
         dismiss(animated: true)
     }
 
@@ -365,12 +360,12 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
 
     func setDelayDaysButtonTitle(_ state: Bool) {
         delayDaysState = state
-        if 0 == state {
-            delayDaysButton.setTitle("Delay:", for: .normal)
-        } else {
+        if state {
             delayDaysButton.setTitle("Days of month:", for: .normal)
+        } else {
+            delayDaysButton.setTitle("Delay:", for: .normal)
         }
-        DBGLog("state= %d titleIsDelay= %d title= %@", state, ddbTitleIsDelay(), delayDaysButton.titleLabel?.text)
+        DBGLog(String("state= \(state) titleIsDelay= \(ddbTitleIsDelay()) title= \(delayDaysButton.titleLabel?.text)"))
     }
 
     func ddbTitleIsDelay() -> Bool {
@@ -379,8 +374,6 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
     }
 
     func guiFromNr() {
-        // if rid == 0 return   
-        var i: Int
 
         if nil == nr {
             nr = notifyReminder()
@@ -392,14 +385,14 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         } else {
             //self.tmpReminder=FALSE;
         }
-        DBGLog("%@", nr)
+        DBGLog(String("\(nr)"))
         enableButton.isSelected = nr?.reminderEnabled ?? false
         updateCheckBtn(enableButton)
         msgTF.text = nr?.msg
 
         if (nr?.start ?? 0) > -1 {
             enableStartControls(true)
-            startSlider.value = Float(nr?.start ?? 0.0)
+            startSlider.value = Float(nr!.start)
             sliderUpdate(Int(startSlider.value), hrtf: startHr, mntf: startMin, ampml: startTimeAmPm)
         } else {
             enableStartControls(false)
@@ -407,7 +400,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
 
         if nr?.untilEnabled ?? false {
             enableFinishButton.isSelected = true
-            finishSlider.value = Float(nr?.until ?? 0.0)
+            finishSlider.value = Float(nr!.until)
             repeatTimes.text = String(format: "%ld", Int(nr?.times ?? 0))
             intervalButton.setTitle(nr?.timesRandom ?? false ? "random" : "interval", for: .normal)
             sliderUpdate(Int(finishSlider.value), hrtf: finishHr, mntf: finishMin, ampml: finishTimeAmPm)
@@ -421,7 +414,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         if nr?.monthDays != nil {
             //self.weekMonthEvery.selectedSegmentIndex=SEGMONTH;
             setDelayDaysButtonTitle(true)
-            var nma = [AnyHashable](repeating: 0, count: 32)
+            var nma: [String] = [] // (repeating: nil, count: 32)
             for i in 0..<32 {
                 if Int(nr?.monthDays ?? 0) & (0x01 << i) != 0 {
                     nma.append("\(i + 1)")
@@ -441,7 +434,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
             if nr?.fromLast ?? false {
                 fromLastButton.isSelected = true
                 if nr?.vid != nil {
-                    let c = tracker?.valObjTable?.count ?? 0
+                    let c = tracker?.valObjTable.count ?? 0
                     for i in 0..<c {
                         if nr?.vid == ((tracker?.valObjTable)?[i] as? valueObj)?.vid {
                             everyTrackerNdx = i + 1
@@ -494,7 +487,6 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
     }
 
     func clearWeekDays() {
-        var i: Int
         for i in 0..<7 {
             ((weekdayBtns)?[i] as? UIButton)?.isSelected = false
         }
@@ -553,7 +545,6 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
             if !everyTrackerButton.isHidden {
                 nr?.vid = (everyTrackerNdx != 0 ? ((tracker?.valObjTable)?[everyTrackerNdx - 1] as? valueObj)?.vid : 0) ?? 0
             }
-            var i: Int
             for i in 0..<7 {
                 if ((weekdayBtns)?[i] as? UIButton)?.isSelected ?? false {
                     nr?.weekDays |= UInt8((0x01 << (weekdays[i])))
@@ -608,8 +599,6 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
     }
 
     func nullNRguiState() -> Bool {
-        var i: Int
-
         if startSlider.isEnabled && finishSlider.isEnabled && (startSlider.value > finishSlider.value) {
             return true // if start > fin yes it is null state
         }
@@ -735,7 +724,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
     }
 
     @IBAction func everyBtn(_ sender: Any) {
-        DBGLog("everyBtn %@", everyButton.title(for: .normal))
+        DBGLog(String("everyBtn \(everyButton.title(for: .normal))"))
         everyMode = UInt8((everyMode != 0 ? Int((everyMode << 1)) & EV_MASK : EV_HOURS))
         everyBtnStateUpdate()
     }
@@ -858,9 +847,13 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         setEveryTrackerBtnName()
     }
 
-    @IBAction func everyTFChange(_ sender: Any) {
+    @IBAction func everyTFChange(_ sender: UITextField) {
         DBGLog("everyTFChange")
-        if 0 >= sender.text.intValue {
+        if let intval = Int(sender.text!) {
+            if 0 >= intval {
+                sender.text = ""
+            }
+        } else {
             sender.text = ""
         }
         updateEnabledButton()
@@ -871,7 +864,6 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
     }
 
     func hideWeekdays(_ state: Bool) {
-        var i: Int
         for i in 0..<7 {
             ((weekdayBtns)?[i] as? UIButton)?.isHidden = state
         }
@@ -912,17 +904,17 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         updateEnabledButton()
     }
 
-    @IBAction func delayDaysBtn(_ sender: Any) {
+    @IBAction func delayDaysBtn(_ sender: UIButton) {
         //- (IBAction)weekMonthEveryChange:(id)sender {
         //    DBGLog(@"weekMonthEveryChange -- %d --",[sender selectedSegmentIndex]);
-        DBGLog("curr title: %@", sender.titleLabel?.text)
+        DBGLog(String("curr title: \(sender.titleLabel?.text)"))
         if ddbTitleIsDelay() {
             setDelayDaysButtonTitle(true)
         } else {
             setDelayDaysButtonTitle(false)
         }
 
-        DBGLog("change to -- %@ --", sender.titleLabel?.text)
+        DBGLog(String("change to -- \(sender.titleLabel?.text) --"))
 
         activeField?.resignFirstResponder()
         doDelayDaysButtonState()
@@ -958,9 +950,9 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
              */
     }
 
-    @IBAction func wdBtn(_ sender: Any) {
-        DBGLog("wdBtn %@", sender.currentTitle)
-        sender.selected = !sender.isSelected
+    @IBAction func wdBtn(_ sender: UIButton) {
+        DBGLog(String("wdBtn \(sender.currentTitle)"))
+        sender.isSelected = !sender.isSelected
         updateEnabledButton()
     }
 
@@ -1044,8 +1036,8 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
 
     }
 
-    @IBAction func enableBtn(_ sender: Any) {
-        toggleCheckBtn(sender as? UIButton)
+    @IBAction func enableBtn(_ sender: UIButton) {
+        toggleCheckBtn(sender)
         if !sender.isSelected {
             rTracker_resource.alert("Reminder disabled", msg: "This reminder is now disabled.  To delete it, clear the settings and navigate away.", vc: self)
         }
@@ -1063,8 +1055,8 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
     }
 
     @IBAction func intervalBtn(_ sender: UIButton) {
-        DBGLog("intervalBtn %@", sender.currentTitle)
-        DBGLog("everyBtn %@", intervalButton.title(for: .normal))
+        DBGLog(String("intervalBtn \(sender.currentTitle)"))
+        DBGLog(String("everyBtn \(intervalButton.title(for: .normal))"))
         if intervalButton.title(for: .normal) == "random" {
             intervalButton.setTitle("interval", for: .normal)
         } else {
@@ -1097,7 +1089,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         updateEnabledButton()
     }
 
-    @IBAction func startSliderAction(_ sender: Any) {
+    @IBAction func startSliderAction(_ sender: UISlider) {
         //DBGLog(@"startSlider");
         sliderUpdate(Int(sender.value), hrtf: startHr, mntf: startMin, ampml: startTimeAmPm)
     }
@@ -1133,33 +1125,33 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
     }
 
     //start
-    @IBAction func startHrChange(_ sender: Any) {
-        DBGLog("hrChange %@", sender.text)
-        limitTimeTF(sender as? UITextField, max: 23)
+    @IBAction func startHrChange(_ sender: UITextField) {
+        DBGLog(String("hrChange \(sender.text)"))
+        limitTimeTF(sender, max: 23)
         timeTfUpdate(startSlider, hrtf: startHr, mntf: startMin, ampml: startTimeAmPm)
     }
 
-    @IBAction func startMinChange(_ sender: Any) {
-        DBGLog("minChange %@", sender.text)
-        limitTimeTF(sender as? UITextField, max: 59)
+    @IBAction func startMinChange(_ sender: UITextField) {
+        DBGLog(String("minChange \(sender.text)"))
+        limitTimeTF(sender, max: 59)
         timeTfUpdate(startSlider, hrtf: startHr, mntf: startMin, ampml: startTimeAmPm)
     }
 
     //fin
-    @IBAction func finishHrChange(_ sender: Any) {
-        DBGLog("hrChange %@", sender.text)
-        limitTimeTF(sender as? UITextField, max: 23)
+    @IBAction func finishHrChange(_ sender: UITextField) {
+        DBGLog(String("hrChange \(sender.text)"))
+        limitTimeTF(sender, max: 23)
         timeTfUpdate(finishSlider, hrtf: finishHr, mntf: finishMin, ampml: finishTimeAmPm)
     }
 
-    @IBAction func finishMinChange(_ sender: Any) {
-        DBGLog("minChange %@", sender.text)
-        limitTimeTF(sender as? UITextField, max: 59)
+    @IBAction func finishMinChange(_ sender: UITextField) {
+        DBGLog(String("minChange \(sender.text)"))
+        limitTimeTF(sender, max: 59)
         timeTfUpdate(finishSlider, hrtf: finishHr, mntf: finishMin, ampml: finishTimeAmPm)
     }
 
     @IBAction func timesChange(_ sender: UITextField) {
-        DBGLog("timesChange %@", sender.text)
+        DBGLog(String("timesChange \(sender.text)"))
 
         if 2 > Int(sender.text ?? "") ?? 0 {
             if nr?.timesRandom ?? false {
@@ -1190,9 +1182,9 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         #if DEBUGLOG
-        let touch = touches.first as? UITouch
+        let touch = touches.first
         let touchPoint = touch?.location(in: view)
-        DBGLog("I am touched at %f, %f.", touchPoint?.x, touchPoint?.y)
+        DBGLog(String("I am touched at \(touchPoint!.x), \(touchPoint!.y)."))
         #endif
 
         activeField?.resignFirstResponder()

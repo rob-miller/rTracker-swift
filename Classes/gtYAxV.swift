@@ -22,7 +22,7 @@
 //
 
 import UIKit
-
+/*
 func intSort(_ num1: Any?, _ num2: Any?, _ context: UnsafeMutableRawPointer?) -> Int {
     let v1 = (num1 as? NSNumber)?.intValue ?? 0
     let v2 = (num2 as? NSNumber)?.intValue ?? 0
@@ -41,11 +41,11 @@ func choiceCompare(_ ndx0: Any?, _ ndx1: Any?, _ context: UnsafeMutableRawPointe
 
     let self = context as? gtYAxV
 
-    let cv0 = "cv\(c0)"
-    let cv1 = "cv\(c1)"
+    let cv0 = String("cv\(c0)")
+    let cv1 = String("cv\(c1)")
 
-    let v0s = (vogd?.vo?.optDict)?[cv0] as? String
-    let v1s = (vogd?.vo?.optDict)?[cv1] as? String
+    let v0s = vogd!.vo.optDict[cv0]
+    let v1s = vogd!.vo.optDict[cv1]
 
     if (nil == v0s) || (nil == v1s) {
         // push not-set choices to top of graph
@@ -60,7 +60,7 @@ func choiceCompare(_ ndx0: Any?, _ ndx1: Any?, _ context: UnsafeMutableRawPointe
 
     let val0 = CGFloat(Float(v0s ?? "") ?? 0.0)
     let val1 = CGFloat(Float(v1s ?? "") ?? 0.0)
-    DBGLog("c0 %d c1 %d v0s %@ v1s %@ val0 %f val1 %f", c0, c1, v0s, v1s, val0, val1)
+    DBGLog(String("c0 \(c0) c1 \(c1) v0s \(v0s) v1s \(v1s) val0 \(val0) val1 \(val1)"))
     // need results descending, so reverse test outcome
     if val0 < val1 {
         return ComparisonResult.orderedAscending.rawValue
@@ -70,6 +70,7 @@ func choiceCompare(_ ndx0: Any?, _ ndx1: Any?, _ context: UnsafeMutableRawPointe
         return ComparisonResult.orderedSame.rawValue
     }
 }
+*/
 
 class gtYAxV: UIView {
     /*{
@@ -83,7 +84,7 @@ class gtYAxV: UIView {
     }*/
 
     //@property(nonatomic,retain) UIColor *backgroundColor;
-    var aVogd: vogd?
+    var vogd: vogd?
     var myFont: UIFont?
     var scaleOriginY: CGFloat = 0.0
     var scaleHeightY: CGFloat = 0.0
@@ -109,41 +110,32 @@ class gtYAxV: UIView {
 
     func vtChoiceSetColor(_ context: CGContext?, ndx: Int) {
         let cc = "cc\(ndx)"
-        let col = ((vogd?.vo?.optDict)?[cc] as? NSNumber)?.intValue ?? 0
-        (rTracker_resource.colorSet()?[col] as? UIColor)?.set()
+        let col = Int(vogd!.vo.optDict[cc]!)
+        rTracker_resource.colorSet()[col!].set()
     }
 
-    func drawYAxis(_ context: CGContext?) {
+    func drawYAxis(_ context: CGContext) {
         var i: Int
-        let svHeight = graphSV?.contentSize.height ?? 0.0
-        let svOffsetY = svHeight - ((graphSV?.frame.size.height ?? 0.0) + (graphSV?.contentOffset.y ?? 0.0))
-        let unitsPerSVY = f((vogd?.maxVal ?? 0.0) - (vogd?.minVal ?? 0.0)) / svHeight
+        let svHeight = graphSV!.contentSize.height
+        let svOffsetY = svHeight - (graphSV!.frame.size.height + graphSV!.contentOffset.y)
+        let unitsPerSVY = d(vogd!.maxVal - vogd!.minVal) / svHeight
         let startUnit = (vogd?.minVal ?? 0.0) + (svOffsetY * unitsPerSVY)
         let finUnit = (vogd?.minVal ?? 0.0) + ((svOffsetY + (graphSV?.frame.size.height ?? 0.0)) * unitsPerSVY)
 
         let unitStep = (finUnit - startUnit) / YTICKS
 
         DBGLog(
-            "svcofy= %f svoffy= %f  svh= %f min= %f max= %f upsvy= %f scaleh= %f start= %f fin= %f ",
-            graphSV?.contentOffset.y,
-            svOffsetY,
-            svHeight,
-            vogd?.minVal,
-            vogd?.maxVal,
-            unitsPerSVY,
-            scaleHeightY,
-            startUnit,
-            finUnit)
+            String("svcofy= \(graphSV?.contentOffset.y) svoffy= \(svOffsetY) svh= \(svHeight) min= \(vogd!.minVal) max= \(vogd?.maxVal) upsvy= \(unitsPerSVY) scaleh= \(scaleHeightY) start= \(startUnit) fin= \(finUnit)"))
 
         //CGFloat len = self.bounds.size.height - (CGFloat) (2*BORDER);
         let step = scaleHeightY / YTICKS
 
-        DBGLog(" %f %f %f", scaleHeightY, YTICKS, step)
+        DBGLog(String(" \(scaleHeightY) \(YTICKS) \(step)"))
         let x0 = bounds.size.width
         let x1 = x0 - TICKLEN
         let x2 = x1 - 3.0
 
-        let vtype = vogd?.vo?.vtype ?? 0
+        let vtype = vogd?.vo.vtype ?? 0
         var fmt = "%0.2f"
 
         /*
@@ -157,12 +149,12 @@ class gtYAxV: UIView {
 
         i = Int(YTICKS)
         while i >= 1 {
-            var y = f(i) * step
-            MoveTo(x0, y)
-            AddLineTo(x1, y)
+            var y = d(i) * step
+            MoveTo(context, x0, y)
+            AddLineTo(context, x1, y)
 
 
-            let val = startUnit + (f(YTICKS - Double(i)) * unitStep)
+            let val = startUnit + (d(YTICKS - Double(i)) * unitStep)
             var vstr: String?
             switch vtype {
             case VOT_CHOICE:
@@ -176,14 +168,14 @@ class gtYAxV: UIView {
                     //DBGLog(@"obj= %@",[choiceMap objectAtIndex:ndx]);
                     //DBGLog(@"choice= %d", [ [choiceMap objectAtIndex:ndx] intValue ]);
                     //int choice = [ [choiceMap objectAtIndex:ndx] intValue ];
-                    let choice = vogd?.vo?.getChoiceIndex(forValue: "\(val)") ?? 0
+                    let choice = vogd?.vo.getChoiceIndex(forValue: "\(val)") ?? 0
                     vtChoiceSetColor(context, ndx: choice)
                     let ch = "c\(choice)"
-                    vstr = (vogd?.vo?.optDict)?[ch] as? String
+                    vstr = (vogd?.vo.optDict)?[ch] as? String
                 }
             case VOT_BOOLEAN:
                 if 1 == i {
-                    vstr = (vogd?.vo?.optDict)?["boolval"] as? String
+                    vstr = (vogd?.vo.optDict)?["boolval"] as? String
                     y = 0.2 * step
                 } else {
                     vstr = ""
@@ -197,7 +189,7 @@ class gtYAxV: UIView {
                     vstr = ""
                 }
             case VOT_TEXTB:
-                if ((vogd?.vo?.optDict)?["tbnl"] as? String) == "1" {
+                if (vogd?.vo.optDict["tbnl"] as? String) == "1" {
                     // linecount is a num for graph
                     // fall through to default - handle as number
                 } else if 1 == i {
@@ -212,14 +204,14 @@ class gtYAxV: UIView {
 
             default:
                 if vtype == VOT_FUNC {
-                    let fnddp = ((vogd?.vo?.optDict)?["fnddp"] as? NSNumber)?.intValue ?? 0
-                    fmt = String(format: "%%0.%df", fnddp)
+                    let fnddp = Int((vogd?.vo.optDict["fnddp"])!)
+                    fmt = String("%%0.\(fnddp)f")
                 } else if vtype == VOT_TEXTB {
                     fmt = "%0.1f"
                 } else {
                     //figure out sig figs for input data and set format here accordingly?
                     //fmt = @"%0.2f";
-                    let numddps = (vogd?.vo?.optDict)?["numddp"] as? String
+                    let numddps = vogd?.vo.optDict["numddp"] as? String
                     let numddp = Int(numddps ?? "") ?? 0
                     if (nil == numddps) || (-1 == numddp) {
                         if unitStep < 1.0 {
@@ -261,8 +253,9 @@ class gtYAxV: UIView {
         if let vogd {
             // can get here with no graph data if only vot_info entries
             safeDispatchSync({ [self] in
-                if let myFont, let myGraphColor = vogd.myGraphColor() {
-                    vogd.vo?.valueName?.draw(at: CGPoint(x: SPACE5, y: frame.size.height - BORDER), withAttributes: [
+                if let myFont {
+                    let myGraphColor = vogd.myGraphColor()
+                    vogd.vo.valueName?.draw(at: CGPoint(x: SPACE5, y: frame.size.height - BORDER), withAttributes: [
                         NSAttributedString.Key.font: myFont,
                         NSAttributedString.Key.foregroundColor: myGraphColor
                     ])
@@ -280,12 +273,12 @@ class gtYAxV: UIView {
 
     override func draw(_ rect: CGRect) {
         // Drawing code
-        let context = UIGraphicsGetCurrentContext()
-        context?.clear(bounds)
+        let context = UIGraphicsGetCurrentContext()!
+        context.clear(bounds)
         UIColor.white.set()
 
-        MoveTo(bounds.size.width, scaleOriginY)
-        AddLineTo(bounds.size.width, scaleHeightY) // scaleOriginY = 0
+        MoveTo(context, bounds.size.width, scaleOriginY)
+        AddLineTo(context, bounds.size.width, scaleHeightY) // scaleOriginY = 0
 
         drawYAxis(context)
 
@@ -318,7 +311,7 @@ class gtYAxV: UIView {
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         //DBGLog(@"gvc touches ended: %@", [self touchReport:touches]);
 
-        let touch = touches.first as? UITouch
+        let touch = touches.first
         if (1 == touch?.tapCount) && (1 == touches.count) {
             (parentGTVC as? graphTrackerVC)?.yavTap()
         }

@@ -31,7 +31,7 @@ class notifyReminderVC2: UIViewController, UIPickerViewDelegate, UIPickerViewDat
     }
     */
     var parentNRVC: notifyReminderViewController?
-    var soundFiles: [AnyHashable]?
+    var soundFiles: [String]?
     @IBOutlet var datePicker: UIDatePicker!
     @IBOutlet var soundPicker: UIPickerView!
     @IBOutlet var btnTestOutlet: UIButton!
@@ -40,8 +40,8 @@ class notifyReminderVC2: UIViewController, UIPickerViewDelegate, UIPickerViewDat
 
     override init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) {
         super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)
-        var sfa: [AnyHashable] = []
-        datePicker.date = Date(timeIntervalSince1970: TimeInterval(parentNRVC?.nr?.saveDate ?? 0.0))
+        var sfa: [String] = []
+        datePicker.date = Date(timeIntervalSince1970: TimeInterval(parentNRVC!.nr!.saveDate))
 
         var files: [String]? = nil
         do {
@@ -58,7 +58,7 @@ class notifyReminderVC2: UIViewController, UIPickerViewDelegate, UIPickerViewDat
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        datePicker.date = Date(timeIntervalSince1970: TimeInterval(parentNRVC?.nr?.saveDate ?? 0.0))
+        datePicker.date = Date(timeIntervalSince1970: TimeInterval(parentNRVC!.nr!.saveDate))
         btnHelpOutlet.setTitleTextAttributes(
             [
                 .font: UIFont.systemFont(ofSize: 28.0)
@@ -91,7 +91,7 @@ class notifyReminderVC2: UIViewController, UIPickerViewDelegate, UIPickerViewDat
     }
 
     override func viewWillAppear(_ animated: Bool) {
-        datePicker.date = Date(timeIntervalSince1970: TimeInterval(parentNRVC?.nr?.saveDate ?? 0.0))
+        datePicker.date = Date(timeIntervalSince1970: TimeInterval(parentNRVC!.nr!.saveDate))
         let ndx = UInt((soundFiles?.firstIndex(of: parentNRVC?.nr?.soundFileName ?? "") ?? NSNotFound))
         if (nil == parentNRVC?.nr?.soundFileName) || (NSNotFound == Int(ndx)) {
             soundPicker.selectRow(soundFiles?.count ?? 0, inComponent: 0, animated: false)
@@ -124,9 +124,9 @@ class notifyReminderVC2: UIViewController, UIPickerViewDelegate, UIPickerViewDat
 
     }
 
-    @IBAction func btnDone(_ sender: Any) {
+    @IBAction func btnDone(_ sender: Any?) {
         //ios6 [self dismissModalViewControllerAnimated:YES];
-        DBGLog("leaving - datepicker says %@", datePicker.date)
+        DBGLog(String("leaving - datepicker says \(datePicker.date)"))
         parentNRVC?.nr?.saveDate = Int(datePicker.date.timeIntervalSince1970)
 
         dismiss(animated: true)
@@ -155,7 +155,7 @@ class notifyReminderVC2: UIViewController, UIPickerViewDelegate, UIPickerViewDat
     // MARK: -
     // MARK: Picker Data Source Methods
 
-    func numberOfComponents(in pickerView: UIPickerView?) -> Int {
+    func numberOfComponents(in pickerView: UIPickerView) -> Int {
         return 1
     }
 
@@ -172,7 +172,7 @@ class notifyReminderVC2: UIViewController, UIPickerViewDelegate, UIPickerViewDat
     ) -> String? {
         let c = soundFiles?.count ?? 0
         if row < c {
-            return (soundFiles)?[row]?.replacingOccurrences(of: "_", with: " ").replacingOccurrences(
+            return soundFiles![row].replacingOccurrences(of: "_", with: " ").replacingOccurrences(
                 of: ".caf",
                 with: "")
         } else if row == c {

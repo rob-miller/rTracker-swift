@@ -24,6 +24,7 @@
 //
 
 import Foundation
+import UIKit
 
 //@interface voImage : voState <UIImagePickerControllerDelegate, UINavigationControllerDelegate>
 
@@ -47,11 +48,11 @@ class voImage: voState, UINavigationControllerDelegate {
         let vde = voDataEdit(nibName: "voDataEdit", bundle: nil)
         vde.vo = vo
         devc = vde // assign
-        MyTracker?.vc?.navigationController?.pushViewController(vde, animated: true)
+        MyTracker.vc?.navigationController?.pushViewController(vde, animated: true)
 
     }
 
-    override func voDisplay(_ bounds: CGRect) -> UIView? {
+    override func voDisplay(_ bounds: CGRect) -> UIView {
         let imageButton = UIButton(type: .custom)
         imageButton.frame = bounds //CGRectZero;
         imageButton.contentVerticalAlignment = .center
@@ -182,9 +183,9 @@ class voImage: voState, UINavigationControllerDelegate {
         return super.setOptDictDflts()
     }
 
-    override func cleanOptDictDflts(_ key: String?) -> Bool {
+    override func cleanOptDictDflts(_ key: String) -> Bool {
 
-        let val = (vo?.optDict)?[key ?? ""] as? String
+        let val = vo.optDict[key]
         if nil == val {
             return true
         }
@@ -215,8 +216,8 @@ class voImage: voState, UINavigationControllerDelegate {
     }
     */
 
-    override func newVOGD() -> Any? {
+    override func newVOGD() -> vogd {
         // TODO: need to handle image differently from note
-        return vogd?.initAsNote(vo)
+        return vogd(vo).initAsNote(vo)
     }
 }

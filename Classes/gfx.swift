@@ -1,4 +1,7 @@
 //  Converted to Swift 5.7.2 by Swiftify v5.7.25331 - https://swiftify.com/
+
+import CoreGraphics
+import UIKit
 ///************
 /// gfx.swift
 /// Copyright 2011-2021 Robert T. Miller
@@ -25,100 +28,106 @@
 
 let GFXHDEBUG = 0
 
-let CGPush = context?.saveGState()
-let CGPop = context?.restoreGState()
+func CGPush(_ c: CGContext) -> Void? {
+    c.saveGState()
+}
+func CGPop(_ c: CGContext) -> Void? {
+    c.restoreGState()
+}
 
-func MTPrim(_ x: Any, _ y: Any) -> Void? {
-    context?.move(to: CGPoint(x: x, y: y))
+func MTPrim(_ c: CGContext, _ x: Double, _ y: Double) -> Void? {
+    c.move(to: CGPoint(x: x, y: y))
 }
-func ALPrim(_ x: Any, _ y: Any) -> Void? {
-    context?.addLine(to: CGPoint(x: x, y: y))
+func ALPrim(_ c: CGContext, _ x: Double, _ y: Double) -> Void? {
+    c.addLine(to: CGPoint(x: x, y: y))
 }
-func AEPrim(_ x: Any, _ y: Any) {
-    context?.addEllipse(in: CGRect(
+func AEPrim(_ c: CGContext, _ x: Double, _ y: Double) {
+    c.addEllipse(in: CGRect(
         origin: CGPoint(x: x - 2.0, y: y - 2.0),
         size: CGSize(width: 4.0, height: 4.0)
     ))
-    context?.move(to: CGPoint(x: x, y: y))
+    c.move(to: CGPoint(x: x, y: y))
 }
-func AFEPrim(_ x: Any, _ y: Any) {
-    context?.fillEllipse(in: CGRect(
+func AFEPrim(_ c: CGContext, _ x: Double, _ y: Double) {
+    c.fillEllipse(in: CGRect(
         origin: CGPoint(x: x - 4.0, y: y - 4.0),
         size: CGSize(width: 8.0, height: 8.0)
     ))
-    context?.move(to: CGPoint(x: x, y: y))
+    c.move(to: CGPoint(x: x, y: y))
 }
-func AE2Prim(_ x: Any, _ y: Any) {
-    context?.addEllipse(in: CGRect(
+func AE2Prim(_ c: CGContext, _ x: Double, _ y: Double) {
+    c.addEllipse(in: CGRect(
         origin: CGPoint(x: x - 3.0, y: y - 3.0),
         size: CGSize(width: 6.0, height: 6.0)
     ))
-    context?.move(to: CGPoint(x: x, y: y))
+    c.move(to: CGPoint(x: x, y: y))
 }
-func ACPrim(_ x: Any, _ y: Any) {
+func ACPrim(_ c: CGContext, _ x: Double, _ y: Double) {
     //CGPush
-    context?.setLineWidth(2)
-    context?.setStrokeColor(UIColor.white.cgColor)
-    context?.move(to: CGPoint(x: x - 8.0, y: y))
-    context?.addLine(to: CGPoint(x: x + 8.0, y: y))
-    context?.move(to: CGPoint(x: x, y: y - 8.0))
-    context?.addLine(to: CGPoint(x: x, y: y + 8.0))
-    context?.move(to: CGPoint(x: x, y: y))
-    context?.drawPath(using: .fillStroke)
+    c.setLineWidth(2)
+    c.setStrokeColor(UIColor.white.cgColor)
+    c.move(to: CGPoint(x: x - 8.0, y: y))
+    c.addLine(to: CGPoint(x: x + 8.0, y: y))
+    c.move(to: CGPoint(x: x, y: y - 8.0))
+    c.addLine(to: CGPoint(x: x, y: y + 8.0))
+    c.move(to: CGPoint(x: x, y: y))
+    c.drawPath(using: .fillStroke)
     //CGPop
 }
 
 #if GFXHDEBUG
-func MoveTo(_ x: Any, _ y: Any) {
+func MoveTo(_ c: CGContext, _ x: Double, _ y: Double) {
     print("mov: \(x),\(y)")
-    MTPrim(x, y)
+    MTPrim(c, x, y)
 }
-func AddLineTo(_ x: Any, _ y: Any) {
+func AddLineTo(_ c: CGContext, _ x: Double, _ y: Double) {
     print("lin: \(x),\(y)")
-    ALPrim(x, y)
+    ALPrim(c, x, y)
 }
-func AddCircle(_ x: Any, _ y: Any) {
+func AddCircle(_ c: CGContext, _ x: Double, _ y: Double) {
     print("cir: \(x),\(y)")
-    AEPrim(x, y)
+    AEPrim(c, x, y)
 }
-func AddFilledCircle(_ x: Any, _ y: Any) {
+func AddFilledCircle(_ c: CGContext, _ x: Double, _ y: Double) {
     print("fcir: \(x),\(y)")
-    AFEPrim(x, y)
+    AFEPrim(c, x, y)
 }
-func AddCross(_ x: Any, _ y: Any) {
+func AddCross(_ c: CGContext, _ x: Double, _ y: Double) {
     print("cross: \(x),\(y)")
-    ACPrim(x, y)
+    ACPrim(c, x, y)
 }
-func AddBigCircle(_ x: Any, _ y: Any) {
+func AddBigCircle(_ c: CGContext, _ x: Double, _ y: Double) {
     print("big cir: \(x),\(y)")
-    AE2Prim(x, y)
+    AE2Prim(c, x, y)
 }
 #else
 //#define MoveTo(x,y) CGContextMoveToPoint(context,(x),(y))
 //#define AddLineTo(x,y) CGContextAddLineToPoint(context,(x),(y))
 //#define AddCircle(x,y) CGContextAddEllipseInRect(context, (CGRect) {{(x-2.0f),(y-2.0f)},{4.0f,4.0f}})
 //; CGContextAddEllipseInRect(context, (CGRect) {{(x-1.0f),(y-1.0f)},{2.0f,2.0f}})
-func MoveTo(_ x: Any, _ y: Any) {
-    MTPrim(x, y)
+func MoveTo(_ c: CGContext, _ x: Double, _ y: Double) {
+    MTPrim(c, x, y)
 }
-func AddLineTo(_ x: Any, _ y: Any) {
-    ALPrim(x, y)
+func AddLineTo(_ c: CGContext, _ x: Double, _ y: Double) {
+    ALPrim(c, x, y)
 }
-func AddCircle(_ x: Any, _ y: Any) {
-    AEPrim(x, y)
+func AddCircle(_ c: CGContext, _ x: Double, _ y: Double) {
+    AEPrim(c, x, y)
 }
-func AddFilledCircle(_ x: Any, _ y: Any) {
-    AFEPrim(x, y)
+func AddFilledCircle(_ c: CGContext, _ x: Double, _ y: Double) {
+    AFEPrim(c, x, y)
 }
-func AddCross(_ x: Any, _ y: Any) {
-    ACPrim(x, y)
+func AddCross(_ c: CGContext, _ x: Double, _ y: Double) {
+    ACPrim(c, x, y)
 }
-func AddBigCircle(_ x: Any, _ y: Any) {
-    AE2Prim(x, y)
+func AddBigCircle(_ c: CGContext, _ x: Double, _ y: Double) {
+    AE2Prim(c, x, y)
 }
 #endif
 
-func DevPt(_ x: Any, _ y: Any) -> CGPoint? {
-    context?.convertToUserSpace(CGPoint(x: x, y: y))
+func DevPt(_ c: CGContext, _ x: Double, _ y: Double) -> CGPoint? {
+    c.convertToUserSpace(CGPoint(x: x, y: y))
 }
-let Stroke = context?.strokePath()
+func Stroke(_ c: CGContext) {
+    c.strokePath()
+}

@@ -22,6 +22,7 @@
 //
 
 import Foundation
+import UIKit
 
 class voText: voState, UITextFieldDelegate {
     /*{
@@ -29,16 +30,17 @@ class voText: voState, UITextFieldDelegate {
     }*/
 
     private var _dtf: UITextField?
-    var dtf: UITextField? {
-        safeDispatchSync({ [self] in
-            if self.dtf != nil && self.dtf?.frame.size.width != vosFrame.size.width {
-                self.dtf = nil // first time around thinks size is 320, handle larger devices
-            }
-        })
-
+    var dtf: UITextField {
+        //safeDispatchSync({ [self] in
+        if self._dtf != nil && self._dtf?.frame.size.width != vosFrame.size.width {
+            self._dtf = nil // first time around thinks size is 320, handle larger devices
+        }
+        // })
+        
         if nil == _dtf {
+            DBGLog(String("init \(vo.valueName) : x=\(vosFrame.origin.x) y=\(vosFrame.origin.y) w=\(vosFrame.size.width) h=\(vosFrame.size.height)"))
             _dtf = UITextField(frame: vosFrame)
-
+            
             if #available(iOS 13.0, *) {
                 _dtf?.textColor = .label
                 _dtf?.backgroundColor = .secondarySystemBackground
@@ -46,30 +48,30 @@ class voText: voState, UITextFieldDelegate {
                 _dtf?.textColor = .black
                 _dtf?.backgroundColor = .white
             }
-
+            
             _dtf?.borderStyle = .roundedRect //Bezel;
             _dtf?.font = PrefBodyFont //[UIFont systemFontOfSize:17.0];
             _dtf?.autocorrectionType = .no // no auto correction support
-
+            
             _dtf?.keyboardType = .default // use the full keyboard
             _dtf?.placeholder = "<enter text>"
-
+            
             _dtf?.returnKeyType = .done
-
+            
             _dtf?.clearButtonMode = .whileEditing // has a clear 'x' button to the right
-
+            
             //dtf.tag = kViewTag;		// tag this control so we can remove it later for recycled cells
             _dtf?.delegate = self // let us be the delegate so we know when the keyboard's "Done" button is pressed
-
+            
             // Add an accessibility label that describes what the text field is for.
             _dtf?.accessibilityLabel = NSLocalizedString("NormalTextField", comment: "")
             _dtf?.text = ""
             _dtf?.addTarget(self, action: #selector(voNumber.textFieldDidChange(_:)), for: .editingChanged)
         }
-
-        return _dtf
+    
+        return _dtf!
     }
-    weak var startStr: String?
+    var startStr: String?
 
     override func getValCap() -> Int {
         // NSMutableString size for value
@@ -79,7 +81,7 @@ class voText: voState, UITextFieldDelegate {
     func textFieldDidBeginEditing(_ textField: UITextField) {
         //DBGLog(@"tf begin editing");
         startStr = textField.text
-        (vo?.parentTracker as? trackerObj)?.activeControl = textField as? UIControl
+        vo.parentTracker.activeControl = textField
     }
 
     @objc func textFieldDidChange(_ textField: UITextField?) {
@@ -89,12 +91,12 @@ class voText: voState, UITextFieldDelegate {
     func textFieldDidEndEditing(_ textField: UITextField) {
         //DBGLog(@"tf end editing");
         if startStr != textField.text {
-            vo?.value = textField.text
+            vo.value = textField.text
             //textField.textColor = [UIColor blackColor];
             NotificationCenter.default.post(name: NSNotification.Name(rtValueUpdatedNotification), object: self)
             startStr = nil
         }
-        (vo?.parentTracker as? trackerObj)?.activeControl = nil
+        vo.parentTracker.activeControl = nil
     }
 
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
@@ -105,43 +107,43 @@ class voText: voState, UITextFieldDelegate {
     }
 
     override func resetData() {
-        if nil != dtf {
+        if nil != _dtf {
             // not self, do not instantiate
             if Thread.isMainThread {
-                dtf?.text = ""
+                dtf.text = ""
             } else {
                 DispatchQueue.main.async(execute: { [self] in
-                    dtf?.text = ""
+                    dtf.text = ""
                 })
             }
         }
-        vo?.useVO = true
+        vo.useVO = true
     }
 
-    override func voDisplay(_ bounds: CGRect) -> UIView? {
+    override func voDisplay(_ bounds: CGRect) -> UIView {
         vosFrame = bounds
 
-        if vo?.value != dtf?.text {
+        if vo.value != dtf.text {
             safeDispatchSync({ [self] in
-                dtf?.text = vo?.value
+                dtf.text = vo.value
             })
-            DBGLog("dtf: vo val= %@ dtf txt= %@", vo?.value, dtf?.text)
+            DBGLog(String("dtf: vo val= \(vo.value) dtf txt= \(dtf.text)"))
         }
 
-        DBGLog("textfield voDisplay: %@", dtf?.text)
+        DBGLog(String("textfield voDisplay: \(dtf.text)"))
         return dtf
     }
 
-    override func update(_ instr: String?) -> String? {
+    override func update(_ instr: String) -> String {
         // confirm textfield not forgotten
-        if ((nil == dtf) /* NOT self.dtf as we want to test if is instantiated */) || !(instr == "") {
+        if ((nil == _dtf) /* NOT self.dtf as we want to test if is instantiated */) || !(instr == "") {
             return instr
         }
         var cpy: String?
         safeDispatchSync({ [self] in
-            cpy = dtf?.text ?? ""
+            cpy = dtf.text ?? ""
         })
-        return cpy
+        return cpy!
     }
 
     // MARK: -
@@ -153,7 +155,7 @@ class voText: voState, UITextFieldDelegate {
         return super.setOptDictDflts()
     }
 
-    override func cleanOptDictDflts(_ key: String?) -> Bool {
+    override func cleanOptDictDflts(_ key: String) -> Bool {
         /*
             NSString *val = [self.vo.optDict objectForKey:key];
             if (nil == val) 
@@ -188,7 +190,7 @@ class voText: voState, UITextFieldDelegate {
     }
     */
 
-    override func newVOGD() -> Any? {
-        return vogd?.initAsNote(vo)
+    override func newVOGD() -> vogd {
+        return vogd(vo).initAsNote(vo)
     }
 }

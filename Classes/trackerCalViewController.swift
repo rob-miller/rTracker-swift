@@ -8,7 +8,7 @@
 //  See the LICENSE file distributed with this work for the terms under
 //  which Square, Inc. licenses this file to you.
 
-import TimesSquare
+//include TimesSquare/TimesSquare.h
 import UIKit
 
 class trackerCalViewController: UIViewController, TSQCalendarViewDelegate {
@@ -29,8 +29,9 @@ class trackerCalViewController: UIViewController, TSQCalendarViewDelegate {
         set(calendar) {
             _calendar = calendar
 
-            navigationItem.title = calendar?.calendarIdentifier
-            tabBarItem.title = calendar?.calendarIdentifier
+            let ci = String("\(calendar!.identifier)")
+            navigationItem.title = ci
+            tabBarItem.title = ci
         }
     }
     var dateSelDict: [AnyHashable : Any]?
@@ -41,114 +42,115 @@ class trackerCalViewController: UIViewController, TSQCalendarViewDelegate {
     override func loadView() {
 
         let calendarView = TSQCalendarView()
-        calendarView.calendar = Calendar.current
+        
+        calendarView.calendar = Calendar(identifier: .gregorian)   // Calendar.current
         calendar = calendarView.calendar
         dateSelDict = [:]
 
-        var idColors: [AnyHashable : Any] = [:]
+        //var idColors: [AnyHashable : Any] = [:]
         var sql = "select id,color from voConfig where id not in  (select id from voInfo where field='graph' and val=0)"
-        tracker?.toQry2DictII(&idColors, sql: sql)
+        let idColors = tracker!.toQry2DictII(sql: sql)
 
-        var fnIds: Set<AnyHashable> = []
+        //var fnIds: Set<AnyHashable> = []
         sql = "select id from voConfig where type=6" // VOT_FUNC hard-coded!
-        tracker?.toQry2SetI(&fnIds, sql: sql)
+        let fnIds = tracker?.toQry2SetI(sql: sql)
 
-        var noGraphIds: Set<AnyHashable> = []
+        //var noGraphIds: Set<AnyHashable> = []
         sql = "select id from voInfo where field='graph' and val=0"
-        tracker?.toQry2SetI(&noGraphIds, sql: sql)
+        let noGraphIds = tracker?.toQry2SetI(sql: sql)
 
         let colorSet = rTracker_resource.colorSet()
-        let pv = privacyV.getPrivacyValue()
-        var dates: [AnyHashable]?
+        let pv = privacyValue
+        var dates: [Int]
         if nil == (parentUTC as? useTrackerController)?.searchSet {
-            dates = []
             sql = "select date from trkrData where minpriv <= \(pv) order by date asc;"
-            tracker?.toQry2AryI(&dates, sql: sql)
+            dates = tracker!.toQry2AryI(sql: sql)
         } else {
-            if let aSearchSet = (parentUTC as? useTrackerController)?.searchSet {
-                dates = aSearchSet
-            }
+            let aSearchSet = (parentUTC as! useTrackerController).searchSet
+            dates = aSearchSet!
+
         }
 
-        var vidSet: [AnyHashable] = []
+        var vidSet: [Int] = []
 
-        for d in dates ?? [] {
-            let dc = calendar?.components([.year, .month, .day], from: Date(timeIntervalSince1970: TimeInterval((d as? NSNumber).intValue)))
+        for d in dates {
+            let dc = calendar!.dateComponents([.year, .month, .day], from: Date(timeIntervalSince1970: TimeInterval(d)))
             var date: Date? = nil
-            if let dc {
-                date = calendar?.date(from: dc)
-            }
+            date = calendar?.date(from: dc)
+            
             let dayStart = Int(date?.timeIntervalSince1970 ?? 0)
 
-            DBGLog("date= %@", date)
-            if (2014 == dc?.year) && (6 == dc?.month) && (13 == dc?.day) {
-                DBGLog("date 2014 june = %@", date)
+            DBGLog(String("date= \(date)"))
+            /*
+            if (2014 == dc.year) && (6 == dc.month) && (13 == dc.day) {
+                DBGLog(String("date 2014 june = \(date)"))
             }
+             */
             // get array of vids in date range
             sql = "select t1.id from voData t0, voConfig t1 where t0.id=t1.id and t0.date >= \(dayStart) and t0.date <= \(dayStart + (24 * 60 * 60) - 1) and t1.priv <= \(pv) and t1.type != \(VOT_INFO) order by t1.rank asc"
 
-            vidSet.removeAll()
-            tracker?.toQry2AryI(&vidSet, sql: sql)
+            //vidSet.removeAll()
+            vidSet = tracker!.toQry2AryI(sql: sql)
             var haveNoGraphNoFn = false
             var graphFnVid = 0
             var targVid = 0
 
             for vid in vidSet {
-                if let vid = vid as? AnyHashable {
-                    if noGraphIds.contains(vid) {
-                        // not graphed
-                        if !fnIds.contains(vid) {
-                            // and not a vot_func
-                            if 0 != graphFnVid {
-                                // have a graphed fn value already set, this confirms there is privacy-ok data
-                                targVid = graphFnVid
-                                break
-                            }
-                            haveNoGraphNoFn = true
+                
+                if noGraphIds!.contains(vid) {
+                    // not graphed
+                    if !fnIds!.contains(vid) {
+                        // and not a vot_func
+                        if 0 != graphFnVid {
+                            // have a graphed fn value already set, this confirms there is privacy-ok data
+                            targVid = graphFnVid
+                            break
                         }
-                    } else if fnIds.contains(vid) {
-                        if 0 == graphFnVid {
-                            // first seen vot_func to graph
-                            graphFnVid = (vid as? NSNumber).intValue
-                            if haveNoGraphNoFn {
-                                // already have confirmation of privacy-ok data
-                                targVid = graphFnVid
-                                break
-                            }
-                        }
-                    } else if 0 != graphFnVid {
-                        // have a graphed fn value already set, this confirms there is privacy-ok data
-                        targVid = graphFnVid
-                        break
-                    } else {
-                        targVid = (vid as? NSNumber).intValue
-                        break
+                        haveNoGraphNoFn = true
                     }
+                } else if fnIds!.contains(vid) {
+                    if 0 == graphFnVid {
+                        // first seen vot_func to graph
+                        graphFnVid = vid
+                        if haveNoGraphNoFn {
+                            // already have confirmation of privacy-ok data
+                            targVid = graphFnVid
+                            break
+                        }
+                    }
+                } else if 0 != graphFnVid {
+                    // have a graphed fn value already set, this confirms there is privacy-ok data
+                    targVid = graphFnVid
+                    break
+                } else {
+                    targVid = vid
+                    break
                 }
+                
             }
 
             if haveNoGraphNoFn && (0 == targVid) {
                 // only have no graph data point
                 dateSelDict?[date] = "" // set for no color
-                DBGLog("date: %@ - have vid but no graph", date)
+                DBGLog(String("date: \(date) - have vid but no graph"))
             } else if targVid != 0 {
-                let cndx = (idColors[NSNumber(value: targVid)] as? NSNumber)?.intValue ?? 0
-                if (cndx < 0) || (cndx > (colorSet?.count ?? 0)) {
+                let cndx = idColors[targVid]!
+                if (cndx < 0) || (cndx > colorSet.count) {
                     dateSelDict?[date] = "" // set for no color
                 } else {
-                    dateSelDict?[date] = colorSet?[cndx] as? UIColor
-                    DBGLog("date: %@  valobj %d UIColor %@ name %@", date, targVid, colorSet?[cndx] as? UIColor, rTracker_resource.colorNames()?[cndx])
+                    dateSelDict?[date] = colorSet[cndx]
+                    DBGLog(String("date: \(date)  valobj \(targVid) UIColor \(colorSet[cndx]) name \(rTracker_resource.colorNames()[cndx])"))
                 }
             }
 
 
             if let date {
-                DBGLog("data for date %@ = %@", date, dateSelDict?[date] as? UIColor)
+                DBGLog(String("data for date \(date) = \(dateSelDict?[date] as? UIColor)"))
             }
         }
 
         calendarView.rowCellClass = trackerCalCalendarRowCell.self
-        calendarView.firstDate = Date(timeIntervalSince1970: TimeInterval(tracker?.firstDate() ?? 0.0))
+        calendarView.firstDate = Date(timeIntervalSince1970: TimeInterval(tracker!.firstDate()))
         calendarView.lastDate = Date() // today
 
         calendarView.backgroundColor = UIColor(red: 0.84, green: 0.85, blue: 0.86, alpha: 1.0)
@@ -205,7 +207,7 @@ class trackerCalViewController: UIViewController, TSQCalendarViewDelegate {
 
     override func viewDidAppear(_ animated: Bool) {
         specDate = true
-        DBGLog("showing tsqcal seldate= %@", dpr?.date)
+        DBGLog(String("showing tsqcal seldate= \(dpr?.date)"))
         (view as? TSQCalendarView)?.selectedDate = dpr?.date
         specDate = false
 
@@ -230,8 +232,8 @@ class trackerCalViewController: UIViewController, TSQCalendarViewDelegate {
     func scroll() {
         let calendarView = view as? TSQCalendarView
         let tableView = calendarView?.tableView
-
-        tableView?.setContentOffset(CGPoint(x: 0.0, y: trackerCalViewController.scrollAtTop != 0 ? 10000.0 : 0.0), animated: true)
+        // rtm atTop hardCoded True in objective-c
+        tableView?.setContentOffset(CGPoint(x: 0.0, y: (trackerCalViewController.scrollAtTop ? 10000.0 : 0.0)), animated: true)
         trackerCalViewController.scrollAtTop = !trackerCalViewController.scrollAtTop
     }
 
@@ -255,13 +257,13 @@ class trackerCalViewController: UIViewController, TSQCalendarViewDelegate {
                 return true
             }
         }
-        var components = calendar?.components([.era, .year, .month, .day], from: Date())
+        var components = calendar?.dateComponents([.era, .year, .month, .day], from: Date())
         var today: Date? = nil
         if let components {
             today = calendar?.date(from: components)
         }
         if let date {
-            components = calendar?.components([.era, .year, .month, .day], from: date)
+            components = calendar?.dateComponents([.era, .year, .month, .day], from: date)
         }
         var inDate: Date? = nil
         if let components {
@@ -269,7 +271,7 @@ class trackerCalViewController: UIViewController, TSQCalendarViewDelegate {
         }
 
         if let inDate {
-            if today?.isEqual(to: inDate) ?? false {
+            if today == inDate {
                 return true
             }
         }
@@ -283,13 +285,15 @@ class trackerCalViewController: UIViewController, TSQCalendarViewDelegate {
         }
         if nil == obj {
             return nil
-        } else if "" == obj {
+        } else if "" == obj as! String{
             return nil
         }
         return obj as? UIColor
     }
 }
 
-extension TSQCalendarView {
-    private(set) var tableView: UITableView?
-}
+/*
+ extension TSQCalendarView {
+ private(set) var tableView: UITableView?
+ }
+ */

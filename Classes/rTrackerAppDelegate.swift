@@ -21,23 +21,14 @@
 //  Copyright Robert T. Miller 2010. All rights reserved.
 //
 
-import Crashlytics
-import Fabric
 import UIKit
 import UserNotifications
 
 @UIApplicationMain
 class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
-    @IBOutlet var window: UIWindow? {
-        if _rTrackerAppDelegate.windowVar == nil {
-            _rTrackerAppDelegate.windowVar = GSTouchesShowingWindow(frame: UIScreen.main.bounds)
-        }
-        return _rTrackerAppDelegate.windowVar
-    }
+    @IBOutlet var window: UIWindow?
     @IBOutlet var navigationController: UINavigationController!
     var pendingTid: NSNumber?
-
-    #endif
 
     // MARK: -
     // MARK: Application lifecycle
@@ -49,7 +40,7 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
     */
     func registerForNotifications() {
         let center = UNUserNotificationCenter.current()
-        let options: UNAuthorizationOptions = .alert + .badge + .sound
+        let options: UNAuthorizationOptions = [.alert, .badge, .sound]
 
         center.requestAuthorization(
             options: options) { granted, error in
@@ -125,23 +116,12 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
     //- (void)applicationDidFinishLaunching:(UIApplication *)application {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
 
-        #if FABRIC
-        //[Fabric with:@[CrashlyticsKit]];
-        Fabric.with([Crashlytics.self])
-        #endif
 
         #if !RELEASE
-        DBGWarn("docs dir= %@", rTracker_resource.ioFilePath(nil, access: true))
+        DBGWarn(String("docs dir= \(rTracker_resource.ioFilePath(nil, access: true))"))
         #endif
         let sud = UserDefaults.standard
         sud.synchronize()
-
-        #if ADVERSION
-        rTracker_resource.setPurchased(sud.bool(forKey: RTA_prodid))
-        if !rTracker_resource.getPurchased() {
-            rt_IAPHelper.sharedInstance()
-        }
-        #endif
 
         let rootController = (navigationController.viewControllers)[0] as? RootViewController
 
@@ -153,26 +133,27 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
             let mainBundlePath = Bundle.main.bundlePath
             let settingsPropertyListPath = URL(fileURLWithPath: mainBundlePath).appendingPathComponent("Settings.bundle/Root.plist").path
 
-            let settingsPropertyList = NSDictionary(contentsOfFile: settingsPropertyListPath) as Dictionary?
+            if let settingsPropertyList = NSDictionary(contentsOfFile: settingsPropertyListPath) as? [String: Any] {
+                let preferenceArray = settingsPropertyList["PreferenceSpecifiers"] as? [[String : Any]]
+                var registerableDictionary: [String : Any] = [:]
 
-            var preferenceArray = settingsPropertyList?["PreferenceSpecifiers"] as? [AnyHashable]
-            var registerableDictionary: [AnyHashable : Any] = [:]
+                for i in 0..<(preferenceArray?.count ?? 0) {
+                    let key = preferenceArray?[i]["Title"] as? String
 
-            for i in 0..<(preferenceArray?.count ?? 0) {
-                let key = preferenceArray?[i]["Key"] as? String
-
-                if let key {
-                    let value = preferenceArray?[i]["DefaultValue"]
-                    if let value {
-                        registerableDictionary[key ?? ""] = value
+                    if let key {
+                        let value = preferenceArray?[i]["DefaultValue"]
+                        if let value {
+                            registerableDictionary[key] = value
+                        }
                     }
                 }
-            }
 
-            if let registerableDictionary = registerableDictionary as? [String : Any] {
                 sud.register(defaults: registerableDictionary)
+                sud.synchronize()
+
+            } else {
+                DBGLog("unable to open settings dictionary from rRoot.plist file")
             }
-            sud.synchronize()
         }
         rTracker_resource.setNotificationsEnabled()
         rTracker_resource.setToldAboutNotifications(sud.bool(forKey: "toldAboutNotifications"))
@@ -183,31 +164,17 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
         //   as found in http://stackoverflow.com/questions/7520971
 
         //[self.window addSubview:[navigationController view]];
+        let rootViewController = RootViewController()
+        let navigationController = UINavigationController(rootViewController: rootViewController)
+
         window?.rootViewController = navigationController
         window?.makeKeyAndVisible()
 
-        DBGLog(
-            "product %@ version %@ build %@  db_ver %d  fn_ver %d samples_ver %d demos_ver %d",
-            Bundle.main.infoDictionary?["CFBundleName"],
-            Bundle.main.infoDictionary?["CFBundleShortVersionString"],
-            Bundle.main.infoDictionary?["CFBundleVersion"],
-            RTDB_VERSION,
-            RTFN_VERSION,
-            SAMPLES_VERSION,
-            DEMOS_VERSION)
-        /*
-            if ([@"rTrackerA" isEqualToString:[[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleName"]]) {
-        #if !ADVERSION 
-                [rTracker_resource alert:@"rTrackerA version error" msg:@"bundle rTrackerA but ADVERSION not set" vc:nil];
-                DBGErr(@"bundle rTrackerA but ADVERSION not set");
-        #endif
-            } else {
-        #if ADVERSION
-                [rTracker_resource alert:@"rTracker version error" msg:@"bundle not rTrackerA but ADVERSION is set" vc:nil];
-                DBGErr(@"bundle not rTrackerA but ADVERSION is set");
-        #endif
-            }
-         */
+        let prod = Bundle.main.infoDictionary?["CFBundleName"]
+        let ver = Bundle.main.infoDictionary?["CFBundleShortVersionString"]
+        let bld = Bundle.main.infoDictionary?["CFBundleVersion"]
+        DBGLog(String("product \(prod) version \(ver) build \(bld)  db_ver \(RTDB_VERSION)  fn_ver \(RTFN_VERSION) samples_ver \(SAMPLES_VERSION) demos_ver \(DEMOS_VERSION)"))
+
         //NSURL *url = (NSURL *)[launchOptions valueForKey:UIApplicationLaunchOptionsURLKey];
         // docs say app openURL below is called anyway, so don't do here which is only if app not already open
         //
@@ -218,16 +185,11 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
 
         rTracker_resource.initHasAmPm()
 
-
-
-        #if ADVERSION
-        rTracker_resource.replaceRtrackerA(rootController)
-        #else
         //if (![rTracker_resource getAcceptLicense]) {
 
         if !sud.bool(forKey: "acceptLicense") {
             // race relying on rvc having set
-            let freeMsg = "Copyright 2010-2021 Robert T. Miller\n\nrTracker is free and open source software, distributed under the Apache License, Version 2.0.\n\nrTracker is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n\nrTracker source code is available at https://github.com/rob-miller/rTracker\n\nThe full Apache License is available at http://www.apache.org/licenses/LICENSE-2.0"
+            let freeMsg = "Copyright 2010-2023 Robert T. Miller\n\nrTracker is free and open source software, distributed under the Apache License, Version 2.0.\n\nrTracker is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n\nrTracker source code is available at https://github.com/rob-miller/rTracker\n\nThe full Apache License is available at http://www.apache.org/licenses/LICENSE-2.0"
 
             let alert = UIAlertController(
                 title: "rTracker is free software.\n",
@@ -259,7 +221,6 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
         } else {
             newMaintainer()
         }
-        #endif
 
         /*
             // for when actually not running, not just in background:
@@ -359,6 +320,7 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
         return alert
     }
 
+    /*
     @objc func dismiss(_ alertController: UIAlertController?) {
         alertController?.dismiss(
             animated: Bool(true))
@@ -370,10 +332,10 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
             message: msg,
             preferredStyle: .alert)
         window?.rootViewController?.present(alert, animated: true)
-        perform(#selector(rTracker_resource.dismiss(_:)), with: alert, afterDelay: TimeInterval(delay))
+        perform(#selector(self.dismiss(_:)), with: alert, afterDelay: TimeInterval(delay))
 
     }
-
+     */
     /*
     - (void)application:(UIApplication *)application didReceiveLocalNotification:(UILocalNotification *)notification {
 
@@ -435,14 +397,14 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
         let rootController = (navigationController.viewControllers)[0]
         let topController = navigationController.viewControllers.last
 
-        (rootController as? RootViewController)?.privacyObj()?.lockDown() // hiding is handled after startup - viewDidAppear() below
+        _ = (rootController as? RootViewController)?.privacyObj.lockDown() // hiding is handled after startup - viewDidAppear() below
         UIApplication.shared.isIdleTimerDisabled = false
 
         let rtSelector = NSSelectorFromString("rejectTracker")
 
         if topController?.responds(to: rtSelector) ?? false {
             // leaving so reject tracker if it is rejectable
-            if (topController as? useTrackerController)?.rejectable {
+            if (((topController as? useTrackerController)?.rejectable) != nil) {
                 //[((useTrackerController *) topController) rejectTracker];
                 navigationController.popViewController(animated: true)
             }
@@ -480,7 +442,10 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
 
         newMaintainer()
 
-        navigationController.visibleViewController?.viewDidAppear(true)
+        //navigationController.visibleViewController?.viewDidAppear(true)
+
+        //navigationController.visibleViewController?.beginAppearanceTransition(true, animated: true)
+
     }
 
     func application(_ application: UIApplication, performActionFor shortcutItem: UIApplicationShortcutItem, completionHandler: @escaping (Bool) -> Void) {

@@ -22,6 +22,7 @@
 //
 
 import Foundation
+import CoreFoundation
 import UIKit
 
 //#import "trackerObj.h"
@@ -110,30 +111,29 @@ let NUMDDPDFLT = -1
 
 protocol voProtocol: AnyObject {
     func getValCap() -> Int
-    func update(_ instr: String?) -> String?
-    func voDisplay(_ bounds: CGRect) -> UIView?
-    func voTVCell(_ tableView: UITableView?) -> UITableViewCell?
+    func update(_ instr: String) -> String
+    func voDisplay(_ bounds: CGRect) -> UIView
+    func voTVCell(_ tableView: UITableView) -> UITableViewCell
     func voTVCellHeight() -> CGFloat
-    func voGraphSet() -> [AnyHashable]?
-    func voDrawOptions(_ ctvovc: Any?)
+    func voGraphSet() -> [String]
+    func voDrawOptions(_ ctvovc: configTVObjVC)
     func loadConfig()
     func setOptDictDflts()
-    func cleanOptDictDflts(_ key: String?) -> Bool
+    func cleanOptDictDflts(_ key: String) -> Bool
     func updateVORefs(_ newVID: Int, old oldVID: Int)
-    func dataEditVDidLoad(_ vc: UIViewController?)
-    func dataEditVWAppear(_ vc: UIViewController?)
-    func dataEditVWDisappear(_ vc: UIViewController?)
+    func dataEditVDidLoad(_ vc: UIViewController)
+    func dataEditVWAppear(_ vc: UIViewController)
+    func dataEditVWDisappear(_ vc: UIViewController)
     //- (void) dataEditVDidUnload;
     //- (void) dataEditFinished;
     //- (void) transformVO:(NSMutableArray *)xdat ydat:(NSMutableArray *)ydat dscale:(double)dscale height:(CGFloat)height border:(float)border firstDate:(int)firstDate;
-    deinit
-    func newVOGD() -> Any?
+    func newVOGD() -> vogd
     //- (void) recalculate;
     func setFnVals(_ tDate: Int)
     func doTrimFnVals()
     func resetData()
-    func mapValue2Csv() -> String?
-    func mapCsv2Value(_ inCsv: String?) -> String?
+    func mapValue2Csv() -> String
+    func mapCsv2Value(_ inCsv: String) -> String
 }
 
 //extern const NSInteger kViewTag;
@@ -218,16 +218,16 @@ class valueObj: NSObject, UITextFieldDelegate {
                 //value = [[NSMutableString alloc] initWithCapacity:1];
                 //[self.value setString:@"0"];
             default:
-                dbgNSAssert1(0, "valueObj init vtype %ld not supported", vt)
+                dbgNSAssert(false, String(format:"valueObj init vtype %ld not supported", vt))
                 tvos = voNumber(vo: self) // to clear analyzer worry
                 _vtype = VOT_NUMBER // consistency if we get here
             }
-            vos = nil
+            // vos = nil
             vos = tvos as? (voState & voProtocol)
             var tval: String?
-            tval = String(repeating: "\0", count: vos?.getValCap() ?? 0) // causes memory leak
-            value = nil
-            value = tval
+            tval = String(repeating: "\0", count: vos?.getValCap() ?? 0)
+            // value = nil
+            _value = tval
             //[self.value release];   // clear retain count from alloc + retain
         }
     }
@@ -236,31 +236,28 @@ class valueObj: NSObject, UITextFieldDelegate {
 
     private var _value: String?
     var value: String? {
-        dbgNSAssert(vos, "accessing vo.value with nil vos")
-        if _value == nil {
-            _value = String(repeating: "\0", count: vos?.getValCap() ?? 0)
-            //value = [[NSMutableString alloc] init];
-            _value = ""
+        get {
+            dbgNSAssert(vos != nil, "accessing vo.value with nil vos")
+            if _value == nil {
+                _value = ""
+            }
+            _value = vos?.update(_value!)
+            return _value
         }
-        _value = vos?.update(_value)
-        return _value
+        set {
+            _value = newValue
+        }
     }
     var vcolor = 0
     var vGraphType = 0
 
-    private var _optDict: [AnyHashable : Any]?
-    var optDict: [AnyHashable : Any]? {
-        if _optDict == nil {
-            _optDict = [:]
-        }
-        return _optDict
-    }
+    var optDict: [String : String] = [:]
     var vos: (voState & voProtocol)?
-    var aVogd: (vogd & voProtocol)?
+    var vogd: (vogd & voProtocol)?
     var display: UIView?
     var useVO = false
     //@property (nonatomic) BOOL retrievedData;
-    var parentTracker: Any?
+    var parentTracker: trackerObj
 
     private var _checkButtonUseVO: UIButton?
     var checkButtonUseVO: UIButton? {
@@ -276,12 +273,13 @@ class valueObj: NSObject, UITextFieldDelegate {
     }
 
  //, retrievedData;
-    convenience init() {
+    /*
+    override convenience init() {
         self.init(data: nil, in_vid: 0, in_vtype: 0, in_vname: "", in_vcolor: 0, in_vgraphtype: 0, in_vpriv: 0)
     }
-
+     */
     init(
-        data parentTO: Any?,
+        data parentTO: trackerObj,
         in_vid: Int,
         in_vtype: Int,
         in_vname: String?,
@@ -290,10 +288,10 @@ class valueObj: NSObject, UITextFieldDelegate {
         in_vpriv: Int
     ) {
         //DBGLog(@"init vObj with args vid: %d vtype: %d vname: %@",in_vid, in_vtype, in_vname);
+        parentTracker = parentTO
         super.init()
         //self.useVO = YES;
 
-        parentTracker = parentTO
         vid = in_vid
         vtype = in_vtype // sets useVO
 
@@ -302,21 +300,26 @@ class valueObj: NSObject, UITextFieldDelegate {
         vGraphType = in_vgraphtype
     }
 
-    init(dict parentTO: Any?, dict: [AnyHashable : Any]?) {
+    init(dict parentTO: trackerObj, dict: [AnyHashable : Any]?) {
         /*
         	DBGLog(@"init vObj with dict vid: %d vtype: %d vname: %@",
                    [(NSNumber*) [dict objectForKey:@"vid"] integerValue],
                    [(NSNumber*) [dict objectForKey:@"vtype"] integerValue],
                    (NSString*) [dict objectForKey:@"valueName"]);
              */
+        parentTracker = parentTO
         super.init()
         useVO = true
-        parentTracker = parentTO
         vid = (dict?["vid"] as? NSNumber)?.intValue ?? 0
-        (parentTracker as? trackerObj)?.minUniquev(vid)
+        parentTracker.minUniquev(vid)
         valueName = dict?["valueName"] as? String
         //self.optDict = (NSMutableDictionary*) dict[@"optDict"];
-        optDict = CFBridgingRelease(CFPropertyListCreateDeepCopy(kCFAllocatorDefault, dict?["optDict"] as? CFDictionary?, CFOptionFlags(.mutableContainersAndLeaves))) as? [AnyHashable : Any]
+        if let ld = dict {
+            if let od = ld["optDict"] as? [String: String] {
+                self.optDict = od
+            }
+        }
+
         vpriv = (dict?["vpriv"] as? NSNumber)?.intValue ?? 0
         vtype = (dict?["vtype"] as? NSNumber)?.intValue ?? 0
         // setting vtype sets vo.useVO through vos init
@@ -324,18 +327,18 @@ class valueObj: NSObject, UITextFieldDelegate {
         vGraphType = (dict?["vGraphType"] as? NSNumber)?.intValue ?? 0
     }
 
-    convenience init(parentOnly parentTO: trackerObj?) {
+    convenience init(parentOnly parentTO: trackerObj) {
         self.init(data: parentTO, in_vid: 0, in_vtype: 0, in_vname: "", in_vcolor: 0, in_vgraphtype: 0, in_vpriv: 0)
     }
 
     init(
-        fromDB parentTO: Any?,
+        fromDB parentTO: trackerObj,
         in_vid: Int
     ) {
+        parentTracker = parentTO
         super.init()
         //self.useVO = YES;
 
-        parentTracker = parentTO
         vid = in_vid
 
         var sql = String(format: "select type, color, graphtype from voConfig where id=%ld", in_vid)
@@ -344,21 +347,21 @@ class valueObj: NSObject, UITextFieldDelegate {
         var in_vcolor: Int
         var in_vgraphtype: Int
 
-        parentTO?.toQry2IntIntInt(UnsafeMutablePointer<Int>(mutating: &in_vtype), i2: UnsafeMutablePointer<Int>(mutating: &in_vcolor), i3: UnsafeMutablePointer<Int>(mutating: &in_vgraphtype), sql: sql)
+        (in_vtype, in_vcolor, in_vgraphtype) = parentTO.toQry2IntIntInt(sql: sql)!
 
         vtype = in_vtype // sets useVO
         vcolor = in_vcolor
         vGraphType = in_vgraphtype
 
         sql = String(format: "select name from voConfig where id==%ld", in_vid)
-        valueName = parentTO?.toQry2Str(sql)
+        valueName = parentTO.toQry2Str(sql:sql)
 
     }
 
     // MARK: -
     // MARK: dictionary to/from
 
-    func dictFromVO() -> [AnyHashable : Any]? {
+    func dictFromVO() -> [String : Any]? {
         /*
             NSNumber *myvid = [NSNumber numberWithInteger:self.vid];
             NSNumber *myvtype = [NSNumber numberWithInteger:self.vtype];
@@ -381,20 +384,24 @@ class valueObj: NSObject, UITextFieldDelegate {
                     self.optDict
                    );
             */
-        if let optDict {
-            return [
-                "vid": NSNumber(value: vid),
-                "vtype": NSNumber(value: vtype),
-                "vpriv": NSNumber(value: vpriv),
-                "valueName": valueName ?? "",
-                "vcolor": NSNumber(value: vcolor),
-                "vGraphType": NSNumber(value: vGraphType),
-                "optDict": optDict
-            ]
-        }
-        return nil
+        return [
+            "vid": NSNumber(value: vid),
+            "vtype": NSNumber(value: vtype),
+            "vpriv": NSNumber(value: vpriv),
+            "valueName": valueName ?? "",
+            "vcolor": NSNumber(value: vcolor),
+            "vGraphType": NSNumber(value: vGraphType),
+            "optDict": optDict
+        ]
+    }
+    
+    func setOptDict(_ od: [String : String]) {
+        optDict = od
     }
 
+    func setOptDictKeyVal(key: String, val: String) {
+        optDict[key] = val
+    }
     //- (void) txtDTF:(BOOL)num;
     func csvValue() -> String? {
         return vos?.mapValue2Csv()
@@ -402,7 +409,7 @@ class valueObj: NSObject, UITextFieldDelegate {
 
     func resetData() {
         vos?.resetData()
-        value = ""
+        _value = ""
 
         //self.retrievedData = NO;
         // do self.useVO in vos resetData
@@ -418,7 +425,7 @@ class valueObj: NSObject, UITextFieldDelegate {
         }
 
         if display == nil {
-            DBGLog("vo new display name:  %@ currVal: .%@.", valueName, value)
+            DBGLog(String("vo new display name:  \(valueName) currVal: .\(value)."))
             display = vos?.voDisplay(bounds)
             display?.tag = kViewTag
         }
@@ -426,7 +433,7 @@ class valueObj: NSObject, UITextFieldDelegate {
     }
 
     func setTrackerDateToNow() {
-        (parentTracker as? trackerObj)?.trackerDate = Date()
+        parentTracker.trackerDate = Date()
     }
 
     // MARK: -
@@ -448,20 +455,20 @@ class valueObj: NSObject, UITextFieldDelegate {
 
     // called when the checkmark button is touched 
     @objc func checkAction(_ sender: Any?) {
-        DBGLog("checkbox ticked for %@ new state= %d", valueName, !useVO)
+        DBGLog(String("checkbox ticked for \(valueName) new state= \(!useVO)"))
         var checkImage: UIImage?
 
         // note: we don't use 'sender' because this action method can be called separate from the button (i.e. from table selection)
         //self.useVO = !self.useVO;
 
         //TODO: re-write to use voStates as appropriate, vos:update returns '' if disabled so could keep values or should clear .value here
-
-        if useVO = !useVO {
+        useVO.toggle()
+        if useVO {
             // if new state=TRUE (toggle useVO and set)   // enableVO ... disableVO
             checkImage = UIImage(named: "checked.png")
             //   do in update():
             if vtype == VOT_SLIDER {
-                value = "\((display as? UISlider)?.value ?? 0.0)"
+                _value = "\((display as? UISlider)?.value ?? 0.0)"
             }
         } else {
             // new state = FALSE
@@ -469,21 +476,21 @@ class valueObj: NSObject, UITextFieldDelegate {
             if vtype == VOT_CHOICE {
                 (display as? UISegmentedControl)?.selectedSegmentIndex = UISegmentedControl.noSegment
             } else if vtype == VOT_SLIDER {
-                let nsdflt = (optDict)?["sdflt"] as? NSNumber
-                var sdflt = nsdflt != nil ? Double(nsdflt?.floatValue ?? 0.0) : SLIDRDFLTDFLT
 
-                if (optDict)?["slidrswlb"] == "1" {
+                var sdflt = Float(optDict["sdflt", default: String("\(SLIDRDFLTDFLT)")])
+
+                if optDict["slidrswlb"] == "1" {
                     // handle slider option 'starts with last'
-                    let to = parentTracker as? trackerObj
-                    var sql = String(format: "select count(*) from voData where id=%ld and date<%d", vid, Int(to?.trackerDate?.timeIntervalSince1970 ?? 0))
-                    let v = to?.toQry2Int(sql) ?? 0
+                    let to = parentTracker
+                    var sql = String(format: "select count(*) from voData where id=%ld and date<%d", vid, Int(to.trackerDate!.timeIntervalSince1970))
+                    let v = to.toQry2Int(sql:sql) ?? 0
                     if v > 0 {
-                        sql = String(format: "select val from voData where id=%ld and date<%d order by date desc limit 1;", vid, Int(to?.trackerDate?.timeIntervalSince1970 ?? 0))
-                        sdflt = CGFloat(to?.toQry2Float(sql) ?? 0.0)
+                        sql = String(format: "select val from voData where id=%ld and date<%d order by date desc limit 1;", vid, Int(to.trackerDate!.timeIntervalSince1970))
+                        sdflt = to.toQry2Float(sql:sql)
                     }
                 }
 
-                (display as? UISlider)?.setValue(Float(sdflt), animated: true)
+                (display as? UISlider)?.setValue(sdflt!, animated: true)
             }
         }
 
@@ -498,15 +505,12 @@ class valueObj: NSObject, UITextFieldDelegate {
     func describe(_ od: Bool) {
         #if DEBUGLOG
         if od {
-            DBGLog("value id %ld name %@ type %ld value .%@. optDict:", vid, valueName, vtype, value)
-            for key in optDict ?? [:] {
-                guard let key = key as? String else {
-                    continue
-                }
-                DBGLog(" %@ = %@ ", key, optDict?[key])
+            DBGLog(String("value id \(vid) name \(valueName) type \(vtype) value .\(value). optDict:"))
+            for (key, value) in optDict {
+                DBGLog(String(" \(key) = \(value) "))
             }
         } else {
-            DBGLog("value id %ld name %@ type %ld value .%@.", vid, valueName, vtype, value)
+            DBGLog(String("value id \(vid) name \(valueName) type \(vtype) value .\(value)."))
         }
         #endif
     }
@@ -537,76 +541,72 @@ class valueObj: NSObject, UITextFieldDelegate {
             return VOG_NONE
         }
 
-        dbgNSAssert1(0, "mapGraphTypes: no match for %@", gts)
+        dbgNSAssert(false, String("mapGraphTypes: no match for \(gts)"))
 
         return 0
     }
 
-    #if DEBUGERR
-    let VOINF = String(format: "t: %@ vo: %li %@", (parentTracker as? trackerObj)?.trackerName ?? "", Int(vid), valueName ?? "")
-    #endif
-
     func validate() {
+        let VOINF = String(format: String("t: \(parentTracker.trackerName) vo: \(Int(vid)) \(valueName)"))
         //DBGLog(@"%@",VOINF);
 
         if vtype < 0 {
-            DBGErr("%@ invalid vtype (negative): %ld", VOINF, vtype)
+            DBGErr(String("\(VOINF) invalid vtype (negative): \(vtype)"))
             vtype = 0
         } else if vtype > VOT_MAX {
-            DBGErr("%@ invalid vtype (too large): %ld max vtype= %li", VOINF, vtype, VOT_MAX)
+            DBGErr(String("\(VOINF) invalid vtype (too large): \(vtype) max vtype= \(VOT_MAX)"))
             vtype = 0
         }
 
         if vpriv < 0 {
-            DBGErr("%@ invalid vpriv (too low): %ld minpriv= %i, 0 accepted", VOINF, vpriv, MINPRIV)
+            DBGErr(String("\(VOINF) invalid vpriv (too low): \(vpriv) minpriv= \(MINPRIV), 0 accepted"))
             vpriv = MINPRIV
         } else if vpriv > MAXPRIV {
-            DBGErr("%@ invalid vtype (too large): %ld maxpriv= %i", VOINF, vpriv, MAXPRIV)
+            DBGErr(String("\(VOINF) invalid vtype (too large): \(vpriv) maxpriv= \(MAXPRIV)"))
             vpriv = 0
         }
 
         if VOT_CHOICE != vtype && VOT_INFO != vtype {
             if vcolor < 0 {
-                DBGErr("%@ invalid vcolor (negative): %ld", VOINF, vcolor)
+                DBGErr(String("\(VOINF) invalid vcolor (negative): \(vcolor)"))
                 vcolor = 0
-            } else if vcolor > ((rTracker_resource.colorSet()?.count ?? 0) - 1) {
-                DBGErr("%@ invalid vcolor (too large): %ld max color= %lu", VOINF, vcolor, UInt((rTracker_resource.colorSet()?.count ?? 0) - 1))
+            } else if vcolor > (rTracker_resource.colorSet().count - 1) {
+                DBGErr(String("\(VOINF) invalid vcolor (too large): \(vcolor) max color= \(UInt(rTracker_resource.colorSet().count - 1))"))
                 vcolor = 0
             }
         }
 
         if vGraphType < 0 {
-            DBGErr("%@ invalid vGraphType (negative): %ld", VOINF, vGraphType)
+            DBGErr(String("\(VOINF) invalid vGraphType (negative): \(vGraphType)"))
             vGraphType = 0
         } else if vGraphType > VOG_MAX {
-            DBGErr("%@ invalid vGraphType (too large): %ld max vGraphType= %i", VOINF, vGraphType, VOG_MAX)
+            DBGErr(String("\(VOINF) invalid vGraphType (too large): \(vGraphType) max vGraphType= \(VOG_MAX)"))
             vGraphType = 0
         }
 
         if VOT_CHOICE == vtype {
             if -1 != vcolor {
-                DBGErr("%@ invalid choice vcolor (not -1): %ld", VOINF, vcolor)
+                DBGErr(String("\(VOINF) invalid choice vcolor (not -1): \(vcolor)"))
                 vcolor = -1
             }
-            var i: Int
+
             for i in 0..<CHOICES {
                 let key = "cc\(i)"
-                let ncol = (optDict)?[key] as? NSNumber
-                if let ncol {
-                    let col = ncol.intValue
-                    if col < 0 {
-                        DBGErr("%@ invalid choice %i color (negative): %ld", VOINF, i, col)
-                        (optDict)?[key] = NSNumber(value: 0)
-                    } else if col > ((rTracker_resource.colorSet()?.count ?? 0) - 1) {
-                        DBGErr("%@ invalid choice %i color (too large): %ld max color= %lu", VOINF, i, col, UInt((rTracker_resource.colorSet()?.count ?? 0) - 1))
-                        (optDict)?[key] = NSNumber(value: 0)
+                if let chc = optDict[key] {
+                    let ncol = Int(chc)!
+                    if ncol < 0 {
+                        DBGErr(String("\(VOINF) invalid choice \(i) color (negative): \(ncol)"))
+                        optDict[key] = "0"
+                    } else if ncol > (rTracker_resource.colorSet().count - 1) {
+                        DBGErr(String("\(VOINF) invalid choice \(i) color (too large): \(ncol) max color= \(UInt(rTracker_resource.colorSet().count) - 1))"))
+                        optDict[key] = "0"
                     }
                 }
             }
         }
         if VOT_INFO == vtype {
             if -1 != vcolor {
-                DBGErr("%@ invalid info vcolor (not -1): %ld", VOINF, vcolor)
+                DBGErr(String("\(VOINF) invalid info vcolor (not -1): \(vcolor)"))
                 vcolor = -1
             }
         }
@@ -624,11 +624,11 @@ class valueObj: NSObject, UITextFieldDelegate {
 
     func getLongTitleSize() -> CGSize {
         var labelSize = CGSize(width: 0, height: 0)
-        if (optDict)?["longTitle"] != nil && ("" != (optDict)?["longTitle"]) {
+        if optDict["longTitle"] != nil && ("" != optDict["longTitle"]) {
             var maxSize = rTracker_resource.getKeyWindowFrame().size
             maxSize.height = 9999
             maxSize.width -= 2 * MARGIN
-            let lts = (optDict)?["longTitle"] as? String
+            let lts = optDict["longTitle"]
             let ltrect = lts?.boundingRect(with: maxSize, options: .usesLineFragmentOrigin, attributes: [
                 NSAttributedString.Key.font: PrefBodyFont
             ], context: nil)
@@ -653,7 +653,7 @@ class valueObj: NSObject, UITextFieldDelegate {
         let inVal = "\(Float(val ?? "") ?? 0.0)"
         for i in 0..<CHOICES {
             let key = "cv\(i)"
-            var tstVal = optDict?[key] as? String
+            var tstVal = optDict[key]
             //if (tstVal) { // bug - don't get to handling default value below - introduced jan/feb, removed 8 mar 2015
             if nil == tstVal {
                 tstVal = "\(Float(i) + 1)" // added 7.iv.2013 - need default value
@@ -689,7 +689,9 @@ class valueObj: NSObject, UITextFieldDelegate {
     }
 }
 
+/*
 //@class voState;
 func f(_ x: Any) -> CGFloat {
     CGFloat(x)
 }
+*/

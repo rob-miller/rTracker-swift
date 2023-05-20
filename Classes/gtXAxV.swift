@@ -31,7 +31,7 @@ class gtXAxV: UIView {
         CGFloat scaleWidthX;
         UIScrollView *graphSV;
     }*/
-    var mytogd: togd?
+    var mytogd: Togd?
     var myFont: UIFont?
     var scaleOriginX: CGFloat = 0.0
     var scaleWidthX: CGFloat = 0.0
@@ -55,8 +55,8 @@ class gtXAxV: UIView {
 
         UIColor.white.set()
 
-        MoveTo(scaleOriginX, 0.0)
-        AddLineTo(scaleWidthX, 0.0)
+        MoveTo(context!, scaleOriginX, 0.0)
+        AddLineTo(context!, scaleWidthX, 0.0)
         //Stroke
 
         drawXAxis(context)
@@ -65,13 +65,13 @@ class gtXAxV: UIView {
     let DOFFST = 15.0
 
     func drawXAxis(_ context: CGContext?) {
-        var i: Int
+        //var i: Int
 
-        let svOffsetX = graphSV?.contentOffset.x ?? 0.0
-        let svWidth = graphSV?.contentSize.width ?? 0.0
-        let secsPerSVX = f((mytogd?.lastDate ?? 0) - (mytogd?.firstDate ?? 0)) / svWidth
-        let startDate = CGFloat(mytogd?.firstDate ?? 0.0) + (svOffsetX * secsPerSVX)
-        let finDate = CGFloat(mytogd?.firstDate ?? 0.0) + ((svOffsetX + scaleWidthX) * secsPerSVX)
+        let svOffsetX = graphSV!.contentOffset.x
+        let svWidth = graphSV!.contentSize.width
+        let secsPerSVX = d(mytogd!.lastDate - mytogd!.firstDate) / svWidth
+        let startDate = CGFloat(mytogd!.firstDate) + (svOffsetX * secsPerSVX)
+        let finDate = CGFloat(mytogd!.firstDate) + ((svOffsetX + scaleWidthX) * secsPerSVX)
 
         let dateStep = (finDate - startDate) / XTICKS
 
@@ -84,18 +84,18 @@ class gtXAxV: UIView {
         var nextXd = -2 * DOFFST
 
         for i in 1...Int(XTICKS) {
-            var x = f(i) * step
+            var x = d(i) * step
             var y: CGFloat = 0.0 // self.bounds.size.height - BORDER;
-            MoveTo(x, y)
+            MoveTo(context!, x, y)
             y += TICKLEN
             //if (i>0)  // from when 1st tick at origin
-            AddLineTo(x, y)
+            AddLineTo(context!, x, y)
 
             y += 1.0 // skip space to time label
             let y2 = y + 4.0 // hack to lengthen ticks where date label can be drawn
             let x2 = x
 
-            let date = Int(startDate + (f(i) * dateStep) + 0.5)
+            let date = Int(startDate + (d(i) * dateStep) + 0.5)
 
             let sd = Date(timeIntervalSince1970: TimeInterval(date))
             let datestr = DateFormatter.localizedString(
@@ -139,7 +139,7 @@ class gtXAxV: UIView {
             x -= 15.0
             if (i == 1 || dateStep >= 24 * 60 * 60 || Double(i) == XTICKS) && x > (nextXd + 10.0) {
                 if (i != 1) && (Double(i) != XTICKS) {
-                    AddLineTo(x2, y2)
+                    AddLineTo(context!, x2, y2)
                 }
                 if let myFont {
                     ds.draw(at: CGPoint(x: x, y: y), withAttributes: [

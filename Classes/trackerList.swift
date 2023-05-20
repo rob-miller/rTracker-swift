@@ -22,6 +22,8 @@
 //
 
 import Foundation
+//import SwiftUI
+import UIKit
 
 //#import "/usr/include/sqlite3.h"
 
@@ -64,7 +66,7 @@ class trackerList: tObjBase {
         getTDb()
 
         var sql = "create table if not exists toplevel (rank integer, id integer unique, name text, priv integer, remindercount integer);"
-        toExecSql(sql)
+        toExecSql(sql:sql)
         // assume all old users have updated columns by now
         //sql = @"alter table toplevel add column remindercount int";  // new column added for reminders
         //[self toExecSqlIgnErr:sql];
@@ -73,33 +75,33 @@ class trackerList: tObjBase {
         //DBGLog(@"toplevel at open contains %d entries",[self toQry2Int:sql]);
 
         sql = "create table if not exists info (name text unique, val integer);"
-        toExecSql(sql)
+        toExecSql(sql:sql)
 
         sql = "select max(val) from info where name='rtdb_version'"
-        let dbVer = toQry2Int(sql)
+        let dbVer = toQry2Int(sql:sql)
         if 0 == dbVer {
             // 0 means no entry so need to initialise
             DBGLog("rtdb_version not set")
             sql = String(format: "insert into info (name, val) values ('rtdb_version',%i);", RTDB_VERSION)
-            toExecSql(sql)
+            toExecSql(sql:sql)
         } else {
 
             if 1 == dbVer {
                 // fix info table to be unique on name
                 sql = "select max(val) from info where name='samples_version'"
-                let samplesVer = toQry2Int(sql)
+                let samplesVer = toQry2Int(sql:sql)
                 sql = "select max(val) from info where name='demos_version'"
-                let demosVer = toQry2Int(sql)
+                let demosVer = toQry2Int(sql:sql)
                 sql = "drop table info"
-                toExecSql(sql)
+                toExecSql(sql:sql)
                 sql = "create table if not exists info (name text unique, val integer);"
-                toExecSql(sql)
+                toExecSql(sql:sql)
                 sql = String(format: "insert into info (name, val) values ('rtdb_version',%i);", RTDB_VERSION) // upgraded now
-                toExecSql(sql)
-                sql = String(format: "insert into info (name, val) values ('demos_version',%i);", demosVer)
-                toExecSql(sql)
-                sql = String(format: "insert into info (name, val) values ('samples_version',%i);", samplesVer)
-                toExecSql(sql)
+                toExecSql(sql:sql)
+                sql = String(format: "insert into info (name, val) values ('demos_version',%i);", demosVer!)
+                toExecSql(sql:sql)
+                sql = String(format: "insert into info (name, val) values ('samples_version',%i);", samplesVer!)
+                toExecSql(sql:sql)
             }
         }
 
@@ -120,6 +122,18 @@ class trackerList: tObjBase {
         initTDb()
     }
 
+    func dbgtlist() {
+#if DEBUGLOG
+        let c = topLayoutNames!.count
+        DBGLog(String("tlist \(c) privacy= \(privacyValue)"))
+        print("n   id   priv   name   (tlist)")
+        for i in 0...c {
+            print(String("\(i+1) \(topLayoutIDs![i])  \(topLayoutPriv![i])  \(topLayoutNames![i])"))
+        }
+        toQry2Log(sql:"select rank, id, priv, name from toplevel order by rank")
+#endif
+    }
+    
     // MARK: -
     // MARK: TopLayoutTable <-> db support
 
@@ -133,20 +147,26 @@ class trackerList: tObjBase {
         //self.sql = @"select * from toplevel";
         //[self toQry2Log];
 
-        let sql = String(format: "select id, name, priv, remindercount from toplevel where priv <= %i order by rank;", privacyV.getPrivacyValue())
-        toQry2AryISII(&topLayoutIDs, s1: &topLayoutNames, i2: &topLayoutPriv, i3: &topLayoutReminderCount, sql: sql)
+        let sql = String(format: "select id, name, priv, remindercount from toplevel where priv <= %i order by rank;", privacyValue)
+        let idnameprivrc = toQry2AryISII(sql: sql)
+        for (id, name, priv, rc) in idnameprivrc {
+            topLayoutIDs?.append(NSNumber(value: id))
+            topLayoutNames?.append(name)
+            topLayoutPriv?.append(NSNumber(value: priv))
+            topLayoutReminderCount?.append(NSNumber(value: rc))
+        }
         //self.sql = nil;
-        DBGLog("loadTopLayoutTable finished, priv=%i tlt= %@", privacyV.getPrivacyValue(), topLayoutNames)
+        DBGLog(String("loadTopLayoutTable finished, priv=\(privacyValue) tlt=\(topLayoutNames)"))
         //DBGTLIST(self);
     }
 
-    func add(toTopLayoutTable tObj: trackerObj?) {
-        DBGLog("%@ toid %ld", tObj?.trackerName, Int(tObj?.toid ?? 0))
+    func add(toTopLayoutTable tObj: trackerObj) {
+        DBGLog(String("\(tObj.trackerName) toid \(tObj.toid)"))
 
-        topLayoutIDs?.append(NSNumber(value: tObj?.toid ?? 0))
-        topLayoutNames?.append(tObj?.trackerName ?? "")
-        topLayoutPriv?.append(NSNumber(value: (tObj?.optDict?["privacy"] as? NSNumber)?.intValue ?? 0))
-        topLayoutReminderCount?.append(NSNumber(value: tObj?.enabledReminderCount() ?? 0))
+        topLayoutIDs?.append(NSNumber(value: tObj.toid))
+        topLayoutNames?.append(tObj.trackerName)
+        topLayoutPriv?.append(NSNumber(value: (tObj.optDict["privacy"] as? NSNumber)?.intValue ?? 0))
+        topLayoutReminderCount?.append(NSNumber(value: tObj.enabledReminderCount()))
 
         confirmToplevelEntry(tObj)
     }
@@ -154,45 +174,45 @@ class trackerList: tObjBase {
     /*
      ensure there is accurate entry in db table toplevel for passed trackerObj
      */
-    func confirmToplevelEntry(_ tObj: trackerObj?) {
+    func confirmToplevelEntry(_ tObj: trackerObj) {
         //self.sql = @"select * from toplevel";
         //[self toQry2Log];
         //DBGLog(@"%@ toid %d",tObj.trackerName, tObj.toid);
         //DBGTLIST(self);
-        var sql = String(format: "select rank from toplevel where id=%ld;", Int(tObj?.toid ?? 0))
-        var rank = toQry2Int(sql) // returns 0 if not found
+        var sql = String(format: "select rank from toplevel where id=%ld;", Int(tObj.toid))
+        var rank = toQry2Int(sql:sql) // returns 0 if not found
         if rank == 0 {
             DBGLog("rank not found")
         } else {
-            sql = String(format: "select count(*) from toplevel where rank=%li;", rank)
-            if 1 < toQry2Int(sql) {
-                DBGLog("too many at rank %li", rank)
+            sql = String(format: "select count(*) from toplevel where rank=%li;", rank!)
+            if 1 < toQry2Int(sql:sql)! {
+                DBGLog(String("too many at rank \(rank)"))
                 rank = 0
             }
         }
         if rank == 0 {
             sql = "select max(rank) from toplevel;" // so put at end
-            rank = toQry2Int(sql) + 1
-            DBGLog("rank adjust, set to %ld", rank)
+            rank = toQry2Int(sql:sql)! + 1
+            DBGLog(String("rank adjust, set to \(rank)"))
         }
 
-        dbgNSAssert(tObj?.toid, "confirmTLE: toid=0")
-        var privVal = (tObj?.optDict?["privacy"] as? NSNumber)?.intValue ?? 0
+        dbgNSAssert(tObj.toid != 0, "confirmTLE: toid=0")
+        var privVal = (tObj.optDict["privacy"] as? NSNumber)?.intValue ?? 0
         privVal = (privVal != 0 ? privVal : PRIVDFLT) // default is 1 not 0;
-        sql = String(format: "insert or replace into toplevel (rank, id, name, priv, remindercount) values (%li, %li, \"%@\", %i, %i);", rank, Int(tObj?.toid ?? 0), rTracker_resource.toSqlStr(tObj?.trackerName) ?? "", privVal, tObj?.enabledReminderCount() ?? 0)
-        toExecSql(sql)
+        sql = String(format: "insert or replace into toplevel (rank, id, name, priv, remindercount) values (%li, %li, \"%@\", %i, %i);", rank!, Int(tObj.toid ), rTracker_resource.toSqlStr(tObj.trackerName)!, privVal, tObj.enabledReminderCount() )
+        toExecSql(sql:sql)
     }
 
     func reorderFromTLT() {
         //DBGTLIST(self);
-        let nrank = 0
+        var nrank = 0
         for tracker in topLayoutNames ?? [] {
             guard let tracker = tracker as? String else {
                 continue
             }
             //DBGLog(@" %@ to rank %d",tracker,nrank);
             let sql = "update toplevel set rank = \(nrank + 1) where name = \"\(rTracker_resource.toSqlStr(tracker) ?? "")\";"
-            toExecSql(sql) // better if used bind vars, but this keeps access in tObjBase
+            toExecSql(sql:sql) // better if used bind vars, but this keeps access in tObjBase
             nrank += 1
         }
         //DBGTLIST(self);
@@ -200,9 +220,9 @@ class trackerList: tObjBase {
 
     func reloadFromTLT() {
         //DBGTLIST(self);
-        let nrank = 0
-        var sql = "delete from toplevel where priv <= \(privacyV.getPrivacyValue());"
-        toExecSql(sql)
+        var nrank = 0
+        var sql = "delete from toplevel where priv <= \(privacyValue);"
+        toExecSql(sql:sql)
         for tracker in topLayoutNames ?? [] {
             guard let tracker = tracker as? String else {
                 continue
@@ -213,7 +233,7 @@ class trackerList: tObjBase {
 
             //DBGLog(@" %@ id %d to rank %d",tracker,tid,nrank);
             sql = String(format: "insert into toplevel (rank, id, name, priv,remindercount) values (%i, %ld, \"%@\", %ld, %ld);", nrank + 1, tid, rTracker_resource.toSqlStr(tracker) ?? "", priv, rc) // rank in db always non-0
-            toExecSql(sql) // better if used bind vars, but this keeps access in tObjBase
+            toExecSql(sql:sql) // better if used bind vars, but this keeps access in tObjBase
             nrank += 1
         }
     }
@@ -233,13 +253,13 @@ class trackerList: tObjBase {
 
     func checkTIDexists(_ tid: NSNumber?) -> Bool {
         let sql = "select id from toplevel where id=\(tid?.intValue ?? 0)"
-        let rslt = toQry2Int(sql)
+        let rslt = toQry2Int(sql:sql)
         return 0 != rslt
     }
 
     // return tid for first matching name
     func getTIDfromName(_ str: String?) -> Int {
-        let ndx = 0
+        var ndx = 0
         for tname in topLayoutNames ?? [] {
             guard let tname = tname as? String else {
                 continue
@@ -253,12 +273,9 @@ class trackerList: tObjBase {
     }
 
     // return aaray of TIDs which match name, order by rank
-    func getTIDFromNameDb(_ str: String?) -> [AnyHashable]? {
-        var i1: [AnyHashable] = []
+    func getTIDFromNameDb(_ str: String?) -> [Int] {
         let sql = "select id from toplevel where name=\"\(rTracker_resource.toSqlStr(str) ?? "")\" order by rank"
-        toQry2AryI(&i1, sql: sql)
-        let ra = i1
-        return ra
+        return toQry2AryI(sql: sql)
     }
 
     ////
@@ -286,12 +303,12 @@ class trackerList: tObjBase {
         } else {
             sql = String(format: "update toplevel set id=%ld where id=%ld", new, old)
         }
-        toExecSql(sql)
+        toExecSql(sql:sql!)
         //self.sql = nil;
 
         loadTopLayoutTable()
 
-        DBGLog("changed toplevel TID %lD to %ld", old, new)
+        DBGLog(String("changed toplevel TID \(old) to \(new)"))
     }
 
     func updateTID(_ old: Int, new: Int) {
@@ -305,28 +322,25 @@ class trackerList: tObjBase {
         var to = trackerObj(old)
         to.clearScheduledReminders() // remove any reminders with old tid
         to.closeTDb()
-        to = nil
+        //to = nil
 
         // rename file
         let oldFname = String(format: "trkr%ld.sqlite3", old)
         let newFname = String(format: "trkr%ld.sqlite3", new)
-        var error: Error?
 
         let fm = FileManager.default
         do {
-            if try fm.moveItem(
-                atPath: rTracker_resource.ioFilePath(oldFname, access: DBACCESS) ?? "",
-                toPath: rTracker_resource.ioFilePath(newFname, access: DBACCESS) ?? "") != true {
-                DBGErr("Unable to move file %@ to %@: %@", oldFname, newFname, error?.localizedDescription)
-            }
-        } catch let e {
-            error = e
+            try fm.moveItem(
+                atPath: rTracker_resource.ioFilePath(oldFname, access: DBACCESS),
+                toPath: rTracker_resource.ioFilePath(newFname, access: DBACCESS))
+        } catch {
+            DBGErr(String("Unable to move file \(oldFname) to \(newFname): \(error.localizedDescription)"))
         }
 
         let upReminders = String(format: "update reminders set tid=%ld", new)
 
         to = trackerObj(new)
-        to.toExecSql(upReminders)
+        to.toExecSql(sql:upReminders)
         to.setReminders()
         to.closeTDb()
     }
@@ -335,7 +349,7 @@ class trackerList: tObjBase {
     // MARK: tracker manipulation methods
 
     func reorderTLT(_ fromRow: Int, toRow: Int) {
-        DBGTLIST(self)
+        dbgtlist()  // DBGTLIST(self)
 
         let tName = (topLayoutNames)?[fromRow]
         let tID = (topLayoutIDs)?[fromRow]
@@ -366,23 +380,20 @@ class trackerList: tObjBase {
 
     func copy(toConfig srcTO: trackerObj?) -> trackerObj? {
         //DBGLog(@"copyToConfig: src id= %d %@",srcTO.toid,srcTO.trackerName);
-        var newTO = trackerObj
-        newTO?.toid = getUnique()
-        newTO = newTO.init()
+        let newTO = trackerObj(getUnique())
+        //newTO.toid = getUnique()
+        //newTO = newTO.init()
 
         let oTN = srcTO?.trackerName
         //NSString *nTN = [[NSString alloc] initWithString:oTN];
         //newTO.trackerName = nTN;
         // release as well
-        newTO?.trackerName = oTN ?? ""
+        newTO.trackerName = oTN
 
         //NSEnumerator *enumer = [srcTO.valObjTable objectEnumerator];
         //valueObj *vo;
         //while (vo = (valueObj *) [enumer nextObject]) {
         for vo in srcTO?.valObjTable ?? [] {
-            guard let vo = vo as? valueObj else {
-                continue
-            }
             let newVO = newTO.copyVoConfig(vo)
             newTO.addValObj(newVO)
         }
@@ -400,11 +411,11 @@ class trackerList: tObjBase {
 
         let tid = ((topLayoutIDs)?[row] as? NSNumber)?.intValue ?? 0
         let to = trackerObj(tid)
-        DBGLog("delete tracker all name:%@ id:%ldd rowtext= %@", to.trackerName, to.toid, topLayoutNames?[row])
+        DBGLog(String("delete tracker all name:\(to.trackerName) id:\(to.toid) rowtext= \(topLayoutNames?[row])"))
         to.clearScheduledReminders()
         to.deleteTrackerDB()
 
-        toExecSql("delete from toplevel where id=\(tid) and name='\(to.trackerName ?? "")'")
+        toExecSql(sql:"delete from toplevel where id=\(tid) and name='\(to.trackerName ?? "")'")
 
         topLayoutNames?.remove(at: row)
         topLayoutIDs?.remove(at: row)
@@ -434,43 +445,35 @@ class trackerList: tObjBase {
     //- (void) writeTListXLS:(NSFileHandle*)nsfh;
     func exportAll() {
         var ndx: Float = 1.0
-        privacyV.jumpMaxPriv() // reasonable to do this now with default encryption enabled
+        jumpMaxPriv() // reasonable to do this now with default encryption enabled
 
         let sql = "select id from toplevel" // ignore current (self) list because subject to privacy
-        var idSet: [AnyHashable] = []
-        toQry2AryI(&idSet, sql: sql)
+        let idSet = toQry2AryI(sql: sql)
         let all = Float(idSet.count)
 
         for tid in idSet {
-            guard let tid = tid as? NSNumber else {
-                continue
-            }
-            let to = trackerObj(tid.intValue)
-            to.saveToItunes()
+            let to = trackerObj(tid)
+            _ = to.saveToItunes()
 
             rTracker_resource.setProgressVal(ndx / all)
             ndx += 1.0
         }
 
-        privacyV.restorePriv()
+        restorePriv()
     }
 
     func confirmToplevelTIDs() {
-        privacyV.jumpMaxPriv() // reasonable to do this now with default encryption enabled
+        jumpMaxPriv() // reasonable to do this now with default encryption enabled
 
         let sql = "select id from toplevel" // ignore current (self) list because subject to privacy
-        var idSet: [AnyHashable] = []
-        toQry2AryI(&idSet, sql: sql)
+        let idSet = toQry2AryI(sql: sql)
 
         for tid in idSet {
-            guard let tid = tid as? NSNumber else {
-                continue
-            }
-            let to = trackerObj(tid.intValue)
+            let to = trackerObj(tid)
             confirmToplevelEntry(to)
         }
 
-        privacyV.restorePriv()
+        restorePriv()
     }
 
     func testConflict(_ tname: String?) -> Bool {
@@ -491,7 +494,7 @@ class trackerList: tObjBase {
             return
         }
 
-        let i = 2
+        var i = 2
         var tstr: String?
 
         tstr = "\(newTracker?.trackerName ?? "") \(i)"
@@ -504,79 +507,57 @@ class trackerList: tObjBase {
 
     func wipeOrphans() {
         let sql = "select id, name from toplevel order by id"
-        var i1: [AnyHashable] = []
-        var s1: [AnyHashable] = []
-        toQry2AryIS(&i1, s1: &s1, sql: sql)
-        var dictTid2Ndx: [AnyHashable : Any] = [:]
-        let c = i1.count
-        var i: Int
-        for i in 0..<c {
-            dictTid2Ndx[i1[i]] = NSNumber(value: i)
+        let idname = toQry2AryIS(sql: sql)
+        var dictTid2Name: [Int : String] = [:]
+
+        for (tlTid, tname) in idname {
+            dictTid2Name[tlTid] = tname
         }
 
-        var err: Error?
-        var fileList: [String]? = nil
         do {
-            fileList = try FileManager.default.contentsOfDirectory(atPath: rTracker_resource.ioFilePath("", access: DBACCESS) ?? "")
-        } catch let e {
-            err = e
-        }
-        var dictTid2Filename: [AnyHashable : Any] = [:]
+            let fileList = try FileManager.default.contentsOfDirectory(atPath: rTracker_resource.ioFilePath("", access: DBACCESS))
+            var dictTid2Filename: [AnyHashable : Any] = [:]
 
-        if nil == fileList {
-            DBGLog("error getting file list: %@", err)
-        } else {
-            let fn: String? = nil
-            for fn in fileList ?? [] {
-                guard let fn = fn as? fn else {
-                    continue
-                }
+            for fn in fileList {
                 let ftid = Int((fn as NSString?)?.substring(from: 4) ?? "") ?? 0
                 if ftid != 0 {
-                    dictTid2Filename[NSNumber(value: ftid)] = fn ?? ""
-                    let ftidNdx = dictTid2Ndx[NSNumber(value: ftid)] as? NSNumber
-                    if let ftidNdx {
-                        DBGLog("%@ iv: %d toplevel: %@", fn, ftid, s1[Int(ftidNdx.uintValue)])
+                    dictTid2Filename[NSNumber(value: ftid)] = fn
+                    let ftidName = dictTid2Name[ftid]
+                    if let ftidName {
+                        DBGLog(String("\(fn) iv: \(ftid) toplevel: \(ftidName)"))
                     } else {
-                        let doDel = true
-                        if doDel {
-                            DBGLog("deleting orphan %d file %@", ftid, fn)
-                            rTracker_resource.deleteFile(atPath: rTracker_resource.ioFilePath(fn, access: DBACCESS))
-                        } else {
+                        //let doDel = true
+                        //if doDel {
+                            DBGLog(String("deleting orphan \(ftid) file \(fn)"))
+                            _ = rTracker_resource.deleteFile(atPath: rTracker_resource.ioFilePath(fn, access: DBACCESS))
+                        /*} else {
                             //trackerObj *to = [[trackerObj alloc]init:ftid];
-                            DBGLog("%@ iv: %d orphan file: %@", fn, ftid, trackerObj(ftid).trackerName)
-                        }
+                            DBGLog(String("\(fn) iv: \(ftid) orphan file: \(trackerObj(ftid).trackerName)"))
+                        }*/
                     }
-                } else if fn?.hasPrefix("stash_trkr") ?? false {
-                    DBGLog("deleting stashed tracker %@", fn)
-                    rTracker_resource.deleteFile(atPath: rTracker_resource.ioFilePath(fn, access: DBACCESS))
+                } else if fn.hasPrefix("stash_trkr") {
+                    DBGLog(String("deleting stashed tracker \(fn)"))
+                    _ = rTracker_resource.deleteFile(atPath: rTracker_resource.ioFilePath(fn, access: DBACCESS))
+                }
+                
+                var i = 0
+                for (tlTid, tname) in idname {
+                    let tltidFilename = dictTid2Filename[tlTid] as? String
+                    if let tltidFilename {
+                        DBGLog(String("tid \(tlTid) name \(tname) file \(tltidFilename)"))
+                    } else {
+                        //let tname = idname[i].1 as
+                        DBGLog(String("tid \(tlTid) name \(tname) no file found - delete from tlist"))
+                        let sql = String("delete from toplevel where id=\(tlTid) and name='\(tname)'")
+                        toExecSql(sql:sql)
+                    }
+                    i += 1
                 }
             }
-            let tlTid: NSNumber? = nil
-            i = 0
-            for tlTid in i1 {
-                guard let tlTid = tlTid as? tlTid else {
-                    continue
-                }
-                var tltidFilename: String? = nil
-                if let tlTid {
-                    tltidFilename = dictTid2Filename[tlTid] as? String
-                }
-                if let tltidFilename {
-                    DBGLog("tid %@ name %@ file %@", tlTid, s1[i], tltidFilename)
-                } else {
-                    let tname = s1[i] as? String
-                    DBGLog("tid %@ name %@ no file found - delete from tlist", tlTid, tname)
-                    let sql = "delete from toplevel where id=\(tlTid ?? 0) and name='\(tname ?? "")'"
-                    toExecSql(sql)
-                }
-                i += 1
-            }
+
+        } catch {
+            DBGLog(String("error getting file list: \(error.localizedDescription)"))
         }
-
-        //self.sql = nil;
-
-
     }
 
     func restoreTracker(_ fn: String?, ndx: Int) {
@@ -589,9 +570,8 @@ class trackerList: tObjBase {
         }
         var newFn = String(format: "trkr%ld.sqlite3", newTid)
         let fm = FileManager.default
-        var error: Error?
 
-        while fm.fileExists(atPath: rTracker_resource.ioFilePath(newFn, access: DBACCESS) ?? "") {
+        while fm.fileExists(atPath: rTracker_resource.ioFilePath(newFn, access: DBACCESS)) {
             newTid = getUnique()
             newFn = String(format: "trkr%ld.sqlite3", newTid)
         }
@@ -599,103 +579,79 @@ class trackerList: tObjBase {
         // RTM TODO ADDRESS: what if fn = newFN here?
 
         do {
-            if try fm.moveItem(
-                atPath: rTracker_resource.ioFilePath(fn, access: DBACCESS) ?? "",
-                toPath: rTracker_resource.ioFilePath(newFn, access: DBACCESS) ?? "") != true {
-                DBGWarn("Unable to move file %@ to %@: %@", fn, newFn, error?.localizedDescription) // only if gtUnique fails ?
-            }
-        } catch let e {
-            error = e
+            try fm.moveItem(
+                atPath: rTracker_resource.ioFilePath(fn, access: DBACCESS),
+                toPath: rTracker_resource.ioFilePath(newFn, access: DBACCESS))
+        } catch {
+            DBGWarn(String("Unable to move file \(fn) to \(newFn): \(error.localizedDescription)")) // only if gtUnique fails ?
         }
 
         ftid = newTid
 
         to = trackerObj(ftid)
         if nil == to?.trackerName {
-            DBGWarn("deleting empty tracker file %@", newFn)
+            DBGWarn(String("deleting empty tracker file \(newFn)"))
             do {
-                if try fm.removeItem(atPath: rTracker_resource.ioFilePath(newFn, access: DBACCESS) ?? "") != true {
-                    DBGLog("Unable to delete file %@: %@", newFn, error?.localizedDescription)
-                }
-            } catch let e {
-                error = e
+                try fm.removeItem(atPath: rTracker_resource.ioFilePath(newFn, access: DBACCESS))
+            } catch {
+                DBGLog(String("Unable to delete file \(newFn): \(error.localizedDescription)"))
             }
         } else {
             let newName = "recovered: " + (to?.trackerName ?? "")
-            to?.trackerName = newName
-            add(toTopLayoutTable: to)
+            to!.trackerName = newName
+            add(toTopLayoutTable: to!)
         }
     }
 
     func recoverOrphans() -> Bool {
         var didRecover = false
         let sql = "select id, name from toplevel order by id"
-        var i1: [AnyHashable] = []
-        var s1: [AnyHashable] = []
-        toQry2AryIS(&i1, s1: &s1, sql: sql)
-        var dictTid2Ndx: [AnyHashable : Any] = [:]
-        let c = i1.count
-        var i: Int
-        for i in 0..<c {
-            dictTid2Ndx[i1[i]] = NSNumber(value: i)
+        let idname = toQry2AryIS(sql: sql)
+        var dictTid2Name: [Int : String] = [:]
+
+        for (tlTid, tname) in idname {
+            dictTid2Name[tlTid] = tname
         }
 
-        var err: Error?
-        var fileList: [String]? = nil
         do {
-            fileList = try FileManager.default.contentsOfDirectory(atPath: rTracker_resource.ioFilePath("", access: DBACCESS) ?? "")
-        } catch let e {
-            err = e
-        }
-        var dictTid2Filename: [AnyHashable : Any] = [:]
-
-        if nil == fileList {
-            DBGLog("error getting file list: %@", err)
-        } else {
-            let fn: String? = nil
-            for fn in fileList ?? [] {
-                guard let fn = fn as? fn else {
-                    continue
-                }
-
-                let ftid = Int((fn as NSString?)?.substring(from: 4) ?? "") ?? 0
-                if ftid != 0 && fn?.hasPrefix("trkr") ?? false && fn?.hasSuffix("sqlite3") ?? false {
-                    dictTid2Filename[NSNumber(value: ftid)] = fn ?? ""
-                    let ftidNdx = dictTid2Ndx[NSNumber(value: ftid)] as? NSNumber
-                    if ftidNdx != nil {
-                        //DBGLog(@"%@ iv: %d toplevel: %@",fn, ftid, [s1 objectAtIndex:[ftidNdx unsignedIntegerValue]]);
+            let fileList = try FileManager.default.contentsOfDirectory(atPath: rTracker_resource.ioFilePath("", access: DBACCESS))
+            var dictTid2Filename: [Int : String] = [:]
+            let pfx = "trkr"
+            let sfx = ".sqlite3"
+            for fn in fileList {
+                var digits = fn.replacingOccurrences(of: pfx, with: "")
+                digits = digits.replacingOccurrences(of: sfx, with: "")
+                let ftid = Int(digits) ?? 0
+                if ftid != 0 && fn.hasPrefix(pfx) && fn.hasSuffix(sfx) {
+                    dictTid2Filename[ftid] = fn
+                    let ftidName = dictTid2Name[ftid]
+                    if ftidName != nil {
+                        //DBGLog(String("\(fn) iv: \(ftid) toplevel: \(ftidName)"));
                     } else {
                         restoreTracker(fn, ndx: 4)
                         didRecover = true
                     }
-                } else if fn?.hasPrefix("stash_trkr") ?? false {
+                } else if fn.hasPrefix("stash_trkr") {
                     restoreTracker(fn, ndx: 10)
                     didRecover = true
                 }
             }
-            let tlTid: NSNumber? = nil
-            i = 0
-            for tlTid in i1 {
-                guard let tlTid = tlTid as? tlTid else {
-                    continue
-                }
-                var tltidFilename: String? = nil
-                if let tlTid {
-                    tltidFilename = dictTid2Filename[tlTid] as? String
-                }
-                if tltidFilename != nil {
-                    //DBGLog(@"tid %@ name %@ file %@",tlTid,[s1 objectAtIndex:i],tltidFilename);
-                } else {
-                    let tname = s1[i] as? String
-                    DBGLog("tid %@ name %@ no file found - delete from tlist", tlTid, tname)
-                    let sql = "delete from toplevel where id=\(tlTid ?? 0) and name='\(tname ?? "")'"
-                    toExecSql(sql)
-                }
-                i += 1
-            }
-        }
 
-        //self.sql = nil;
+            for (tlTid, tlName) in idname {
+                let tltidFilename = dictTid2Filename[tlTid]
+                
+                if tltidFilename != nil {
+                    //DBGLog(String("tid \(tlTid) name \(s1[i]) file \(tltidFilename)"));
+                } else {
+                    DBGLog(String("tid \(tlTid) name \(tlName) no file found - delete from tlist"))
+                    let sql = "delete from toplevel where id=\(tlTid) and name='\(tlName)'"
+                    toExecSql(sql:sql)
+                }
+            }
+        
+        } catch {
+            DBGLog(String("error getting file list: \(error.localizedDescription)"))
+        }
 
         return didRecover
     }
@@ -703,36 +659,30 @@ class trackerList: tObjBase {
     func updateShortcutItems() {
 
         let sciCount = SCICOUNTDFLT //[rTracker_resource getSCICount];
-        var newShortcutItems = [AnyHashable](repeating: 0, count: sciCount)
-        var idArray = [AnyHashable](repeating: 0, count: sciCount)
-        var nameArray = [AnyHashable](repeating: 0, count: sciCount)
+        var newShortcutItems: [UIApplicationShortcutItem] = []
 
         let sql = String(format: "select id, name from toplevel where priv <= %i order by rank limit %d;", MINPRIV, UInt(sciCount))
-        toQry2AryIS(&idArray, s1: &nameArray, sql: sql)
+        let idname = toQry2AryIS(sql: sql)
 
-        if nameArray == nil {
-            return // no trackers, no names on first start
-        }
-        let c = nameArray.count
+        let c = idname.count
         if c == 0 {
             return // no trackers, no names on first start
         }
 
-        var i: Int
-        for i in 0..<sciCount {
+        for i in 0..<min(sciCount, c) {
             let si = UIApplicationShortcutItem(
                 type: "open",
-                localizedTitle: nameArray[i] as? String ?? "",
+                localizedTitle: idname[i].1,
                 localizedSubtitle: nil,
-                icon: nil,
+                icon: nil, // UIApplicationShortcutIcon(systemImageName: "star.fill"),   // https://developer.apple.com/documentation/uikit/menus_and_shortcuts/add_home_screen_quick_actions
                 userInfo: [
-                    "tid": idArray[i]
+                    "tid": idname[i].0 as NSSecureCoding
                 ])
 
             newShortcutItems.append(si)
         }
 
-        UIApplication.shared.shortcutItems = newShortcutItems as? [UIApplicationShortcutItem]
+        UIApplication.shared.shortcutItems = newShortcutItems
 
     }
 }

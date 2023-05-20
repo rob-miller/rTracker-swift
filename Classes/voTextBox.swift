@@ -24,6 +24,7 @@
 import AddressBook
 import Contacts
 import Foundation
+import UIKit
 
 class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextViewDelegate {
     /*{
@@ -91,9 +92,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
     }
 
     private var _alphaArray: [AnyHashable]?
-    var alphaArray: [AnyHashable]? {
-        if nil == _alphaArray {
-            _alphaArray = [
+    let alphaArray = [
                 "#",
                 "A",
                 "B",
@@ -122,12 +121,9 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
                 "Y",
                 "Z"
             ]
-        }
-        return _alphaArray
-    }
 
-    private var _namesArray: [AnyHashable]?
-    var namesArray: [AnyHashable]? {
+    private var _namesArray: [String]?
+    var namesArray: [String]? {
         checkContactsAccess()
         if !accessAddressBook {
             //[rTracker_resource alert_mt:@"Need Contacts access" msg:@"Please go to System Settings -> Privacy -> Contacts and enable access for rTracker to use this feature." vc:[UIApplication sharedApplication].keyWindow.rootViewController];
@@ -136,38 +132,36 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         if nil == _namesArray {
 
             // https://stackoverflow.com/questions/36859991/cncontact-display-name-objective-c-swift
-            var contacts: [AnyHashable] = []
+            var contacts: [CNContact] = []
             let contactStore = CNContactStore()
 
-            var fetchError: Error?
-            let request = CNContactFetchRequest(keysToFetch: [
-                CNContactIdentifierKey,
-                CNContactFormatter.descriptorForRequiredKeys(for: .fullName)
-            ])
+            let fnameKey = CNContactFormatter.descriptorForRequiredKeys(for: .fullName)
+            let keysToFetch = [CNContactIdentifierKey, fnameKey] as! [CNKeyDescriptor]
+            let request = CNContactFetchRequest(keysToFetch: keysToFetch)
 
-            var success = false
+            // Enumerate the contacts
             do {
-                success = Bool(try contactStore.enumerateContacts(with: request, usingBlock: &fetchError))
-
-                let formatter = CNContactFormatter()
-                var mutableNamesArr: [AnyHashable] = []
-
-                for contact in contacts {
-                    guard let contact = contact as? CNContact else {
-                        continue
-                    }
-                    let string = formatter.string(from: contact)
-                    DBGLog("contact = %@", string)
-                    mutableNamesArr.append(string ?? "")
-                }
-                _namesArray = mutableNamesArr
-            } catch let { contact, stop in
-                if let contact {
+                try contactStore.enumerateContacts(with: request, usingBlock: { (contact, stop) in
                     contacts.append(contact)
-                }
-            } {
-                DBGLog("error fetching contacts = %@", fetchError)
+                })
+            } catch let error {
+                DBGLog("error fetching contacts = \(error)")
             }
+            
+            // Create a contact formatter
+            let formatter = CNContactFormatter()
+            
+            // Create an array to store the names
+            var names = [String]()
+            
+            // Loop through the contacts and add their names to the array
+            for contact in contacts {
+                let name = formatter.string(from: contact)
+                names.append(name!)
+            }
+            
+            // Set the names array to the newly created array
+            _namesArray = names
         }
         return _namesArray
 
@@ -225,19 +219,15 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
                  */
     }
 
-    private var _historyArray: [AnyHashable]?
-    var historyArray: [AnyHashable]? {
-        var sql: String?
+    private var _historyArray: [String]?
+    var historyArray: [String] {
+        var sql: String
         if nil == _historyArray {
             //NSMutableArray *his1 = [[NSMutableArray alloc] init];
-            var s0: Set<AnyHashable> = []
-            sql = String(format: "select val from voData where id = %ld and val != '';", Int(vo?.vid ?? 0))
-            var his0: [AnyHashable] = []
-            MyTracker?.toQry2AryS(&his0, sql: sql)
+            var s0: Set<String> = []
+            sql = String(format: "select val from voData where id = %ld and val != '';", Int(vo.vid))
+            let his0 = MyTracker.toQry2AryS(sql: sql)
             for s in his0 {
-                guard let s = s as? String else {
-                    continue
-                }
                 let s1 = s.replacingOccurrences(of: "\r", with: "\n")
                 /*
                 #if DEBUGLOG
@@ -246,11 +236,14 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
                             DBGLog(@"c= %lu separated= .%@.",(unsigned long)sepset.count,sepset);
                 #endif
                              */
-                s0.formUnion(Set(s1.components(separatedBy: "\n")))
+                if s1 != "" {
+                    s0.formUnion(Set(s1.components(separatedBy: "\n")))
+                }
             }
-            sql = nil
-            s0.filter { NSPredicate(format: "SELF != ''").evaluate(with: $0) }
-            _historyArray = Array(s0).sortedArray(using: #selector(NSString.caseInsensitiveCompare(_:)))
+            //s0.filter { NSPredicate(format: "SELF != ''").evaluate(with: $0) }  // lose blank/null entries
+            _historyArray = Array(s0).sorted{
+                $0.localizedCaseInsensitiveCompare($1) == .orderedAscending
+            }
 
             //DBGLog(@"historyArray count= %lu  content= .%@.",(unsigned long)_historyArray.count,_historyArray);
             //historyArray = [[NSArray alloc] initWithArray:his1];
@@ -260,21 +253,18 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
             //	DBGLog(s);
             //}
         }
-        return _historyArray
+        return _historyArray!
     }
 
-    private var _historyNdx: [AnyHashable]?
-    var historyNdx: [AnyHashable]? {
+    private var _historyNdx: [Int]?
+    var historyNdx: [Int] {
         if nil == _historyNdx {
-            let ndx = 0
-            let notSet = NSNumber(value: -1)
+            var ndx = 0
+            let notSet = -1
             var tmpHistoryNdx = getNSMA(notSet)
 
-            for str in historyArray ?? [] {
-                guard let str = str as? String else {
-                    continue
-                }
-                let firstc = unichar(str[str.index(str.startIndex, offsetBy: 0)])
+            for str in historyArray {
+                let firstc = str.first!  // unichar(str[str.index(str.startIndex, offsetBy: 0)])
                 enterNSMA(&tmpHistoryNdx, c: firstc, dflt: notSet, ndx: ndx)
                 ndx += 1
             }
@@ -284,29 +274,26 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
 
             _historyNdx = tmpHistoryNdx
         }
-        return _historyNdx
+        return _historyNdx!
     }
 
-    private var _namesNdx: [AnyHashable]?
-    var namesNdx: [AnyHashable]? {
+    private var _namesNdx: [Int]?
+    var namesNdx: [Int] {
         // with addressbook deprecation, just take first letter and ignore user sort order
         if nil == _namesNdx {
-            let ndx = 0
+            var ndx = 0
             //ABPropertyID abSortOrderProp = [self getABSortTok];
-            let notSet = NSNumber(value: -1)
+            let notSet =  -1
             var tmpNamesNdx = getNSMA(notSet)
 
             for name in namesArray ?? [] {
-                guard let name = name as? String else {
-                    continue
-                }
                 /*
                             NSString *name = (NSString*) CFBridgingRelease(ABRecordCopyValue((__bridge ABRecordRef)abrr, abSortOrderProp));
                             if (nil == name) {
                                 name = (NSString*) CFBridgingRelease(ABRecordCopyCompositeName((__bridge ABRecordRef)(abrr)));
                             }
                             */
-                let firstc = unichar(name[name.index(name.startIndex, offsetBy: 0)])
+                let firstc = name.first!  // unichar(name[name.index(name.startIndex, offsetBy: 0)])
 
                 enterNSMA(&tmpNamesNdx, c: firstc, dflt: notSet, ndx: ndx)
 
@@ -319,7 +306,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
             _namesNdx = tmpNamesNdx
         }
 
-        return _namesNdx
+        return _namesNdx!
     }
     var parentUTC: useTrackerController?
     //@property (nonatomic,retain) NSMutableDictionary *peopleDictionary;
@@ -335,17 +322,19 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
     //@synthesize peopleDictionary,historyDictionary;
     //BOOL keyboardIsShown=NO;
 
-    override init() {
+    /*
+    init() {
         //DBGLog(@"voTextBox default init");
         super.init(vo: nil)
     }
+     */
 
     override func getValCap() -> Int {
         // NSMutableString size for value
         return 96
     }
 
-    override init(vo valo: valueObj?) {
+    override init(vo valo: valueObj) {
         //DBGLog(@"voTextBox init for %@",valo.valueName);
         super.init(vo: valo)
     }
@@ -372,15 +361,15 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         let vde = voDataEdit()
         vde.vo = vo
         devc = vde // assign
-        parentUTC = MyTracker?.vc?.navigationController?.visibleViewController as? useTrackerController
+        parentUTC = MyTracker.vc?.navigationController?.visibleViewController as? useTrackerController
 
-        MyTracker?.vc?.navigationController?.pushViewController(vde, animated: true)
+        MyTracker.vc?.navigationController?.pushViewController(vde, animated: true)
         //[MyTracker.vc.navigationController push :vde animated:YES];
 
 
     }
 
-    override func dataEditVDidLoad(_ vc: UIViewController?) {
+    override func dataEditVDidLoad(_ vc: UIViewController) {
         //self.devc = vc;
         //CGRect visFrame = vc.view.frame;
 
@@ -391,7 +380,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         textView?.delegate = self
         textView?.backgroundColor = .white
 
-        textView?.text = vo?.value
+        textView?.text = vo.value
         textView?.returnKeyType = .default
         textView?.keyboardType = .default // use the default type input method (entire keyboard)
         textView?.isScrollEnabled = true
@@ -407,12 +396,12 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         // myTextView.autocorrectionType = UITextAutocorrectionTypeNo;
 
         if let textView {
-            vc?.view.addSubview(textView)
+            vc.view.addSubview(textView)
         }
 
         keyboardIsShown = false
 
-        if vo?.value == "" {
+        if vo.value == "" {
             textView?.becomeFirstResponder()
         }
 
@@ -422,20 +411,20 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         //self.devc = vc;
         //DBGLog(@"de view will appear");
 
-        if let aParentTracker = vo?.parentTracker {
-            NotificationCenter.default.addObserver(
-                aParentTracker,
-                selector: #selector(trackerObj.trackerUpdated(_:)),
-                name: NSNotification.Name(rtValueUpdatedNotification),
-                object: nil)
-        }
+        let aParentTracker = vo.parentTracker
+        NotificationCenter.default.addObserver(
+            aParentTracker,
+            selector: #selector(trackerObj.trackerUpdated(_:)),
+            name: NSNotification.Name(rtValueUpdatedNotification),
+            object: nil)
+        
 
         if let parentUTC {
             NotificationCenter.default.addObserver(
                 parentUTC,
                 selector: #selector(useTrackerController.updateUTC(_:)),
                 name: NSNotification.Name(rtTrackerUpdatedNotification),
-                object: vo?.parentTracker)
+                object: vo.parentTracker)
         }
 
         /*
@@ -459,12 +448,12 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         //DBGLog(@"de view will disappear");
 
         // unregister this tracker for value updated notifications
-        if let aParentTracker = vo?.parentTracker {
-            NotificationCenter.default.removeObserver(
-                aParentTracker,
-                name: NSNotification.Name(rtValueUpdatedNotification),
-                object: nil)
-        }
+        let aParentTracker = vo.parentTracker
+        NotificationCenter.default.removeObserver(
+            aParentTracker,
+            name: NSNotification.Name(rtValueUpdatedNotification),
+            object: nil)
+        
 
         //unregister for tracker updated notices
 
@@ -582,12 +571,11 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
                 str = "\((namesArray?[row] as? String) ?? "")\n"
             }
         } else {
-            if 0 == (historyArray?.count ?? 0) {
+            if 0 == historyArray.count {
                 rTracker_resource.alert("No history", msg: "Use the keyboard to create some entries, then find them in the history", vc: nil)
             } else {
-                if let aHistoryArray = (historyArray)?[row] {
-                    str = "\(aHistoryArray)\n"
-                }
+                let aHistoryArray = historyArray[row]
+                str = "\(aHistoryArray)\n"
             }
         }
 
@@ -597,14 +585,14 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         }
     }
 
-    @IBAction func segmentChanged(_ sender: Any) {
+    @IBAction func segmentChanged(_ sender: UISegmentedControl) {
         let ndx = sender.selectedSegmentIndex
         //DBGLog(@"segment changed: %ld",(long)ndx);
 
         if textView?.inputView != nil {
             // if was showing pickerview
             pv?.removeFromSuperview() // remove leftover constraints if showed before
-            pv = nil // force regenerate
+            _pv = nil // force regenerate
         }
 
         if SEGKEYBOARD == ndx {
@@ -631,7 +619,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
             } else {
                 addButton.isHidden = false
             }
-            if ((SEGPEOPLE == ndx) && (((vo?.optDict)?["tbni"] as? String) == "1")) || ((SEGHISTORY == ndx) && (((vo?.optDict)?["tbhi"] as? String) == "1")) {
+            if ((SEGPEOPLE == ndx) && (vo.optDict["tbni"] == "1")) || ((SEGHISTORY == ndx) && (vo.optDict["tbhi"] == "1")) {
                 showNdx = true
             } else {
                 showNdx = false
@@ -665,20 +653,21 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
             textView?.text = (textView?.text ?? "") + "\n"
         }
 
-        DBGLog("tb save: vo.val= .%@  tv.txt= %@", vo?.value, textView?.text)
+        DBGLog(String("tb save: vo.val= .\(vo.value)  tv.txt= \(textView!.text)"))
         if 0 == setSearchSeg.selectedSegmentIndex {
-            if vo?.value != textView?.text {
-                vo?.value = textView?.text
+            if vo.value != textView?.text {
+                vo.value = textView?.text
 
-                vo?.display = nil // so will redraw this cell only
+                vo.display = nil // so will redraw this cell only
                 NotificationCenter.default.post(name: NSNotification.Name(rtValueUpdatedNotification), object: self)
             }
         } else {
+            let txtStrings = textView!.text.components(separatedBy: "\n")
+            let searchStrings = Set<AnyHashable>(txtStrings)
 
-            let searchStrings = Set<AnyHashable>(textView?.text.components(separatedBy: "\n"))
-
-            var sql = String(format: "select distinct date from voData where id=%ld and (", Int(vo?.vid ?? 0)) // privacy ok because else can't see textbox
-            let orAnd = Bool(orAndSeg.selectedSegmentIndex)
+            var sql = String(format: "select distinct date from voData where id=%ld and (", Int(vo.vid)) // privacy ok because else can't see textbox
+            let oasi = orAndSeg.selectedSegmentIndex
+            let orAnd = Bool(oasi != 0)
             var cont = false
             for ss in searchStrings {
                 guard let ss = ss as? String else {
@@ -698,10 +687,9 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
             if !sql.hasSuffix("(") {
                 // if ends with '(' then did not add any search terms
                 sql = sql + ")"
-                DBGLog("sql= %@", sql)
-                var searchDates: [AnyHashable] = []
-                parentUTC?.tracker.toQry2AryI(&searchDates, sql: sql)
-                DBGLog("returns %lu entries", UInt(searchDates.count))
+                DBGLog(String("sql= \(sql)"))
+                let searchDates = parentUTC!.tracker!.toQry2AryI(sql: sql)
+                DBGLog(String("returns \(UInt(searchDates.count)) entries"))
                 if 0 < searchDates.count {
                     parentUTC?.searchSet = searchDates
                 } else {
@@ -806,24 +794,24 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
 
     }
 
-    override func voDisplay(_ bounds: CGRect) -> UIView? {
+    override func voDisplay(_ bounds: CGRect) -> UIView {
         vosFrame = bounds
 
-        if vo?.value == "" {
+        if vo.value == "" {
             tbButton?.setTitle("<add text>", for: .normal)
         } else {
-            tbButton?.setTitle(vo?.value, for: .normal)
+            tbButton?.setTitle(vo.value, for: .normal)
         }
         // does not help ! [[self.tbButton superview] setNeedsDisplay];
         // does not help ! [self.tbButton setNeedsDisplay];
         tbButton?.setNeedsLayout()
         //DBGLog(@"tbox voDisplay: %@",[self.tbButton currentTitle]);
-        return tbButton
+        return tbButton!
 
     }
 
-    override func voGraphSet() -> [AnyHashable]? {
-        if ((vo?.optDict)?["tbnl"] as? String) == "1" {
+    override func voGraphSet() -> [String] {
+        if vo.optDict["tbnl"] == "1" {
             // linecount is a num for graph
             return voState.voGraphSetNum()
         } else {
@@ -836,28 +824,28 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
 
     override func setOptDictDflts() {
 
-        if nil == (vo?.optDict)?["tbnl"] {
-            (vo?.optDict)?["tbnl"] = TBNLDFLT ? "1" : "0"
+        if nil == vo.optDict["tbnl"] {
+            vo.optDict["tbnl"] = TBNLDFLT ? "1" : "0"
         }
-        if nil == (vo?.optDict)?["tbni"] {
-            (vo?.optDict)?["tbni"] = TBNIDFLT ? "1" : "0"
+        if nil == vo.optDict["tbni"] {
+            vo.optDict["tbni"] = TBNIDFLT ? "1" : "0"
         }
-        if nil == (vo?.optDict)?["tbhi"] {
-            (vo?.optDict)?["tbhi"] = TBHIDFLT ? "1" : "0"
+        if nil == vo.optDict["tbhi"] {
+            vo.optDict["tbhi"] = TBHIDFLT ? "1" : "0"
         }
 
         return super.setOptDictDflts()
     }
 
-    override func cleanOptDictDflts(_ key: String?) -> Bool {
+    override func cleanOptDictDflts(_ key: String) -> Bool {
 
-        let val = (vo?.optDict)?[key ?? ""] as? String
+        let val = vo.optDict[key]
         if nil == val {
             return true
         }
 
-        if ((key == "tbnl") && (val == TBNLDFLT ? "1" : "0")) || ((key == "tbni") && (val == TBNIDFLT ? "1" : "0")) || ((key == "tbhi") && (val == TBHIDFLT ? "1" : "0")) {
-            vo?.optDict?.removeValue(forKey: key)
+        if ((key == "tbnl") && (val == (TBNLDFLT ? "1" : "0"))) || ((key == "tbni") && (val == (TBNIDFLT ? "1" : "0"))) || ((key == "tbhi") && (val == (TBHIDFLT ? "1" : "0"))) {
+            vo.optDict.removeValue(forKey: key)
             return true
         }
 
@@ -873,7 +861,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         frame = ctvovc?.configCheckButton(
             frame,
             key: "tbnlBtn",
-            state: ((vo?.optDict)?["tbnl"] == "1") /* default:0 */,
+            state: (vo.optDict["tbnl"] == "1") /* default:0 */,
             addsv: true) ?? CGRect.zero
 
         // need index picker for contacts else unusable
@@ -885,7 +873,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         frame = ctvovc?.configCheckButton(
             frame,
             key: "tbniBtn",
-            state: !((vo?.optDict)?["tbni"] == "0"),
+            state: !(vo.optDict["tbni"] == "0"),
             addsv: true) ?? CGRect.zero
 
         frame.origin.x = MARGIN
@@ -895,7 +883,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         frame = ctvovc?.configCheckButton(
             frame,
             key: "tbhiBtn",
-            state: ((vo?.optDict)?["tbhi"] == "1") /* default:0 */,
+            state: (vo.optDict["tbhi"] == "1") /* default:0 */,
             addsv: true) ?? CGRect.zero
 
         //*/
@@ -910,35 +898,32 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         super.voDrawOptions(ctvovc)
     }
 
-    func getNSMA(_ dflt: Any?) -> [AnyHashable]? {
-        var i: Int
-        let c = alphaArray?.count ?? 0
+    func getNSMA(_ dflt: Int) -> [Int]{
+        let c = alphaArray.count
 
-        var tmpNSMA = [AnyHashable](repeating: 0, count: alphaArray?.count ?? 0)
+        var tmpNSMA: [Int] = [] // (repeating: 0, count: alphaArray?.count ?? 0)
         for i in 0..<c {
-            if let dflt = dflt as? AnyHashable {
-                tmpNSMA.insert(dflt, at: i)
-            }
+            tmpNSMA.insert(dflt, at: i)
         }
         return tmpNSMA
     }
 
-    func enterNSMA(_ NSMA: inout [AnyHashable], c: unichar, dflt: Any?, ndx: Int) {
-        let aaNdx = alphaArray?.firstIndex(of: "\(toupper(c))") ?? NSNotFound
+    func enterNSMA(_ NSMA: inout [Int], c: Character, dflt: Int, ndx: Int) {
+        let aaNdx = alphaArray.firstIndex(of: "\(c.uppercased())") ?? NSNotFound
         if NSNotFound == aaNdx {
             if dflt == NSMA[0] {
                 // is a non-alpha, update index if it is first found
-                NSMA[0] = NSNumber(value: ndx)
+                NSMA[0] = ndx
             }
         } else if dflt == NSMA[aaNdx] {
             // only update if this is first for this letter
-            NSMA[aaNdx] = NSNumber(value: ndx)
+            NSMA[aaNdx] = ndx
         }
     }
 
-    func fillNSMA(_ NSMA: inout [AnyHashable], dflt: Any?) {
+    func fillNSMA(_ NSMA: inout [Int], dflt: Int) {
 
-        let ndx = (alphaArray?.count ?? 0) - 1
+        var ndx = alphaArray.count - 1
         var newVal: NSNumber? = nil
         if let lastObject = NSMA.last {
             newVal = NSNumber(value: NSMA.firstIndex(of: lastObject) ?? NSNotFound)
@@ -946,10 +931,10 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         while ndx >= 0 {
             if dflt == NSMA[ndx] {
                 if let newVal {
-                    NSMA[ndx] = newVal
+                    NSMA[ndx] = newVal.intValue
                 }
             } else {
-                newVal = NSMA[ndx] as? NSNumber
+                newVal = NSNumber(value:NSMA[ndx])
             }
             ndx -= 1
         }
@@ -959,7 +944,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
     //	NSMutableDictionary *foo = self.peopleDictionary;
     //}
 
-    func numberOfComponents(in pickerView: UIPickerView?) -> Int {
+    func numberOfComponents(in pickerView: UIPickerView) -> Int {
         if showNdx {
             return 2
         }
@@ -968,7 +953,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
 
     func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
         if showNdx && 0 == component {
-            return alphaArray?.count ?? 0
+            return alphaArray.count
         } else {
             if SEGPEOPLE == segControl.selectedSegmentIndex {
                 if accessAddressBook {
@@ -977,7 +962,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
                     return 0
                 }
             } else {
-                return historyArray?.count ?? 0
+                return historyArray.count
             }
         }
 
@@ -985,7 +970,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
 
     func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
         if showNdx && 0 == component {
-            return (alphaArray)?[row] as? String
+            return alphaArray[row]
         } else {
             if SEGPEOPLE == segControl.selectedSegmentIndex {
                 if accessAddressBook {
@@ -994,7 +979,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
                     return ""
                 }
             } else {
-                return (historyArray)?[row] as? String
+                return historyArray[row]
             }
         }
     }
@@ -1008,9 +993,9 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
                 //srcArr = self.alphaArray;
                 otherComponent = 1
                 if SEGPEOPLE == segControl.selectedSegmentIndex {
-                    targRow = ((namesNdx)?[row] as? NSNumber)?.intValue ?? 0
+                    targRow = namesNdx[row]
                 } else {
-                    targRow = ((historyNdx)?[row] as? NSNumber)?.intValue ?? 0
+                    targRow = historyNdx[row]
                 }
                 //DBGLog(@"showndx on : did sel row targ %d component %d",targRow,component);
             } else {
@@ -1023,25 +1008,25 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
                     if 0 == (namesArray?.count ?? 0) {
                         return
                     }
-                    let name = namesArray?[row] as? String // deprecated ios 9  (NSString*) CFBridgingRelease(ABRecordCopyValue((__bridge ABRecordRef)(self.namesArray)[row], abSortOrderProp));
+                    let name = (namesArray?[row])! as String // deprecated ios 9  (NSString*) CFBridgingRelease(ABRecordCopyValue((__bridge ABRecordRef)(self.namesArray)[row], abSortOrderProp));
                     /* deprecated ios9
                                      if (nil == name) {
                                         name = (NSString*) CFBridgingRelease(ABRecordCopyCompositeName((__bridge ABRecordRef)(self.namesArray)[row])); 
                                     }
                                     */
                     //unichar firstc = [name characterAtIndex:0];
-                    targRow = alphaArray?.firstIndex(of: "\(toupper(name?[name?.index(name?.startIndex, offsetBy: 0)]))") ?? NSNotFound
-                    if NSNotFound == targRow {
-                        targRow = 0
-                    }
+                    targRow = alphaArray.firstIndex(of: "\(name.uppercased().first!)") ?? 0   //   toupper(name![name!.index(name!.startIndex, offsetBy: 0)]))"))!
+                    //if NSNotFound == targRow {
+                    //    targRow = 0
+                    //}
                 } else {
-                    if 0 == (historyArray?.count ?? 0) {
+                    if 0 == historyArray.count {
                         return // crashlytics crash on next line in 2.0.5 - past array bounds
                     }
-                    targRow = alphaArray?.firstIndex(of: "\(toupper((historyArray)?[row]?[(historyArray)?[row]?.index((historyArray)?[row]?.startIndex, offsetBy: 0)]))") ?? NSNotFound
-                    if NSNotFound == targRow {
-                        targRow = 0
-                    }
+                    targRow = alphaArray.firstIndex(of: "\(historyArray[row].uppercased().first!)") ?? 0//  "\(toupper(historyArray![row][(historyArray![row].index(historyArray![row].startIndex, offsetBy: 0))]))") ?? NSNotFound
+                    //if NSNotFound == targRow {
+                    //    targRow = 0
+                    //}
                 }
             }
 
@@ -1075,18 +1060,18 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
     }
     */
 
-    override func newVOGD() -> Any? {
-        if ((vo?.optDict)?["tbnl"] as? String) == "1" {
+    override func newVOGD() -> vogd {
+        if vo.optDict["tbnl"] == "1" {
             // linecount is a num for graph
-            return vogd?.initAsTBoxLC(vo)
+            return vogd(vo).initAsTBoxLC(vo)
         } else {
-            return vogd?.initAsNote(vo)
+            return vogd(vo).initAsNote(vo)
         }
     }
 
-    override func mapValue2Csv() -> String? {
+    override func mapValue2Csv() -> String {
         // add from history or contacts adds trailing \n, trim it here
-        return vo?.value?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return vo.value!.trimmingCharacters(in: .whitespacesAndNewlines)
         /*
             NSUInteger ndx = [self.vo.value length];
 

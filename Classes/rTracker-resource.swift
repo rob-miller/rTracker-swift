@@ -102,9 +102,6 @@ var acceptLicense = ACCEPTLICENSEDFLT
 var toldAboutNotifications = false
 var notificationsEnabled = false
 var maintainerRqst = false
-#if ADVERSION
-    var purchased = false
-#endif
 
     //---------------------------
 
@@ -119,19 +116,22 @@ var bgImage: UIImage? = nil
 
 
 //#define SAFE_DISPATCH_SYNC(code) if ([NSThread isMainThread]) { code } else { dispatch_sync(dispatch_get_main_queue(), ^(void){ code }); }
+/*
 func safeDispatchSync(_ block: () -> ()) {
 }
+*/
 
 // found syntax for this here :
 // https://stackoverflow.com/questions/5225130/grand-central-dispatch-gcd-vs-performselector-need-a-better-explanation/5226271#5226271
 // https://stackoverflow.com/a/8186206/2783487
-func safeDispatchSync(_ block: Void) {
+func safeDispatchSync(_ block: () -> Void) {
     if Thread.isMainThread {
         block()
     } else {
         DispatchQueue.main.sync(execute: block)
     }
 }
+
 
 //---------------------------
 
@@ -159,35 +159,39 @@ class rTracker_resource: NSObject {
 
     //---------------------------
 
-    class func ioFilePath(_ fname: String?, access: Bool) -> String? {
+    class func ioFilePath(_ fname: String?, access: Bool) -> String {
+        // nil acceptable for fname to just get docsdir
         var paths: [AnyHashable]?
         if access {
             paths = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).map(\.path) // file itunes accessible
         } else {
             paths = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).map(\.path) // files not accessible
         }
-        let docsDir = paths?[0] as? String
+        let docsDir = paths![0] as? String
 
         //DBGLog(@"ioFilePath= %@",[docsDir stringByAppendingPathComponent:fname] );
 
-        return URL(fileURLWithPath: docsDir ?? "").appendingPathComponent(fname ?? "").path
+        if let fname {
+            return URL(fileURLWithPath: docsDir!).appendingPathComponent(fname).path as String
+        } else {
+            return URL(fileURLWithPath: docsDir!).path
+        }
     }
 
     class func deleteFile(atPath fp: String?) -> Bool {
         var err: Error?
         if true == FileManager.default.fileExists(atPath: fp ?? "") {
-            DBGLog("deleting file at path %@", fp)
+            DBGLog(String("deleting file at path \(fp)"))
             do {
-                if true != try FileManager.default.removeItem(atPath: fp ?? "") {
-                    DBGErr("Error deleting file: %@ error: %@", fp, err)
-                    return false
-                }
+                try FileManager.default.removeItem(atPath: fp ?? "")
             } catch let e {
                 err = e
+                DBGErr(String("Error deleting file: \(fp) error: \(err)"))
+                return false
             }
             return true
         } else {
-            DBGLog("request to delete non-existent file at path %@", fp)
+            DBGLog(String("request to delete non-existent file at path \(fp)"))
             return true
         }
     }
@@ -206,7 +210,7 @@ class rTracker_resource: NSObject {
                 .protectionKey: FileProtectionType.complete
             ], ofItemAtPath: fp ?? "")
         } catch let err {
-            DBGErr("Error protecting file: %@ error: %@", fp, err)
+            DBGErr(String("Error protecting file: \(fp) error: \(err))"))
             return false
         }
         return true
@@ -230,7 +234,7 @@ class rTracker_resource: NSObject {
         var index: Int
         let stringLength = str?.count ?? 0
 
-        index = 0, numberOfLines = 0
+        index = 0; numberOfLines = 0
         while index < stringLength {
             if let lineRange = (str as NSString?)?.lineRange(for: NSRange(location: index, length: 0)) {
                 index = NSMaxRange(lineRange)
@@ -353,163 +357,21 @@ class rTracker_resource: NSObject {
         })
 
     }
-
-    #if ADVERSION
-
-    // MARK: -
-    // MARK: in-app purchase and ad support
-
-    #if ADVERSION
-
-    class func handleUpgradeOptions(_ choice: Int) {
-        if choice == 1 {
-            if let url = URL(string: "http://itunes.apple.com/us/app/rtracker/id486541371") {
-                UIApplication.shared.openURL(url)
-            }
-        } else if choice == 2 {
-            DBGLog("in app upgrade!")
-
-            rt_IAPHelper.sharedInstance()?.requestProducts(with: { success, products in
-                if success {
-                    DBGLog("success: %lu products", UInt(products?.count ?? 0))
-                    let _products = products
-                    for skp in _products ?? [] {
-                        guard let skp = skp as? SKProduct else {
-                            continue
-                        }
-                        DBGLog("Product title: %@", skp.localizedTitle)
-                        DBGLog("Product description: %@", skp.localizedDescription)
-                        DBGLog("Product price: %@", skp.price)
-                        DBGLog("Product id: %@", skp.productIdentifier)
-
-                        if RTA_prodid == skp.productIdentifier {
-                            rt_IAPHelper.sharedInstance()?.buy(skp) // currently only one product !!!!!
-                        }
-                    }
-                } else {
-                    DBGLog("fail")
-                }
-
-            })
-
-
-            DBGLog("done.")
-        } else if choice == 3 {
-            rt_IAPHelper.sharedInstance()?.restoreCompletedTransactions()
-        } else if choice == 4 {
-            rTracker_resource.setPurchased(true)
-        }
-
+    /*
+    class func dismissAlertController(_ alertController: UIAlertController) {
+        alertController.dismiss(animated: true, completion: nil)
     }
 
-    class func alertView(_ alertView: UIAlertView?, clickedButtonAt buttonIndex: Int) {
-        rTracker_resource.handleUpgradeOptions(buttonIndex)
+    class func doQuickAlert(title: String, msg: String, delay: Int, vc: UIViewController) {
+        let alert = UIAlertController(title: title, message: msg, preferredStyle: .alert)
+        vc.present(alert, animated: true, completion: nil)
+        //perform(#selector(dismissAlertController(_:)), with: alert, afterDelay: TimeInterval(delay))
+         DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+             dismissAlertController(alert)
+         }
+
     }
-
-    class func buy_rTrackerAlert() {
-        let title = "Upgrade to rTracker"
-        let msg = "\nrTrackerA is advertising supported and limited to \(ADVER_TRACKER_LIM) trackers of \(ADVER_ITEM_LIM) items.\n\nPlease buy rTracker, which does not have advertisements or limits.\n\nUse the 'email tracker+data' functionality to transfer your existing trackers to rTracker (email to yourself, open the attachment in rTracker from Mail on your iOS device - you may need to look in your sent mail folder).\n\nOr use the In-App upgrade button below to continue using rTrackerA without ads or limits.  Please note that the In-App upgraded product costs more and seems to get updates later."
-        let btn0 = "Not now"
-        let btn1 = "Get rTracker"
-        let btn2 = "In-App Upgrade"
-        let btn3 = "Restore In-App Upgrade"
-        #if !RELEASE
-        let btn4 = "set Purchased"
-        #endif
-        if SYSTEM_VERSION_LESS_THAN("8.0") {
-            let _alert = UIAlertView(title: title, message: msg, delegate: self, cancelButtonTitle: btn0, otherButtonTitles: btn1, btn2, btn3, btn4)
-            _alert.show()
-        } else {
-            let alert = UIAlertController(
-                title: title,
-                message: msg,
-                preferredStyle: .alert)
-
-            let skipAction = UIAlertAction(title: btn0, style: .default, handler: { action in
-            })
-            let getAction = UIAlertAction(title: btn1, style: .default, handler: { action in
-                rTracker_resource.handleUpgradeOptions(1)
-            })
-            let inappAction = UIAlertAction(title: btn2, style: .default, handler: { action in
-                rTracker_resource.handleUpgradeOptions(2)
-            })
-            let restoreAction = UIAlertAction(title: btn3, style: .default, handler: { action in
-                rTracker_resource.handleUpgradeOptions(3)
-            })
-
-            alert.addAction(skipAction)
-            alert.addAction(getAction)
-            alert.addAction(inappAction)
-            alert.addAction(restoreAction)
-
-            #if !RELEASE
-            let purchaseAction = UIAlertAction(title: btn4, style: .default, handler: { action in
-                rTracker_resource.handleUpgradeOptions(4)
-            })
-            alert.addAction(purchaseAction)
-            #endif
-            var vc: UIViewController?
-            let w = UIWindow(frame: UIScreen.main.bounds)
-            w.rootViewController = UIViewController()
-            w.windowLevel = UIWindow.Level(UIWindow.Level.alert.rawValue + 1)
-            w.makeKeyAndVisible()
-            vc = w.rootViewController
-
-            vc?.present(alert, animated: true)
-        }
-    }
-
-    //----
-
-    /*  defined elsewhere in this file and no buttons
-     - (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
-     if (0 == buttonIndex) {   // do nothing
-     }
-     }
      */
-
-    @objc class func dismiss(_ alertView: UIAlertView?) {
-        alertView?.dismiss(withClickedButtonIndex: 0, animated: true)
-    }
-
-    class func quickAlert(_ title: String?, msg: String?) -> UIAlertView? {
-        //DBGLog(@"qalert title: %@ msg: %@",title,msg);
-        let alert = UIAlertView(title: title, message: msg, delegate: nil, cancelButtonTitle: "", otherButtonTitles: "")
-        alert.show()
-        //[alert release];
-        return alert
-    }
-
-    @objc class func dismiss(_ alertController: UIAlertController?) {
-        alertController?.dismiss(
-            animated: Bool(true))
-    }
-
-    class func doQuickAlert(_ title: String?, msg: String?, delay: Int, vc: UIViewController?) {
-        if SYSTEM_VERSION_LESS_THAN("8.0") {
-            let alert = rTracker_resource.quickAlert(title, msg: msg)
-            self.perform(#selector(dismiss(_:)), with: alert, afterDelay: TimeInterval(delay))
-        } else {
-            let alert = UIAlertController(
-                title: title,
-                message: msg,
-                preferredStyle: .alert)
-            vc?.present(alert, animated: true)
-            rTracker_resource.perform(#selector(dismiss(_:)), with: alert, afterDelay: TimeInterval(delay))
-        }
-    }
-
-    class func replaceRtrackerA(_ vc: UIViewController?) {
-        rTracker_resource.alert("rTracker is free", msg: "rTrackerA is being removed from the app store.\n\nPlease install rTracker, which is now free and open source.\n\nSee the help pages for instructions on how to transfer trackers between these applications (tl;dr : email tracker+data to yourself, open attachment with rTracker).", vc: vc)
-    }
-
-    #endif
-
-    //----
-    #endif
-
-
-
     //---------------------------
     // MARK: -
     // MARK: navcontroller view transition
@@ -521,7 +383,7 @@ class rTracker_resource: NSObject {
             UIView.transition(
                 with: view,
                 duration: 1.0,
-                options: UIView.AnimationOptions(rawValue: animOpt),
+                options: UIView.AnimationOptions(rawValue: UInt(animOpt)),
                 animations: {
                     if let vc {
                         navc?.pushViewController(
@@ -537,7 +399,7 @@ class rTracker_resource: NSObject {
             UIView.transition(
                 with: view,
                 duration: 1.0,
-                options: UIView.AnimationOptions(rawValue: animOpt),
+                options: UIView.AnimationOptions(rawValue: UInt(animOpt)),
                 animations: {
                     navc?.popViewController(
                         animated: false)
@@ -547,7 +409,7 @@ class rTracker_resource: NSObject {
 
     //---------------------------
 
-    class func colorSet() -> [AnyHashable]? {
+    class func colorSet() -> [UIColor] {
         return [
             UIColor.red,
             UIColor.green,
@@ -565,7 +427,7 @@ class rTracker_resource: NSObject {
 
     }
 
-    class func colorNames() -> [AnyHashable]? {
+    class func colorNames() -> [String] {
         return [
             "red",
             "green",
@@ -582,7 +444,7 @@ class rTracker_resource: NSObject {
         ]
     }
 
-    class func vtypeNames() -> [AnyHashable]? {
+    class func vtypeNames() -> [String] {
         // indexes must match defns in valueObj.h 
         return [
             "number",
@@ -668,7 +530,9 @@ class rTracker_resource: NSObject {
             }
 
             //[activityIndicator stopAnimating];
-            activityIndicator?.performSelector(onMainThread: #selector(MSStickerView.stopAnimating), with: nil, waitUntilDone: true)
+            //activityIndicator?.performSelector(onMainThread: #selector(stopAnimating), with: nil, waitUntilDone: true)
+            activityIndicator!.stopAnimating()
+
 
             outerView?.removeFromSuperview()
 
@@ -692,13 +556,13 @@ class rTracker_resource: NSObject {
 
         //progressBar = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault ];
         progressBar = UIProgressView(progressViewStyle: .bar)
-        let pbFrame = progressBar?.frame
+        var pbFrame = progressBar?.frame
         let vFrame = view?.frame
         pbFrame?.size.width = vFrame?.size.width ?? 0.0
 
         //pbFrame.origin.y = 70.0;
         pbFrame?.origin.y = yloc
-        DBGLog("progressbar yloc= %f", yloc)
+        DBGLog(String("progressbar yloc= \(yloc)"))
 
         //pbFrame.size.height = 550;
         progressBar?.frame = pbFrame ?? CGRect.zero
@@ -813,7 +677,7 @@ class rTracker_resource: NSObject {
 
     class func setToldAboutSwipe(_ toldSwipe: Bool) {
         toldAboutSwipe = toldSwipe
-        DBGLog("updateToldAboutSwipe:%d", toldAboutSwipe)
+        DBGLog(String("updateToldAboutSwipe:\(toldAboutSwipe)"))
     }
 
     class func getToldAboutNotifications() -> Bool {
@@ -822,7 +686,7 @@ class rTracker_resource: NSObject {
 
     class func setToldAboutNotifications(_ toldNotifications: Bool) {
         toldAboutNotifications = toldNotifications
-        DBGLog("updateToldAboutNotifications:%d", toldAboutNotifications)
+        DBGLog(String("updateToldAboutNotifications:\(toldAboutNotifications)"))
     }
 
     class func setNotificationsEnabled() {
@@ -854,42 +718,24 @@ class rTracker_resource: NSObject {
 
     class func setMaintainerRqst(_ inMaintainerRqst: Bool) {
         maintainerRqst = inMaintainerRqst
-        DBGLog("update maintainerRqst:%d", maintainerRqst)
+        DBGLog(String("update maintainerRqst:\(maintainerRqst)"))
     }
-
-    #if ADVERSION
-
-    class func getPurchased() -> Bool {
-        return purchased
-    }
-
-    class func setPurchased(_ inPurchased: Bool) {
-        purchased = inPurchased
-        DBGLog("setPurchased:%d", inPurchased)
-        if inPurchased {
-            NotificationCenter.default.post(name: NSNotification.Name(rtPurchasedNotification), object: nil)
-        }
-    }
-
-    #endif
-
 
     class func stashTracker(_ tid: Int) {
         let oldFname = "trkr\(tid).sqlite3"
         let newFname = "stash_trkr\(tid).sqlite3"
         var error: Error?
 
-        DBGLog("stashing tracker %d", tid)
+        DBGLog(String("stashing tracker \(tid)"))
 
         let fm = FileManager.default
         do {
-            if try fm.copyItem(
-                atPath: rTracker_resource.ioFilePath(oldFname, access: DBACCESS) ?? "",
-                toPath: rTracker_resource.ioFilePath(newFname, access: DBACCESS) ?? "") != true {
-                DBGWarn("Unable to copy file %@ to %@: %@", oldFname, newFname, error?.localizedDescription)
-            }
+            try fm.copyItem(
+                atPath: rTracker_resource.ioFilePath(oldFname, access: DBACCESS),
+                toPath: rTracker_resource.ioFilePath(newFname, access: DBACCESS))
         } catch let e {
             error = e
+            DBGWarn(String("Unable to copy file \(oldFname) to \(newFname): \(error?.localizedDescription)"))
         }
     }
 
@@ -909,15 +755,14 @@ class rTracker_resource: NSObject {
         let fname = "stash_trkr\(tid).sqlite3"
         var error: Error?
 
-        DBGLog("dumping stashed tracker %d", tid)
+        DBGLog(String("dumping stashed tracker \(tid)"))
 
         let fm = FileManager.default
         do {
-            if try fm.removeItem(atPath: rTracker_resource.ioFilePath(fname, access: DBACCESS) ?? "") != true {
-                DBGWarn("Unable to delete file %@: %@", fname, error?.localizedDescription)
-            }
+            try fm.removeItem(atPath: rTracker_resource.ioFilePath(fname, access: DBACCESS))
         } catch let e {
             error = e
+            DBGWarn(String("Unable to delete file \(fname): \(error?.localizedDescription)"))
         }
         lastStashedTid = 0
 
@@ -931,24 +776,22 @@ class rTracker_resource: NSObject {
         let newFname = "trkr\(tid).sqlite3"
         var error: Error?
 
-        DBGLog("restoring stashed tracker %d", tid)
+        DBGLog(String("restoring stashed tracker \(tid)"))
 
         let fm = FileManager.default
         do {
-            if try fm.removeItem(atPath: rTracker_resource.ioFilePath(newFname, access: DBACCESS) ?? "") != true {
-                DBGLog("Unable to delete file %@: %@", newFname, error?.localizedDescription)
-            }
+            try fm.removeItem(atPath: rTracker_resource.ioFilePath(newFname, access: DBACCESS))
         } catch let e {
             error = e
+            DBGLog(String("Unable to delete file \(newFname): \(error?.localizedDescription)"))
         }
         do {
-            if try fm.moveItem(
-                atPath: rTracker_resource.ioFilePath(oldFname, access: DBACCESS) ?? "",
-                toPath: rTracker_resource.ioFilePath(newFname, access: DBACCESS) ?? "") != true {
-                DBGWarn("Unable to move file %@ to %@: %@", oldFname, newFname, error?.localizedDescription)
-            }
+            try fm.moveItem(
+                atPath: rTracker_resource.ioFilePath(oldFname, access: DBACCESS),
+                toPath: rTracker_resource.ioFilePath(newFname, access: DBACCESS))
         } catch let e {
             error = e
+            DBGWarn(String("Unable to move file \(oldFname) to \(newFname): \(error?.localizedDescription)"))
         }
     }
 
@@ -986,10 +829,10 @@ class rTracker_resource: NSObject {
     }
 
     class func rrConfigTextField(_ frame: CGRect, key: String?, target: Any?, delegate: Any?, action: Selector, num: Bool, place: String?, text: String?) -> UITextField? {
-        DBGLog(" frame x %f y %f w %f h %f", frame.origin.x, frame.origin.y, frame.size.width, frame.size.height)
+        DBGLog(String(" frame x \(frame.origin.x) y \(frame.origin.y) w \(frame.size.width)) h \(frame.size.height)"))
         var rtf: UITextField?
         if num {
-            rtf = numField(frame: frame) as? UITextField
+            rtf = numField(frame: frame) as UITextField
         } else {
             rtf = UITextField(frame: frame)
         }
@@ -1001,7 +844,7 @@ class rTracker_resource: NSObject {
         rtf?.borderStyle = .roundedRect
         rtf?.font = PrefBodyFont
 
-        dbgNSAssert((action != nil), "nil action")
+        //dbgNSAssert((action != nil), "nil action")
         dbgNSAssert((target != nil), "nil action")
 
         rtf?.addTarget(target, action: action, for: .editingDidEndOnExit)
@@ -1082,14 +925,14 @@ class rTracker_resource: NSObject {
     // MARK: keyboard support
 
     class func willShowKeyboard(_ n: Notification?, view: UIView?, boty: CGFloat) {
-        var n = n
+        //var n = n
 
         if keyboardIsShown {
             // need bit more logic to handle additional scrolling for another textfield
             return
         }
 
-        DBGLog("handling keyboard will show: %@", n?.object)
+        DBGLog(String("handling keyboard will show: \(n?.object)"))
         currKeyboardView = view
         currKeyboardSaveFrame = view?.frame ?? CGRect.zero
 
@@ -1099,13 +942,13 @@ class rTracker_resource: NSObject {
         let boundsValue = userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue //FrameBeginUserInfoKey
         let keyboardSize = boundsValue?.cgRectValue.size
 
-        let viewFrame = view?.frame
+        var viewFrame = view?.frame
         let topk = (viewFrame?.size.height ?? 0.0) - (keyboardSize?.height ?? 0.0) // - viewFrame.origin.y;
 
         if boty <= topk {
-            DBGLog("activeField visible, do nothing  boty= %f  topk= %f", boty, topk)
+            DBGLog(String("activeField visible, do nothing  boty= \(boty)  topk= \(topk)"))
         } else {
-            DBGLog("activeField hidden, scroll up  boty= %f  topk= %f", boty, topk)
+            DBGLog(String("activeField hidden, scroll up  boty= \(boty)  topk= \(topk)"))
             viewFrame?.origin.y -= boty - topk
 
             //viewFrame.size.height -= self.navigationController.toolbar.frame.size.height;
@@ -1155,7 +998,7 @@ class rTracker_resource: NSObject {
             forResource: soundFileName,
             withExtension: nil)
 
-        DBGLog("soundfile = %@ soundurl= %@", soundFileName, soundURL)
+        DBGLog(String("soundfile = \(soundFileName) soundurl= \(soundURL)"))
 
         if let url = soundURL as CFURL? {
             AudioServicesCreateSystemSoundID(url, UnsafeMutablePointer<SystemSoundID>(mutating: &sound1))
@@ -1227,15 +1070,8 @@ class rTracker_resource: NSObject {
         }
     }
 
-    class func isDeviceiPhone5() -> Bool {
-        if UI_USER_INTERFACE_IDIOM() == .phone && !(rTracker_resource.isDeviceiPhone4()) {
-            return true
-        }
-        return false
-    }
-
     class func getKeyWindowFrame() -> CGRect {
-        var rframe: CGRect
+        var rframe: CGRect = CGRect.zero
         safeDispatchSync({
             var window = UIApplication.shared.keyWindow
             if window == nil {
@@ -1249,7 +1085,7 @@ class rTracker_resource: NSObject {
 
     class func getOrientationFromWindow() -> UIDeviceOrientation {
         let f = rTracker_resource.getKeyWindowFrame()
-        DBGLog("window : width %f   height %f ", f.size.width, f.size.height)
+        DBGLog(String("window : width \(f.size.width)   height \(f.size.height) "))
         if f.size.height > f.size.width {
             return .portrait
         }
@@ -1271,10 +1107,6 @@ class rTracker_resource: NSObject {
     class func getScreenMaxDim() -> CGFloat {
         let size = UIScreen.main.bounds.size
         return size.width > size.height ? size.width : size.height
-    }
-
-    func CHOOSE(_ x: Any, _ y: Any) {
-        mb.url(forResource: x, withExtension: nil) != nil ? x : y
     }
 
     class func getLaunchImageName() -> String? {
@@ -1363,7 +1195,7 @@ class rTracker_resource: NSObject {
 
     // copied from http://www.creativepulse.gr/en/blog/2013/how-to-find-the-visible-width-and-height-in-an-ios-app
     class func get_visible_size(_ vc: UIViewController?) -> CGSize {
-        var result: CGSize
+        var result: CGSize = CGSize.zero
 
         var size = UIScreen.main.bounds.size
         // UIInterfaceOrientation orientation = [[UIApplication sharedApplication] statusBarOrientation];
@@ -1410,7 +1242,7 @@ class rTracker_resource: NSObject {
         }
 
         if #available(iOS 11.0, *) {
-            let sai = UIApplication.shared.delegate?.window?.safeAreaInsets
+            let sai = UIApplication.shared.delegate?.window??.safeAreaInsets
             result.height -= sai?.bottom ?? 0.0
         }
 
@@ -1426,7 +1258,7 @@ class rTracker_resource: NSObject {
     }
 
     class func get_screen_size(_ vc: UIViewController?) -> CGSize {
-        var result: CGSize
+        var result: CGSize = CGSize.zero
 
         let size = UIScreen.main.bounds.size
         //UIInterfaceOrientation orientation = [[UIApplication sharedApplication] statusBarOrientation];
@@ -1485,7 +1317,7 @@ class rTracker_resource: NSObject {
 
     class func get_background_color(_ vc: UIViewController?) -> UIColor? {
         if bgColor == nil {
-            bgColor = UIColor(patternImage: rTracker_resource.get_background_image(vc))
+            bgColor = UIColor(patternImage: rTracker_resource.get_background_image(vc)!)
         }
         return bgColor
     }

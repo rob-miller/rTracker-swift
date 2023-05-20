@@ -109,7 +109,7 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
         view.backgroundColor = .black
         //[[self view] setBackgroundColor:[UIColor redColor]];
 
-        let gtvRect: CGRect
+        var gtvRect: CGRect = CGRect.zero
 
         // get our own frame
 
@@ -125,7 +125,7 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
 
         //srect.origin.y -= 50;
 
-        DBGLog("gtvc srect: %f %f %f %f", srect.origin.x, srect.origin.y, srect.size.width, srect.size.height)
+        DBGLog(String("gtvc srect: \(srect.origin.x) \(srect.origin.y) \(srect.size.width) \(srect.size.height)"))
 
         /*
             CGFloat tw = srect.size.width;   // swap because landscape only implementation and view not loaded yet
@@ -142,11 +142,11 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
 
         // add views for title, axes and labels
 
-        myFont = UIFont(name: String(utf8String: FONTNAME) ?? "", size: CGFloat(FONTSIZE))
+        myFont = UIFont(name: String(FONTNAME), size: CGFloat(FONTSIZE))
         let labelHeight = (myFont?.lineHeight ?? 0.0) + 2.0
 
         // view for title
-        let rect: CGRect
+        var rect: CGRect = CGRect.zero
         rect.origin.y = 0.0
         rect.size.height = labelHeight
         //rect.origin.x = 60.0f;  // this works
@@ -175,7 +175,7 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
         rect.origin.y = titleView?.frame.size.height ?? 0.0
         rect.size.height = srect.size.height - labelHeight // ((2*labelHeight) + (3*SPACE) + TICKLEN);
 
-        DBGLog("gtvc yax rect: %f %f %f %f", rect.origin.x, rect.origin.y, rect.size.width, rect.size.height)
+        DBGLog(String("gtvc yax rect: \(rect.origin.x) \(rect.origin.y) \(rect.size.width) \(rect.size.height)"))
 
         let tyav = gtYAxV(frame: rect)
         yAV = tyav
@@ -198,7 +198,7 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
         rect.origin.x = rect.size.width
         rect.size.width = srect.size.width - rect.size.width - 10
 
-        DBGLog("gtvc xax rect: %f %f %f %f", rect.origin.x, rect.origin.y, rect.size.width, rect.size.height)
+        DBGLog(String("gtvc xax rect: \(rect.origin.x) \(rect.origin.y) \(rect.size.width) \(rect.size.height)"))
 
         yAV?.scaleHeightY = rect.origin.y - (titleView?.frame.size.height ?? 0.0) // set bottom of y scale area
 
@@ -241,7 +241,7 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
 
         // load all togd, vogd data into NSArrays etc.
 
-        tracker?.togd = gtvRect // now we know the full gtvRect
+        tracker?.setTOGD(gtvRect)  // now we know the full gtvRect
         nextVO() // initialize self.currVO
 
         yAV?.vogd = currVO?.vogd as? vogd
@@ -252,7 +252,7 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
         }
         //[self.yAV setBackgroundColor:[UIColor yellowColor]];
 
-        xAV?.mytogd = tracker?.togd as? togd
+        xAV?.mytogd = tracker?.togd as? Togd
         xAV?.graphSV = scrollView
         if let xAV {
             view.addSubview(xAV)
@@ -265,8 +265,8 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
         gtv?.gtvCurrVO = currVO
         gtv?.parentGTVC = self
         if DPA_GOTO == dpr?.action {
-            let targSecs = Int(dpr?.date?.timeIntervalSince1970 - (tracker?.togd as? togd)?.firstDate)
-            gtv?.xMark = Double((tracker?.togd as? togd)?.firstDate ?? 0.0) + (Double(targSecs) * ((tracker?.togd as? togd)?.dateScale ?? 0.0))
+            let targSecs = Int(dpr!.date!.timeIntervalSince1970) - tracker!.togd!.firstDate
+            gtv?.xMark = Double((tracker!.togd!).firstDate) + (Double(targSecs) * (tracker!.togd!.dateScale))
         }
 
 
@@ -303,8 +303,8 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
         super.viewWillAppear(animated)
 
         if DPA_GOTO == dpr?.action {
-            let targSecs = Int(dpr?.date?.timeIntervalSince1970 - (tracker?.togd as? togd)?.firstDate)
-            gtv?.xMark = Double(targSecs) * ((tracker?.togd as? togd)?.dateScale ?? 0.0)
+            let targSecs = Int(dpr!.date!.timeIntervalSince1970) - tracker!.togd!.firstDate
+            gtv?.xMark = Double(targSecs) * (tracker!.togd!.dateScale)
         }
 
         if nil != (tracker?.optDict)?["dirtyFns"] {
@@ -344,7 +344,7 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
             tracker?.recalculateFns()
 
             if tracker?.goRecalculate ?? false {
-                tracker?.togd = gtv?.frame ?? CGRect.zero // recreate all graph data
+                tracker!.setTOGD(gtv?.frame ?? CGRect.zero)  // recreate all graph data
                 tracker?.goRecalculate = false
             }
 
@@ -360,7 +360,7 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
     }
 
     func fireRecalculateFns() {
-        if tracker?.recalcFnLock {
+        if tracker?.recalcFnLock.get() != nil {
             return // already running
         }
         rTracker_resource.startProgressBar(scrollView, navItem: nil, disable: false, yloc: 20.0)
@@ -369,14 +369,11 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
 
     func fireRegenSearchMatches() {
         if nil != parentUTC?.searchSet {
-            var xPoints: [AnyHashable] = []
+            var xPoints: [NSNumber] = []
             if let aSearchSet = parentUTC?.searchSet {
                 for d in aSearchSet {
-                    guard let d = d as? NSNumber else {
-                        continue
-                    }
-                    if d.floatValue >= Float((tracker?.togd as? togd)?.firstDate ?? 0.0) {
-                        xPoints.append(NSNumber(value: Float(Double((d.floatValue - Float((tracker?.togd as? togd)?.firstDate ?? 0.0))) * ((tracker?.togd as? togd)?.dateScale ?? 0.0))))
+                    if d >= tracker!.togd!.firstDate {
+                        xPoints.append(NSNumber(value: Float(Double((d - tracker!.togd!.firstDate)) * tracker!.togd!.dateScale)))
                     }
                 }
             }
@@ -390,7 +387,8 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
     }
 
     override func motionEnded(_ motion: UIEvent.EventSubtype, with event: UIEvent?) {
-        if event?.type == UIEvent.EventSubtype.motionShake {
+        if motion == .motionShake {
+        //if event?.type == UIEvent.EventSubtype.motionShake {
             // It has shake d
             /*
                     if (0 != OSAtomicTestAndSet(0, &(_shakeLock))) {
@@ -716,7 +714,7 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
 
     func yavTap() {
         //if (0 != self.shakeLock) return;
-        if tracker?.recalcFnLock {
+        if tracker!.recalcFnLock.get() {
             return
         }
         //DBGLog(@"yav tapped!");
@@ -729,7 +727,7 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
 
     func gtvTap(_ touches: Set<AnyHashable>?) {
         //if (0 != self.shakeLock) return;
-        if tracker?.recalcFnLock {
+        if tracker!.recalcFnLock.get() {
             return
         }
         //DBGLog(@"gtv tapped!");
@@ -740,12 +738,12 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
             let touchPoint = touch?.location(in: gtv) // sv=> full zoomed content size ; gtv => gtv frame but zoom/scroll mapped
             //DBGLog(@"gtv tap at %f, %f.  taps= %d  numTouches= %d",touchPoint.x, touchPoint.y, [touch tapCount],[touches count]);
 
-            let nearDate = Int(Double((tracker?.togd as? togd)?.firstDate ?? 0.0) + ((touchPoint?.x ?? 0.0) * ((tracker?.togd as? togd)?.dateScaleInv ?? 0.0)))
+            let nearDate = Int(Double(tracker!.togd!.firstDate) + (touchPoint!.x * (tracker!.togd!.dateScaleInv)))
             let newDate = tracker?.dateNearest(nearDate) ?? 0
             dpr?.date = Date(timeIntervalSince1970: TimeInterval(newDate))
             dpr?.action = DPA_GOTO
             //self.gtv.xMark = touchPoint.x;
-            gtv?.xMark = Double((newDate - ((tracker?.togd as? togd)?.firstDate ?? 0))) * ((tracker?.togd as? togd)?.dateScale ?? 0.0)
+            gtv?.xMark = Double(newDate - tracker!.togd!.firstDate) * tracker!.togd!.dateScale
         } else if (2 == touch?.tapCount) && (1 == (touches?.count ?? 0)) {
             DBGLog("gtvTap: cancel")
             gtv?.xMark = NOXMARK
@@ -779,36 +777,33 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
         // TODO: can we cache this in optDict?
 
         var maxw: CGFloat = 0.0
-
+        var nmax, nmin, bval: NSNumber?
         for vo in tracker?.valObjTable ?? [] {
-            guard let vo = vo as? valueObj else {
-                continue
-            }
-            if "1" == (vo.optDict)?["graph"] {
+            if "1" == vo.optDict["graph"] {
                 switch vo.vtype {
                 case VOT_NUMBER, VOT_FUNC:
-                    if "0" == (vo.optDict)?["autoscale"] {
-                        maxw = testDblWidth(((vo.optDict)?["gmin"] as? NSNumber)?.doubleValue ?? 0.0, max: maxw)
-                        maxw = testDblWidth(((vo.optDict)?["gmax"] as? NSNumber)?.doubleValue ?? 0.0, max: maxw)
+                    if "0" == vo.optDict["autoscale"] {
+                        maxw = testDblWidth(Double(vo.optDict["gmin"]!)!, max: maxw)
+                        maxw = testDblWidth(Double(vo.optDict["gmax"]!)!, max: maxw)
                     } else {
                         var sql = String(format: "select min(val collate BINARY) from voData where id=%ld;", vo.vid) // CMPSTRDBL
-                        maxw = testDblWidth(tracker?.toQry2Double(sql) ?? 0.0, max: maxw)
+                        maxw = testDblWidth(tracker?.toQry2Double(sql:sql) ?? 0.0, max: maxw)
                         sql = String(format: "select max(val collate BINARY) from voData where id=%ld;", vo.vid) // CMPSTRDBL
-                        maxw = testDblWidth(tracker?.toQry2Double(sql) ?? 0.0, max: maxw)
+                        maxw = testDblWidth(tracker?.toQry2Double(sql:sql) ?? 0.0, max: maxw)
                     }
                 case VOT_SLIDER:
-                    let nmin = (vo.optDict)?["smin"] as? NSNumber
-                    let nmax = (vo.optDict)?["smax"] as? NSNumber
-                    maxw = testDblWidth(nmin != nil ? nmin?.doubleValue ?? 0.0 : d(SLIDRMINDFLT), max: maxw)
-                    maxw = testDblWidth(nmax != nil ? nmax?.doubleValue ?? 0.0 : d(SLIDRMAXDFLT), max: maxw)
+                    nmin = NSNumber(pointer:vo.optDict["smin"])
+                    nmax = NSNumber(pointer:vo.optDict["smax"])
+                    maxw = testDblWidth(nmin != nil ? nmin!.doubleValue : d(SLIDRMINDFLT), max: maxw)
+                    maxw = testDblWidth(nmax != nil ? nmax!.doubleValue : d(SLIDRMAXDFLT), max: maxw)
                 case VOT_BOOLEAN:
-                    let bval = (vo.optDict)?["boolval"] as? NSNumber
-                    maxw = testDblWidth(bval != nil ? bval?.doubleValue ?? 0.0 : d(BOOLVALDFLT), max: maxw)
+                    bval = NSNumber(pointer:vo.optDict["boolval"])
+                    maxw = testDblWidth(bval != nil ? bval!.doubleValue : d(BOOLVALDFLT), max: maxw)
                 case VOT_CHOICE:
-                    var i: Int
+                    //var i: Int
                     for i in 0..<CHOICES {
                         let key = "c\(i)"
-                        let s = (vo.optDict)?[key] as? String
+                        let s = vo.optDict[key]
                         if (s != nil) && (s != "") {
                             maxw = testStrWidth(s, max: maxw)
                         }
@@ -836,9 +831,6 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
         if nil == currVO {
             // no currVO set, work through list and set first one that has graph enabled
             for vo in tracker?.valObjTable ?? [] {
-                guard let vo = vo as? valueObj else {
-                    continue
-                }
                 if testSetVO(vo) {
                     return
                 }
@@ -847,13 +839,13 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
             // currVO is set, find it in list and then circle around trying to find next that has graph enabled
             var currNdx: Int? = nil
             if let currVO {
-                currNdx = tracker?.valObjTable?.firstIndex(of: currVO) ?? NSNotFound
+                currNdx = tracker?.valObjTable.firstIndex(of: currVO) ?? NSNotFound
             }
             var ndx = (currNdx ?? 0) + 1
-            var maxc = tracker?.valObjTable?.count ?? 0
+            var maxc = tracker?.valObjTable.count
             while true {
-                while ndx < maxc {
-                    if testSetVO((tracker?.valObjTable)?[ndx] as? valueObj) {
+                while ndx < maxc! {
+                    if testSetVO(tracker?.valObjTable[ndx] as? valueObj) {
                         return
                     }
                     ndx += 1

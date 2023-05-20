@@ -64,37 +64,37 @@ let EV_MASK = EV_HOURS | EV_DAYS | EV_WEEKS | EV_MONTHS
 
 class notifyReminder: NSObject {
     /*{
-
-        int rid;
-
-        uint32_t monthDays;
-        uint8_t weekDays;
-        uint8_t everyMode;
-
-        int everyVal;
-        int start;        // -1 for not used
-        int until;
-        int times;
-
-
-        NSString *msg;
-        NSString *soundFileName;
-
-        BOOL timesRandom;
-        BOOL reminderEnabled;
-        BOOL untilEnabled;
-        BOOL fromLast;
-
-        NSInteger tid;
-        NSInteger vid;   // 0 => tracker OR not used if start valid
-
-        int saveDate;
-
-        UNMutableNotificationContent *notifContent;
-
-        //trackerObj *to;
-    }*/
-
+     
+     int rid;
+     
+     uint32_t monthDays;
+     uint8_t weekDays;
+     uint8_t everyMode;
+     
+     int everyVal;
+     int start;        // -1 for not used
+     int until;
+     int times;
+     
+     
+     NSString *msg;
+     NSString *soundFileName;
+     
+     BOOL timesRandom;
+     BOOL reminderEnabled;
+     BOOL untilEnabled;
+     BOOL fromLast;
+     
+     NSInteger tid;
+     NSInteger vid;   // 0 => tracker OR not used if start valid
+     
+     int saveDate;
+     
+     UNMutableNotificationContent *notifContent;
+     
+     //trackerObj *to;
+     }*/
+    
     var rid = 0
     var monthDays: UInt32 = 0
     var weekDays: UInt8 = 0
@@ -114,47 +114,47 @@ class notifyReminder: NSObject {
     var saveDate = 0
     var notifContent: UNMutableNotificationContent?
     var uNid: String?
-
+    
     let UNTILFLAG = 0x01 << 0
     let TIMESRFLAG = 0x01 << 1
     let ENABLEFLAG = 0x01 << 2
     let FROMLASTFLAG = 0x01 << 3
-
+    
     override init() {
-
+        
         super.init()
         notifContent = nil
         saveDate = Int(Date().timeIntervalSince1970)
         soundFileName = nil
     }
-
+    
     //@property (nonatomic,retain) trackerObj *to;
-
+    
     //-(id) init:(trackerObj*) tObjIn;
-
+    
     /*
-    - (id)init:(trackerObj*) tObjIn {
-    	if ((self = [self init])) {
-    		//DBGLog(@"init trackerObj id: %d",tid);
-    		self.to = tObjIn;
-            [self initReminderTable];
-            [self nextRid];
-    	}
-    	return self;
-    }
-    */
-
-    convenience init(_ inRid: NSNumber?, to: Any?) {
+     - (id)init:(trackerObj*) tObjIn {
+     if ((self = [self init])) {
+     //DBGLog(@"init trackerObj id: %d",tid);
+     self.to = tObjIn;
+     [self initReminderTable];
+     [self nextRid];
+     }
+     return self;
+     }
+     */
+    
+    convenience init(_ inRid: NSNumber?, to: trackerObj?) {
         self.init()
         //DBGLog(@"init trackerObj id: %d",tid);
         //[self initReminderTable];
-        loadRid(String(format: "rid=%d and tid=%ld", inRid?.intValue ?? 0, Int(to?.toid ?? 0)), to: to)
-        DBGLog("%@", self)
-
+        loadRid(String(format: "rid=%d and tid=%ld", inRid?.intValue ?? 0, Int(to!.toid)), to: to!)
+        DBGLog("\(self)")
+        
     }
-
+    
     init(dict: [AnyHashable : Any]?) {
-
+        
         super.init()
         rid = (dict?["rid"] as? NSNumber)?.intValue ?? 0
         monthDays = (dict?["monthDays"] as? NSNumber)?.uint32Value ?? 0
@@ -166,39 +166,39 @@ class notifyReminder: NSObject {
         times = (dict?["times"] as? NSNumber)?.intValue ?? 0
         msg = dict?["msg"] as? String
         soundFileName = dict?["soundFile"] as? String
-
+        
         putFlags(UInt((dict?["flags"] as? NSNumber)?.uint32Value ?? 0))
-
+        
         tid = (dict?["tid"] as? NSNumber)?.intValue ?? 0
         vid = (dict?["vid"] as? NSNumber)?.intValue ?? 0
-
+        
         saveDate = (dict?["saveDate"] as? NSNumber)?.intValue ?? 0
-        DBGLog("%@", self)
+        DBGLog(String(describing: self))
     }
-
+    
     deinit {
         //DBGLog(@"nr dealloc");
     }
-
-    func save(_ to: Any?) {
+    
+    func save(_ to: trackerObj) {
         let flags = getFlags()
-
-        DBGLog("%@", self)
+        
+        DBGLog(String(describing: self))
         let sql = String(format: "insert or replace into reminders (rid, monthDays, weekDays, everyMode, everyVal, start, until, times, flags, tid, vid, saveDate, msg, soundFileName) values (%ld, %d, %d, %d,%ld, %ld, %ld, %ld, %d, %ld, %ld, %ld, '%@', '%@')", rid, monthDays, weekDays, everyMode, everyVal, start, until, times, flags, tid, vid, saveDate, msg ?? "", soundFileName ?? "")
-        DBGLog("save sql= %@", sql)
-        to?.toExecSql(sql)
+        DBGLog(String("save sql= \(sql)"))
+        to.toExecSql(sql:sql)
         //sql = nil;
     }
-
+    
     /*
      // not used - db updates only on tracker saveConfig
-    - (void) delete:(trackerObj*)to {
-        if (!self.rid) return;
-       sql = [NSString stringWithFormat:@"delete from reminders where rid=%d",self.rid];
-        [to toExecSql:sql];
-      //sql = nil;
-    }
-    */
+     - (void) delete:(trackerObj*)to {
+     if (!self.rid) return;
+     sql = [NSString stringWithFormat:@"delete from reminders where rid=%d",self.rid];
+     [to toExecSql:sql];
+     //sql = nil;
+     }
+     */
     func getFlags() -> UInt {
         var flags: UInt = 0
         if timesRandom {
@@ -215,20 +215,22 @@ class notifyReminder: NSObject {
         }
         return flags
     }
-
+    
     func putFlags(_ flags: UInt) {
         timesRandom = Int(flags) & TIMESRFLAG != 0 ? true : false
         reminderEnabled = Int(flags) & ENABLEFLAG != 0 ? true : false
         untilEnabled = Int(flags) & UNTILFLAG != 0 ? true : false
         fromLast = Int(flags) & FROMLASTFLAG != 0 ? true : false
     }
-
+    
     //-(void) delete:(id)to;
-    func loadRid(_ sqlWhere: String?, to: Any?) {
+    func loadRid(_ sqlWhere: String?, to: trackerObj) {
         var sql = "select rid, monthDays, weekDays, everyMode, everyVal, start, until, times, flags, tid, vid, saveDate, msg from reminders where \(sqlWhere ?? "")"
-        let arr = [Int](repeating: 0, count: 12)
+        //let arr = [Int](repeating: 0, count: 12)
         var flags: UInt = 0
-        let tmp = to?.toQry2I12aS1(&arr, sql: sql)
+        let ias = to.toQry2I12aS1(sql: sql)
+        let (arr, str) = ias!
+        
         //DBGLog(@"read msg: %@",tmp);
         if 0 != arr[0] {
             // && (arr[0] != self.rid)) {
@@ -244,12 +246,12 @@ class notifyReminder: NSObject {
             tid = arr[9]
             vid = arr[10]
             saveDate = arr[11]
-
+            
             putFlags(flags)
-
-            msg = tmp
+            
+            msg = str
             sql = "select soundFileName from reminders where \(sqlWhere ?? "")"
-            soundFileName = to?.toQry2Str(sql)
+            soundFileName = to.toQry2Str(sql:sql)
             if "(null)" == soundFileName {
                 soundFileName = nil
             }
@@ -257,16 +259,16 @@ class notifyReminder: NSObject {
             clearNR()
             rid = 0
             saveDate = Int(Date().timeIntervalSince1970)
-            msg = to?.trackerName
-            tid = to?.toid ?? 0
+            msg = to.trackerName
+            tid = to.toid
         }
-
+        
         //sql = nil;
-
-        DBGLog("%@", self)
+        
+        DBGLog(String(describing: self))
     }
-
-    func dictFromNR() -> [AnyHashable : Any]? {
+    
+    func dictFromNR() -> [String : Any]? {
         let flags = getFlags()
         return [
             "rid": NSNumber(value: rid),
@@ -278,14 +280,14 @@ class notifyReminder: NSObject {
             "until": NSNumber(value: until),
             "times": NSNumber(value: times),
             "msg": msg ?? "",
-            "soundFile": (soundFileName ?? "") ?? "",
+            "soundFile": soundFileName as Any,
             "flags": NSNumber(value: flags),
             "tid": NSNumber(value: tid),
             "vid": NSNumber(value: vid),
             "saveDate": NSNumber(value: saveDate)
         ]
     }
-
+    
     func clearNR() {
         //self.rid=0; // need to keep if set
         monthDays = 0
@@ -311,36 +313,36 @@ class notifyReminder: NSObject {
         vid = 0
         //self.saveDate=0;  // need to keep if set
     }
-
+    
     func hrVal(_ val: Int) -> Int {
         return val / 60
     }
-
+    
     func mnVal(_ val: Int) -> Int {
         return val % 60
     }
-
+    
     func timeStr(_ val: Int) -> String? {
         if -1 == val {
             return "-"
         }
         return String(format: "%02ld:%02ld", hrVal(val), mnVal(val))
     }
-
+    
     override var description: String {
         var desc = String(format: "nr:%ld ", rid)
-
+        
         if start > -1 {
             desc = desc + "start \(timeStr(start) ?? "") "
         }
-
+        
         if untilEnabled {
             desc = desc + "until \(timeStr(until) ?? "") "
         }
-
+        
         if monthDays != 0 {
-            var i: Int
-            var nma = [AnyHashable](repeating: 0, count: 32)
+            //var i: Int
+            var nma:[String] = []
             for i in 0..<32 {
                 if Int(monthDays) & (0x01 << i) != 0 {
                     nma.append("\(i + 1)")
@@ -348,7 +350,7 @@ class notifyReminder: NSObject {
             }
             desc = desc + "monthDays:\(nma.joined(separator: ",")) "
         } else if everyVal != 0 {
-
+            
             switch everyMode {
             case UInt8(EV_HOURS):
                 desc = desc + String(format: "every %ld Hours ", everyVal)
@@ -361,7 +363,7 @@ class notifyReminder: NSObject {
             default:
                 desc = desc + String(format: "every %ld Minutes ", everyVal)
             }
-
+            
             if fromLast {
                 if vid != 0 {
                     desc = desc + String(format: "from last vid:%ld ", vid)
@@ -372,14 +374,14 @@ class notifyReminder: NSObject {
         } else {
             // if (self.nr.weekDays)  = default if nothing set
             desc = desc + "weekdays: "
-
-            let weekdays = [Int](repeating: 0, count: 7)
+            
+            var weekdays = [Int](repeating: 0, count: 7)
             var firstWeekDay: Int
             firstWeekDay = Calendar.current.firstWeekday
             let dateFormatter = DateFormatter()
-            let wdNames: [String]? = nil
-
-            var i: Int
+            var wdNames: [String]? = nil
+            
+            //var i: Int
             for i in 0..<7 {
                 var wd = firstWeekDay + i
                 if wd > 7 {
@@ -388,54 +390,51 @@ class notifyReminder: NSObject {
                 weekdays[i] = wd - 1 // firstWeekDay is 1-indexed, switch to 0-indexed
                 wdNames?[i] = dateFormatter.shortWeekdaySymbols[weekdays[i]]
             }
-
+            
             for i in 0..<7 {
                 if 0 != (Int(weekDays) & (0x01 << weekdays[i])) {
                     desc = desc + "\(wdNames?[i] ?? "") "
                 }
             }
         }
-
+        
         desc = desc + "msg:'\(msg ?? "")' "
         desc = desc + "saveDate:'\(Date(timeIntervalSince1970: TimeInterval(saveDate)))' "
-
+        
         if nil == soundFileName {
             desc = desc + "default sound "
         } else {
             desc = desc + "soundfile \(soundFileName ?? "") "
         }
-
+        
         if reminderEnabled {
             desc = desc + "enabled"
         } else {
             desc = desc + "disabled"
         }
-
+        
         return desc
     }
-
+    
     func create() {
         if nil == notifContent {
-            if nil == (notifContent = UNMutableNotificationContent()) {
-                return
-            }
+            notifContent = UNMutableNotificationContent()
         }
-
-
+        
         //self.notifContent.timeZone = [NSTimeZone defaultTimeZone];
-
+        
         notifContent?.body = msg ?? ""
         notifContent?.title = NSLocalizedString("rTracker reminder", comment: "")
-
+        
         notifContent?.badge = NSNumber(value: 1)
-
+        
         if nil == soundFileName || ("" == soundFileName) {
             notifContent?.sound = UNNotificationSound.default
         } else {
-            notifContent?.sound = UNNotificationSound(named: UNNotificationSoundName(soundFileName))
+            notifContent?.sound = UNNotificationSound(named: UNNotificationSoundName(soundFileName!))
         }
         notifContent?.launchImageName = rTracker_resource.getLaunchImageName() ?? ""
-
+        
         //NSDictionary *infoDict = [NSDictionary dictionaryWithObject:[NSNumber numberWithInt:self.tid] forKey:@"tid"];
         let infoDict = [
             "tid": NSNumber(value: tid),
@@ -444,13 +443,13 @@ class notifyReminder: NSObject {
         notifContent?.userInfo = infoDict
         DBGLog("created.")
     }
-
+    
     func cancelOld() {
         let center = UNUserNotificationCenter.current()
         let idArr = [String(format: "%ld", rid)]
         center.removePendingNotificationRequests(withIdentifiers: idArr)
     }
-
+    
     func schedule(_ targDate: Date?) {
         cancelOld() // remove any notifications set with rid instead of tid-rid
         if nil == notifContent {
@@ -459,67 +458,86 @@ class notifyReminder: NSObject {
         if nil == notifContent {
             return
         }
-
+        
         let center = UNUserNotificationCenter.current()
         /*
-            [center getNotificationSettingsWithCompletionHandler:^(UNNotificationSettings * _Nonnull settings) {
-              if (settings.authorizationStatus != UNAuthorizationStatusAuthorized) {
-                  return; // Notifications not allowed
-              }
-            }];
-            */
+         [center getNotificationSettingsWithCompletionHandler:^(UNNotificationSettings * _Nonnull settings) {
+         if (settings.authorizationStatus != UNAuthorizationStatusAuthorized) {
+         return; // Notifications not allowed
+         }
+         }];
+         */
         if !rTracker_resource.getNotificationsEnabled() {
             return // Notifications not allowed
         }
-
+        
         let idStr = String(format: "%ld-%ld", tid, rid)
-
+        
         var triggerDate: DateComponents? = nil
         if let targDate {
-            triggerDate = Calendar.current.components(
-                .year + .month + .day + .hour + .minute + .second,
-                from: targDate)
+            //triggerDate = Calendar.current.components([.year + .month + .day + .hour + .minute + .second],from: targDate!)
+            let components: Set<Calendar.Component> = [.year, .month, .day, .hour, .minute, .second]
+            triggerDate = Calendar.current.dateComponents(components, from: targDate)
         }
-
+        
         var trigger: UNCalendarNotificationTrigger? = nil
         if let triggerDate {
             trigger = UNCalendarNotificationTrigger(dateMatching: triggerDate, repeats: false)
         }
-
+        
         var request: UNNotificationRequest? = nil
         if let notifContent {
             request = UNNotificationRequest(identifier: idStr, content: notifContent, trigger: trigger)
         }
-
+        
         if let request {
             center.add(request, withCompletionHandler: { error in
                 if let error {
-                    DBGWarn("error scheduling reminder %@: %@", idStr, error)
+                    DBGWarn(String("error scheduling reminder \(idStr): \(error)"))
                 }
             })
         }
-
-        DBGLog("scheduled %@", idStr)
+        
+        DBGLog(String("scheduled \(idStr)"))
     }
-
+    
     func playSound() {
         rTracker_resource.playSound(soundFileName)
     }
-
-    //+(NSMutableArray *) getRidArray:(UNUserNotificationCenter*) center tid:(NSInteger) tid;
-    class func useRidArray(_ center: UNUserNotificationCenter?, tid: Int, callback: @escaping ([AnyHashable]?) -> Void) {
-        var ridArray: [AnyHashable] = []
-        center?.getPendingNotificationRequests(completionHandler: { [self] notifications in
-            for i in 0..<(notifications?.count ?? 0) {
-                let oneEvent = notifications?[i] as? UNNotificationRequest
-                let userInfoCurrent = oneEvent?.content.userInfo
-                if (userInfoCurrent?["tid"] as? NSNumber)?.intValue ?? 0 == tid {
-                    let tidRid = oneEvent?.identifier.components(separatedBy: "-")
-                    ridArray.append(tidRid?[1] ?? "") // just add rid
+    
+    static func useRidArray(_ center: UNUserNotificationCenter, tid: Int, callback: @escaping ([String]) -> Void) {
+        var ridArray = [String]()
+        center.getPendingNotificationRequests { notifications in
+            for notification in notifications {
+                let userInfo = notification.content.userInfo
+                if let notificationTid = userInfo["tid"] as? Int, notificationTid == tid {
+                    let components = notification.identifier.components(separatedBy: "-")
+                    if let rid = components.last {
+                        ridArray.append(rid)
+                    }
                 }
             }
             callback(ridArray)
-        })
-
+        }
     }
+    /*
+     //+(NSMutableArray *) getRidArray:(UNUserNotificationCenter*) center tid:(NSInteger) tid;
+     class func useRidArray(_ center: UNUserNotificationCenter?, tid: Int, callback: @escaping ([AnyHashable]?) -> Void) {
+     var ridArray: [AnyHashable] = []
+     center?.getPendingNotificationRequests(completionHandler: {
+     for i in 0..<notifications.count {
+     let oneEvent = notifications[i] //as? UNNotificationRequest
+     let userInfoCurrent = oneEvent.content.userInfo
+     if (userInfoCurrent["tid"] as? NSNumber)?.intValue ?? 0 == tid {
+     let tidRid = oneEvent.identifier.components(separatedBy: "-")
+     ridArray.append(tidRid[1]) // just add rid
+     }
+     }
+     callback(ridArray)
+     })
+     
+     }
+     */
 }
+     
+    

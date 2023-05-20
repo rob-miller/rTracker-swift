@@ -49,69 +49,82 @@
 import MessageUI
 import UIKit
 
-#if ADVERSION && (!DISABLE_ADS)
-var tracker: trackerObj?
-var dpvc: datePickerVC?
-var dpr: dpRslt?
-var saveFrame = CGRect.zero
-var needSave = false
-var didSave = false
-var fwdRotations = false
-var rejectable = false
-var viewDisappearing = false
-var tlist: trackerList?
-var alertResponse = 0
-var saveTargD = 0
-var tsCalVC: trackerCalViewController?
-var searchSet: [AnyHashable]?
-var rvcTitle: String?
-var aAdSupport: adSupport?
-var tableView: UITableView?
-var prevDateBtn: UIBarButtonItem?
-var postDateBtn: UIBarButtonItem?
-var currDateBtn: UIBarButtonItem?
-var calBtn: UIBarButtonItem?
-var searchBtn: UIBarButtonItem?
-var delBtn: UIBarButtonItem?
-var skip2EndBtn: UIBarButtonItem?
-var flexibleSpaceButtonItem: UIBarButtonItem?
-var fixed1SpaceButtonItem: UIBarButtonItem?
-var saveBtn: UIBarButtonItem?
-var menuBtn: UIBarButtonItem?
-var gt: UIViewController?
-//n
-//updateToolBar
-//targD
-//doGT
-//returnFromGraph
-//rejectTracker
-//- (BOOL) automaticallyForwardAppearanceAndRotationMethodsToChildViewControllers;
+class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDataSource, UITextFieldDelegate, MFMailComposeViewControllerDelegate, UIAdaptivePresentationControllerDelegate {
+
+    var tracker: trackerObj?
+    var saveFrame = CGRect.zero
+    var needSave = false
+    var didSave = false
+    var fwdRotations = false
+    var rejectable = false
+    var viewDisappearing = false
+    var tlist: trackerList?
+    var alertResponse = 0
+    var saveTargD = 0
+    var searchSet: [Int]?
+    var rvcTitle: String?
+    var tableView: UITableView?
+    /*
+    var prevDateBtn: UIBarButtonItem?
+    var postDateBtn: UIBarButtonItem?
+    var currDateBtn: UIBarButtonItem?
+    var calBtn: UIBarButtonItem?
+    var searchBtn: UIBarButtonItem?
+    var delBtn: UIBarButtonItem?
+    var skip2EndBtn: UIBarButtonItem?
+    //var flexibleSpaceButtonItem: UIBarButtonItem?
+    var fixed1SpaceButtonItem: UIBarButtonItem?
+    var saveBtn: UIBarButtonItem?
+    var menuBtn: UIBarButtonItem?
+    */
+    var gt: UIViewController?
+    //n
+    //updateToolBar
+    //targD
+    //doGT
+    //returnFromGraph
+    //rejectTracker
+    //- (BOOL) automaticallyForwardAppearanceAndRotationMethodsToChildViewControllers;
 
 
-var alreadyReturning = false // graphTrackerVC viewWillTransitionToSize() called when we dismissVieControllerAnimated() below, so don't call a second time
-var emCancel = "Cancel"
-var emEmailCsv = "email CSV"
-var emEmailTracker = "email Tracker"
-var emEmailTrackerData = "email Tracker+Data"
-var emItunesExport = "save for PC (iTunes)"
-var emDuplicate = "duplicate entry to now"
-
-class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDataSource, UITextFieldDelegate, MFMailComposeViewControllerDelegate, UIAdaptivePresentationControllerDelegate, ADBannerViewDelegate {
-
+    var alreadyReturning = false // graphTrackerVC viewWillTransitionToSize() called when we dismissVieControllerAnimated() below, so don't call a second time
+    var emCancel = "Cancel"
+    var emEmailCsv = "email CSV"
+    var emEmailTracker = "email Tracker"
+    var emEmailTrackerData = "email Tracker+Data"
+    var emItunesExport = "save for PC (iTunes)"
+    var emDuplicate = "duplicate entry to now"
     //BOOL keyboardIsShown=NO;
 
     // MARK: -
     // MARK: core object methods and support
+    
+    var _dpvc: datePickerVC?
+    var dpvc: datePickerVC {
+        if _dpvc == nil {
+            _dpvc = datePickerVC()
+        }
+        return _dpvc!
+    }
+
+    var _dpr: dpRslt?
+    var dpr: dpRslt {
+        if _dpr == nil {
+            _dpr = dpRslt()
+        }
+        return _dpr!
+    }
+
 
 
     // MARK: -
     // MARK: view support
 
     func showSaveBtn() {
-        if needSave && navigationItem.rightBarButtonItem != saveBtn() {
-            navigationItem.setRightBarButton(saveBtn(), animated: true)
-        } else if !needSave && navigationItem.rightBarButtonItem != menuBtn() {
-            navigationItem.setRightBarButton(menuBtn(), animated: true)
+        if needSave && navigationItem.rightBarButtonItem != _saveBtn {
+            navigationItem.setRightBarButton(saveBtn, animated: true)
+        } else if !needSave && navigationItem.rightBarButtonItem != _menuBtn {
+            navigationItem.setRightBarButton(menuBtn, animated: true)
         }
     }
 
@@ -120,119 +133,42 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     func updateTableCells(_ inVO: valueObj?) {
         var iparr: [AnyHashable] = []
-        let n = 0
+        var n = 0
 
-        for vo in tracker.valObjTable ?? [] {
-            guard let vo = vo as? valueObj else {
-                continue
-            }
+        for vo in tracker!.valObjTable {
             if VOT_FUNC == vo.vtype {
                 vo.display = nil // always redisplay
-                iparr.append(IndexPath(index: 0).adding(n))
+                iparr.append(IndexPath(index: 0).appending(n))
             } else if (inVO?.vid == vo.vid) && (nil == vo.display) {
-                iparr.append(IndexPath(index: 0).adding(n))
+                iparr.append(IndexPath(index: 0).appending(n))
             }
             n += 1
         }
         // n.b. we hardcode number of sections in a tracker tableview here
         if isViewLoaded && view.window != nil {
             if let iparr = iparr as? [IndexPath] {
-                tableView.reloadRows(at: iparr, with: .none)
+                tableView!.reloadRows(at: iparr, with: .none)
             }
         }
 
     }
-
-    #if ADVERSION
-    // handle rtPurchasedNotification
-    @objc func updatePurchased(_ n: Notification?) {
-        rTracker_resource.doQuickAlert("Purchase Successful", msg: "Thank you!", delay: 2, vc: self)
-        #if !DISABLE_ADS
-        if nil != _adSupport {
-            if adSupport()?.bannerView?.isDescendantOf(view) {
-                adSupport()?.bannerView?.removeFromSuperview()
-            }
-            adSupport() = nil
-        }
-        #endif
-        let bg = UIImageView(image: UIImage(named: rTracker_resource.getLaunchImageName() ?? ""))
-        let tableFrame = bg.frame
-        tableFrame.size.height = rTracker_resource.get_visible_size(self).height // - ( 2 * statusBarHeight ) ;
-        tableView.frame = tableFrame
-        tableView.backgroundView = bg
-        tableView.setNeedsDisplay()
-        //[self.tableView reloadData];
-    }
-
-    #endif
 
     // handle rtTrackerUpdatedNotification
-
-    @objc func updateUTC(_ n: Notification?) {
-        DBGLog("UTC update notification from tracker %@", (n?.object as? trackerObj)?.trackerName)
-        var vo: valueObj? = nil
-        let obj = n?.object
-        if type(of: obj) === valueObj.self {
-            vo = n?.object as? valueObj
-            DBGLog("updated vo %@", vo?.valueName)
+    @objc func updateUTC(_ notification: Notification?) {
+        DBGLog(String("UTC update notification from tracker \((notification?.object as? trackerObj)?.trackerName)"))
+        var vo: valueObj?
+        if let obj = notification?.object, type(of: obj) == valueObj.self {
+            vo = obj as? valueObj
+            DBGLog(String("updated vo \(vo?.valueName)"))
         }
-
         updateTableCells(vo)
         needSave = true
         showSaveBtn()
-
-        // write temp tracker here
-        tracker.saveTempTrackerData()
-
+        tracker?.saveTempTrackerData()
         // delete on save or cancel button
         // load if present in viewdidload [?]
-        // delete all on program start    [?]
-
-
+        // delete all on program start [?]
     }
-
-    #if ADVERSION && (!DISABLE_ADS)
-
-    override func viewDidLayoutSubviews() {
-        if !rTracker_resource.getPurchased() {
-            adSupport()?.layoutAnimated(self, tableview: tableView, animated: UIView.areAnimationsEnabled)
-            //[self.adSupport layoutAnimated:self tableview:self.tableView animated:NO];
-        }
-    }
-
-    func bannerViewDidLoadAd(_ banner: ADBannerView?) {
-        adSupport()?.layoutAnimated(self, tableview: tableView, animated: true)
-        //[self.adSupport layoutAnimated:self tableview:self.tableView animated:NO];
-    }
-
-    func bannerView(_ banner: ADBannerView?, didFailToReceiveAdWithError error: Error?) {
-        adSupport()?.layoutAnimated(self, tableview: tableView, animated: true)
-        //[self.adSupport layoutAnimated:self tableview:self.tableView animated:NO];
-    }
-
-    func bannerViewActionShouldBegin(_ banner: ADBannerView?, willLeaveApplication willLeave: Bool) -> Bool {
-        //[self.adSupport stopTimer];
-        return true
-    }
-
-    /*
-     - (void)bannerViewActionDidFinish:(ADBannerView *)banner
-     {
-     //[self.adSupport startTimer];
-     }
-     */
-
-    func adSupport() -> adSupport? {
-        if !rTracker_resource.getPurchased() {
-            if _adSupport == nil {
-                _adSupport = adSupport?.init()
-            }
-        }
-        return _adSupport
-    }
-
-    #endif
-
 
     override func loadView() {
         // Ensure that we don't load an .xib file for this viewcontroller
@@ -256,7 +192,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
         // navigationbar setup
         let backButton = UIBarButtonItem(
-            title: "< \(rvcTitle)" /*@"< rTracker"  // rTracker ... tracks ? */,
+            title: String("< \(rvcTitle)") /*@"< rTracker"  // rTracker ... tracks ? */,
             style: .plain,
             target: self,
             action: #selector(addTrackerController.btnCancel))
@@ -266,7 +202,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         updateToolBar()
 
         // title setup
-        title = tracker.trackerName
+        title = tracker!.trackerName
 
         // tableview setup
         //UIImageView *bg = [[UIImageView alloc] initWithImage:[UIImage imageNamed:[rTracker_resource getLaunchImageName]]];
@@ -275,25 +211,16 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         //CGRect statusBarFrame = [self.navigationController.view.window convertRect:UIApplication.sharedApplication.statusBarFrame toView:self.navigationController.view];
         //CGFloat statusBarHeight = statusBarFrame.size.height;
 
-        let tableFrame = bg.frame
+        var tableFrame = bg.frame
         tableFrame.size.height = rTracker_resource.get_visible_size(self).height //- ( 2 * statusBarHeight ) ;
 
-        #if ADVERSION
-        if !rTracker_resource.getPurchased() {
-            #if !DISABLE_ADS
 
-            tableFrame.size.height -= adSupport()?.bannerView?.frame.size.height ?? 0.0
-            DBGLog("ad h= %f  tfh= %f ", adSupport()?.bannerView?.frame.size.height, tableFrame.size.height)
-            #endif
-        }
-        #endif
-
-        DBGLog("tvf origin x %f y %f size w %f h %f", tableFrame.origin.x, tableFrame.origin.y, tableFrame.size.width, tableFrame.size.height)
+        DBGLog(String("tvf \(tableFrame)"))  // origin x %f y %f size w %f h %f", tableFrame.origin.x, tableFrame.origin.y, tableFrame.size.width, tableFrame.size.height)
         tableView = UITableView(frame: tableFrame, style: .plain) // because getLaunchImageName worked out size! //self.saveFrame
 
         //self.tableView.translatesAutoresizingMaskIntoConstraints = NO;
-        tableView.dataSource = self
-        tableView.delegate = self
+        tableView!.dataSource = self
+        tableView!.delegate = self
 
 
         bg.tag = BGTAG
@@ -302,9 +229,9 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
         setViewMode()
 
-        tableView.separatorStyle = .none
+        tableView!.separatorStyle = .none
         //self.tableView.separatorColor = [UIColor clearColor];
-        view.addSubview(tableView)
+        view.addSubview(tableView!)
 
         // swipe gesture recognizer
 
@@ -324,12 +251,12 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             [self.view addGestureRecognizer:swipe];
             */
 
-        tracker.vc = self
+        tracker!.vc = self
         alertResponse = 0
         saveTargD = 0
 
         //load temp tracker data here if available
-        if tracker.loadTempTrackerData() {
+        if tracker!.loadTempTrackerData() {
             needSave = true
             showSaveBtn()
         }
@@ -338,7 +265,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         setViewMode()
-        tableView.setNeedsDisplay()
+        tableView!.setNeedsDisplay()
         view.setNeedsDisplay()
     }
 
@@ -390,13 +317,13 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         if #available(iOS 13.0, *) {
             if traitCollection.userInterfaceStyle == .dark {
                 // if darkMode
-                tableView.backgroundView = nil
-                tableView.backgroundColor = UIColor.systemBackground
+                tableView!.backgroundView = nil
+                tableView!.backgroundColor = UIColor.systemBackground
                 return
             }
         }
 
-        tableView.backgroundColor = UIColor.clear
+        tableView!.backgroundColor = UIColor.clear
 
     }
 
@@ -406,58 +333,58 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
         viewDisappearing = false
 
-        let f = rTracker_resource.getKeyWindowFrame()
+        var f = rTracker_resource.getKeyWindowFrame()
 
         if f.size.width > f.size.height {
             // already in landscape view
             doGT()
         } else {
-            if f.size.width != tableView.frame.size.width {
+            if f.size.width != tableView!.frame.size.width {
                 f.origin.x = 0.0
                 f.origin.y = 0.0
-                tableView.frame = f
+                tableView!.frame = f
                 setViewMode()
-                tracker.rescanMaxLabel()
-                tableView.reloadData()
+                tracker!.rescanMaxLabel()
+                tableView!.reloadData()
             }
 
-            if dpr() != nil {
-                switch dpr()?.action {
+            if _dpr != nil {
+                switch dpr.action {
                 case DPA_NEW:
-                    tracker.resetData()
+                    tracker!.resetData()
                     //[self updateTrackerTableView];  // moved below
-                    tracker.trackerDate = Date(timeIntervalSince1970: TimeInterval(tracker.noCollideDate(Int(dpr()?.date?.timeIntervalSince1970 ?? 0))))
+                    tracker!.trackerDate = Date(timeIntervalSince1970: TimeInterval(tracker!.noCollideDate(Int(dpr.date!.timeIntervalSince1970))))
                     //[self updateToolBar];
                 case DPA_SET:
-                    if tracker.hasData() {
-                        tracker.change(dpr()?.date)
+                    if tracker!.hasData() {
+                        tracker!.change(dpr.date)
                         needSave = true
                     } else {
-                        tracker.trackerDate = dpr()?.date
+                        tracker!.trackerDate = dpr.date
                     }
                     //[self updateToolBar];
                 case DPA_GOTO:
                     var targD = 0
-                    if nil != dpr()?.date {
+                    if nil != dpr.date {
                         // set to nil to cause reset tracker, ready for new
-                        targD = Int(dpr()?.date?.timeIntervalSince1970 ?? 0)
-                        if !tracker.loadData(targD) {
-                            tracker.trackerDate = dpr()?.date
-                            targD = tracker.prevDate()
+                        targD = Int(dpr.date?.timeIntervalSince1970 ?? 0)
+                        if !tracker!.loadData(targD) {
+                            tracker!.trackerDate = dpr.date
+                            targD = tracker!.prevDate()
                             if targD == 0 {
-                                targD = tracker.postDate()
+                                targD = tracker!.postDate()
                             }
                         }
                     }
                     setTrackerDate(targD)
                 case DPA_GOTO_POST /* for TimesSquare calendar which gives date with time=midnight (= beginning of day) */:
                     var targD = 0
-                    if nil != dpr()?.date {
+                    if nil != dpr.date {
                         // set to nil to cause reset tracker, ready for new
-                        targD = Int(dpr()?.date?.timeIntervalSince1970 ?? 0)
-                        if !tracker.loadData(targD) {
-                            tracker.trackerDate = dpr()?.date
-                            targD = tracker.postDate()
+                        targD = Int(dpr.date?.timeIntervalSince1970 ?? 0)
+                        if !tracker!.loadData(targD) {
+                            tracker!.trackerDate = dpr.date
+                            targD = tracker!.postDate()
                             if targD == 0 {
                                 targD = 0 // if no post date, must mean today so new tracker
                             }
@@ -468,15 +395,15 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 case DPA_CANCEL:
                     break
                 default:
-                    dbgNSAssert(0, "failed to determine dpr action")
+                    dbgNSAssert(false, "failed to determine dpr action")
                 }
-                dpr()?.date = nil
-                dpvc() = nil
-                dpr() = nil
+                dpr.date = nil
+                _dpvc = nil
+                _dpr = nil
             }
 
             NotificationCenter.default.addObserver(
-                tracker,
+                tracker!,
                 selector: #selector(trackerObj.trackerUpdated(_:)),
                 name: NSNotification.Name(rtValueUpdatedNotification),
                 object: nil)
@@ -486,16 +413,6 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 selector: #selector(updateUTC(_:)),
                 name: NSNotification.Name(rtTrackerUpdatedNotification),
                 object: tracker)
-
-            #if ADVERSION
-            if !rTracker_resource.getPurchased() {
-                NotificationCenter.default.addObserver(
-                    self,
-                    selector: #selector(RootViewController.updatePurchased(_:)),
-                    name: NSNotification.Name(rtPurchasedNotification),
-                    object: nil)
-            }
-            #endif
 
             //DBGLog(@"add kybd will show notifcation");
             keyboardIsShown = false
@@ -521,17 +438,6 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
             updateToolBar()
 
-
-            #if ADVERSION
-            if !rTracker_resource.getPurchased() {
-                #if !DISABLE_ADS
-                adSupport()?.initBannerView(self)
-                if let aBannerView = adSupport()?.bannerView {
-                    view.addSubview(aBannerView)
-                }
-                #endif
-            }
-            #endif
         }
 
         super.viewWillAppear(animated)
@@ -541,9 +447,9 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
         //DBGLog(@"utc view did appear!");
         // in case we just regained active after interruption -- sadly view still seen if done in viewWillAppear
-        if (nil != tracker) && (tracker.getValue() > privacyV.getPrivacyValue()) {
+        if (nil != tracker) && (tracker!.getPrivacyValue() > privacyValue) {
             //[self.navigationController popViewControllerAnimated:YES];
-            tracker.activeControl?.resignFirstResponder()
+            tracker!.activeControl?.resignFirstResponder()
 
             if rTracker_resource.getSavePrivate() {
                 btnCancel()
@@ -552,12 +458,12 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             }
         }
         //[self updateTrackerTableView];  // need for ios5 after set date in graph and return
-        tableView.reloadData()
+        tableView!.reloadData()
         didSave = false
 
         if !rTracker_resource.getToldAboutSwipe() {
             // if not yet told
-            if 0 != tracker.prevDate() {
+            if 0 != tracker!.prevDate() {
                 //  and have previous data
                 rTracker_resource.alert("Swipe control", msg: "Swipe for earlier entries", vc: self)
                 rTracker_resource.setToldAboutSwipe(true)
@@ -566,19 +472,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             }
         }
 
-        #if ADVERSION
-        if !rTracker_resource.getPurchased() {
-            #if !DISABLE_ADS
-            adSupport()?.layoutAnimated(self, tableview: tableView, animated: false)
-            #endif
-        }
-        #endif
-
         super.viewDidAppear(animated)
-
-
-
-
     }
 
     override func viewWillDisappear(_ animated: Bool) {
@@ -595,7 +489,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
         // unregister this tracker for value updated notifications
         NotificationCenter.default.removeObserver(
-            tracker,
+            tracker!,
             name: NSNotification.Name(rtValueUpdatedNotification),
             object: nil)
 
@@ -604,14 +498,6 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             self,
             name: NSNotification.Name(rtTrackerUpdatedNotification),
             object: nil)
-
-        #if ADVERSION
-        //unregister for purchase notices
-        NotificationCenter.default.removeObserver(
-            self,
-            name: NSNotification.Name(rtPurchasedNotification),
-            object: nil)
-        #endif
 
         //DBGLog(@"remove kybd will show notifcation");
         // unregister for keyboard notifications while not visible.
@@ -654,10 +540,10 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     */
 
     func rejectTracker() {
-        DBGLog("rejecting input tracker %ld %@  prevTID= %ld", Int(tracker.toid), tracker.trackerName, tracker.prevTID)
-        tlist.updateTLtid(Int(tracker.toid), new: tracker.prevTID) // revert topLevel to before
-        tracker.deleteTrackerDB()
-        rTracker_resource.unStashTracker(tracker.prevTID) // this view and tracker going away now so dont need to clear rejectable or prevTID
+        DBGLog(String("rejecting input tracker \(tracker!.toid) \(tracker!.trackerName)  prevTID= \(tracker!.prevTID)"))
+        tlist!.updateTLtid(Int(tracker!.toid), new: tracker!.prevTID) // revert topLevel to before
+        tracker!.deleteTrackerDB()
+        rTracker_resource.unStashTracker(tracker!.prevTID) // this view and tracker going away now so dont need to clear rejectable or prevTID
     }
 
     override func didMove(toParent parent: UIViewController?) {
@@ -774,11 +660,11 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                     DBGLog("utc did rotate to interface orientation portrait upside down")
                 case .landscapeLeft:
                     DBGLog("utc did rotate to interface orientation landscape left")
-                    tracker.activeControl?.resignFirstResponder()
+                    tracker!.activeControl?.resignFirstResponder()
                     doGT()
                 case .landscapeRight:
                     DBGLog("utc did rotate to interface orientation landscape right")
-                    tracker.activeControl?.resignFirstResponder()
+                    tracker!.activeControl?.resignFirstResponder()
                     doGT()
                 default:
                     DBGWarn("utc did rotate but can't tell to where")
@@ -790,58 +676,6 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     }
 
-    /*
-    - (void)willRotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration {
-    	switch (toInterfaceOrientation) {
-    		case UIInterfaceOrientationPortrait:
-    			DBGLog(@"utc will rotate to interface orientation portrait duration: %f sec",duration);
-    			break;
-    		case UIInterfaceOrientationPortraitUpsideDown:
-    			DBGLog(@"utc will rotate to interface orientation portrait upside down duration: %f sec", duration);
-    			break;
-    		case UIInterfaceOrientationLandscapeLeft:
-    			DBGLog(@"utc will rotate to interface orientation landscape left duration: %f sec", duration);
-                [self.tracker.activeControl resignFirstResponder];
-
-                // if ( SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"6.0") ) { [self doGT]; }
-
-    			break;
-    		case UIInterfaceOrientationLandscapeRight:
-    			DBGLog(@"utc will rotate to interface orientation landscape right duration: %f sec", duration);
-                [self.tracker.activeControl resignFirstResponder];
-
-                // if ( SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"6.0") ) { [self doGT]; }
-
-    			break;
-    		default:
-    			DBGWarn(@"utc will rotate but can't tell to where duration: %f sec", duration);
-    			break;			
-    	}
-    }
-    */
-
-    // * not ios6
-    // YES should be default anyway so no need to subclass  ??
-    /*
-    - (BOOL) automaticallyForwardAppearanceAndRotationMethodsToChildViewControllers {
-
-        DBGLog(@"autoFwdRot returning %d",self.fwdRotations);
-        //return self.fwdRotations;
-        return YES;
-    }
-     */
-
-    /* YES is default
-    - (BOOL) shouldAutomaticallyForwardRotationMethods {
-        return YES;
-    }
-
-    - (BOOL)shouldAutomaticallyForwardAppearanceMethods {
-        return YES;
-    }
-     */
-
-
     func doGT() {
         DBGLog("start present graph")
 
@@ -850,11 +684,11 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         gt?.modalPresentationStyle = .fullScreen // need for iPad, this is default for 'horizontally compact environment'
 
         gt?.tracker = tracker
-        if tracker.hasData() {
-            dpr()?.date = tracker.trackerDate
-            dpr()?.action = DPA_GOTO
+        if tracker!.hasData() {
+            dpr.date = tracker!.trackerDate
+            dpr.action = DPA_GOTO
         }
-        gt?.dpr = dpr()
+        gt?.dpr = dpr
         gt?.parentUTC = self
 
         self.gt = gt
@@ -936,30 +770,30 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     @objc func keyboardWillShow(_ n: Notification?) {
         DBGLog("UTC keyboardwillshow")
 
-        let coff = tableView.contentOffset
+        let coff = tableView!.contentOffset
         //DBGLog(@"coff x=%f y=%f",coff.x,coff.y);
         //DBGLog(@"k will show, y= %f",viewFrame.origin.y);
 
         var boty: CGFloat
 
         #if DEBUGLOG
-        let ac = tracker.activeControl
-        var acsv = ac?.forBaselineLayout()
-        var vf = acsv?.frame
-        DBGLog("frame1: %f %f %f %f", vf?.origin.x, vf?.origin.y, vf?.size.width, vf?.size.height)
-        acsv = ac?.superview
-        vf = acsv?.frame
-        DBGLog("frame2: %f %f %f %f", vf?.origin.x, vf?.origin.y, vf?.size.width, vf?.size.height)
-        acsv = ac?.superview?.superview
-        vf = acsv?.frame
-        DBGLog("frame3: %f %f %f %f", vf?.origin.x, vf?.origin.y, vf?.size.width, vf?.size.height)
-        acsv = ac?.superview?.superview?.superview
-        vf = acsv?.frame
-        DBGLog("frame4: %f %f %f %f", vf?.origin.x, vf?.origin.y, vf?.size.width, vf?.size.height)
+        let ac = tracker!.activeControl
+        var acsv = ac!.forBaselineLayout()
+        var vf = acsv.frame
+        DBGLog(String("frame1: \(vf.origin.x) \(vf.origin.y) \(vf.size.width) \(vf.size.height)"))
+        acsv = ac!.superview!
+        vf = acsv.frame
+        DBGLog(String("frame2: \(vf.origin.x) \(vf.origin.y) \(vf.size.width) \(vf.size.height)"))
+        acsv = (ac?.superview?.superview)!
+        vf = acsv.frame
+        DBGLog(String("frame3: \(vf.origin.x) \(vf.origin.y) \(vf.size.width) \(vf.size.height)"))
+        acsv = (ac?.superview?.superview?.superview)!
+        vf = acsv.frame
+        DBGLog(String("frame4: \(vf.origin.x) \(vf.origin.y) \(vf.size.width) \(vf.size.height)"))
 
         acsv = view
-        vf = acsv?.frame
-        DBGLog("self frame: %f %f %f %f", vf?.origin.x, vf?.origin.y, vf?.size.width, vf?.size.height)
+        vf = acsv.frame
+        DBGLog(String("self frame: \(vf.origin.x) \(vf.origin.y) \(vf.size.width) \(vf.size.height)"))
 
         #endif
         /*
@@ -972,10 +806,10 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 boty += self.tracker.activeControl.superview.superview.superview.frame.size.height;
             } else {  // ios 8 and above
              */
-        boty = (tracker.activeControl?.superview?.superview?.frame.origin.y ?? 0.0) + (tracker.activeControl?.superview?.superview?.frame.size.height ?? 0.0) - coff.y
+        boty = (tracker!.activeControl?.superview?.superview?.frame.origin.y ?? 0.0) + (tracker!.activeControl?.superview?.superview?.frame.size.height ?? 0.0) - coff.y
         //}
 
-        DBGLog("dispatching to wsk, boty= %f kis=%d", boty, keyboardIsShown)
+        DBGLog(String("dispatching to wsk, boty= (boty) kis=(keyboardIsShown)"))
         rTracker_resource.willShowKeyboard(n, view: view, boty: boty)
 
 
@@ -1049,12 +883,12 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         #if DEBUGLOG
-        let touch = touches.first as? UITouch
+        let touch = touches.first
         let touchPoint = touch?.location(in: view)
-        DBGLog("I am touched at %f, %f.", touchPoint?.x, touchPoint?.y)
+        DBGLog(String("I am touched at \(touchPoint!.x), \(touchPoint!.y)."))
         #endif
 
-        tracker.activeControl?.resignFirstResponder()
+        tracker!.activeControl?.resignFirstResponder()
     }
 
     // MARK: -
@@ -1103,17 +937,19 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
      }
      */
 
-    func saveBtn() -> UIBarButtonItem? {
+    var _saveBtn: UIBarButtonItem?
+    var saveBtn: UIBarButtonItem {
         if _saveBtn == nil {
             _saveBtn = UIBarButtonItem(
                 barButtonSystemItem: .save,
                 target: self,
                 action: #selector(addTrackerController.btnSave))
         }
-        return _saveBtn
+        return _saveBtn!
     }
 
-    func menuBtn() -> UIBarButtonItem? {
+    var _menuBtn: UIBarButtonItem?
+    var menuBtn: UIBarButtonItem {
         if _menuBtn == nil {
             if rejectable {
                 _menuBtn = UIBarButtonItem(
@@ -1121,36 +957,23 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                     style: .plain,
                     target: self,
                     action: #selector(btnAccept))
-                _menuBtn.tintColor = .green
+                _menuBtn!.tintColor = .green
             } else {
                 _menuBtn = UIBarButtonItem(
                     barButtonSystemItem: .action,
                     target: self,
                     action: #selector(btnMenu))
-                /*
-                           // can export or duplicate last to now
-                           else {
-                            _menuBtn = [[UIBarButtonItem alloc]
-                                       initWithTitle:@"Export"
-                                       style:UIBarButtonItemStylePlain
-                                       target:self
-                                       action:@selector(iTunesExport)];
-                        }
-                           */
             }
         }
 
-        return _menuBtn
+        return _menuBtn!
     }
 
     // MARK: -
     // MARK: datepicker support
 
     func clearVoDisplay() {
-        for vo in tracker.valObjTable ?? [] {
-            guard let vo = vo as? valueObj else {
-                continue
-            }
+        for vo in tracker!.valObjTable {
             //if (vo.vtype == VOT_FUNC)
             vo.display = nil // always redisplay
         }
@@ -1162,15 +985,12 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         //DBGLog(@"utc: updateTrackerTableView");
         DispatchQueue.main.async(execute: { [self] in
 
-            for vo in tracker.valObjTable ?? [] {
-                guard let vo = vo as? valueObj else {
-                    continue
-                }
+            for vo in tracker!.valObjTable {
                 //if (vo.vtype == VOT_FUNC)
                 vo.display = nil // always redisplay
             }
 
-            tableView.reloadData()
+            tableView!.reloadData()
         })
 
         //[(UITableView *) self.view reloadData];
@@ -1182,73 +1002,48 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
         var tbi: [AnyHashable] = []
 
-        let prevD = tracker.prevDate()
-        let postD = tracker.postDate()
-        let lastD = tracker.lastDate()
-        let currD = Int(tracker.trackerDate?.timeIntervalSince1970 ?? 0)
+        let prevD = tracker!.prevDate()
+        let postD = tracker!.postDate()
+        let lastD = tracker!.lastDate()
+        let currD = Int(tracker!.trackerDate?.timeIntervalSince1970 ?? 0)
         /*
         	DBGLog(@"prevD = %d %@",prevD,[NSDate dateWithTimeIntervalSince1970:prevD]);
         	DBGLog(@"currD = %d %@",currD,[NSDate dateWithTimeIntervalSince1970:currD]);
         	DBGLog(@"postD = %d %@",postD,[NSDate dateWithTimeIntervalSince1970:postD]);
         	DBGLog(@"lastD = %d %@",lastD,[NSDate dateWithTimeIntervalSince1970:lastD]);
         */
-        currDateBtn() = nil
+        _currDateBtn = nil
 
         if postD != 0 || (lastD == currD) {
-            if let aDelBtn = delBtn() {
-                tbi.append(aDelBtn)
-            }
+            tbi.append(delBtn)
+            
         } else {
-            if let aFixed1SpaceButtonItem = fixed1SpaceButtonItem() {
-                tbi.append(aFixed1SpaceButtonItem)
-            }
+            tbi.append(fixed1SpaceButtonItem)
         }
 
-        if let aFlexibleSpaceButtonItem = flexibleSpaceButtonItem() {
-            tbi.append(aFlexibleSpaceButtonItem)
-        }
+        tbi.append(flexibleSpaceButtonItem)
 
-        if let aCurrDateBtn = currDateBtn() {
-            tbi.append(aCurrDateBtn)
-        }
+        tbi.append(currDateBtn)
 
-        if let aFlexibleSpaceButtonItem = flexibleSpaceButtonItem() {
-            tbi.append(aFlexibleSpaceButtonItem)
-        }
+        tbi.append(flexibleSpaceButtonItem)
+
         if (prevD != 0) || (postD != 0) || (lastD == currD) {
-            if let aCalBtn = calBtn() {
-                tbi.append(aCalBtn)
-            }
+            tbi.append(calBtn)
         } else {
-            if let aFixed1SpaceButtonItem = fixed1SpaceButtonItem() {
-                tbi.append(aFixed1SpaceButtonItem)
-            }
+            tbi.append(fixed1SpaceButtonItem)
         }
-        if let aFlexibleSpaceButtonItem = flexibleSpaceButtonItem() {
-            tbi.append(aFlexibleSpaceButtonItem)
-        }
+        tbi.append(flexibleSpaceButtonItem)
 
         if nil != searchSet {
-            if let aSearchBtn = searchBtn() {
-                tbi.append(aSearchBtn)
-            }
+            tbi.append(searchBtn)
         } else {
-            if let aFixed1SpaceButtonItem = fixed1SpaceButtonItem() {
-                tbi.append(aFixed1SpaceButtonItem)
-            }
+            tbi.append(fixed1SpaceButtonItem)
         }
-        if let aFlexibleSpaceButtonItem = flexibleSpaceButtonItem() {
-            tbi.append(aFlexibleSpaceButtonItem)
-        }
-
+        tbi.append(flexibleSpaceButtonItem)
         if postD != 0 || (lastD == currD) {
-            if let aSkip2EndBtn = skip2EndBtn() {
-                tbi.append(aSkip2EndBtn)
-            }
+            tbi.append(skip2EndBtn)
         } else {
-            if let aFixed1SpaceButtonItem = fixed1SpaceButtonItem() {
-                tbi.append(aFixed1SpaceButtonItem)
-            }
+            tbi.append(fixed1SpaceButtonItem)
         }
 
         //[tbi addObject:[self testBtn]];
@@ -1263,7 +1058,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             return
         }
 
-        if alertResponse {
+        if alertResponse != 0 {
             if 1 == choice {
                 // save
                 saveActions()
@@ -1298,23 +1093,23 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         if 0 == choice {
             DBGLog("cancelled")
         } else {
-            var targD = tracker.prevDate()
+            var targD = tracker!.prevDate()
             if targD == 0 {
-                targD = tracker.postDate()
+                targD = tracker!.postDate()
             }
-            tracker.deleteCurrEntry()
+            tracker!.deleteCurrEntry()
             setTrackerDate(targD)
         }
     }
 
     func duplicateEntry() {
-        tracker.trackerDate = Date()
+        tracker!.trackerDate = Date()
         needSave = true
 
         showSaveBtn()
 
         // write temp tracker here
-        tracker.saveTempTrackerData()
+        tracker!.saveTempTrackerData()
         updateToolBar()
         updateTrackerTableView()
 
@@ -1327,7 +1122,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
         DBGLog("exporting tracker:")
         #if DEBUGLOG
-        tracker.describe()
+        tracker!.describe()
         #endif
         //[rTracker_resource startProgressBar:self.view navItem:self.navigationItem disable:YES];
         let navframe = navigationController?.navigationBar.frame
@@ -1370,7 +1165,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     */
 
     func alertChkSave() {
-        let title = (tracker.trackerName ?? "") + " modified" // 'modified' needed by handler
+        let title = tracker!.trackerName! + " modified" // 'modified' needed by handler
         let msg = "Save this record before leaving?"
         let btn0 = "Cancel"
         let btn1 = "Save"
@@ -1425,13 +1220,13 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         }
 
         if targD == 0 {
-            DBGLog(" setTrackerDate: %d = reset to now", targD)
-            tracker.resetData()
+            DBGLog(String(" setTrackerDate: \(targD) = reset to now"))
+            tracker!.resetData()
         } else if targD < 0 {
-            DBGLog("setTrackerDate: %d = no earlier date", targD)
+            DBGLog(String("setTrackerDate: \(targD) = no earlier date"))
         } else {
-            DBGLog(" setTrackerDate: %d = %@", targD, Date(timeIntervalSince1970: TimeInterval(targD)))
-            tracker.loadData(targD)
+            DBGLog(String(" setTrackerDate: \(targD) = \(Date(timeIntervalSince1970: TimeInterval(targD)))"))
+            _ = tracker!.loadData(targD)
         }
         needSave = false // dumping anything not saved by going to another date.
         showSaveBtn()
@@ -1447,12 +1242,12 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     }
 
     func leaveTracker() {
-        tracker.removeTempTrackerData()
+        tracker!.removeTempTrackerData()
         if didSave {
-            tracker.setReminders() // saved data may change reminder action so wipe and set again
+            tracker!.setReminders() // saved data may change reminder action so wipe and set again
             didSave = false
         } else {
-            tracker.confirmReminders() // else just confirm any enabled reminders have one scheduled
+            tracker!.confirmReminders() // else just confirm any enabled reminders have one scheduled
         }
         // took out because need default 'back button' = "<name>'s tracks" but can't set action only for that button -- need to catch in viewWillDisappear  -- FAILED
         navigationController?.popViewController(animated: true)
@@ -1473,15 +1268,15 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     func saveActions() {
         if rejectable {
-            if tracker.prevTID != 0 {
-                rTracker_resource.rmStashedTracker(tracker.prevTID)
-                tracker.prevTID = 0
+            if tracker!.prevTID != 0 {
+                rTracker_resource.rmStashedTracker(tracker!.prevTID)
+                tracker!.prevTID = 0
             }
             rejectable = false
             checkPrivWarn()
         }
 
-        tracker.saveData()
+        tracker!.saveData()
         needSave = false
 
     }
@@ -1496,12 +1291,12 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             return
         }
 
-        if (tracker.optDict)?["savertn"] == "0" {
+        if (tracker!.optDict)["savertn"] as! String == "0" {
             // default:1
             // do not return to tracker list after save, so generate clear form
-            if !(toolbarItems?.contains(postDateBtn) ?? false) {
-                tracker.resetData()
-            }
+            //if !(toolbarItems?.contains(postDateBtn) ?? false) {
+            tracker!.resetData()
+            //}
             updateToolBar()
             updateTrackerTableView()
             needSave = false
@@ -1526,29 +1321,29 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         autoreleasepool {
             //DBGLog(@"start export");
 
-            tracker.saveToItunes()
+            _ = tracker!.saveToItunes()
             safeDispatchSync({ [self] in
                 rTracker_resource.finishProgressBar(view, navItem: navigationItem, disable: true)
             })
-            rTracker_resource.alert("Tracker saved", msg: "\(tracker.trackerName ?? "")_out.csv and _out.plist files have been saved to the rTracker Documents directory on this device.  Access them through iTunes on your PC/Mac, or with a program like iExplorer from Macroplant.com.  Import by changing the names to _in.csv and _in.plist, and read about .rtcsv file import capabilities in the help pages.", vc: self)
+            rTracker_resource.alert("Tracker saved", msg: "\(tracker!.trackerName ?? "")_out.csv and _out.plist files have been saved to the rTracker Documents directory on this device.  Access them through iTunes on your PC/Mac, or with a program like iExplorer from Macroplant.com.  Import by changing the names to _in.csv and _in.plist, and read about .rtcsv file import capabilities in the help pages.", vc: self)
         }
     }
 
     @IBAction func btnMenu() {
 
         //int prevD = (int)[self.tracker prevDate];
-        let postD = tracker.postDate()
-        let lastD = tracker.lastDate()
-        let currD = Int(tracker.trackerDate?.timeIntervalSince1970 ?? 0)
+        let postD = tracker!.postDate()
+        let lastD = tracker!.lastDate()
+        let currD = Int(tracker!.trackerDate?.timeIntervalSince1970 ?? 0)
         /*
              DBGLog(@"prevD = %d %@",prevD,[NSDate dateWithTimeIntervalSince1970:prevD]);
              DBGLog(@"currD = %d %@",currD,[NSDate dateWithTimeIntervalSince1970:currD]);
              DBGLog(@"postD = %d %@",postD,[NSDate dateWithTimeIntervalSince1970:postD]);
              DBGLog(@"lastD = %d %@",lastD,[NSDate dateWithTimeIntervalSince1970:lastD]);
              */
-        currDateBtn() = nil
+        _currDateBtn = nil
 
-        let title = "\(tracker.trackerName ?? "") tracker"
+        let title = "\(tracker!.trackerName ?? "") tracker"
         let msg: String? = nil
         // NSString *btn5 = (postD != 0 || (lastD == currD)) ? emDuplicate : nil;
 
@@ -1597,25 +1392,22 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         var msg: String?
         if vpm > tpriv {
             if tpriv > PRIVDFLT {
-                msg = String(format: "Set a privacy level greater than %ld to see the %@ tracker, and greater than %ld to see all items in it", tpriv, tracker.trackerName ?? "", vpm)
+                msg = String(format: "Set a privacy level greater than %ld to see the %@ tracker, and greater than %ld to see all items in it", tpriv, tracker!.trackerName ?? "", vpm)
             } else {
-                msg = String(format: "Set a privacy level greater than %ld to see all items in the %@ tracker", vpm, tracker.trackerName ?? "")
+                msg = String(format: "Set a privacy level greater than %ld to see all items in the %@ tracker", vpm, tracker!.trackerName ?? "")
             }
         } else {
-            msg = String(format: "Set a privacy level greater than %ld to see the %@ tracker", tpriv, tracker.trackerName ?? "")
+            msg = String(format: "Set a privacy level greater than %ld to see the %@ tracker", tpriv, tracker!.trackerName ?? "")
         }
         rTracker_resource.alert("Privacy alert", msg: msg, vc: self)
     }
 
     func checkPrivWarn() {
-        let tpriv = ((tracker.optDict)?["privacy"] as? NSNumber)?.intValue ?? 0
+        let tpriv = ((tracker!.optDict)["privacy"] as? NSNumber)?.intValue ?? 0
         var vprivmax = PRIVDFLT
 
-        for vo in tracker.valObjTable ?? [] {
-            guard let vo = vo as? valueObj else {
-                continue
-            }
-            vo.vpriv = ((vo.optDict)?["privacy"] as? NSNumber)?.intValue ?? 0
+        for vo in tracker!.valObjTable {
+            vo.vpriv = Int(vo.optDict["privacy"]!)!
             if vo.vpriv > vprivmax {
                 vprivmax = vo.vpriv
             }
@@ -1629,20 +1421,11 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     @IBAction func btnAccept() {
 
-        #if ADVERSION
-        if !rTracker_resource.getPurchased() {
-            if ADVER_TRACKER_LIM < (tlist.topLayoutIDs?.count ?? 0) {
-                //[rTracker_resource buy_rTrackerAlert];
-                rTracker_resource.replaceRtrackerA(self)
-                return
-            }
-        }
-        #endif
 
         DBGLog("accepting tracker")
-        if tracker.prevTID != 0 {
-            rTracker_resource.rmStashedTracker(tracker.prevTID)
-            tracker.prevTID = 0
+        if tracker!.prevTID != 0 {
+            rTracker_resource.rmStashedTracker(tracker!.prevTID)
+            tracker!.prevTID = 0
         }
         rejectable = false
         //[self.tlist loadTopLayoutTable];
@@ -1651,28 +1434,28 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     }
 
     @objc func handleViewSwipeRight(_ gesture: UISwipeGestureRecognizer?) {
-        if !tracker.swipeEnable {
+        if !tracker!.swipeEnable {
             return
         }
-        var targD = tracker.prevDate()
+        var targD = tracker!.prevDate()
         if targD == 0 {
             targD = -1
         }
         setTrackerDate(targD)
 
         if targD > 0 {
-            tableView.reloadSections(NSIndexSet(index: 0) as IndexSet, with: .right)
+            tableView!.reloadSections(NSIndexSet(index: 0) as IndexSet, with: .right)
         }
     }
 
     @objc func handleViewSwipeLeft(_ gesture: UISwipeGestureRecognizer?) {
-        if !tracker.swipeEnable {
+        if !tracker!.swipeEnable {
             return
         }
-        let targD = tracker.postDate()
+        let targD = tracker!.postDate()
         setTrackerDate(targD)
         if targD > 0 {
-            tableView.reloadSections(NSIndexSet(index: 0) as IndexSet, with: .left)
+            tableView!.reloadSections(NSIndexSet(index: 0) as IndexSet, with: .left)
         }
 
     }
@@ -1681,95 +1464,23 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         setTrackerDate(0)
     }
 
-    func dpvc() -> datePickerVC? {
-        if _dpvc == nil {
-            _dpvc = datePickerVC()
-        }
-        return _dpvc
-    }
-
-    func dpr() -> dpRslt? {
-        if _dpr == nil {
-            _dpr = dpRslt()
-        }
-        return _dpr
-    }
-
-    // not called
-    //- (void)presentationControllerDidDismiss:(UIPresentationController *)dpvc {
-    //    [self handleDPR];
-    //}
-
     @objc func btnCurrDate() {
         //DBGLog(@"pressed date becuz its a button, should pop up a date picker....");
 
-        dpvc()?.myTitle = "Date for \(tracker.trackerName ?? "")"
-        dpr()?.date = tracker.trackerDate
-        dpvc()?.dpr = dpr()
+        dpvc.myTitle = "Date for \(tracker!.trackerName ?? "")"
+        dpr.date = tracker!.trackerDate
+        dpvc.dpr = dpr
 
         //CGRect f = self.view.frame;
 
-        dpvc()?.modalTransitionStyle = .coverVertical
-        dpvc()?.presentationController?.delegate = self // need for ios 13 to access viewWillAppear as presentationControllerDidDismiss not firing
-        if let aDpvc = dpvc() {
-            present(aDpvc, animated: true)
-        }
-
-        /*
-
-            CGRect viewFrame = self.view.frame;
-
-        	UIView *haveView = [self.view viewWithTag:kViewTag2];
-
-        	if (haveView) {
-        		if (haveView.frame.origin.y == self.view.frame.size.height) {// is hidden
-        			viewFrame.origin.y = self.view.frame.origin.y + 100;
-        			self.table.userInteractionEnabled = NO;
-        		} else {  // is up
-        			viewFrame.origin.y = self.view.frame.size.height;
-        			self.table.userInteractionEnabled = YES;
-        		}
-
-        		[UIView beginAnimations:nil context:NULL];
-        		[UIView setAnimationBeginsFromCurrentState:YES];
-        		[UIView setAnimationDuration:kAnimationDuration];
-
-        		[haveView setFrame:viewFrame];		
-        		[UIView commitAnimations];
-
-        		//[viewToRemove removeFromSuperview];
-        	} else {
-        		viewFrame.origin.y = viewFrame.size.height;
-
-        		UIView *myView = [[UIView alloc] initWithFrame:viewFrame];
-        		myView.backgroundColor = [UIColor whiteColor];
-        		myView.tag = kViewTag2;
-
-        		[self buildDatePickerView:myView];
-
-
-        		[UIView beginAnimations:nil context:NULL];
-        		[UIView setAnimationBeginsFromCurrentState:YES];
-        		[UIView setAnimationDuration:kAnimationDuration];
-
-        		self.table.userInteractionEnabled = NO;
-
-        		[self.view addSubview:myView];
-        		//viewFrame.size.height -=100;
-        		viewFrame.origin.y = self.view.frame.origin.y + 100;
-        		[myView setFrame:viewFrame];
-
-        		[UIView commitAnimations];
-        	}
-
-        	 */
-
-
+        dpvc.modalTransitionStyle = .coverVertical
+        dpvc.presentationController?.delegate = self // need for ios 13 to access viewWillAppear as presentationControllerDidDismiss not firing
+        present(dpvc, animated: true)
     }
 
     @objc func btnDel() {
         let title = "Delete entry"
-        let msg = "Really delete \(tracker.trackerName ?? "") entry \(tracker.trackerDate?.description(with: NSLocale.current) ?? "")?"
+        let msg = "Really delete \(tracker!.trackerName ?? "") entry \(tracker!.trackerDate?.description(with: NSLocale.current) ?? "")?"
         let btn0 = "Cancel"
         let btn1 = "Yes, delete"
 
@@ -1796,6 +1507,14 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     // MARK: timesSquare calendar vc
 
 
+    var _tsCalVC: trackerCalViewController?
+    var tsCalVC: trackerCalViewController {
+        if nil == _tsCalVC {
+            _tsCalVC = trackerCalViewController()
+        }
+        return _tsCalVC!
+    }
+
     @objc func btnCal() {
         DBGLog("cal btn")
         if needSave {
@@ -1805,28 +1524,15 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         }
 
         //self.dpvc.myTitle = [NSString stringWithFormat:@"Date for %@", self.tracker.trackerName];
-        dpr()?.date = tracker.trackerDate
-        tsCalVC()?.dpr = dpr()
-        tsCalVC()?.tracker = tracker
-        tsCalVC()?.parentUTC = self
-        tsCalVC()?.presentationController?.delegate = self // need for ios 13 to access viewWillAppear as presentationControllerDidDismiss not firing
+        dpr.date = tracker!.trackerDate
+        tsCalVC.dpr = dpr
+        tsCalVC.tracker = tracker
+        tsCalVC.parentUTC = self
+        tsCalVC.presentationController?.delegate = self // need for ios 13 to access viewWillAppear as presentationControllerDidDismiss not firing
 
-        tsCalVC()?.modalTransitionStyle = .coverVertical
-        //
-        //if ( SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"6.0") ) {
-        if let aTsCalVC = tsCalVC() {
-            present(aTsCalVC, animated: true)
-        }
-        //} else {
-        //    [self presentModalViewController:self.tsCalVC animated:YES];
-        //}
-    }
+        tsCalVC.modalTransitionStyle = .coverVertical
 
-    func tsCalVC() -> trackerCalViewController? {
-        if nil == _tsCalVC {
-            _tsCalVC = trackerCalViewController()
-        }
-        return _tsCalVC
+        present(tsCalVC, animated: true)
     }
 
     // MARK: -
@@ -1860,12 +1566,13 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     */
 
-    func currDateBtn() -> UIBarButtonItem? {
+    var _currDateBtn: UIBarButtonItem?
+    var currDateBtn: UIBarButtonItem {
         //DBGLog(@"currDateBtn called");
         if _currDateBtn == nil {
 
             var datestr: String? = nil
-            if let aTrackerDate = tracker.trackerDate {
+            if let aTrackerDate = tracker!.trackerDate {
                 datestr = DateFormatter.localizedString(
                     from: aTrackerDate,
                     dateStyle: .short,
@@ -1880,41 +1587,44 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 action: #selector(btnCurrDate))
         }
 
-        return _currDateBtn
+        return _currDateBtn!
     }
 
-    func flexibleSpaceButtonItem() -> UIBarButtonItem? {
+    var _flexibleSpaceButtonItem: UIBarButtonItem?
+    var flexibleSpaceButtonItem: UIBarButtonItem {
         if _flexibleSpaceButtonItem == nil {
             _flexibleSpaceButtonItem = UIBarButtonItem(
                 barButtonSystemItem: .flexibleSpace,
                 target: nil,
                 action: nil)
         }
-        return _flexibleSpaceButtonItem
+        return _flexibleSpaceButtonItem!
     }
 
-    func fixed1SpaceButtonItem() -> UIBarButtonItem? {
+    var _fixed1SpaceButtonItem: UIBarButtonItem?
+    var fixed1SpaceButtonItem: UIBarButtonItem {
         if _fixed1SpaceButtonItem == nil {
             _fixed1SpaceButtonItem = UIBarButtonItem(
                 barButtonSystemItem: .fixedSpace,
                 target: nil,
                 action: nil)
-            _fixed1SpaceButtonItem.width = CGFloat(32.0)
+            _fixed1SpaceButtonItem!.width = CGFloat(32.0)
         }
 
-        return _fixed1SpaceButtonItem
+        return _fixed1SpaceButtonItem!
     }
 
-    func calBtn() -> UIBarButtonItem? {
+    var _calBtn: UIBarButtonItem?
+    var calBtn: UIBarButtonItem {
         if _calBtn == nil {
             _calBtn = UIBarButtonItem(
                 title: "📆" /* @"\u2630" //@"Cal" */,
                 style: .plain,
                 target: self,
                 action: #selector(btnCal))
-            _calBtn.tintColor = UIColor(red: 0.0, green: 0.8, blue: 0.0, alpha: 1.0)
+            _calBtn!.tintColor = UIColor(red: 0.0, green: 0.8, blue: 0.0, alpha: 1.0)
             //_calBtn.tintColor = [UIColor greenColor];
-            _calBtn.setTitleTextAttributes(
+            _calBtn!.setTitleTextAttributes(
                 [
                     .font: UIFont.systemFont(ofSize: 28.0)
                 //,NSForegroundColorAttributeName: [UIColor greenColor]
@@ -1922,19 +1632,20 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 for: .normal)
         }
 
-        return _calBtn
+        return _calBtn!
     }
 
-    func searchBtn() -> UIBarButtonItem? {
+    var _searchBtn: UIBarButtonItem?
+    var searchBtn: UIBarButtonItem {
         if _searchBtn == nil {
             _searchBtn = UIBarButtonItem(
                 title: "🔍" /*@"Cal" */,
                 style: .plain,
                 target: self,
                 action: #selector(btnSearch))
-            _searchBtn.tintColor = UIColor(red: 0.0, green: 0.0, blue: 0.8, alpha: 1.0)
+            _searchBtn!.tintColor = UIColor(red: 0.0, green: 0.0, blue: 0.8, alpha: 1.0)
             //_searchBtn.tintColor = [UIColor greenColor];
-            _searchBtn.setTitleTextAttributes(
+            _searchBtn!.setTitleTextAttributes(
                 [
                     .font: UIFont.systemFont(ofSize: 28.0)
                 //,NSForegroundColorAttributeName: [UIColor greenColor]
@@ -1942,30 +1653,32 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 for: .normal)
         }
 
-        return _searchBtn
+        return _searchBtn!
     }
 
     @objc func btnSearch() {
-        rTracker_resource.alert("Search results", msg: String(format: "%ld entries highlighted in calendar and graph views", Int(searchSet.count())), vc: self)
+        rTracker_resource.alert("Search results", msg: String(format: "%ld entries highlighted in calendar and graph views", Int(searchSet!.count)), vc: self)
     }
 
-    func delBtn() -> UIBarButtonItem? {
+    var _delBtn: UIBarButtonItem?
+    var delBtn: UIBarButtonItem {
         if _delBtn == nil {
             _delBtn = UIBarButtonItem(
                 barButtonSystemItem: .trash,
                 target: self,
                 action: #selector(btnDel))
-            _delBtn.tintColor = .red
+            _delBtn!.tintColor = .red
             //[_delBtn setTitleTextAttributes:@{
             //                                 NSFontAttributeName: [UIFont systemFontOfSize:28.0]
             //                                 ,NSForegroundColorAttributeName: [UIColor redColor]
             //                                 } forState:UIControlStateNormal];
         }
 
-        return _delBtn
+        return _delBtn!
     }
 
-    func skip2EndBtn() -> UIBarButtonItem? {
+    var _skip2EndBtn: UIBarButtonItem?
+    var skip2EndBtn: UIBarButtonItem {
         if _skip2EndBtn == nil {
             _skip2EndBtn = UIBarButtonItem(
                 barButtonSystemItem: .fastForward,
@@ -1979,7 +1692,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             //                                  } forState:UIControlStateNormal];
         }
 
-        return _skip2EndBtn
+        return _skip2EndBtn!
     }
 
     // MARK: -
@@ -1987,22 +1700,23 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     func attachTrackerData(_ mailer: MFMailComposeViewController?, key: String?) -> Bool {
         var result: Bool
-        var fp = tracker.getPath(RTRKext)
+        var fp = tracker!.getPath(RTRKext)
         var mimetype = "application/rTracker"
-        var fname = (tracker.trackerName ?? "") + RTRKext
+        var fname = (tracker!.trackerName ?? "") + RTRKext
 
         if key == emEmailCsv {
-            if result = tracker.writeCSV() {
-                fp = tracker.getPath(CSVext)
+            result = tracker!.writeCSV()
+            if result {
+                fp = tracker!.getPath(CSVext)
                 mimetype = "text/csv"
-                fname = (tracker.trackerName ?? "") + CSVext
+                fname = (tracker!.trackerName ?? "") + CSVext
             }
         } else if key == emEmailTrackerData {
-            result = tracker.writeRtrk(true)
+            result = tracker!.writeRtrk(true)
         } else if key == emEmailTracker {
-            result = tracker.writeRtrk(false)
+            result = tracker!.writeRtrk(false)
         } else {
-            DBGLog("no match for key %@", key)
+            DBGLog(String("no match for key \(key)"))
             result = false
         }
 
@@ -2010,7 +1724,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             var fileData: Data? = nil
             do {
                 fileData = try NSData(contentsOfFile: fp ?? "", options: .uncached) as Data?
-            } catch let err {
+            } catch {
             }
             if nil != fileData {
                 if let fileData {
@@ -2028,8 +1742,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
         let mailer = MFMailComposeViewController()
         mailer.mailComposeDelegate = self
-        if tracker.optDict?["dfltEmail"] != nil {
-            let toRecipients = [(tracker.optDict)?["dfltEmail"]]
+        if tracker!.optDict["dfltEmail"] != nil {
+            let toRecipients = [(tracker!.optDict)["dfltEmail"]]
             mailer.setToRecipients(toRecipients.compactMap { $0 } as? [String])
         }
         var emailBody: String?
@@ -2037,19 +1751,19 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
         if emEmailCsv == btnTitle {
             if rTracker_resource.getRtcsvOutput() {
-                emailBody = (tracker.trackerName ?? "") + " tracker data file in rtCSV format attached.  Generated by <a href=\"http://rob-miller.github.io/rTracker/rTracker/iPhone/pages/rTracker-main.html\">rTracker</a>."
+                emailBody = (tracker!.trackerName ?? "") + " tracker data file in rtCSV format attached.  Generated by <a href=\"http://rob-miller.github.io/rTracker/rTracker/iPhone/pages/rTracker-main.html\">rTracker</a>."
             } else {
-                emailBody = (tracker.trackerName ?? "") + " tracker data file in CSV format attached.  Generated by <a href=\"http://rob-miller.github.io/rTracker/rTracker/iPhone/pages/rTracker-main.html\">rTracker</a>."
+                emailBody = (tracker!.trackerName ?? "") + " tracker data file in CSV format attached.  Generated by <a href=\"http://rob-miller.github.io/rTracker/rTracker/iPhone/pages/rTracker-main.html\">rTracker</a>."
             }
-            mailer.setSubject((tracker.trackerName ?? "") + " tracker CSV data")
+            mailer.setSubject((tracker!.trackerName ?? "") + " tracker CSV data")
             ext = CSVext
         } else {
             if emEmailTrackerData == btnTitle {
-                emailBody = (tracker.trackerName ?? "") + " tracker with data attached.  Open with <a href=\"http://rob-miller.github.io/rTracker/rTracker/iPhone/pages/rTracker-main.html\">rTracker</a>."
-                mailer.setSubject((tracker.trackerName ?? "") + " tracker with data")
+                emailBody = (tracker!.trackerName ?? "") + " tracker with data attached.  Open with <a href=\"http://rob-miller.github.io/rTracker/rTracker/iPhone/pages/rTracker-main.html\">rTracker</a>."
+                mailer.setSubject((tracker!.trackerName ?? "") + " tracker with data")
             } else {
-                emailBody = (tracker.trackerName ?? "") + " tracker attached.  Open with <a href=\"http://rob-miller.github.io/rTracker/rTracker/iPhone/pages/rTracker-main.html\">rTracker</a>."
-                mailer.setSubject((tracker.trackerName ?? "") + " tracker")
+                emailBody = (tracker!.trackerName ?? "") + " tracker attached.  Open with <a href=\"http://rob-miller.github.io/rTracker/rTracker/iPhone/pages/rTracker-main.html\">rTracker</a>."
+                mailer.setSubject((tracker!.trackerName ?? "") + " tracker")
             }
             ext = RTRKext
         }
@@ -2062,7 +1776,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         #if RELEASE
         rTracker_resource.deleteFile(atPath: tracker.getPath(ext))
         #else
-        DBGErr("leaving rtrk at path: %@", tracker.getPath(ext))
+        DBGErr(String("leaving rtrk at path: (tracker.getPath(ext))"))
         #endif
 
     }
@@ -2096,7 +1810,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     // Customize the number of rows in the table view.
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         //return 0;  //[rTrackerAppDelegate.topLayoutTable count];
-        return tracker.valObjTable?.count ?? 0
+        return tracker!.valObjTable.count
     }
 
     //#define MARGIN 7.0f
@@ -2107,10 +1821,10 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     // Customize the appearance of table view cells.
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let row = indexPath.row
-        let vo = (tracker.valObjTable)?[row] as? valueObj
+        let vo = (tracker!.valObjTable)[row]
         //DBGLog(@"uvc table cell at index %d label %@",row,vo.valueName);
 
-        return (vo?.vos?.voTVCell(tableView))!
+        return (vo.vos?.voTVCell(tableView))!
         /*
             UITableViewCell *tvc = [vo.vos voTVCell:tableView];
             UIImageView *bg = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"bkgnd-cell1-320-56.png"]];
@@ -2123,8 +1837,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         let row = indexPath.row
-        let vo = (tracker.valObjTable)?[row] as? valueObj
-        return vo?.vos?.voTVCellHeight() ?? 0.0
+        let vo = (tracker!.valObjTable)[row]
+        return vo.vos?.voTVCellHeight() ?? 0.0
         /*
         	NSInteger vt = ((valueObj*) (self.tracker.valObjTable)[[indexPath row]]).vtype;
         	if ( vt == VOT_CHOICE || vt == VOT_SLIDER )
@@ -2141,43 +1855,31 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         // [self.navigationController pushViewController:anotherViewController animated:YES];
         // [anotherViewController release];
 
-        let vo = (tracker.valObjTable)?[indexPath.row] as? valueObj
+        let vo = (tracker!.valObjTable)[indexPath.row]
 
         #if DEBUGLOG
         let row = indexPath.row
         //valueObj *vo = (valueObj *) [self.tracker.valObjTable  objectAtIndex:row];
-        DBGLog("selected row %lu : %@", UInt(row), vo?.valueName)
+        DBGLog(String("selected row \(UInt(row)): \(vo.valueName)"))
         #endif
 
-        if VOT_INFO == vo?.vtype {
-            var url = (vo?.optDict)?["infourl"]?.trimmingCharacters(in: .whitespaces)
-            if "" != url {
-                let urlCheck = (url as NSString?)?.range(of: "://")
-                if urlCheck?.location == NSNotFound {
-                    url = "http://" + (url ?? "")
+        if VOT_INFO == vo.vtype {
+            if var url = (vo.optDict["infourl"])?.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines), !url.isEmpty {
+                if !url.contains("://") {
+                    url = "http://" + url
                 }
-                DBGLog("vot_info: selected -> fire url: %@", url)
-                if let anUrl = URL(string: url ?? "") {
-                    UIApplication.shared.open(anUrl, options: [:]) { success in
-                        if !success {
-                            if url?.localizedCaseInsensitiveContains("http://") ?? false || url?.localizedCaseInsensitiveContains("https://") ?? false {
-                                rTracker_resource.alert("Failed to open URL", msg: "Failed to open the URL \(url ?? "") - network problem?", vc: self)
-                            } else {
-                                rTracker_resource.alert("Failed to open URL", msg: "Failed to open the URL \(url ?? "") - perhaps the supporting app is not installed??", vc: self)
-                            }
+                DBGLog("vot_info: selected -> fire url: \(url)")
+                UIApplication.shared.open(URL(string: url)!, options: [:]) { success in
+                    if !success {
+                        if url.localizedCaseInsensitiveContains("http://") || url.localizedCaseInsensitiveContains("https://") {
+                            rTracker_resource.alert("Failed to open URL", msg: "Failed to open the URL \(url) - network problem?", vc: self)
+                        } else {
+                            rTracker_resource.alert("Failed to open URL", msg: "Failed to open the URL \(url) - perhaps the supporting app is not installed??", vc: self)
                         }
                     }
                 }
-                /* openurl deprecated ios 9.0
-                            if (! [[UIApplication sharedApplication] openURL:[NSURL URLWithString:url] ]) {
-                                if ([url localizedCaseInsensitiveContainsString:@"http://"] || [url localizedCaseInsensitiveContainsString:@"https://"]) {
-                                    [rTracker_resource alert:@"Failed to open URL" msg:[NSString stringWithFormat:@"Failed to open the URL %@ - network problem?",url] vc:self];
-                                } else {
-                                    [rTracker_resource alert:@"Failed to open URL" msg:[NSString stringWithFormat:@"Failed to open the URL %@ - perhaps the supporting app is not installed??",url] vc:self];
-                                }
-                            }
-                             */
             }
+
         }
 
 
@@ -2187,8 +1889,6 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     }
 }
-
-#endif
 
 // UIAdaptivePresentationControllerDelegate added so dpvc.presentationController.delegate can be set to trigger viewWillAppear for ios13 - hacky.
 

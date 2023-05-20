@@ -53,18 +53,74 @@ let PVSTARTUP = UInt(1 << 4)
 
 
 let BTNRADIUS = 2
-    let LBLRADIUS = 4
+let LBLRADIUS = 4
 
-    let NXTBTNLBL = "  >  "
-    let PRVBTNLBL = "  <  "
+let NXTBTNLBL = "  >  "
+let PRVBTNLBL = "  <  "
 
-    // MARK: -
-    // MARK: singleton privacyValue support
-    var privacyValue = PRIVDFLT
-var stashedPriv: NSNumber? = nil
+// MARK: -
+// MARK: singleton privacyValue support
+
+private var _privacyValue: Int = PRIVDFLT
+var privacyValue: Int {
+    get {
+        return _privacyValue
+    }
+    set {
+        _privacyValue = newValue
+        DBGLog(String("updatePrivacy:\(_privacyValue)"))
+    }
+}
+
+var stashedPriv: NSNumber? = nil  // NSNumber so can check for nil
 var lastShow: TimeInterval = 0
 
+func jumpMaxPriv() {
+    if nil == stashedPriv {
+        stashedPriv = NSNumber(value: privacyValue)
+        DBGLog(String("stashed priv \(stashedPriv)"))
+    }
+
+    //[self.privacyObj setPrivacyValue:MAXPRIV];  // temporary max privacy level so see all
+    privacyValue = MAXPRIV
+    DBGLog("priv jump!")
+}
+
+func restorePriv() {
+    if nil == stashedPriv {
+        return
+    }
+    //if (YES == self.openUrlLock) {
+    //    return;
+    //}
+    DBGLog(String("restore priv to \(stashedPriv)"))
+    //[self.privacyObj setPrivacyValue:[self.stashedPriv intValue]];  // return to privacy level
+    privacyValue = stashedPriv?.intValue ?? 0
+    stashedPriv = nil
+
+}
+
 class privacyV: UIView {
+    
+    func lockDown() -> Int {
+        DBGLog("privObj: lockdown")
+        let currP = privacyValue
+
+        ttv?.showKey(0)
+        privacyValue = (MINPRIV)
+
+        if (PWNEEDPRIVOK != pwState) && (PWNEEDPASS != pwState) {
+            // 27.v.2013 don't set to query if no pw setup yet
+            _pwState = PWQUERYPASS
+        }
+
+        showing = PVNOSHOW
+        //if ([self.configBtn.currentTitle isEqualToString:CFGBTNLOCK]) {
+        //    self.showing = PVQUERY;
+        //}
+        return currP
+    }
+
     /*{
     	UIView *parentView;
         RootViewController *parent;
@@ -96,7 +152,7 @@ class privacyV: UIView {
             _ppwv?.parentAction = #selector(ppwvResponse)
 
             _ppwv?.topy = (parentView?.frame.size.height ?? 0.0) - frame.size.height
-            DBGLog("pv.y = %f  s.h = %f  ty= %f", parentView?.frame.size.height, frame.size.height, _ppwv?.topy)
+            DBGLog(String("pv.y = \(parentView?.frame.size.height ?? 0)  s.h = \(frame.size.height)  ty= \(_ppwv?.topy ?? 0)"))
         }
         return _ppwv
     }
@@ -108,7 +164,7 @@ class privacyV: UIView {
             _showing
         }
         set(newState) {
-            DBGLog("priv: setShowing %d -> %d  curr priv= %d", _showing, newState, privacyV.getPrivacyValue())
+            DBGLog(String("priv: setShowing \(_showing) -> \(newState)  curr priv= \(privacyValue)"))
             if (PVNOSHOW == _showing) && (PVNOSHOW == newState) {
                 return // this happens when closing down.
             }
@@ -134,7 +190,7 @@ class privacyV: UIView {
                     title: btn0,
                     style: .default,
                     handler: { [self] action in
-                        pwState = PWNEEDPASS
+                        _pwState = PWNEEDPASS
                         //self.showing = PVSTARTUP;
                         self.showing = PVQUERY
                     })
@@ -173,7 +229,7 @@ class privacyV: UIView {
                 alpha = 1.0
                 if PVNEEDPASS == _showing {
                     // if just created, pass is currently up, set up pvquery behind keyboard
-                    pwState = PWKNOWPASS // just successfully created password so don't ask again
+                    _pwState = PWKNOWPASS // just successfully created password so don't ask again
                     showPVQ(true)
                     //[self.ppwv hidePPWVAnimated:TRUE];  // don't hide and re-show
                     // crash[(RootViewController*) self.parentView refreshToolBar:YES];
@@ -211,7 +267,7 @@ class privacyV: UIView {
                         parentView?.setNeedsDisplay() //  privateBtn.title = @"private";
                     } else {
 
-                        setPrivacyValue(MINPRIV + dbTestKey(Int(ttv?.key ?? 0))) // 14.ix.2011 privacy not 0
+                        privacyValue = (MINPRIV + dbTestKey(Int(ttv?.key ?? 0))) // 14.ix.2011 privacy not 0
 
                         if PVCONFIG == self.showing {
                             ppwv?.hidePPWV(animated: false)
@@ -227,9 +283,9 @@ class privacyV: UIView {
 
                 _showing = PVNOSHOW
             } else if PVCONFIG == newState {
-                if PWKNOWPASS == pwState || (PVCHECKPASS == _showing && ppwv?.ok == ppwv?.next) {
+                if PWKNOWPASS == pwState || (PVCHECKPASS == _showing && ppwv!.ok == ppwv!.nextState) {
                     if PVCHECKPASS == _showing {
-                        pwState = PWKNOWPASS // just successfully entered password so don't ask again
+                        _pwState = PWKNOWPASS // just successfully entered password so don't ask again
                         //	[self hideConfigBtns:FALSE];
                         //	[UIView beginAnimations:nil context:NULL];
                         //	[UIView setAnimationDuration:kAnimationDuration];
@@ -342,12 +398,11 @@ class privacyV: UIView {
 
     private var _ssValLab: UILabel?
     var ssValLab: UILabel? {
+        let lfx = frame.origin.x + (frame.size.width * (TICTACHRZFRAC / 2.0))            // x= same as clearBtn
+        let lfy = frame.size.height * ((1.0 - TICTACVRTFRAC) - (1.0 - TICTACHGTFRAC))           // y = same as saveBtn
+        let lfsize = "100".size(withAttributes: [NSAttributedString.Key.font: PrefBodyFont])
         if _ssValLab == nil {
-            let lframe = CGRect(frame.origin.x + (frame.size.width * (TICTACHRZFRAC / 2.0))            // x= same as clearBtn
-        , frame.size.height * ((1.0 - TICTACVRTFRAC) - (1.0 - TICTACHGTFRAC))            // y = same as saveBtn
-        , "100".size(withAttributes: [
-                NSAttributedString.Key.font: PrefBodyFont
-            ]))
+            var lframe = CGRect(x:lfx, y:lfy, width:lfsize.width, height:lfsize.height)
             lframe.origin.x -= lframe.size.width / 2.0
             _ssValLab = UILabel(frame: lframe)
             _ssValLab?.textAlignment = .right // ios6 UITextAlignmentRight;
@@ -386,59 +441,6 @@ class privacyV: UIView {
         return _prevBtn
     }
 
-    class func getPrivacyValue() -> Int {
-        return privacyValue
-    }
-
-    func setPrivacyValue(_ priv: Int) {
-        privacyValue = priv
-        DBGLog("updatePrivacy:%d", privacyV.getPrivacyValue())
-        //[self.pvc.tableView reloadData ];
-    }
-
-    class func jumpMaxPriv() {
-        if nil == stashedPriv {
-            stashedPriv = NSNumber(value: privacyV.getPrivacyValue())
-            DBGLog("stashed priv %@", stashedPriv)
-        }
-
-        //[self.privacyObj setPrivacyValue:MAXPRIV];  // temporary max privacy level so see all
-        privacyValue = MAXPRIV
-        DBGLog("priv jump!")
-    }
-
-    class func restorePriv() {
-        if nil == stashedPriv {
-            return
-        }
-        //if (YES == self.openUrlLock) {
-        //    return;
-        //}
-        DBGLog("restore priv to %@", stashedPriv)
-        //[self.privacyObj setPrivacyValue:[self.stashedPriv intValue]];  // return to privacy level
-        privacyValue = stashedPriv?.intValue ?? 0
-        stashedPriv = nil
-
-    }
-
-    func lockDown() -> Int {
-        DBGLog("privObj: lockdown")
-        let currP = privacyValue
-
-        ttv?.showKey(0)
-        setPrivacyValue(MINPRIV)
-
-        if (PWNEEDPRIVOK != pwState) && (PWNEEDPASS != pwState) {
-            // 27.v.2013 don't set to query if no pw setup yet
-            pwState = PWQUERYPASS
-        }
-
-        showing = PVNOSHOW
-        //if ([self.configBtn.currentTitle isEqualToString:CFGBTNLOCK]) {
-        //	self.showing = PVQUERY;
-        //}
-        return currP
-    }
 
     // MARK: -
     // MARK: core UIView object methods and support
@@ -456,14 +458,14 @@ class privacyV: UIView {
     let PVH = 0.46
 
     init(parentView pv: UIView?) {
-        DBGLog("privV enter parent= x=%f y=%f w=%f h=%f", pv?.frame.origin.x, pv?.frame.origin.y, pv?.frame.size.width, pv?.frame.size.height)
+        DBGLog(String("privV enter parent= x=\(pv?.frame.origin.x ?? 0) y=\(pv?.frame.origin.y ?? 0) w=\(pv?.frame.size.width ?? 0) h=\(pv?.frame.size.height ?? 0)"))
         //CGRect frame = CGRectMake(0.0f, pv.frame.size.height,pv.frame.size.width,(pv.frame.size.height * PVH));
         // like this but need to re-calc button positions too :-( CGRect frame = CGRectMake(pv.frame.size.width-320.0, pv.frame.size.height,320.0,171.0);
         let frame = CGRect(x: 0.0, y: pv?.frame.size.height ?? 0.0, width: 320.0, height: 171.0)
-        DBGLog("privacyV: x=%f y=%f w=%f h=%f", frame.origin.x, frame.origin.y, frame.size.width, frame.size.height)
+        DBGLog(String("privacyV: x=(frame.origin.x) y=(frame.origin.y) w=(frame.size.width) h=(frame.size.height)"))
         super.init(frame: frame)
         parentView = pv
-        pwState = PWNEEDPRIVOK //PWNEEDPASS;
+        _pwState = PWNEEDPRIVOK //PWNEEDPASS;
         let bg = UIImageView(image: UIImage(named: rTracker_resource.getLaunchImageName() ?? ""))
 
         addSubview(bg)
@@ -523,7 +525,7 @@ class privacyV: UIView {
 
     func dbTestKey(_ `try`: Int) -> Int {
         let sql = "select lvl from priv1 where key=\(`try`);"
-        return tob?.toQry2Int(sql) ?? 0
+        return tob!.toQry2Int(sql:sql)!
     }
 
     func dbSetKey(_ key: Int, level lvl: Int) {
@@ -534,32 +536,29 @@ class privacyV: UIView {
         } else {
             sql = "delete from priv1 where lvl=\(lvl);"
         }
-        tob?.toExecSql(sql)
+        tob!.toExecSql(sql:sql!)
 
     }
 
     func dbGetKey(_ lvl: Int) -> UInt {
         let sql = "select key from priv1 where lvl=\(lvl);"
-        return UInt(tob?.toQry2Int(sql) ?? 0)
+        return UInt(tob!.toQry2Int(sql: sql)!)
     }
 
-    func dbGetAdjacentKey(_ lvl: UnsafeMutablePointer<Int>?, nxt: Bool) -> UInt {
+    func dbGetAdjacentKey(_ lvl: Int, nxt: Bool) -> (Int, Int) {
         var rkey: Int
+        var lvlrslt: Int
         var sql: String?
 
         if nxt {
-            if let lvl {
-                sql = "select key, lvl from priv1 where lvl>\(lvl) order by lvl asc limit 1;"
-            }
+            sql = "select key, lvl from priv1 where lvl>\(lvl) order by lvl asc limit 1;"
         } else {
-            if let lvl {
-                sql = "select key, lvl from priv1 where lvl<\(lvl) order by lvl desc limit 1;"
-            }
+            sql = "select key, lvl from priv1 where lvl<\(lvl) order by lvl desc limit 1;"
         }
-        DBGLog("getAdjacentVal: next=%d in lvl=%d", nxt, lvl)
-        tob?.toQry2IntInt(UnsafeMutablePointer<Int>(mutating: &rkey), i2: lvl, sql: sql)
-        DBGLog("getAdjacentVal: rtn lvl=%d  key=%d", lvl, rkey)
-        return UInt(rkey)
+        DBGLog(String("getAdjacentVal: next=(nxt) in lvl=(lvl)"))
+        (rkey, lvlrslt) = tob!.toQry2IntInt(sql: sql!)!
+        DBGLog(String("getAdjacentVal: rtn lvl=(lvl) key=(rkey)"))
+        return (rkey, lvlrslt)
     }
 
     // MARK: -
@@ -583,20 +582,20 @@ class privacyV: UIView {
 
     func resetPw() {
         ppwv?.dbResetPass()
-        pwState = PWNEEDPRIVOK
+        _pwState = PWNEEDPRIVOK
         showing = PVNOSHOW
-        setPrivacyValue(MINPRIV)
+        privacyValue = MINPRIV
     }
 
     @objc func ppwvResponse() {
-        DBGLog("ppwvResponse: transition to %d", ppwv?.next)
+        DBGLog(String("ppwvResponse: transition to (ppwv?.next)"))
 
-        showing = ppwv?.next ?? 0
+        showing = ppwv!.nextState
     }
 
     func showPVQ(_ state: Bool) {
-        DBGLog("parent v h= %f  pvh= %f  prod= %f", parentView?.frame.size.height, PVH, (parentView?.frame.size.height ?? 0.0) * PVH)
-        DBGLog("x= %f  y= %f  w= %f  h= %f", frame.origin.x, frame.origin.y, frame.size.width, frame.size.height)
+        DBGLog(String("parent v h= (parentView?.frame.size.height ?? 0.0) pvh= (PVH) prod= ((parentView?.frame.size.height ?? 0.0) * PVH)"))
+        DBGLog(String(format: "x= %f y= %f w= %f h= %f", frame.origin.x, frame.origin.y, frame.size.width, frame.size.height))
         if state {
             // show
             lastShow = Date().timeIntervalSinceReferenceDate
@@ -608,10 +607,10 @@ class privacyV: UIView {
         } else {
             // hide
             let thisHide = Date().timeIntervalSinceReferenceDate
-            DBGLog("lastShow= %lf thisHide= %lf delta= %lf", lastShow, thisHide, (thisHide - lastShow))
+            DBGLog(String("lastShow= (lastShow) thisHide= (thisHide) delta= (thisHide - lastShow)"))
             if (thisHide - lastShow) <= 0.6 {
                 ttv?.showKey(0)
-                setPrivacyValue(PRIVDFLT)
+                privacyValue = PRIVDFLT
             }
             ppwv?.hide()
 
@@ -655,9 +654,9 @@ class privacyV: UIView {
     }
 
     @objc func saveConfig(_ btn: UIButton?) {
-        var ttvkey: UInt
+        let ttvkey: UInt = ttv!.key
 
-        if (ttvkey = ttv?.key ?? 0) != 0 {
+        if ttvkey != 0 {
             // don't allow saving blank tt for a privacy level
             dbSetKey(Int(ttvkey), level: Int((showSlider?.value ?? 0.0) + 0.5))
         }
@@ -666,7 +665,7 @@ class privacyV: UIView {
     @objc func adjustTTV(_ btn: UIButton?) {
         var lvl = Int((showSlider?.value ?? 0.0) + 0.5)
         ///*
-        var k: UInt
+        var k: Int
         var dir: Bool
         if btn?.currentTitle == NXTBTNLBL {
             // next
@@ -676,9 +675,9 @@ class privacyV: UIView {
             dir = false
         }
 
-        DBGLog("adjustTTv: slider lvl= %d dir=%d", lvl, dir)
+        DBGLog(String("adjustTTv: slider lvl= (lvl) dir=(dir)"))
 
-        k = dbGetAdjacentKey(UnsafeMutablePointer<Int>(mutating: &lvl), nxt: dir)
+        (k, lvl) = dbGetAdjacentKey(lvl, nxt: dir)
 
         if k == 0 {
             // if getAdjacent failed = no next/prev key for curr slider value
@@ -686,7 +685,7 @@ class privacyV: UIView {
             if 0 == dbGetKey(lvl) {
                 // and no existing key for curr slider
                 //k = 
-                dbGetAdjacentKey(UnsafeMutablePointer<Int>(mutating: &lvl), nxt: !dir) // go for prev/next (opposite dir)
+                (_, lvl) = dbGetAdjacentKey(lvl, nxt: !dir) // go for prev/next (opposite dir)
             }
         }
         //*/

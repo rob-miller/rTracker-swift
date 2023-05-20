@@ -138,19 +138,19 @@ class gtVONameV: UIView {
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        DBGLog("gvc touches began: %@", touchReport(touches))
+        DBGLog(String("gvc touches began: \(touchReport(touches))"))
     }
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
-        DBGLog("gvc touches cancelled: %@", touchReport(touches))
+        DBGLog(String("gvc touches cancelled: \(touchReport(touches))"))
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        DBGLog("gvc touches ended: %@", touchReport(touches))
+        DBGLog(String("gvc touches ended: \(touchReport(touches))"))
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        DBGLog("gvc touches moved: %@", touchReport(touches))
+        DBGLog(String("gvc touches moved: \(touchReport(touches))"))
     }
 
     required init?(coder aDecoder: NSCoder) {

@@ -23,6 +23,7 @@
 
 import Foundation
 import QuartzCore
+import UIKit
 
 class voChoice: voState {
     /*{
@@ -42,11 +43,10 @@ class voChoice: voState {
         if nil == _segmentedControl {
             //NSArray *segmentTextContent = [NSArray arrayWithObjects: @"0", @"one", @"two", @"three", @"four", nil];
 
-            var i: Int
             var segmentTextContent: [AnyHashable] = []
             for i in 0..<CHOICES {
                 let key = "c\(i)"
-                let s = (vo?.optDict)?[key] as? String
+                let s = vo.optDict[key]
                 if (s != nil) && (s != "") {
                     segmentTextContent.append(s ?? "")
                 }
@@ -57,7 +57,7 @@ class voChoice: voState {
             _segmentedControl = UISegmentedControl(items: segmentTextContent)
             //_segmentedControl.segmentedControlStyle = UISegmentedControlStyleBar;  // resets segment widths to 0
 
-            if ((vo?.optDict)?["shrinkb"] as? String) == "1" {
+            if vo.optDict["shrinkb"] == "1" {
                 /*
                             int j=0;
                             for (NSString *s in segmentTextContent) {
@@ -90,14 +90,14 @@ class voChoice: voState {
     var processingTfDone = false
     var processingTfvDone = false
 
-    override init(vo valo: valueObj?) {
+    override init(vo valo: valueObj) {
         super.init(vo: valo)
         processingTfDone = false
-        vo?.useVO = false
+        vo.useVO = false
     }
 
     override func resetData() {
-        vo?.useVO = false
+        vo.useVO = false
     }
 
     override func getValCap() -> Int {
@@ -105,14 +105,14 @@ class voChoice: voState {
         return 1
     }
 
-    override func voTVCell(_ tableView: UITableView?) -> UITableViewCell? {
+    override func voTVCell(_ tableView: UITableView) -> UITableViewCell {
         return super.voTVEnabledCell(tableView)
         //return [super voTVCell:tableView];
     }
 
     override func voTVCellHeight() -> CGFloat {
         //return CELL_HEIGHT_TALL;
-        return (segmentedControl?.frame.size.height ?? 0.0) + (3 * MARGIN) + (vo?.getLabelSize().height ?? 0.0) + (vo?.getLongTitleSize().height ?? 0.0)
+        return segmentedControl!.frame.size.height + (3 * MARGIN) + vo.getLabelSize().height + vo.getLongTitleSize().height
 
     }
 
@@ -122,7 +122,7 @@ class voChoice: voState {
         let segNdx = segmentedControl?.selectedSegmentIndex ?? 0
         if UISegmentedControl.noSegment != segNdx {
 
-            let val = (vo?.optDict)?[String(format: "cv%lu", UInt(segNdx))] as? String
+            let val = vo.optDict[String(format: "cv%lu", UInt(segNdx))]
             if nil == val {
                 rslt = String(format: "%lu", UInt(segNdx) + 1)
             } else {
@@ -130,7 +130,7 @@ class voChoice: voState {
             }
             #if DEBUGLOG
             let chTitle = segmentedControl?.titleForSegment(at: segNdx)
-            DBGLog("get v for seg title %@ ndx %lu rslt %@", chTitle, UInt(segNdx), rslt) // why tf not just return fn on segNdx?
+            DBGLog(String("get v for seg title \(chTitle) ndx \(UInt(segNdx)) rslt \(rslt ?? "")")) // why tf not just return fn on segNdx?
             #endif
             /*
                     for (i=0; i<CHOICES;i++) {
@@ -149,7 +149,7 @@ class voChoice: voState {
     }
 
     func getSegmentIndexForValue() -> Int {
-        return vo?.getChoiceIndex(forValue: vo?.value) ?? 0
+        return vo.getChoiceIndex(forValue: vo.value)
         /*
             // doesn't display if e.g only choice 6 configured
             // rtm change with 'specify choice values' 24.xii.2012 return [self.vo.value integerValue]-1;
@@ -179,15 +179,15 @@ class voChoice: voState {
     }
     */
 
-    @objc func segmentAction(_ sender: Any?) {
-        if (sender?.selectedSegmentIndex == getSegmentIndexForValue()) && vo?.useVO ?? false {
+    @objc func segmentAction(_ sender: UISegmentedControl) {
+        if (sender.selectedSegmentIndex == getSegmentIndexForValue()) && vo.useVO { // check useVO in case programmed value is same as index
             return
         }
-        DBGLog("segmentAction: selected segment = %ld", Int(sender?.selectedSegmentIndex ?? 0))
-        vo?.value = getValueForSegmentChoice()
+        DBGLog(String("segmentAction: selected segment = \(Int(sender.selectedSegmentIndex))"))
+        vo.value = getValueForSegmentChoice()
         //TODO: vo.value setter should do enable/disable ?
-        if !(vo?.useVO ?? false) {
-            vo?.enableVO()
+        if vo.useVO {
+            vo.enableVO()
         }
         /*
             if ([@"" isEqual: self.vo.value]) {
@@ -199,22 +199,22 @@ class voChoice: voState {
         NotificationCenter.default.post(name: NSNotification.Name(rtValueUpdatedNotification), object: self)
     }
 
-    override func voDisplay(_ bounds: CGRect) -> UIView? {
+    override func voDisplay(_ bounds: CGRect) -> UIView {
 
 
         vosFrame = bounds
 
         // set displayed segment from self.vo.value
 
-        if vo?.value == "" {
+        if vo.value == "" {
             if UISegmentedControl.noSegment != segmentedControl?.selectedSegmentIndex {
                 segmentedControl?.selectedSegmentIndex = UISegmentedControl.noSegment
-                vo?.disableVO()
+                vo.disableVO()
             }
         } else {
             let segNdx = getSegmentIndexForValue()
             if segmentedControl?.selectedSegmentIndex != segNdx {
-                DBGLog("segmentedControl set value int: %ld str: %@ segNdx: %d", Int(vo?.value ?? "") ?? 0, vo?.value, segNdx)
+                DBGLog(String("segmentedControl set value int: \(Int(vo.value!)) str: \(vo.value) segNdx: \(segNdx)"))
                 // during loadCSV, not matching the string will cause a new c%d dict entry, so can be > CHOICES
                 if CHOICES > segNdx {
                     // normal case
@@ -225,16 +225,16 @@ class voChoice: voState {
                     // user must fix it, but it is all there to work with by save/edit csv and modify tracker
                     segmentedControl?.selectedSegmentIndex = UISegmentedControl.noSegment
                 }
-                vo?.enableVO()
+                vo.enableVO()
             }
         }
         //[self.segmentedControl sendActionsForControlEvents:UIControlEventValueChanged];
-        DBGLog("segmentedControl voDisplay: index %ld", Int(segmentedControl?.selectedSegmentIndex ?? 0))
+        DBGLog(String("segmentedControl voDisplay: index \(Int(segmentedControl!.selectedSegmentIndex))"))
 
-        return segmentedControl
+        return segmentedControl!
     }
 
-    override func voGraphSet() -> [AnyHashable]? {
+    override func voGraphSet() -> [String] {
         return ["dots", "bar"]
     }
 
@@ -243,43 +243,36 @@ class voChoice: voState {
             return
         }
         processingTfDone = true
-
         var i = 0
-        let key: String? = nil
-        for key in ctvovcp?.wDict ?? [:] {
-            guard let key = key as? key else {
-                continue
-            }
-            if ((ctvovcp?.wDict)?[key ?? ""] as? UITextField) == tf {
-                let kstr = Int8(key?.utf8CString ?? 0)
-                sscanf(kstr, "%dtf", &i)
+        let wDict = ctvovcp!.wDict
+        for (key, value) in wDict {
+            if let textField = value as? UITextField, textField == tf {
+                let digits = key.trimmingCharacters(in: CharacterSet.decimalDigits.inverted)
+                i = Int(digits)!
                 break
             }
         }
-
-        DBGLog("set choice %d: %@", i, tf?.text)
+        DBGLog(String("set choice \(i): \(tf!.text)"))
         tf?.text = tf?.text?.replacingOccurrences(of: "'", with: "") // these mess up sqlite -- could escape but lazy!
         tf?.text = tf?.text?.replacingOccurrences(of: "\"", with: "")
-        (vo?.optDict)?["c\(i)"] = tf?.text
+        vo.optDict["c\(i)"] = tf?.text
         let cc = "cc\(i)"
 
         let b = (ctvovcp?.wDict)?[String(format: "%dbtn", i)] as? UIButton
         if tf?.text == "" {
             b?.backgroundColor = .clear
-            vo?.optDict?.removeValue(forKey: cc)
+            vo.optDict.removeValue(forKey: cc)
             //TODO: should offer to delete any stored data
         } else {
-            let ncol = (vo?.optDict)?[cc] as? NSNumber
-
-            if ncol == nil {
-                let col = vo?.parentTracker?.nextColor ?? 0
-                (vo?.optDict)?[cc] = NSNumber(value: col)
-                b?.backgroundColor = rTracker_resource.colorSet()?[col] as? UIColor
+            if vo.optDict[cc] == nil {
+                let col = vo.parentTracker.nextColor
+                vo.optDict[cc] = String("\(col)")
+                b?.backgroundColor = rTracker_resource.colorSet()[col]
             }
         }
         i += 1
         if i < CHOICES {
-            (ctvovcp?.wDict)?[String(format: "%dtf", i)]?.becomeFirstResponder()
+            (ctvovcp!.wDict[String(format: "%dtf", i)] as! UITextField).becomeFirstResponder()
         } else {
             tf?.resignFirstResponder()
         }
@@ -296,27 +289,24 @@ class voChoice: voState {
         processingTfvDone = true
 
         var i = 0
-        let key: String? = nil
-        for key in ctvovcp?.wDict ?? [:] {
-            guard let key = key as? key else {
-                continue
-            }
-            if ((ctvovcp?.wDict)?[key ?? ""] as? UITextField) == tf {
-                let kstr = Int8(key?.utf8CString ?? 0)
-                sscanf(kstr, "%dtfv", &i)
+        let wDict = ctvovcp!.wDict
+        for (key, value) in wDict {
+            if let textField = value as? UITextField, textField == tf {
+                let digits = key.trimmingCharacters(in: CharacterSet.decimalDigits.inverted)
+                i = Int(digits)!
                 break
             }
         }
 
         if "" != tf?.text {
-            DBGLog("set choice value %d: %@", i, tf?.text)
-            (vo?.optDict)?["cv\(i)"] = tf?.text
+            DBGLog(String("set choice value \(i): \(tf!.text)"))
+            vo.optDict["cv\(i)"] = tf?.text
         } else {
-            vo?.optDict?.removeValue(forKey: "cv\(i)")
+            vo.optDict.removeValue(forKey: "cv\(i)")
         }
 
         //if (++i<CHOICES) {
-        (ctvovcp?.wDict)?[String(format: "%dtf", i)]?.becomeFirstResponder()
+        (ctvovcp!.wDict[String(format: "%dtf", i)] as! UITextField).becomeFirstResponder()
         //} else {
         //	[tf resignFirstResponder];
         //}
@@ -328,29 +318,22 @@ class voChoice: voState {
     @objc func choiceColorButtonAction(_ btn: UIButton?) {
         var i = 0
 
-        for key in ctvovcp?.wDict ?? [:] {
-            guard let key = key as? String else {
-                continue
-            }
-            if ((ctvovcp?.wDict)?[key] as? UIButton) == btn {
-                let kstr = key.utf8CString as? UnsafePointer<Int8>
-                sscanf(kstr, "%dbtn", &i)
+        for (key, value) in ctvovcp!.wDict {
+            if (value as? UIButton) == btn {
+                let digits = key.trimmingCharacters(in: CharacterSet.decimalDigits.inverted)
+                i = Int(digits)!
                 break
             }
         }
 
         let cc = "cc\(i)"
-        let ncol = (vo?.optDict)?[cc] as? NSNumber
-        if ncol == nil {
-            // do nothing as no choice label set so button not active
-        } else {
-            var col = ncol?.intValue ?? 0
-            col += 1
-            if col >= (rTracker_resource.colorSet()?.count ?? 0) {
+        if let ncol = vo.optDict[cc] {
+            var col = Int(ncol)! + 1
+            if col >= rTracker_resource.colorSet().count {
                 col = 0
             }
-            (vo?.optDict)?[cc] = NSNumber(value: col)
-            btn?.backgroundColor = rTracker_resource.colorSet()?[col] as? UIColor
+            vo.optDict[cc] = String("\(col)")
+            btn?.backgroundColor = rTracker_resource.colorSet()[col]
         }
 
     }
@@ -360,31 +343,30 @@ class voChoice: voState {
 
     override func setOptDictDflts() {
 
-        if nil == (vo?.optDict)?["shrinkb"] {
-            (vo?.optDict)?["shrinkb"] = SHRINKBDFLT ? "1" : "0"
+        if nil == vo.optDict["shrinkb"] {
+            vo.optDict["shrinkb"] = SHRINKBDFLT ? "1" : "0"
         }
 
-        if nil == (vo?.optDict)?["exportvalb"] {
-            (vo?.optDict)?["exportvalb"] = EXPORTVALBDFLT ? "1" : "0"
+        if nil == vo.optDict["exportvalb"] {
+            vo.optDict["exportvalb"] = EXPORTVALBDFLT ? "1" : "0"
         }
 
         return super.setOptDictDflts()
     }
 
-    override func cleanOptDictDflts(_ key: String?) -> Bool {
+    override func cleanOptDictDflts(_ key: String) -> Bool {
 
-        let val = (vo?.optDict)?[key ?? ""] as? String
-        if nil == val {
+        guard let val = vo.optDict[key] else {
             return true
         }
 
-        if (key == "shrinkb") && (val == SHRINKBDFLT ? "1" : "0") {
-            vo?.optDict?.removeValue(forKey: key)
+        if (key == "shrinkb") && (val == (SHRINKBDFLT ? "1" : "0")) {
+            vo.optDict.removeValue(forKey: key)
             return true
         }
 
-        if (key == "exportvalb") && (val == EXPORTVALBDFLT ? "1" : "0") {
-            vo?.optDict?.removeValue(forKey: key)
+        if (key == "exportvalb") && (val == (EXPORTVALBDFLT ? "1" : "0")) {
+            vo.optDict.removeValue(forKey: key)
             return true
         }
 
@@ -409,7 +391,7 @@ class voChoice: voState {
 
         frame.size.height = ctvovc?.lfHeight ?? 0.0 // self.labelField.frame.size.height; // lab.frame.size.height;
 
-        var i: Int
+        //var i: Int
         var j = 1
         for i in 0..<CHOICES {
             frame.size.width = tfvWidth
@@ -421,7 +403,7 @@ class voChoice: voState {
                 action: #selector(ctfvDone(_:)),
                 num: true,
                 place: "\(i + 1)",
-                text: (vo?.optDict)?["cv\(i)"] as? String,
+                text: vo.optDict["cv\(i)"],
                 addsv: true) ?? CGRect.zero
 
             frame.origin.x += MARGIN + tfvWidth
@@ -434,7 +416,7 @@ class voChoice: voState {
                 action: #selector(ctfDone(_:)),
                 num: false,
                 place: "choice \(i + 1)",
-                text: (vo?.optDict)?["c\(i)"] as? String,
+                text: vo.optDict["c\(i)"],
                 addsv: true) ?? CGRect.zero
 
             frame.origin.x += MARGIN + tfWidth
@@ -446,17 +428,16 @@ class voChoice: voState {
             btn.layer.cornerRadius = 8.0
             btn.layer.masksToBounds = true
             btn.layer.borderWidth = 1.0
-            let cc = (vo?.optDict)?["cc\(i)"] as? NSNumber
-            if cc == nil {
-                btn.backgroundColor = .clear
+            if let cc = vo.optDict["cc\(i)"] {
+                btn.backgroundColor = rTracker_resource.colorSet()[Int(cc)!]
             } else {
-                btn.backgroundColor = rTracker_resource.colorSet()?[cc?.intValue ?? 0] as? UIColor
+                btn.backgroundColor = .clear
             }
 
             btn.titleLabel?.font = PrefBodyFont
 
             btn.addTarget(self, action: #selector(choiceColorButtonAction(_:)), for: .touchDown)
-            (ctvovc?.wDict)?[String(format: "%dbtn", i)] = btn
+            ctvovc!.wDict[String(format: "%dbtn", i)] = btn
             //[ctvovc.view addSubview:btn];
             ctvovc?.scroll.addSubview(btn)
 
@@ -486,7 +467,7 @@ class voChoice: voState {
         frame = ctvovc?.configCheckButton(
             frame,
             key: "csbBtn",
-            state: ((vo?.optDict)?["shrinkb"] == "1") /* default:0 */,
+            state: (vo.optDict["shrinkb"] == "1") /* default:0 */,
             addsv: true) ?? CGRect.zero
 
         // export values option
@@ -501,7 +482,7 @@ class voChoice: voState {
         frame = ctvovc?.configCheckButton(
             frame,
             key: "cevBtn",
-            state: ((vo?.optDict)?["exportvalb"] == "1") /* default:0 */,
+            state: (vo.optDict["exportvalb"] == "1") /* default:0 */,
             addsv: true) ?? CGRect.zero
 
 
@@ -520,56 +501,53 @@ class voChoice: voState {
     }
     */
 
-    override func newVOGD() -> Any? {
-        return vogd?.initAsNum(vo)
+    override func newVOGD() -> vogd {
+        return vogd(vo).initAsNum(vo)
     }
 
     /* rtm here : export value option 
      */
 
-    override func mapValue2Csv() -> String? {
+    override func mapValue2Csv() -> String {
         #if DEBUGLOG
         DBGLog(
-            "val= %@ indexForval= %d obj= %@",
-            vo?.value,
-            getSegmentIndexForValue(),
-            vo?.optDict?["c\(getSegmentIndexForValue())"])
+            String("val= \(vo.value) indexForval= \(getSegmentIndexForValue()) obj= \(vo.optDict["c\(getSegmentIndexForValue())"])"))
         #endif
-        if ((vo?.optDict)?["exportvalb"] as? String) == "1" {
-            return vo?.value
+        if vo.optDict["exportvalb"] == "1" {
+            return vo.value!
         } else {
-            return (vo?.optDict)?["c\(getSegmentIndexForValue())"] as? String
+            return (vo.optDict["c\(getSegmentIndexForValue())"])!
         }
     }
 
     /* rtm here : export value option -- need to parse and match value if choice did not match
      */
 
-    override func mapCsv2Value(_ inCsv: String?) -> String? {
-        var optDict = vo?.optDict
-        if (optDict?["exportvalb"] as? String) == "1" {
+    override func mapCsv2Value(_ inCsv: String) -> String {
+        var optDict = vo.optDict
+        if optDict["exportvalb"] == "1" {
             // we simply store the value, up to the user to provide a choice to match it
             return inCsv
         }
-        var ndx: Int
-        let count = optDict?.count ?? 0
+        //var ndx: Int
+        let count = optDict.count
         var maxc = -1
         var firstBlank = -1
         var lastColor = -1
-        DBGLog("inCsv= %@", inCsv)
+        DBGLog(String("inCsv= \(inCsv)"))
         for ndx in 0..<count {
             let key = "c\(ndx)"
-            let val = optDict?[key] as? String
+            let val = optDict[key]
             if nil != val {
                 maxc = ndx
-                lastColor = (optDict?["cc\(ndx)"] as? NSNumber)?.intValue ?? 0
+                lastColor = Int(optDict["cc\(ndx)"]!)!
                 if val == inCsv {
                     //DBGLog(@"matched, returning %d",ndx+1);
                     //return [NSString stringWithFormat:@"%d",ndx+1];    // found match, return 1-based index and be done
                     // change for can spec value for choice
-                    DBGLog("matched, ndx=%d", ndx)
+                    DBGLog(String("matched, ndx=\(ndx)"))
                     let key = "cv\(ndx)"
-                    return optDict?[key] as? String
+                    return optDict[key]!
                 } else if (-1 == firstBlank) && ("" == val) {
                     firstBlank = ndx
                 }
@@ -594,16 +572,16 @@ class voChoice: voState {
             maxc += 1 // maxc is last one used because there were no blanks, so inc to next
         }
 
-        optDict?["c\(maxc)"] = inCsv
+        optDict["c\(maxc)"] = inCsv
 
         lastColor += 1
-        if lastColor >= (rTracker_resource.colorSet()?.count ?? 0) {
+        if lastColor >= rTracker_resource.colorSet().count {
             lastColor = 0
         }
 
-        optDict?["cc\(maxc)"] = NSNumber(value: lastColor)
+        optDict["cc\(maxc)"] = String("\(lastColor)")
 
-        DBGLog("created choice %@ choice c%d color %ld", inCsv, maxc, lastColor)
+        DBGLog(String("created choice \(inCsv) choice c\(maxc) color \(lastColor)"))
 
         maxc += 1 // +1 because value not 0-based, while c%d key is
 
