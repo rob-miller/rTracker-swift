@@ -185,13 +185,26 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
 
     //@property (nonatomic,retain) NSMutableArray *fnStrs;
 
-    private var _fnStrDict: [String : NSNumber]?
-    var fnStrDict: [String : NSNumber] {
+    private var _fnStrDict: [NSNumber : String]?
+    var fnStrDict: [NSNumber : String] {
         if nil == _fnStrDict {
             let fnTokArr = PARENFNS + OTHERFNS
             let fnStrArr = ARG1STRS + ARG2STRS + TIMESTRS + PARENSTRS + OTHERSTRS
             var fnTokNSNarr: [NSNumber] = []
 
+            for a1 in fn1args {
+                fnTokNSNarr.append(NSNumber(value:a1))
+            }
+            for a2 in fn2args {
+                fnTokNSNarr.append(NSNumber(value:a2))
+            }
+            for tmop in fnTimeOps {
+                fnTokNSNarr.append(NSNumber(value:tmop))
+            }
+            for tok in fnTokArr {
+                fnTokNSNarr.append(NSNumber(value:tok))
+            }
+            /*
             var j = 0
             for i in 0..<ARG1CNT {
                 fnTokNSNarr[j] = NSNumber(value:fn1args[i])
@@ -209,9 +222,11 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                 fnTokNSNarr[j] = NSNumber(value:fnTokArr[i])
                 j += 1
             }
+             */
             //fnStrDict = [NSDictionary dictionaryWithObjects:fnStrArr forKeys:fnTokNSNarr count:TOTFNCNT];
             //_fnStrDict = NSDictionary(objects:fnStrArr as [String], forKeys:fnTokNSNarr as [NSCopying], count: TOTFNCNT) as Dictionary
-            _fnStrDict = Dictionary(uniqueKeysWithValues: zip(fnStrArr, fnTokNSNarr))
+            //_fnStrDict = Dictionary(uniqueKeysWithValues: zip(fnStrArr, fnTokNSNarr))
+            _fnStrDict = Dictionary(uniqueKeysWithValues: zip(fnTokNSNarr, fnStrArr))
         }
         return _fnStrDict!
     }
@@ -870,12 +885,16 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                         switch currTok {
                         case FN1ARGELAPSEDWEEKS:
                             result /= d(7)
+                            fallthrough
                         case FN1ARGELAPSEDDAYS:
                             result /= d(24)
+                            fallthrough
                         case FN1ARGELAPSEDHOURS:
                             result /= d(60)
+                            fallthrough
                         case FN1ARGELAPSEDMINS:
                             result /= d(60)
+                            fallthrough
                         case FN1ARGELAPSEDSECS:
                             fallthrough
                         default:
@@ -980,7 +999,8 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                         //break;
                         #if FUNCTIONDBG
                         DBGLog("presum: fall through")
-                    #endif
+                        #endif
+                        fallthrough
                     case FN1ARGSUM:
                         // (date<%d) because add in v1 below
                         sql = String(format: "select total(val) from voData where id=%ld and date >=%ld and date <%d;", vid, epd0, epd1)
@@ -1100,26 +1120,31 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                     result /= 7 // 7 days /week
                     #if FUNCTIONDBG
                     DBGLog(String("timefn: weeks : \(result)"))
-                #endif
+                    #endif
+                    fallthrough
                 case FNTIMEDAYS:
                     result /= 24 // 24 hrs / day
                     #if FUNCTIONDBG
                     DBGLog(String("timefn: days \(result)"))
-                #endif
+                    #endif
+                    fallthrough
                 case FNTIMEHRS:
                     result /= 60 // 60 mins / hr
                     #if FUNCTIONDBG
                     DBGLog(String("timefn: hrs \(result)"))
-                #endif
+                    #endif
+                    fallthrough
                 case FNTIMEMINS:
                     result /= 60 // 60 secs / min
                     #if FUNCTIONDBG
                     DBGLog(String("timefn: mins \(result)"))
-                #endif
+                    #endif
+                    fallthrough
                 case FNTIMESECS:
                     #if FUNCTIONDBG
                     DBGLog(String("timefn: secs \(result)"))
-                #endif
+                    #endif
+                    fallthrough
                 default:
                     //result /= d( 60 * 60 );  // 60 secs min * 60 secs hr
                     break
@@ -1520,7 +1545,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                 } else {
                     //NSInteger ndx = (i * -1) -1;
                     //[fstr appendString:[self.fnStrs objectAtIndex:ndx]];  xxx   // get str for token
-                    fstr += "\(fnStrDict["\(i)"]!)"
+                    fstr += "\(fnStrDict[NSNumber(value:i)]!)"
                     if isFn1Arg(i) {
                         fstr += "["
                         closePending = true
@@ -2110,7 +2135,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
     func fnTokenToStr(_ tok: Int) -> String {
         // convert token to str
         if isFn(tok) {
-            return String("\(fnStrDict[String("\(NSNumber(value: tok))")])")
+            return String("\(fnStrDict[NSNumber(value: tok)])")
             //tok = (tok * -1) -1;
             //return [self.fnStrs objectAtIndex:tok];
         } else {
@@ -2297,11 +2322,14 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                     targ = beginOfWeek
                 }
                  */
+                fallthrough
             // if any of week, day, month, year we need to wipe hour, minute, second components
             case FREPCDAYS:
                 unitFlags.insert(.day)  // |= NSCalendar.Unit.day.rawValue
+                fallthrough
             case FREPCMONTHS:
                 unitFlags.insert(.month)  //  |= NSCalendar.Unit.month.rawValue
+                fallthrough
             case FREPCYEARS:
                 unitFlags.insert(.year)  //  |= NSCalendar.Unit.year.rawValue
                 var components: DateComponents? = nil
@@ -2311,6 +2339,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                 if let components {
                     targ = gregorian.date(from: components)
                 }
+                fallthrough
             default:
                 break
             }
