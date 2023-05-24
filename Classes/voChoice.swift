@@ -116,7 +116,7 @@ class voChoice: voState {
 
     }
 
-    func getValueForSegmentChoice() -> String? {
+    func getValueForSegmentChoice() -> String {
         //int i;
         var rslt = ""
         let segNdx = segmentedControl?.selectedSegmentIndex ?? 0
@@ -130,7 +130,7 @@ class voChoice: voState {
             }
             #if DEBUGLOG
             let chTitle = segmentedControl?.titleForSegment(at: segNdx)
-            DBGLog(String("get v for seg title \(chTitle) ndx \(UInt(segNdx)) rslt \(rslt ?? "")")) // why tf not just return fn on segNdx?
+            DBGLog(String("get v for seg title \(chTitle) ndx \(UInt(segNdx)) rslt \(rslt)")) // why tf not just return fn on segNdx?
             #endif
             /*
                     for (i=0; i<CHOICES;i++) {
