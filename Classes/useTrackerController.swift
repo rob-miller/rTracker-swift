@@ -121,9 +121,9 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     // MARK: view support
 
     func showSaveBtn() {
-        if needSave && navigationItem.rightBarButtonItem != _saveBtn {
+        if needSave && navigationItem.rightBarButtonItem != saveBtn {
             navigationItem.setRightBarButton(saveBtn, animated: true)
-        } else if !needSave && navigationItem.rightBarButtonItem != _menuBtn {
+        } else if !needSave && navigationItem.rightBarButtonItem != menuBtn {
             navigationItem.setRightBarButton(menuBtn, animated: true)
         }
     }
@@ -192,7 +192,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
         // navigationbar setup
         let backButton = UIBarButtonItem(
-            title: String("< \(rvcTitle)") /*@"< rTracker"  // rTracker ... tracks ? */,
+            title: String("< \(rvcTitle!)") /*@"< rTracker"  // rTracker ... tracks ? */,
             style: .plain,
             target: self,
             action: #selector(addTrackerController.btnCancel))
@@ -777,22 +777,25 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         var boty: CGFloat
 
         #if DEBUGLOG
-        let ac = tracker!.activeControl
-        var acsv = ac!.forBaselineLayout()
-        var vf = acsv.frame
-        DBGLog(String("frame1: \(vf.origin.x) \(vf.origin.y) \(vf.size.width) \(vf.size.height)"))
-        acsv = ac!.superview!
-        vf = acsv.frame
-        DBGLog(String("frame2: \(vf.origin.x) \(vf.origin.y) \(vf.size.width) \(vf.size.height)"))
-        acsv = (ac?.superview?.superview)!
-        vf = acsv.frame
-        DBGLog(String("frame3: \(vf.origin.x) \(vf.origin.y) \(vf.size.width) \(vf.size.height)"))
-        acsv = (ac?.superview?.superview?.superview)!
-        vf = acsv.frame
-        DBGLog(String("frame4: \(vf.origin.x) \(vf.origin.y) \(vf.size.width) \(vf.size.height)"))
+        if let ac = tracker!.activeControl {
+            //var acsv = ac.forBaselineLayout
+            var vf = ac.frame
+            DBGLog(String("frame1: \(vf.origin.x) \(vf.origin.y) \(vf.size.width) \(vf.size.height)"))
+            var acsv = ac.superview!
+            vf = acsv.frame
+            DBGLog(String("frame2: \(vf.origin.x) \(vf.origin.y) \(vf.size.width) \(vf.size.height)"))
+            acsv = (ac.superview?.superview)!
+            vf = acsv.frame
+            DBGLog(String("frame3: \(vf.origin.x) \(vf.origin.y) \(vf.size.width) \(vf.size.height)"))
+            acsv = (ac.superview?.superview?.superview)!
+            vf = acsv.frame
+            DBGLog(String("frame4: \(vf.origin.x) \(vf.origin.y) \(vf.size.width) \(vf.size.height)"))
+        } else {
+            DBGLog("keyboardWill Show but no active control")
+        }
 
-        acsv = view
-        vf = acsv.frame
+        let acsv = view
+        let vf = acsv!.frame
         DBGLog(String("self frame: \(vf.origin.x) \(vf.origin.y) \(vf.size.width) \(vf.size.height)"))
 
         #endif
