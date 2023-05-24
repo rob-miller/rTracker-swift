@@ -247,6 +247,55 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
         return true
     }
 
+    func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
+
+       guard let bdn = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String else { return false }
+       
+       print("openURL \(url)")
+       print("bundle id: \(bdn)")
+       
+       guard let navigationController = window?.rootViewController as? UINavigationController,
+             let rootController = navigationController.viewControllers.first as? RootViewController else {
+           return false
+       }
+       
+        var tid: Int = 0
+        let urlas = url.absoluteString
+        let curl = urlas.cString(using: .utf8)
+        let base = "\(bdn)://"
+        let format = "\(base)tid=%d"
+        let scanner = Scanner(string: urlas)
+        let _ = scanner.scanUpToString("tid=")
+
+        if !scanner.isAtEnd {
+            scanner.currentIndex = scanner.string.index(scanner.currentIndex, offsetBy: "tid=".count)
+        }
+
+        // Finally, scan the integer value
+        if scanner.scanInt(&tid) {
+
+        //if scanner.scanString(base, into: nil) && scanner.scanString("tid=", into: nil) && scanner.scanInt(&tid) {
+            print("curl=\(urlas) format=\(format) tid=\(tid)")
+       
+            let tlist = rootController.tlist
+            tlist.loadTopLayoutTable()
+            let tidNumber = NSNumber(value: tid)
+            if tlist.topLayoutIDs!.contains(tidNumber) {
+                rootController.performSelector(onMainThread: #selector(rootController.doOpenTracker(_:)), with: tidNumber, waitUntilDone: false)
+            } else {
+                rTracker_resource.alert("no tracker found", msg: "No tracker with ID \(tid) found in \(bdn).  Edit the tracker, tap the ⚙, and look in 'database info' for the tracker id.", vc: rootController)
+            }
+           
+        } else if urlas == base {
+            // do nothing because rTracker:// should open with default trackerList page
+        } else if urlas.hasPrefix(base) || urlas.hasPrefix(base.lowercased()) {
+            print("sscanf fail curl=\(urlas) format=\(format)")
+            rTracker_resource.alert("bad URL", msg: "URL received was \(url.absoluteString) but should look like \(format)", vc: rootController)
+        }
+       
+        return true
+    }
+
     /* no longer support responding to notifications / open as url
 
     - (BOOL) application:(UIApplication *)application openURL:(NSURL *)url sourceApplication:(NSString *)sourceApplication annotation:(id)annotation {
