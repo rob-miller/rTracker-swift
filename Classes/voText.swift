@@ -91,7 +91,7 @@ class voText: voState, UITextFieldDelegate {
     func textFieldDidEndEditing(_ textField: UITextField) {
         //DBGLog(@"tf end editing");
         if startStr != textField.text {
-            vo.value = textField.text
+            vo.value = textField.text ?? ""
             //textField.textColor = [UIColor blackColor];
             NotificationCenter.default.post(name: NSNotification.Name(rtValueUpdatedNotification), object: self)
             startStr = nil

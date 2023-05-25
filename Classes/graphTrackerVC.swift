@@ -243,7 +243,7 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
 
         tracker?.setTOGD(gtvRect)  // now we know the full gtvRect
         nextVO() // initialize self.currVO
-
+        
         yAV?.vogd = currVO?.vogd as? vogd
         yAV?.graphSV = scrollView
 
@@ -792,12 +792,14 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
                         maxw = testDblWidth(tracker?.toQry2Double(sql:sql) ?? 0.0, max: maxw)
                     }
                 case VOT_SLIDER:
-                    nmin = NSNumber(pointer:vo.optDict["smin"])
-                    nmax = NSNumber(pointer:vo.optDict["smax"])
+                    nmin = NSNumber(value:Double(vo.optDict["smin"]!)!)
+                    nmax = NSNumber(value:Double(vo.optDict["smax"]!)!)
                     maxw = testDblWidth(nmin != nil ? nmin!.doubleValue : d(SLIDRMINDFLT), max: maxw)
                     maxw = testDblWidth(nmax != nil ? nmax!.doubleValue : d(SLIDRMAXDFLT), max: maxw)
                 case VOT_BOOLEAN:
-                    bval = NSNumber(pointer:vo.optDict["boolval"])
+                    //bval = NSNumber(pointer:vo.optDict["boolval"])
+                    bval = NSNumber(value: Double(vo.optDict["boolval"]!)!)
+                    //DBGLog("bval= \(bval)")
                     maxw = testDblWidth(bval != nil ? bval!.doubleValue : d(BOOLVALDFLT), max: maxw)
                 case VOT_CHOICE:
                     //var i: Int

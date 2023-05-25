@@ -362,7 +362,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
         DBGLog(String("save label: \(tempValObj!.valueName) id: \(Int(tempValObj!.vid)) row: \(UInt(row)) = \(selected)"))
         #endif
 
-        parentTrackerObj?.addValObj(tempValObj)
+        parentTrackerObj?.addValObj(tempValObj!)
 
         leave()
         //[self.navigationController popViewControllerAnimated:YES];

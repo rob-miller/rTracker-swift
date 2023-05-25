@@ -287,7 +287,7 @@ class gtYAxV: UIView {
     // MARK: -
     // MARK: touch support
 
-    func touchReport(_ touches: Set<AnyHashable>?) -> String? {
+    func touchReport(_ touches: Set<AnyHashable>?) -> String {
 
         #if DEBUGLOG
         let touch = touches?.first as? UITouch
@@ -295,7 +295,6 @@ class gtYAxV: UIView {
         return String(format: "touch at %f, %f.  taps= %lu  numTouches= %lu", touchPoint?.x ?? 0.0, touchPoint?.y ?? 0.0, UInt(touch?.tapCount ?? 0), UInt(touches?.count ?? 0))
         #endif
         return ""
-
     }
 
     /*

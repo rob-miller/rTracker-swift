@@ -47,7 +47,7 @@
 {
     button.titleLabel.font = [UIFont boldSystemFontOfSize:19.f];
     button.titleLabel.shadowOffset = self.shadowOffset;
-    button.adjustsImageWhenDisabled = NO;
+    //button.adjustsImageWhenDisabled = NO;
     [button setTitleColor:self.textColor forState:UIControlStateNormal];
     [button setTitleShadowColor:[UIColor whiteColor] forState:UIControlStateNormal];
 }

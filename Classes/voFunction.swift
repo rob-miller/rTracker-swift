@@ -772,7 +772,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                 switch currTok {
                 case FN1ARGDELTA:
                     if epd1 == 0 {
-                        v1 = Double(to.getValObj(vid)!.value!)!
+                        v1 = Double(to.getValObj(vid)!.value)!
                     } else {
                         sql = String(format: "select val from voData where vid=%ld and date=%d;", vid, epd1)
                         v1 = to.toQry2Double(sql:sql)!
@@ -782,7 +782,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                     result = v1 - v0
                 case FN1ARGAVG:
                     if epd1 == 0 {
-                        v1 = Double(to.getValObj(vid)!.value!)!
+                        v1 = Double(to.getValObj(vid)!.value)!
                         sql = String(format: "select avg(val) from voData where vid=%ld and date >=%d;", vid, epd0)
                         result = Double(to.toQry2Float(sql:sql)!) + v1
                     } else {
@@ -1155,7 +1155,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             } else {
                 // remaining option is we have some vid as currTok, return its value up the chain
                 let lvo = to.getValObj(currTok)!
-                result = Double(lvo.value!) ?? 0
+                result = Double(lvo.value) ?? 0
                 #if FUNCTIONDBG
                 DBGLog(String("vid \(lvo.vid): result= \(result)"))
                 #endif

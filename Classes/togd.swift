@@ -83,10 +83,8 @@ class Togd: NSObject {
     }
 
     func fillVOGDs() {
-        for vo in pto?.valObjTable ?? [] {
-            let tvogd = vo.vos?.newVOGD()
-            vo.vogd = tvogd as? (vogd & voProtocol)
-            //[vo.vogd release]; // rtm 05 feb 2012  +1 for new (alloc), +1 for vo retain
+        for vo in pto!.valObjTable {
+            vo.vogd = vo.vos!.newVOGD()
         }
     }
 }

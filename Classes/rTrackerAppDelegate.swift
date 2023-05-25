@@ -261,7 +261,7 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
        
         var tid: Int = 0
         let urlas = url.absoluteString
-        let curl = urlas.cString(using: .utf8)
+        //let curl = urlas.cString(using: .utf8)
         let base = "\(bdn)://"
         let format = "\(base)tid=%d"
         let scanner = Scanner(string: urlas)

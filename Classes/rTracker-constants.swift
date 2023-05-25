@@ -54,20 +54,20 @@ let PRIVDFLT = MINPRIV
 
 
 func f(_ x: Any) -> Float {
-    if let doubleValue = x as? Double {
-        return Float(doubleValue)
-    } else if let intValue = x as? Int {
-        return Float(intValue)
+    if let doubleValueF = x as? Double {
+        return Float(doubleValueF)
+    } else if let intValueF = x as? Int {
+        return Float(intValueF)
     } else {
         return 0.0 // or some default value
     }
 }
 
 func d(_ x: Any) -> Double {
-    if let doubleValue = x as? Double {
-        return doubleValue
-    } else if let intValue = x as? Int {
-        return Double(intValue)
+    if let doubleValueD = x as? Double {
+        return doubleValueD
+    } else if let intValueD = x as? Int {
+        return Double(intValueD)
     } else {
         return 0.0 // or some default value
     }

@@ -107,7 +107,7 @@ class voBoolean: voState {
             //bv = BOOLVALDFLTSTR;
             //[self.vo.optDict setObject:bv forKey:@"boolval"];
             //}
-            vo.value = bv
+            vo.value = bv!
             rTracker_resource.setCheck(self.checkButton, colr: rTracker_resource.colorSet()[Int(vo.optDict["btnColr"]!)!])
             if "1" == vo.optDict["setstrackerdate"] {
                 vo.setTrackerDateToNow()

@@ -621,7 +621,7 @@ class voState: NSObject, voProtocol {
     }
 
     func mapValue2Csv() -> String {
-        return vo.value! // subclass overrides if need to do anything - specifically for choice, textbox
+        return vo.value // subclass overrides if need to do anything - specifically for choice, textbox
     }
 
     func mapCsv2Value(_ inCsv: String) -> String {

@@ -656,7 +656,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         DBGLog(String("tb save: vo.val= .\(vo.value)  tv.txt= \(textView!.text)"))
         if 0 == setSearchSeg.selectedSegmentIndex {
             if vo.value != textView?.text {
-                vo.value = textView?.text
+                vo.value = textView?.text ?? ""
 
                 vo.display = nil // so will redraw this cell only
                 NotificationCenter.default.post(name: NSNotification.Name(rtValueUpdatedNotification), object: self)
@@ -1071,7 +1071,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
 
     override func mapValue2Csv() -> String {
         // add from history or contacts adds trailing \n, trim it here
-        return vo.value!.trimmingCharacters(in: .whitespacesAndNewlines)
+        return vo.value.trimmingCharacters(in: .whitespacesAndNewlines)
         /*
             NSUInteger ndx = [self.vo.value length];
 

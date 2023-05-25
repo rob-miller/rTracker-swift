@@ -390,7 +390,7 @@ class trackerObj: tObjBase {
             }
 
             if addVO {
-                addValObj(eVO)
+                addValObj(eVO!)
                 rescanVoIds(&existingVOs) // re-validate
             }
 
@@ -889,7 +889,7 @@ class trackerObj: tObjBase {
             dbgNSAssert((vo.vid >= 0), "tObj saveData vo.vid <= 0")
             if VOT_INFO != vo.vtype || ("1" == vo.optDict["infosave"]) {
                 //if (vo.vtype != VOT_FUNC) { // no fn results data kept
-                DBGLog(String("  vo \(vo.valueName)  id \(vo.vid) val \(vo.value ?? "")"))
+                DBGLog(String("  vo \(vo.valueName)  id \(vo.vid) val \(vo.value)"))
                 if vo.value == "" {
                     sql = String(format: "delete from voData where id = %ld and date = %d;", vo.vid, tdi)
                 } else {
@@ -1396,7 +1396,7 @@ class trackerObj: tObjBase {
         var saveData: [AnyHashable] = []
         for vo in valObjTable {
             if VOT_FUNC != vo.vtype {
-                saveData.append(vo.value ?? "")
+                saveData.append(vo.value)
             }
         }
         var fp = getPath(TmpTrkrData)
@@ -1444,7 +1444,7 @@ class trackerObj: tObjBase {
         enumerator = (loadData as NSArray?)?.objectEnumerator()
         for vo in valObjTable {
             if VOT_FUNC != vo.vtype {
-                vo.value = enumerator?.nextObject() as? String
+                vo.value = enumerator?.nextObject() as? String ?? ""
             }
         }
         return true
@@ -1468,19 +1468,19 @@ class trackerObj: tObjBase {
         }
     }
 
-    func updateValObj(_ valObj: valueObj?) -> Bool {
+    func updateValObj(_ valObj: valueObj) -> Bool {
 
         //NSEnumerator *enumer = [self.valObjTable objectEnumerator];
         //valueObj *vo;
         //while ( vo = (valueObj *) [enumer nextObject]) {
         for vo in valObjTable {
-            if vo.vid == valObj?.vid {
+            if vo.vid == valObj.vid {
                 //*vo = *valObj; // indirection cannot be to an interface in non-fragile ABI
-                vo.vtype = valObj?.vtype ?? 0
-                vo.valueName = valObj?.valueName // property retain should keep these all ok w/o leaks
+                vo.vtype = valObj.vtype
+                vo.valueName = valObj.valueName // property retain should keep these all ok w/o leaks
                 //[vo.valueName setString:valObj.valueName];  // valueName not mutableString
-                vo.value = valObj?.value
-                vo.display = valObj?.display
+                vo.value = valObj.value
+                vo.display = valObj.display
                 return true
             }
         }
@@ -1546,14 +1546,12 @@ class trackerObj: tObjBase {
         maxLabel = lsize
     }
 
-    func addValObj(_ valObj: valueObj?) {
-        DBGLog(String("addValObj to \(trackerName) id= \(super.toid) : adding _\(valObj!.valueName)_ id= \(Int(valObj!.vid)), total items now \(UInt(valObjTable.count))"))
+    func addValObj(_ valObj: valueObj) {
+        DBGLog(String("addValObj to \(trackerName) id= \(super.toid) : adding _\(valObj.valueName)_ id= \(Int(valObj.vid)), total items now \(UInt(valObjTable.count))"))
 
         // check if toid already exists, then update
         if !updateValObj(valObj) {
-            if let valObj {
-                valObjTable.append(valObj)
-            }
+            valObjTable.append(valObj)
         }
 
         rescanMaxLabel()

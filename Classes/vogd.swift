@@ -325,7 +325,7 @@ class vogd: NSObject {
 
         //var i2: [Int] = []
 
-        let sql = String(format: "select date,val, str_count(val, '\n') from voData where id=%ld and val not NULL and val != '' and date >= %d and date <= %d order by date;", Int(vo.vid), myTOGD.firstDate, myTOGD.lastDate)
+        let sql = String(format: "select date,val, (LENGTH(val) - LENGTH(REPLACE(val, CHAR(10), '')) + 1) from voData where id=%ld and val not NULL and val != '' and date >= %d and date <= %d order by date;", Int(vo.vid), myTOGD.firstDate, myTOGD.lastDate)
         let rsltISI = myTracker.toQry2AryISI(sql: sql)
         //sql = nil;
 

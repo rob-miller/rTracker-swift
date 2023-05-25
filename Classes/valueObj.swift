@@ -176,7 +176,7 @@ class valueObj: NSObject, UITextFieldDelegate {
             // called for setting property vtype
             //DBGLog(@"setVtype - allocating vos");
             _vtype = vt // not self as this is set fn!
-            var tvos: Any? = nil
+            var tvos: voState
             switch vt {
             case VOT_NUMBER:
                 tvos = voNumber(vo: self)
@@ -223,26 +223,26 @@ class valueObj: NSObject, UITextFieldDelegate {
                 _vtype = VOT_NUMBER // consistency if we get here
             }
             // vos = nil
-            vos = tvos as? (voState & voProtocol)
-            var tval: String?
-            tval = String(repeating: "\0", count: vos?.getValCap() ?? 0)
+            vos = tvos //as voState //as? (voState & voProtocol)
+            //var tval: String?
+            //tval = String(repeating: "\0", count: vos?.getValCap() ?? 0)
             // value = nil
-            _value = tval
+            _value = ""
             //[self.value release];   // clear retain count from alloc + retain
         }
     }
     var vpriv = 0
     var valueName: String?
 
-    private var _value: String?
-    var value: String? {
+    private var _value: String? = nil
+    var value: String {
         get {
             dbgNSAssert(vos != nil, "accessing vo.value with nil vos")
             if _value == nil {
                 _value = ""
             }
             _value = vos?.update(_value!)
-            return _value
+            return _value!
         }
         set {
             _value = newValue
@@ -252,8 +252,8 @@ class valueObj: NSObject, UITextFieldDelegate {
     var vGraphType = 0
 
     var optDict: [String : String] = [:]
-    var vos: (voState & voProtocol)?
-    var vogd: (vogd & voProtocol)?
+    var vos: voState?  //(voState & voProtocol)?
+    var vogd: vogd?  // (vogd & voProtocol)?
     var display: UIView?
     var useVO = false
     //@property (nonatomic) BOOL retrievedData;

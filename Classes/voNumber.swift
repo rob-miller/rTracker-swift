@@ -122,7 +122,7 @@ class voNumber: voState, UITextFieldDelegate {
         DBGLog(String("tf end editing vid=\(Int(vo.vid)) vo.value=\(vo.value) tf.text=\(textField.text)"))
 
         if startStr != textField.text {
-            vo.value = textField.text
+            vo.value = textField.text ?? ""
             //textField.textColor = [UIColor blackColor];
             //textField.backgroundColor = [UIColor whiteColor];
             NotificationCenter.default.post(name: NSNotification.Name(rtValueUpdatedNotification), object: self)

@@ -214,7 +214,7 @@ class voChoice: voState {
         } else {
             let segNdx = getSegmentIndexForValue()
             if segmentedControl?.selectedSegmentIndex != segNdx {
-                DBGLog(String("segmentedControl set value int: \(Int(vo.value!)) str: \(vo.value) segNdx: \(segNdx)"))
+                DBGLog(String("segmentedControl set value int: \(Int(vo.value)) str: \(vo.value) segNdx: \(segNdx)"))
                 // during loadCSV, not matching the string will cause a new c%d dict entry, so can be > CHOICES
                 if CHOICES > segNdx {
                     // normal case
@@ -514,7 +514,7 @@ class voChoice: voState {
             String("val= \(vo.value) indexForval= \(getSegmentIndexForValue()) obj= \(vo.optDict["c\(getSegmentIndexForValue())"])"))
         #endif
         if vo.optDict["exportvalb"] == "1" {
-            return vo.value!
+            return vo.value
         } else {
             return (vo.optDict["c\(getSegmentIndexForValue())"])!
         }
