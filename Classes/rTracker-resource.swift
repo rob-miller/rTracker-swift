@@ -1073,10 +1073,14 @@ class rTracker_resource: NSObject {
     class func getKeyWindowFrame() -> CGRect {
         var rframe: CGRect = CGRect.zero
         safeDispatchSync({
+            let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+            let window = windowScene?.windows.first
+            /*
             var window = UIApplication.shared.keyWindow
             if window == nil {
                 window = UIApplication.shared.windows[0]
             }
+             */
             rframe = window?.frame ?? CGRect.zero
         })
 
@@ -1198,13 +1202,16 @@ class rTracker_resource: NSObject {
         var result: CGSize = CGSize.zero
 
         var size = UIScreen.main.bounds.size
+        let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+        let orientation = windowScene!.interfaceOrientation
+        /*
         // UIInterfaceOrientation orientation = [[UIApplication sharedApplication] statusBarOrientation];
         let firstWindow = UIApplication.shared.windows.first
         let windowScene = firstWindow?.windowScene
         let orientation = windowScene?.interfaceOrientation
-
+         */
         //if (UIInterfaceOrientationIsLandscape(vc.interfaceOrientation)) {
-        if orientation?.isLandscape ?? false {
+        if orientation.isLandscape {
             result.width = size.height
             result.height = size.width
         } else {
@@ -1217,9 +1224,12 @@ class rTracker_resource: NSObject {
         let rvc = (vc?.navigationController?.viewControllers)?[0]
 
         if vc == rvc {
+            let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+            /*
             let firstWindow = UIApplication.shared.windows.first
             let windowScene = firstWindow?.windowScene
-            let uisbm = windowScene?.statusBarManager
+             */
+            let uisbm = windowScene!.statusBarManager
 
             //size = [[UIApplication sharedApplication] statusBarFrame].size;
             size = uisbm?.statusBarFrame.size ?? CGSize.zero
@@ -1261,13 +1271,16 @@ class rTracker_resource: NSObject {
         var result: CGSize = CGSize.zero
 
         let size = UIScreen.main.bounds.size
+        let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+        let orientation = windowScene!.interfaceOrientation
+        /*
         //UIInterfaceOrientation orientation = [[UIApplication sharedApplication] statusBarOrientation];
         let firstWindow = UIApplication.shared.windows.first
         let windowScene = firstWindow?.windowScene
         let orientation = windowScene?.interfaceOrientation
-
+         */
         //if (UIInterfaceOrientationIsLandscape(vc.interfaceOrientation)) {
-        if orientation?.isLandscape ?? false {
+        if orientation.isLandscape {
             result.width = size.height
             result.height = size.width
         } else {

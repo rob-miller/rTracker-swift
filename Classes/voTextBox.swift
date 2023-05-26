@@ -717,7 +717,9 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
              */
 
         if textView?.inputAccessoryView == nil {
-            Bundle.main.loadNibNamed("voTBacc", owner: self, options: nil)
+            let views = Bundle.main.loadNibNamed("voTBacc", owner: nil, options: nil)
+            let myView = views?.first as? UIView
+            Bundle.main.loadNibNamed("voTBacc", owner: nil, options: nil)
             // Loading the AccessoryView nib file sets the accessoryView outlet.
             textView?.inputAccessoryView = accessoryView
             // After setting the accessory view for the text view, we no longer need a reference to the accessory view.
@@ -784,7 +786,12 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         }
 
         if !accessAddressBook {
-            rTracker_resource.alert("Need Contacts access", msg: "Please go to System Settings -> Privacy -> Contacts and enable access for rTracker to use this feature.", vc: UIApplication.shared.keyWindow?.rootViewController)
+            let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+            let window = windowScene!.windows.first
+            let rootViewController = window!.rootViewController
+            rTracker_resource.alert("Need Contacts access", msg: "Please go to System Settings -> Privacy -> Contacts and enable access for rTracker to use this feature.",
+                                    vc:rootViewController)
+                                    //vc: UIApplication.shared.keyWindow?.rootViewController)
         }
 
     }

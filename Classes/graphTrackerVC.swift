@@ -531,10 +531,14 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
         if isViewLoaded && view.window != nil {
 
             coordinator.animate(alongsideTransition: { [self] context in
+                let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+                let orientation = windowScene!.interfaceOrientation
+                /*
                 //UIInterfaceOrientation orientation = [[UIApplication sharedApplication] statusBarOrientation];
                 let firstWindow = UIApplication.shared.windows.first
                 let windowScene = firstWindow?.windowScene
                 let orientation = windowScene?.interfaceOrientation
+                 */
                 // do whatever  -- willRotateTo
 
                 switch orientation {
@@ -555,10 +559,14 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
                 }
 
             }) { [self] context in
+                let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+                let orientation = windowScene!.interfaceOrientation
+                /*
                 //UIInterfaceOrientation orientation = [[UIApplication sharedApplication] statusBarOrientation];
                 let firstWindow = UIApplication.shared.windows.first
                 let windowScene = firstWindow?.windowScene
                 let orientation = windowScene?.interfaceOrientation
+                 */
                 // do whatever -- didRotateTo
                 switch orientation {
                 case .portrait:

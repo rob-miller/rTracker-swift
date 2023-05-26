@@ -622,11 +622,15 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         if isViewLoaded && view.window != nil {
 
             coordinator.animate(alongsideTransition: { context in
+                let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+                let orientation = windowScene!.interfaceOrientation
+                /*
                 //UIInterfaceOrientation orientation = [[UIApplication sharedApplication] statusBarOrientation];
                 let firstWindow = UIApplication.shared.windows.first
                 let windowScene = firstWindow?.windowScene
                 let orientation = windowScene?.interfaceOrientation
-
+                */
+                
                 // do whatever  -- willRotateTo
 
                 switch orientation {
@@ -647,11 +651,14 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 }
 
             }) { [self] context in
+                let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+                let orientation = windowScene!.interfaceOrientation
+                /*
                 //UIInterfaceOrientation orientation = [[UIApplication sharedApplication] statusBarOrientation];
                 let firstWindow = UIApplication.shared.windows.first
                 let windowScene = firstWindow?.windowScene
                 let orientation = windowScene?.interfaceOrientation
-
+                 */
                 // do whatever -- didRotateTo
                 switch orientation {
                 case .portrait:

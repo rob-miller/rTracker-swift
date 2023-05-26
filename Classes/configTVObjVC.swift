@@ -344,7 +344,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         #if DEBUGLOG
-        let touch = touches.first as? UITouch
+        let touch = touches.first
         let touchPoint = touch?.location(in: view)
         DBGLog(String("I am touched at \(touchPoint!.x), \(touchPoint!.y)."))
         #endif

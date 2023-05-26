@@ -817,7 +817,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
 
         #if FUNCTIONDBG
         // print our complete function
-        var i: Int
+        //var i: Int
         var outstr = ""
         for i in 0..<maxc {
             let object = fnArray[i] 
@@ -853,8 +853,8 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                 vid = fnArray[currFnNdx].intValue
                 currFnNdx += 1 // get fn arg, can only be valobj vid
                 //valueObj *valo = [to getValObj:vid];
-                let sv1 = to.getValObj(vid)!.value
-                let nullV1 = nil == sv1 || ("" == sv1)
+                let sv1 = to.getValObj(vid)?.value
+                let nullV1 = (nil == sv1 || ("" == sv1))
                 let v1 = Double(sv1 ?? "") ?? 0.0
                 sql = String(format: "select count(val) from voData where id=%ld and date >=%ld and date <%d;", vid, epd0, epd1)
                 var ci = to.toQry2Int(sql:sql)!
@@ -1257,7 +1257,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
 
         var valstr = vo.value // evaluated on read so make copy
         if FnErr {
-            valstr = "❌ " + (valstr ?? "")
+            valstr = "❌ " + (valstr)
         }
         if valstr != "" {
             rlab?.backgroundColor = .clear // was whiteColor

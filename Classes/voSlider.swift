@@ -163,7 +163,7 @@ class voSlider: voState {
 
         #if DEBUGLOG
         let vals = vo.value
-        let valf = CGFloat(Float(vo.value ?? "") ?? 0.0)
+        let valf = CGFloat(Float(vo.value) ?? 0.0)
         //trackerObj *pto = self.vo.parentTracker;
 
         DBGLog(String("voDisplay slider \(vo.valueName ?? "") vals= \(vals) valf= \(valf) -> slider.valf= \(sliderCtl?.value ?? 0.0)"))
@@ -182,9 +182,9 @@ class voSlider: voState {
             } else {
                 sliderCtl?.setValue(Float(sdflt), animated: false)
             }
-        } else if sliderCtl?.value != Float(vo.value ?? "") ?? 0.0 {
+        } else if sliderCtl?.value != Float(vo.value) ?? 0.0 {
             //self.sliderCtl.value = [self.vo.value floatValue];
-            sliderCtl?.setValue(Float(vo.value ?? "") ?? 0.0, animated: false)
+            sliderCtl?.setValue(Float(vo.value) ?? 0.0, animated: false)
         }
         DBGLog(String("sliderCtl voDisplay: \(sliderCtl?.value ?? 0.0)"))
         //NSLog(@"sliderCtl voDisplay: %f", self.sliderCtl.value);

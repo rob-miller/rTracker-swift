@@ -216,7 +216,10 @@ class privacyV: UIView {
                         [vc presentViewController:alert animated:YES completion:nil];
                         */
 
-                let vc = UIApplication.shared.keyWindow?.rootViewController
+                //let vc = UIApplication.shared.keyWindow?.rootViewController
+                let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+                let window = windowScene!.windows.first
+                let vc = window!.rootViewController
                 vc?.present(alert, animated: true)
             } else if PVNOSHOW != newState && PWNEEDPASS == pwState {
                 // must set an initial password to use privacy features        
