@@ -335,16 +335,17 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
 
         // no default fdlc so if set stays set - delete on del cons from fn
 
-        var v = Int((tempValObj?.optDict["frep0"]!)!)
-        if v! >= FREPDFLT {
-            tempValObj?.optDict.removeValue(forKey: "frv0")
+        //var v: Int?
+        if let v = Int((tempValObj?.optDict["frep0"] ?? "")) {
+            if v >= FREPDFLT {
+                tempValObj?.optDict.removeValue(forKey: "frv0")
+            }
         }
-
-        v = Int(tempValObj!.optDict["frep1"]!)
-        if v! >= FREPDFLT {
-            tempValObj?.optDict.removeValue(forKey: "frv1")
+        if let v = Int(tempValObj?.optDict["frep1"] ?? "") {
+            if v >= FREPDFLT {
+                tempValObj?.optDict.removeValue(forKey: "frv1")
+            }
         }
-
         if ((tempValObj?.optDict)?["autoscale"] as? String) == "0" {
 
             // override no autoscale if gmin, gmax both set and equal

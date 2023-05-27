@@ -531,7 +531,7 @@ class rTracker_resource: NSObject {
 
             //[activityIndicator stopAnimating];
             //activityIndicator?.performSelector(onMainThread: #selector(stopAnimating), with: nil, waitUntilDone: true)
-            activityIndicator!.stopAnimating()
+            activityIndicator?.stopAnimating()
 
 
             outerView?.removeFromSuperview()
