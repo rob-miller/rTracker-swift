@@ -45,11 +45,12 @@ class voImage: voState, UINavigationControllerDelegate {
 
     @objc func imgBtnAction(_ sender: Any?) {
         DBGLog("imgBtn Action.")
+        /*
         let vde = voDataEdit(nibName: "voDataEdit", bundle: nil)
         vde.vo = vo
         devc = vde // assign
         MyTracker.vc?.navigationController?.pushViewController(vde, animated: true)
-
+         */
     }
 
     override func voDisplay(_ bounds: CGRect) -> UIView {
