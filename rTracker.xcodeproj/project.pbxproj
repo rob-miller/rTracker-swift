@@ -77,8 +77,6 @@
 		D487D7741260A77800298C1D /* configTVObjVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = D487D7721260A77800298C1D /* configTVObjVC.swift */; };
 		D487D7751260A77800298C1D /* configTVObjVC.xib in Resources */ = {isa = PBXBuildFile; fileRef = D487D7731260A77800298C1D /* configTVObjVC.xib */; };
 		D48E98642A23BE8100AC5ACB /* voTextBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4B6AE71127EC35E00C036ED /* voTextBox.swift */; };
-		D48E98652A23E2BA00AC5ACB /* voTBacc.xib in Resources */ = {isa = PBXBuildFile; fileRef = D47FD4ED128C016600EFE8A7 /* voTBacc.xib */; };
-		D48E98662A23E58500AC5ACB /* voTBacc3.xib in Resources */ = {isa = PBXBuildFile; fileRef = D48E98622A23BD7300AC5ACB /* voTBacc3.xib */; };
 		D48E98672A23E65700AC5ACB /* voTBacc2.xib in Resources */ = {isa = PBXBuildFile; fileRef = D48E98602A22831200AC5ACB /* voTBacc2.xib */; };
 		D48F9E7F119AA02A00B37C93 /* valueObj.swift in Sources */ = {isa = PBXBuildFile; fileRef = D48F9E7E119AA02A00B37C93 /* valueObj.swift */; };
 		D48F9FB2119B4CA600B37C93 /* addValObjController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D48F9FB0119B4CA600B37C93 /* addValObjController.swift */; };
@@ -214,7 +212,6 @@
 		D47FBB7E14A9E2D700CE0547 /* closedview-button.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "closedview-button.png"; path = "Resources/png/closedview-button.png"; sourceTree = "<group>"; };
 		D47FBB8014A9E2E300CE0547 /* fullview-button.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "fullview-button.png"; path = "Resources/png/fullview-button.png"; sourceTree = "<group>"; };
 		D47FBB8214A9E2F100CE0547 /* shadeview-button.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "shadeview-button.png"; path = "Resources/png/shadeview-button.png"; sourceTree = "<group>"; };
-		D47FD4ED128C016600EFE8A7 /* voTBacc.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = voTBacc.xib; path = ../Resources/xib/voTBacc.xib; sourceTree = "<group>"; };
 		D47FD5D0128C22DC00EFE8A7 /* AddressBook.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AddressBook.framework; path = System/Library/Frameworks/AddressBook.framework; sourceTree = SDKROOT; };
 		D47FD5E1128C230700EFE8A7 /* AddressBookUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AddressBookUI.framework; path = System/Library/Frameworks/AddressBookUI.framework; sourceTree = SDKROOT; };
 		D481089919E056D600B422A8 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = rTracker/Images.xcassets; sourceTree = "<group>"; };
@@ -223,7 +220,6 @@
 		D487D7721260A77800298C1D /* configTVObjVC.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = configTVObjVC.swift; sourceTree = "<group>"; };
 		D487D7731260A77800298C1D /* configTVObjVC.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = configTVObjVC.xib; path = ../Resources/xib/configTVObjVC.xib; sourceTree = "<group>"; };
 		D48E98602A22831200AC5ACB /* voTBacc2.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = voTBacc2.xib; path = Resources/xib/voTBacc2.xib; sourceTree = SOURCE_ROOT; };
-		D48E98622A23BD7300AC5ACB /* voTBacc3.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = voTBacc3.xib; path = Classes/voTBacc3.xib; sourceTree = SOURCE_ROOT; };
 		D48F9E7E119AA02A00B37C93 /* valueObj.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = valueObj.swift; sourceTree = "<group>"; };
 		D48F9FB0119B4CA600B37C93 /* addValObjController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = addValObjController.swift; sourceTree = "<group>"; };
 		D49854AE12312A400009E458 /* useTrackerController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = useTrackerController.swift; sourceTree = "<group>"; };
@@ -514,9 +510,7 @@
 				D4B6AE82127EC39800C036ED /* voBoolean.swift */,
 				D4B6AE7B127EC38300C036ED /* voChoice.swift */,
 				D4B6AE71127EC35E00C036ED /* voTextBox.swift */,
-				D47FD4ED128C016600EFE8A7 /* voTBacc.xib */,
 				D48E98602A22831200AC5ACB /* voTBacc2.xib */,
-				D48E98622A23BD7300AC5ACB /* voTBacc3.xib */,
 				D4C1873E128A971000A612C4 /* voDataEdit.swift */,
 				D4B6AE6C127EC34D00C036ED /* voText.swift */,
 				D4B6AE67127EC33500C036ED /* voNumber.swift */,
@@ -714,11 +708,9 @@
 				D4B3009315A9B51A0042319D /* sampleTrackers in Resources */,
 				D40607E417D7CB5A00C05A38 /* fullview-button-blue-7@2x.png in Resources */,
 				D4B634B917B1C3B500E96BC1 /* notifyReminderViewController.xib in Resources */,
-				D48E98662A23E58500AC5ACB /* voTBacc3.xib in Resources */,
 				D4D555111BAC84C600064968 /* LaunchScreenImg.png in Resources */,
 				D4C0B3E023E9C3BB00304511 /* bell 1.caf in Resources */,
 				D417E3122A2121570093564A /* LICENSE in Resources */,
-				D48E98652A23E2BA00AC5ACB /* voTBacc.xib in Resources */,
 				D473ED4019571F8A00B4702C /* CalendarRow.png in Resources */,
 				D4C0B3DE23E9C3BB00304511 /* bell 2.caf in Resources */,
 				D473ED4519571F8A00B4702C /* CalendarSelectedDate@2x.png in Resources */,
