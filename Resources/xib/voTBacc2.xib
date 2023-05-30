@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="21507" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
+    <device id="retina6_12" orientation="portrait" appearance="light"/>
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="21505"/>
+        <capability name="Safe area layout guides" minToolsVersion="9.0"/>
+        <capability name="Stack View standard spacing" minToolsVersion="9.0"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <objects>
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner"/>
+        <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
+        <view contentMode="scaleToFill" id="TXs-4Z-6mP" customClass="CustomAccessoryView" customModule="rTracker" customModuleProvider="target">
+            <rect key="frame" x="0.0" y="0.0" width="680" height="43"/>
+            <autoresizingMask key="autoresizingMask" flexibleMinX="YES" widthSizable="YES" flexibleMaxX="YES"/>
+            <subviews>
+                <stackView opaque="NO" contentMode="scaleToFill" distribution="equalSpacing" alignment="center" spacingType="standard" translatesAutoresizingMaskIntoConstraints="NO" id="guZ-R0-FwH">
+                    <rect key="frame" x="0.0" y="6" width="600" height="31"/>
+                    <subviews>
+                        <segmentedControl opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="top" apportionsSegmentWidthsByContent="YES" segmentControlStyle="bar" selectedSegmentIndex="2" translatesAutoresizingMaskIntoConstraints="NO" id="e4M-kr-YHK">
+                            <rect key="frame" x="0.0" y="0.0" width="113" height="32"/>
+                            <segments>
+                                <segment title="👥"/>
+                                <segment title="📖"/>
+                                <segment title="⌨"/>
+                            </segments>
+                            <connections>
+                                <action selector="segmentChanged:" destination="TXs-4Z-6mP" eventType="valueChanged" id="RjG-mM-5Wy"/>
+                            </connections>
+                        </segmentedControl>
+                        <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="contactAdd" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="FcS-a4-M6d" userLabel="addButton">
+                            <rect key="frame" x="306.33333333333331" y="2.6666666666666661" width="25.666666666666686" height="25.666666666666671"/>
+                            <accessibility key="accessibilityConfiguration" label="add"/>
+                            <fontDescription key="fontDescription" name="Helvetica-Bold" family="Helvetica" pointSize="18"/>
+                            <state key="normal">
+                                <color key="titleColor" red="0.19607843459999999" green="0.30980393290000002" blue="0.52156865600000002" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                <color key="titleShadowColor" red="0.5" green="0.5" blue="0.5" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                            </state>
+                            <state key="highlighted">
+                                <color key="titleColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                            </state>
+                            <connections>
+                                <action selector="addButtonPressed:" destination="TXs-4Z-6mP" eventType="touchUpInside" id="Rtf-cE-vN4"/>
+                            </connections>
+                        </button>
+                        <segmentedControl opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="top" segmentControlStyle="plain" selectedSegmentIndex="0" translatesAutoresizingMaskIntoConstraints="NO" id="0gR-OH-qkQ">
+                            <rect key="frame" x="525" y="0.0" width="75" height="32"/>
+                            <segments>
+                                <segment title="✔︎"/>
+                                <segment title="🔍"/>
+                            </segments>
+                            <connections>
+                                <action selector="searchSegChanged:" destination="TXs-4Z-6mP" eventType="valueChanged" id="uUV-92-6EP"/>
+                            </connections>
+                        </segmentedControl>
+                    </subviews>
+                </stackView>
+                <segmentedControl hidden="YES" opaque="NO" contentMode="scaleToFill" horizontalCompressionResistancePriority="999" contentHorizontalAlignment="left" contentVerticalAlignment="top" apportionsSegmentWidthsByContent="YES" segmentControlStyle="plain" selectedSegmentIndex="0" translatesAutoresizingMaskIntoConstraints="NO" id="sgK-gu-ATk">
+                    <rect key="frame" x="610" y="5" width="51" height="32"/>
+                    <segments>
+                        <segment title="∪"/>
+                        <segment title="∩"/>
+                    </segments>
+                </segmentedControl>
+                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="KUh-dB-4AC">
+                    <rect key="frame" x="620" y="7" width="30" height="30"/>
+                    <constraints>
+                        <constraint firstAttribute="width" constant="30" id="3Zl-Ln-4VF"/>
+                        <constraint firstAttribute="width" secondItem="KUh-dB-4AC" secondAttribute="height" multiplier="1:1" id="BLM-hr-A1K"/>
+                        <constraint firstAttribute="height" constant="30" id="khg-P5-peN"/>
+                    </constraints>
+                    <state key="normal" title="❌"/>
+                    <connections>
+                        <action selector="clearButtonPressed:" destination="TXs-4Z-6mP" eventType="touchUpInside" id="izX-Se-zje"/>
+                    </connections>
+                </button>
+            </subviews>
+            <viewLayoutGuide key="safeArea" id="gOj-Kc-uOg"/>
+            <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+            <constraints>
+                <constraint firstItem="sgK-gu-ATk" firstAttribute="leading" secondItem="guZ-R0-FwH" secondAttribute="trailing" constant="10" id="6vX-IK-UYH"/>
+                <constraint firstItem="guZ-R0-FwH" firstAttribute="top" secondItem="TXs-4Z-6mP" secondAttribute="top" constant="6" id="9ft-RQ-vi0"/>
+                <constraint firstAttribute="bottom" secondItem="guZ-R0-FwH" secondAttribute="bottom" constant="6" id="GiD-2l-bws"/>
+                <constraint firstAttribute="bottom" secondItem="sgK-gu-ATk" secondAttribute="bottom" constant="7" id="KYb-Ro-yN0"/>
+                <constraint firstItem="guZ-R0-FwH" firstAttribute="leading" secondItem="TXs-4Z-6mP" secondAttribute="leading" id="PNw-Ab-I5O"/>
+                <constraint firstAttribute="trailing" secondItem="KUh-dB-4AC" secondAttribute="trailing" constant="30" id="WSr-Bh-f0m"/>
+                <constraint firstAttribute="bottom" secondItem="KUh-dB-4AC" secondAttribute="bottom" constant="6" id="aB9-XW-K2O"/>
+                <constraint firstItem="sgK-gu-ATk" firstAttribute="top" secondItem="TXs-4Z-6mP" secondAttribute="top" constant="5" id="au8-OP-Csb"/>
+                <constraint firstItem="KUh-dB-4AC" firstAttribute="top" secondItem="TXs-4Z-6mP" secondAttribute="top" constant="7" id="l7C-01-JHT"/>
+                <constraint firstItem="KUh-dB-4AC" firstAttribute="leading" secondItem="guZ-R0-FwH" secondAttribute="trailing" constant="20" id="qdz-0V-nYp"/>
+            </constraints>
+            <nil key="simulatedStatusBarMetrics"/>
+            <freeformSimulatedSizeMetrics key="simulatedDestinationMetrics"/>
+            <connections>
+                <outlet property="addButton" destination="FcS-a4-M6d" id="S0t-de-saB"/>
+                <outlet property="clearButton" destination="KUh-dB-4AC" id="Iqp-rh-w0m"/>
+                <outlet property="orAndSeg" destination="sgK-gu-ATk" id="1Im-53-7zI"/>
+                <outlet property="searchSeg" destination="0gR-OH-qkQ" id="x0I-9s-BF6"/>
+                <outlet property="segControl" destination="e4M-kr-YHK" id="Fwr-Rl-d0z"/>
+            </connections>
+            <point key="canvasLocation" x="377.89855072463769" y="202.56696428571428"/>
+        </view>
+    </objects>
+</document>

@@ -26,6 +26,70 @@ import Contacts
 import Foundation
 import UIKit
 
+class CustomAccessoryView: UIView {
+
+    @IBOutlet weak var addButton: UIButton!
+    @IBOutlet weak var segControl: UISegmentedControl!
+    @IBOutlet weak var searchSeg: UISegmentedControl!
+    @IBOutlet weak var clearButton: UIButton!
+    @IBOutlet weak var orAndSeg: UISegmentedControl!
+    var votb: voTextBox!
+    
+    class func instanceFromNib(_ invotb: voTextBox) -> CustomAccessoryView {
+        let cav =  UINib(nibName: "voTBacc2", bundle: nil).instantiate(withOwner: nil, options: nil)[0] as! CustomAccessoryView
+        cav.votb = invotb
+        return cav
+    }
+    
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        
+        // Initialize your view
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        super.init(coder: aDecoder)
+        
+        // Initialize your view
+
+    }
+    @IBAction func addButtonPressed(_ sender: Any) {
+        print("addButton pressed")
+        votb.addPickerData()
+    }
+    
+    @IBAction func clearButtonPressed(_ sender: UIButton) {
+        votb.clear()
+    }
+    
+    @IBAction func segmentChanged(_ sender: UISegmentedControl) {
+        print("seg changed")
+        votb.segmentChanged(sender.selectedSegmentIndex)
+    }
+    
+    @IBAction func searchSegChanged(_ sender: UISegmentedControl) {
+        if 0 == searchSeg.selectedSegmentIndex {
+            orAndSeg.isHidden = true
+            clearButton.isHidden = false
+        } else {
+            orAndSeg.isHidden = false
+            clearButton.isHidden = true
+        }
+    }
+    
+    func initAccView() {
+        addButton.isHidden = true
+        let fsize: CGFloat = 20.0
+        segControl.setTitleTextAttributes([
+            .font: UIFont.systemFont(ofSize: fsize)
+        ], for: .normal)
+        searchSeg.setTitleTextAttributes([
+            .font: UIFont.systemFont(ofSize: fsize)
+        ], for: .normal)
+    }
+}
+
+
 class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextViewDelegate {
     /*{
 
@@ -69,11 +133,9 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         return _tbButton
     }
     var textView: UITextView?
-    @IBOutlet var accessoryView: UIView!
-    @IBOutlet var addButton: UIButton!
-    @IBOutlet var clearButton: UIButton!
-    @IBOutlet weak var segControl: UISegmentedControl!
 
+    var cav: CustomAccessoryView!
+    
     private var _pv: UIPickerView?
     var pv: UIPickerView? {
         if nil == _pv {
@@ -126,7 +188,6 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
     var namesArray: [String]? {
         checkContactsAccess()
         if !accessAddressBook {
-            //[rTracker_resource alert_mt:@"Need Contacts access" msg:@"Please go to System Settings -> Privacy -> Contacts and enable access for rTracker to use this feature." vc:[UIApplication sharedApplication].keyWindow.rootViewController];
             return nil
         }
         if nil == _namesArray {
@@ -164,59 +225,6 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
             _namesArray = names
         }
         return _namesArray
-
-        /* ios 9 deprecates ABAddressBook, processContactsAuthStatus should take care of access permissions
-                if (kABAuthorizationStatusDenied == ABAddressBookGetAuthorizationStatus()) {
-                    //    [rTracker_resource alert:@"Need Contacts access" msg:@"Please go to System Settings -> Privacy -> Contacts and enable access for rTracker to use this feature."];
-                    //CFRelease(addressBook);
-                    return nil;
-                }
-
-                ABAddressBookRef addressBook = ABAddressBookCreateWithOptions(NULL,NULL);
-                // ios6  ABAddressBookRef addressBook = ABAddressBookCreate();
-                __block BOOL accessGranted = NO;
-
-                if (kABAuthorizationStatusNotDetermined == ABAddressBookGetAuthorizationStatus()) {
-                    if (&ABAddressBookRequestAccessWithCompletion != NULL) { // we're on iOS 6
-                        dispatch_semaphore_t sema = dispatch_semaphore_create(0);
-                        ABAddressBookRef addressBook = ABAddressBookCreateWithOptions(NULL,NULL);  // ios6 ABAddressBookCreate();
-                        ABAddressBookRequestAccessWithCompletion(addressBook, ^(bool granted, CFErrorRef error) {
-                            accessGranted = granted;
-                            dispatch_semaphore_signal(sema);
-                        });
-                        dispatch_semaphore_wait(sema, DISPATCH_TIME_FOREVER);
-                        // not needed with ios6 arc :  dispatch_release(sema);
-                        CFRelease(addressBook);
-                    }
-
-                    if (! accessGranted) {
-                        [rTracker_resource alert:@"Need Contacts access" msg:@"Please go to System Settings -> Privacy -> Contacts and enable access for rTracker to use this feature." vc:nil];
-                    }
-                }
-
-                CFArrayRef people = ABAddressBookCopyArrayOfAllPeople(addressBook);
-                //
-                CFMutableArrayRef peopleMutable = CFArrayCreateMutableCopy(
-                                                                           kCFAllocatorDefault,
-                                                                           CFArrayGetCount(people),
-                                                                           people
-                                                                           );
-
-                CFArraySortValues(
-                                  peopleMutable,
-                                  CFRangeMake(0, CFArrayGetCount(peopleMutable)),
-                                  (CFComparatorFunction) ABPersonComparePeopleByName,
-                                  (void*)(unsigned long) ABPersonGetSortOrdering()
-                                  );
-
-                _namesArray = [[NSArray alloc] initWithArray:(__bridge NSArray*)peopleMutable];
-
-                CFRelease(addressBook);
-                CFRelease(people);
-                CFRelease(peopleMutable);
-            }
-            return _namesArray;
-                 */
     }
 
     private var _historyArray: [String]?
@@ -240,7 +248,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
                     s0.formUnion(Set(s1.components(separatedBy: "\n")))
                 }
             }
-            //s0.filter { NSPredicate(format: "SELF != ''").evaluate(with: $0) }  // lose blank/null entries
+            s0 = s0.filter { NSPredicate(format: "SELF != ''").evaluate(with: $0) }  // lose blank/null entries
             _historyArray = Array(s0).sorted{
                 $0.localizedCaseInsensitiveCompare($1) == .orderedAscending
             }
@@ -287,12 +295,6 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
             var tmpNamesNdx = getNSMA(notSet)
 
             for name in namesArray ?? [] {
-                /*
-                            NSString *name = (NSString*) CFBridgingRelease(ABRecordCopyValue((__bridge ABRecordRef)abrr, abSortOrderProp));
-                            if (nil == name) {
-                                name = (NSString*) CFBridgingRelease(ABRecordCopyCompositeName((__bridge ABRecordRef)(abrr)));
-                            }
-                            */
                 let firstc = name.first!  // unichar(name[name.index(name.startIndex, offsetBy: 0)])
 
                 enterNSMA(&tmpNamesNdx, c: firstc, dflt: notSet, ndx: ndx)
@@ -315,13 +317,12 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
     //@property (nonatomic) CGRect saveFrame;
     var showNdx = false
     var accessAddressBook = false
+    /*
     @IBOutlet weak var setSearchSeg: UISegmentedControl!
     @IBOutlet weak var orAndSeg: UISegmentedControl!
+     */
 
-    //,saveFrame=_saveFrame,
-    //@synthesize peopleDictionary,historyDictionary;
-    //BOOL keyboardIsShown=NO;
-
+ 
     /*
     init() {
         //DBGLog(@"voTextBox default init");
@@ -344,18 +345,16 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
 
         //DBGLog(@"tbBtn= %0x  rcount= %d",tbButton,[tbButton retainCount]);
         // convenience constructor, do not own (enven tho retained???)
-        accessoryView = nil
-
+        //foo accessoryView = nil
+        cav = nil
         devc = nil
 
         //self.alphaArray = nil;
 
-
-
-
     }
 
     @objc func tbBtnAction(_ sender: Any?) {
+        // textbox pressed in tracker, bring up editor view
         //DBGLog(@"tbBtn Action.");
         //voDataEdit *vde = [[voDataEdit alloc] initWithNibName:@"voDataEdit" bundle:nil ];
         let vde = voDataEdit()
@@ -396,6 +395,11 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         // myTextView.autocorrectionType = UITextAutocorrectionTypeNo;
 
         if let textView {
+            if textView.inputAccessoryView == nil {
+                cav = CustomAccessoryView.instanceFromNib(self)
+                textView.inputAccessoryView = cav // myAccessoryView  /* accessoryView
+                cav.initAccView()
+            }
             vc.view.addSubview(textView)
         }
 
@@ -478,83 +482,19 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         */
     }
 
-    /*
-    - (void) dataEditVDidUnload {
-    	self.devc = nil;
-    }
-    */
-
-    //- (void) dataEditFinished {
-    //	[self.vo.value setString:self.textView.text];
-    //}
-
-    /*
-    - (void)keyboardWillShow:(NSNotification *)aNotification 
-    {
-        DBGLog(@"votb keyboardwillshow");
-
-    	if (keyboardIsShown)
-    		return;
-
-    	// the keyboard is showing so resize the table's height
-    	self.saveFrame = self.devc.view.frame;
-    	CGRect keyboardRect = [[aNotification userInfo][UIKeyboardFrameEndUserInfoKey] CGRectValue];
-        NSTimeInterval animationDuration =
-    	[[aNotification userInfo][UIKeyboardAnimationDurationUserInfoKey] doubleValue];
-        CGRect frame = self.devc.view.frame;
-        frame.size.height -= keyboardRect.size.height;
-        [UIView beginAnimations:@"ResizeForKeyboard" context:nil];
-        [UIView setAnimationDuration:animationDuration];
-        self.devc.view.frame = frame;
-        [UIView commitAnimations];
-
-        keyboardIsShown = YES;
-
-    }
-
-    - (void)keyboardWillHide:(NSNotification *)aNotification
-    {
-        DBGLog(@"votb keyboardwillhide");
-
-        // the keyboard is hiding reset the table's height
-    	//CGRect keyboardRect = [[[aNotification userInfo] objectForKey:UIKeyboardFrameEndUserInfoKey] CGRectValue];
-        NSTimeInterval animationDuration =
-    	[[aNotification userInfo][UIKeyboardAnimationDurationUserInfoKey] doubleValue];
-        //CGRect frame = self.devc.view.frame;
-        //frame.size.height += keyboardRect.size.height;
-        [UIView beginAnimations:@"ResizeForKeyboard" context:nil];
-        [UIView setAnimationDuration:animationDuration];
-        self.devc.view.frame = self.saveFrame;  // frame;
-        [UIView commitAnimations];
-
-
-        keyboardIsShown = NO;
-    }
-    */
-
+ 
     // MARK: -
     // MARK: UITextViewDelegate
-
-    @IBAction func setSearchSegChanged(_ sender: Any) {
-        if 0 == setSearchSeg.selectedSegmentIndex {
-            orAndSeg.isHidden = true
-            clearButton.isHidden = false
-        } else {
-            orAndSeg.isHidden = false
-            clearButton.isHidden = true
-        }
-    }
-
 
     /*
     - (void)keyboardWillShow:(NSNotification *)aNotification;
     - (void)keyboardWillHide:(NSNotification *)aNotification;
     */
-    @IBAction func clear(_ sender: Any) {
+    func clear() {
         textView?.text = ""
     }
 
-    @IBAction func addPickerData(_ sender: Any) {
+    func addPickerData() {
         var row = 0
         var str: String? = nil
 
@@ -563,11 +503,10 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         } else {
             row = pv?.selectedRow(inComponent: 0) ?? 0
         }
-        if SEGPEOPLE == segControl.selectedSegmentIndex {
+        if SEGPEOPLE == cav.segControl.selectedSegmentIndex {
             if 0 == (namesArray?.count ?? 0) {
                 rTracker_resource.alert("No Contacts", msg: "Add some names to your Address Book, then find them here", vc: nil)
             } else if accessAddressBook {
-                // ios 9 deprecation str = [NSString stringWithFormat:@"%@\n",(NSString*) CFBridgingRelease(ABRecordCopyCompositeName((__bridge ABRecordRef)((self.namesArray)[row])))];
                 str = "\((namesArray?[row] as? String) ?? "")\n"
             }
         } else {
@@ -584,11 +523,15 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
             textView?.text = (textView?.text ?? "") + (str ?? "")
         }
     }
+     
 
-    @IBAction func segmentChanged(_ sender: UISegmentedControl) {
-        let ndx = sender.selectedSegmentIndex
+    //@IBAction func segmentChanged(_ sender: UISegmentedControl) {
+    func segmentChanged(_ ndx:Int) {
+        //let ndx = sender.selectedSegmentIndex
         //DBGLog(@"segment changed: %ld",(long)ndx);
 
+
+        
         if textView?.inputView != nil {
             // if was showing pickerview
             pv?.removeFromSuperview() // remove leftover constraints if showed before
@@ -596,38 +539,25 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         }
 
         if SEGKEYBOARD == ndx {
-            addButton.isHidden = true
+            cav.addButton.isHidden = true
             textView?.inputView = nil
         } else {
             if SEGPEOPLE == ndx {
                 checkContactsAccess()
-                /* checkContactsAccess does the alert
-                            if (! self.accessAddressBook) {
-                                [rTracker_resource alert:@"Need Contacts access" msg:@"Please go to System Settings -> Privacy -> Contacts and enable access for rTracker to use this feature." vc:nil];
-                            }
-                            */
-                /* ABAddressBook deprecated ios 9
-                            if (kABAuthorizationStatusDenied == ABAddressBookGetAuthorizationStatus()) {
-                                [rTracker_resource alert:@"Need Contacts access" msg:@"Please go to System Settings -> Privacy -> Contacts and enable access for rTracker to use this feature." vc:nil];
-                                self.addButton.hidden = YES;
-                                self.accessAddressBook = NO;
-                            } else {
-                                self.addButton.hidden = NO;
-                                self.accessAddressBook = YES;
-                            }
-                            */
+                if !accessAddressBook {
+                    return
+                }
             } else {
-                addButton.isHidden = false
+                cav.addButton.isHidden = false
             }
-            if ((SEGPEOPLE == ndx) && (vo.optDict["tbni"] == "1")) || ((SEGHISTORY == ndx) && (vo.optDict["tbhi"] == "1")) {
+            if ((SEGPEOPLE == ndx) && (vo.optDict["tbni"] == "1") && accessAddressBook)
+                || ((SEGHISTORY == ndx) && (vo.optDict["tbhi"] == "1")) {
                 showNdx = true
             } else {
                 showNdx = false
             }
 
-            //if (nil == self.textView.inputView) 
             textView?.inputView = pv
-            //[rTracker_resource alert_mt:@"Need Contacts access" msg:@"Please go to System Settings -> Privacy -> Contacts and enable access for rTracker to use this feature." vc:self.pv.inputViewController];
         }
 
         textView?.resignFirstResponder()
@@ -636,13 +566,9 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         if let selectedRange = textView?.selectedRange {
             textView?.scrollRangeToVisible(selectedRange)
         }
-        //if (!self.accessAddressBook && SEGPEOPLE == ndx) {
-        //    [rTracker_resource alert_mt:@"Need Contacts access" msg:@"Please go to System Settings -> Privacy -> Contacts and enable access for rTracker to use this feature." vc:[UIApplication sharedApplication].keyWindow.rootViewController];
-        //}
-
-
     }
-
+     
+    
     @objc func saveAction(_ sender: Any?) {
         // finish typing text/dismiss the keyboard by removing it as the first responder
         //
@@ -654,7 +580,8 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         }
 
         DBGLog(String("tb save: vo.val= .\(vo.value)  tv.txt= \(textView!.text)"))
-        if 0 == setSearchSeg.selectedSegmentIndex {
+
+        if 0 == cav.searchSeg.selectedSegmentIndex {
             if vo.value != textView?.text {
                 vo.value = textView?.text ?? ""
 
@@ -666,7 +593,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
             let searchStrings = Set<AnyHashable>(txtStrings)
 
             var sql = String(format: "select distinct date from voData where id=%ld and (", Int(vo.vid)) // privacy ok because else can't see textbox
-            let oasi = orAndSeg.selectedSegmentIndex
+            let oasi = cav.orAndSeg.selectedSegmentIndex
             let orAnd = Bool(oasi != 0)
             var cont = false
             for ss in searchStrings {
@@ -710,35 +637,16 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         devc?.navigationItem.rightBarButtonItem = saveItem
     }
 
+    /*
     func textViewShouldBeginEditing(_ aTextView: UITextView) -> Bool {
-
-        /*
-             You can create the accessory view programmatically (in code), in the same nib file as the view controller's main view, or from a separate nib file. This example illustrates the latter; it means the accessory view is loaded lazily -- only if it is required.
-             */
-
-        if textView?.inputAccessoryView == nil {
-            let views = Bundle.main.loadNibNamed("voTBacc", owner: nil, options: nil)
-            let myView = views?.first as? UIView
-            Bundle.main.loadNibNamed("voTBacc", owner: nil, options: nil)
-            // Loading the AccessoryView nib file sets the accessoryView outlet.
-            textView?.inputAccessoryView = accessoryView
-            // After setting the accessory view for the text view, we no longer need a reference to the accessory view.
-            accessoryView = nil
-            addButton.isHidden = true
-            let fsize: CGFloat = 20.0
-            segControl.setTitleTextAttributes([
-                .font: UIFont.systemFont(ofSize: fsize)
-            ], for: .normal)
-            setSearchSeg.setTitleTextAttributes([
-                .font: UIFont.systemFont(ofSize: fsize)
-            ], for: .normal)
+        if false { //textView?.inputAccessoryView == nil {
+            cav = CustomAccessoryView.instanceFromNib(self)
+            textView?.inputAccessoryView = cav 
+            cav.initAccView()
         }
-        //CGRect avframe = self.textView.inputAccessoryView.frame;
-        //DBGLog(@"acc view frame rect: %f %f %f %f",avframe.origin.x,avframe.origin.y,avframe.size.width,avframe.size.height);
-
         return true
     }
-
+    */
     func textViewShouldEndEditing(_ aTextView: UITextView) -> Bool {
         aTextView.resignFirstResponder()
         return true
@@ -756,44 +664,39 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
 
         if .authorized == stat {
             DispatchQueue.main.async(execute: { [self] in
-                addButton.isHidden = false
+                cav.addButton.isHidden = false
             })
             accessAddressBook = true
         } else if .notDetermined == stat {
-            //safeDispatchSync(^{
             let contactStore = CNContactStore()
             contactStore.requestAccess(for: entityType) { [self] granted, error in
                 if granted {
                     DispatchQueue.main.async(execute: { [self] in
-                        addButton.isHidden = false
+                        cav.addButton.isHidden = false
                     })
                     accessAddressBook = true
                 } else {
                     DispatchQueue.main.async(execute: { [self] in
-                        addButton.isHidden = true
-                        // [rTracker_resource alert_mt:@"Need Contacts access" msg:@"Please go to System Settings -> Privacy -> Contacts and enable access for rTracker to use this feature." vc:[UIApplication sharedApplication].keyWindow.rootViewController];
+                        cav.addButton.isHidden = true
                     })
                     accessAddressBook = false
                 }
             }
-            // });
         } else {
             DispatchQueue.main.async(execute: { [self] in
-                addButton.isHidden = true
-                // [rTracker_resource alert_mt:@"Need Contacts access" msg:@"Please go to System Settings -> Privacy -> Contacts and enable access for rTracker to use this feature." vc:[UIApplication sharedApplication].keyWindow.rootViewController];
+                cav.addButton.isHidden = true
             })
             accessAddressBook = false
-        }
-
-        if !accessAddressBook {
+            
             let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
             let window = windowScene!.windows.first
             let rootViewController = window!.rootViewController
             rTracker_resource.alert("Need Contacts access", msg: "Please go to System Settings -> Privacy -> Contacts and enable access for rTracker to use this feature.",
                                     vc:rootViewController)
                                     //vc: UIApplication.shared.keyWindow?.rootViewController)
+            cav.segControl.selectedSegmentIndex = SEGKEYBOARD
+            segmentChanged(SEGKEYBOARD)
         }
-
     }
 
     func getNames() {
@@ -947,6 +850,8 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         }
     }
 
+    // MARK: -
+    // MARK: picker view
     //- (void) updatePickerArrays:(NSInteger)row {
     //	NSMutableDictionary *foo = self.peopleDictionary;
     //}
@@ -961,8 +866,8 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
     func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
         if showNdx && 0 == component {
             return alphaArray.count
-        } else {
-            if SEGPEOPLE == segControl.selectedSegmentIndex {
+         } else {
+             if SEGPEOPLE == cav.segControl.selectedSegmentIndex {
                 if accessAddressBook {
                     return namesArray?.count ?? 0
                 } else {
@@ -972,14 +877,13 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
                 return historyArray.count
             }
         }
-
     }
 
     func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
         if showNdx && 0 == component {
             return alphaArray[row]
         } else {
-            if SEGPEOPLE == segControl.selectedSegmentIndex {
+            if SEGPEOPLE == cav.segControl.selectedSegmentIndex {
                 if accessAddressBook {
                     return namesArray?[row] as? String // deprecated ios 9 (NSString*) CFBridgingRelease(ABRecordCopyCompositeName((__bridge ABRecordRef)((self.namesArray)[row])));
                 } else {
@@ -988,7 +892,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
             } else {
                 return historyArray[row]
             }
-        }
+         }
     }
 
     func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
@@ -999,7 +903,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
             if component == 0 {
                 //srcArr = self.alphaArray;
                 otherComponent = 1
-                if SEGPEOPLE == segControl.selectedSegmentIndex {
+                if SEGPEOPLE == cav.segControl.selectedSegmentIndex {
                     targRow = namesNdx[row]
                 } else {
                     targRow = historyNdx[row]
@@ -1007,7 +911,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
                 //DBGLog(@"showndx on : did sel row targ %d component %d",targRow,component);
             } else {
                 otherComponent = 0
-                if SEGPEOPLE == segControl.selectedSegmentIndex {
+                if SEGPEOPLE == cav.segControl.selectedSegmentIndex {
                     if !accessAddressBook {
                         return
                     }
@@ -1044,7 +948,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
     func pickerView(_ pickerView: UIPickerView, widthForComponent component: Int) -> CGFloat {
 
         var componentWidth: CGFloat = 280.0
-
+ 
         if showNdx {
             if component == 0 {
                 componentWidth = 40.0 // first column size is narrow for letters
@@ -1079,23 +983,6 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
     override func mapValue2Csv() -> String {
         // add from history or contacts adds trailing \n, trim it here
         return vo.value.trimmingCharacters(in: .whitespacesAndNewlines)
-        /*
-            NSUInteger ndx = [self.vo.value length];
-
-            if (0<ndx) {
-                unichar c = [self.vo.value characterAtIndex:--ndx];
-
-                DBGLog(@".%@. lne=%lu trim= .%@.",self.vo.value,(unsigned long)ndx,[self.vo.value substringToIndex:ndx]);
-                DBGLog(@" %d %d %d : %d",[self.vo.value characterAtIndex:ndx-2],[self.vo.value characterAtIndex:ndx-1],[self.vo.value characterAtIndex:ndx],'\n');
-
-                if (('\n' == c) || ('\r' == c)) {
-                    //DBGLog(@"trimming.");
-                    return (NSString*) [self.vo.value substringToIndex:ndx];
-                }
-            }
-
-            return (NSString*) self.vo.value;  	
-             */
     }
 }
 
