@@ -133,7 +133,6 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         return _tbButton
     }
     var textView: UITextView?
-
     var cav: CustomAccessoryView!
     
     private var _pv: UIPickerView?
@@ -185,47 +184,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
             ]
 
     private var _namesArray: [String]?
-    var namesArray: [String]? {
-        checkContactsAccess()
-        if !accessAddressBook {
-            return nil
-        }
-        if nil == _namesArray {
-
-            // https://stackoverflow.com/questions/36859991/cncontact-display-name-objective-c-swift
-            var contacts: [CNContact] = []
-            let contactStore = CNContactStore()
-
-            let fnameKey = CNContactFormatter.descriptorForRequiredKeys(for: .fullName)
-            let keysToFetch = [CNContactIdentifierKey, fnameKey] as! [CNKeyDescriptor]
-            let request = CNContactFetchRequest(keysToFetch: keysToFetch)
-
-            // Enumerate the contacts
-            do {
-                try contactStore.enumerateContacts(with: request, usingBlock: { (contact, stop) in
-                    contacts.append(contact)
-                })
-            } catch let error {
-                DBGLog("error fetching contacts = \(error)")
-            }
-            
-            // Create a contact formatter
-            let formatter = CNContactFormatter()
-            
-            // Create an array to store the names
-            var names = [String]()
-            
-            // Loop through the contacts and add their names to the array
-            for contact in contacts {
-                let name = formatter.string(from: contact)
-                names.append(name!)
-            }
-            
-            // Set the names array to the newly created array
-            _namesArray = names
-        }
-        return _namesArray
-    }
+    var namesArray: [String] = []
 
     private var _historyArray: [String]?
     var historyArray: [String] {
@@ -294,7 +253,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
             let notSet =  -1
             var tmpNamesNdx = getNSMA(notSet)
 
-            for name in namesArray ?? [] {
+            for name in namesArray {
                 let firstc = name.first!  // unichar(name[name.index(name.startIndex, offsetBy: 0)])
 
                 enterNSMA(&tmpNamesNdx, c: firstc, dflt: notSet, ndx: ndx)
@@ -408,7 +367,6 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         if vo.value == "" {
             textView?.becomeFirstResponder()
         }
-
     }
 
     override func dataEditVWAppear(_ vc: UIViewController?) {
@@ -496,7 +454,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
 
     func addPickerData() {
         var row = 0
-        var str: String? = nil
+        var str: String = ""
 
         if showNdx {
             row = pv?.selectedRow(inComponent: 1) ?? 0
@@ -504,10 +462,10 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
             row = pv?.selectedRow(inComponent: 0) ?? 0
         }
         if SEGPEOPLE == cav.segControl.selectedSegmentIndex {
-            if 0 == (namesArray?.count ?? 0) {
+            if 0 == namesArray.count {
                 rTracker_resource.alert("No Contacts", msg: "Add some names to your Address Book, then find them here", vc: nil)
             } else if accessAddressBook {
-                str = "\((namesArray?[row] as? String) ?? "")\n"
+                str = "\(namesArray[row])\n"
             }
         } else {
             if 0 == historyArray.count {
@@ -519,9 +477,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         }
 
         //DBGLog(@"add picker data %@",str);
-        if nil != str {
-            textView?.text = (textView?.text ?? "") + (str ?? "")
-        }
+        textView?.text = (textView?.text ?? "") + str
     }
      
 
@@ -545,11 +501,32 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
             if SEGPEOPLE == ndx {
                 checkContactsAccess()
                 if !accessAddressBook {
+                    cav.segControl.selectedSegmentIndex = SEGKEYBOARD
+                    segmentChanged(SEGKEYBOARD)
                     return
                 }
-            } else {
-                cav.addButton.isHidden = false
+                if !ABloaded {
+                    accessABcondition.lock()
+                    while !ABloaded {
+                        accessABcondition.wait()
+                    }
+                    accessABcondition.unlock()
+                }
+                if 0 == namesArray.count {
+                    rTracker_resource.alert("No Contacts", msg: "Add some names to your Address Book, then find them here", vc: nil)
+                    cav.segControl.selectedSegmentIndex = SEGKEYBOARD
+                    segmentChanged(SEGKEYBOARD)
+                    return
+                }
+            } else {  // SEGHISTORY
+                if 0 == historyArray.count {
+                    rTracker_resource.alert("No history", msg: "Use the keyboard to create some entries, save, and then find them in the history", vc: nil)
+                    cav.segControl.selectedSegmentIndex = SEGKEYBOARD
+                    segmentChanged(SEGKEYBOARD)
+                    return
+                }
             }
+            cav.addButton.isHidden = false
             if ((SEGPEOPLE == ndx) && (vo.optDict["tbni"] == "1") && accessAddressBook)
                 || ((SEGHISTORY == ndx) && (vo.optDict["tbhi"] == "1")) {
                 showNdx = true
@@ -562,7 +539,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
 
         textView?.resignFirstResponder()
         textView?.becomeFirstResponder()
-
+        
         if let selectedRange = textView?.selectedRange {
             textView?.scrollRangeToVisible(selectedRange)
         }
@@ -657,50 +634,84 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
 
     // largely copied from https://gist.github.com/willthink/024f1394474e70904728
     // and https://stackoverflow.com/questions/36859991/cncontact-display-name-objective-c-swift
-
+    // NSCondition additions from gpt4
+    let accessABcondition = NSCondition()
+    var accessABknown: Bool = false
+    var ABloaded: Bool = false
     func checkContactsAccess() {
         let entityType: CNEntityType = .contacts
         let stat = CNContactStore.authorizationStatus(for: entityType)
 
         if .authorized == stat {
-            DispatchQueue.main.async(execute: { [self] in
-                cav.addButton.isHidden = false
-            })
             accessAddressBook = true
         } else if .notDetermined == stat {
             let contactStore = CNContactStore()
             contactStore.requestAccess(for: entityType) { [self] granted, error in
+                accessABcondition.lock()
                 if granted {
-                    DispatchQueue.main.async(execute: { [self] in
-                        cav.addButton.isHidden = false
-                    })
                     accessAddressBook = true
                 } else {
-                    DispatchQueue.main.async(execute: { [self] in
-                        cav.addButton.isHidden = true
-                    })
                     accessAddressBook = false
                 }
+                accessABknown = true
+                accessABcondition.signal()
+                accessABcondition.unlock()
             }
-        } else {
-            DispatchQueue.main.async(execute: { [self] in
-                cav.addButton.isHidden = true
-            })
-            accessAddressBook = false
             
-            let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
-            let window = windowScene!.windows.first
-            let rootViewController = window!.rootViewController
+            accessABcondition.lock()
+            while !accessABknown {
+                accessABcondition.wait()
+            }
+            accessABcondition.unlock()
+        } else {
+            accessAddressBook = false
             rTracker_resource.alert("Need Contacts access", msg: "Please go to System Settings -> Privacy -> Contacts and enable access for rTracker to use this feature.",
-                                    vc:rootViewController)
-                                    //vc: UIApplication.shared.keyWindow?.rootViewController)
-            cav.segControl.selectedSegmentIndex = SEGKEYBOARD
-            segmentChanged(SEGKEYBOARD)
+                                    vc:nil)
         }
+        
+        if accessAddressBook {
+            DispatchQueue.global().async { [weak self] in
+                self?.accessABcondition.lock()
+                self?.getNames()
+                self?.ABloaded = true
+                self?.accessABcondition.signal()
+                self?.accessABcondition.unlock()
+            }
+        }
+        
     }
 
     func getNames() {
+        //checkContactsAccess()
+        if !accessAddressBook {
+            return
+        }
 
+        // https://stackoverflow.com/questions/36859991/cncontact-display-name-objective-c-swift
+        var contacts: [CNContact] = []
+        let contactStore = CNContactStore()
+
+        let fnameKey = CNContactFormatter.descriptorForRequiredKeys(for: .fullName)
+        let keysToFetch = [CNContactIdentifierKey, fnameKey] as! [CNKeyDescriptor]
+        let request = CNContactFetchRequest(keysToFetch: keysToFetch)
+
+        // Enumerate the contacts
+        do {
+            try contactStore.enumerateContacts(with: request, usingBlock: { (contact, stop) in
+                contacts.append(contact)
+            })
+        } catch let error {
+            DBGLog("error fetching contacts = \(error)")
+        }
+        
+        // Create a contact formatter
+        let formatter = CNContactFormatter()
+
+        // Loop through the contacts and add their names to the array
+        for contact in contacts {
+            let name = formatter.string(from: contact)
+            namesArray.append(name!)
+        }
 
     }
 
@@ -869,7 +880,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
          } else {
              if SEGPEOPLE == cav.segControl.selectedSegmentIndex {
                 if accessAddressBook {
-                    return namesArray?.count ?? 0
+                    return namesArray.count
                 } else {
                     return 0
                 }
@@ -885,7 +896,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         } else {
             if SEGPEOPLE == cav.segControl.selectedSegmentIndex {
                 if accessAddressBook {
-                    return namesArray?[row] as? String // deprecated ios 9 (NSString*) CFBridgingRelease(ABRecordCopyCompositeName((__bridge ABRecordRef)((self.namesArray)[row])));
+                    return namesArray[row]
                 } else {
                     return ""
                 }
@@ -916,16 +927,10 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
                         return
                     }
                     // deprecated ios 9 ABPropertyID abSortOrderProp = [self getABSortTok];
-                    if 0 == (namesArray?.count ?? 0) {
+                    if 0 == namesArray.count {
                         return
                     }
-                    let name = (namesArray?[row])! as String // deprecated ios 9  (NSString*) CFBridgingRelease(ABRecordCopyValue((__bridge ABRecordRef)(self.namesArray)[row], abSortOrderProp));
-                    /* deprecated ios9
-                                     if (nil == name) {
-                                        name = (NSString*) CFBridgingRelease(ABRecordCopyCompositeName((__bridge ABRecordRef)(self.namesArray)[row])); 
-                                    }
-                                    */
-                    //unichar firstc = [name characterAtIndex:0];
+                    let name = namesArray[row]
                     targRow = alphaArray.firstIndex(of: "\(name.uppercased().first!)") ?? 0   //   toupper(name![name!.index(name!.startIndex, offsetBy: 0)]))"))!
                     //if NSNotFound == targRow {
                     //    targRow = 0
