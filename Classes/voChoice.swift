@@ -186,7 +186,7 @@ class voChoice: voState {
         DBGLog(String("segmentAction: selected segment = \(Int(sender.selectedSegmentIndex))"))
         vo.value = getValueForSegmentChoice()
         //TODO: vo.value setter should do enable/disable ?
-        if vo.useVO {
+        if !vo.useVO {
             vo.enableVO()
         }
         /*
