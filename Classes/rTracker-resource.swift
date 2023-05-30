@@ -342,15 +342,22 @@ class rTracker_resource: NSObject {
             alert?.addAction(defaultAction)
 
             if nil == vcCpy {
+                /*
                 let w = UIWindow(frame: UIScreen.main.bounds)
                 w.rootViewController = UIViewController()
                 w.windowLevel = UIWindow.Level(UIWindow.Level.alert.rawValue + 1)
                 w.makeKeyAndVisible()
-                vcCpy = w.rootViewController
+                 */
+                let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+                let window = windowScene!.windows.first
+                let rootViewController = window!.rootViewController
+                vcCpy = rootViewController
             }
             //dispatch_async(dispatch_get_main_queue(), ^(void){
-            if let alert {
-                vcCpy?.present(alert, animated: true)
+            DispatchQueue.main.async {
+                if let alert {
+                    vcCpy?.present(alert, animated: true)
+                }
             }
             //});
 
