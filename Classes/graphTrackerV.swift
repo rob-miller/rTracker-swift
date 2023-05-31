@@ -96,15 +96,15 @@ class graphTrackerV: UIScrollView {
     }
 
     // note same name call in gtYAxV
-    func vtChoiceSetColor(_ vogd: vogd?, context: CGContext, val: CGFloat) {
-        var val = val
+    func vtChoiceSetColor(_ vogd: vogd?, context: CGContext, inval: CGFloat) {
+        var val = inval
         // DBGLog(@"vtChoiceSetColor input %f",val);
         val /= vogd?.vScale ?? 0.0
         val += vogd?.minVal ?? 0.0
-        // DBGLog(@"vtChoiceSetColor transformed %f",val);
+        //DBGLog("vtChoiceSetColor input val \(inval) transformed val \(val)");
         let choice = vogd!.vo.getChoiceIndex(forValue: "\(val)")
         let cc = "cc\(choice)"
-        let col = Int((vogd!.vo.optDict)[cc]!)
+        let col = Int(vogd!.vo.optDict[cc]!)
         let colorSet = rTracker_resource.colorSet()[col!].cgColor
         context.setFillColor(colorSet)
         
@@ -286,7 +286,7 @@ class graphTrackerV: UIScrollView {
             let x = CGFloat(nx.floatValue)
             let y = CGFloat((e?.nextObject() as? NSNumber)?.floatValue ?? 0.0)
             if vogd?.vo.vtype == VOT_CHOICE {
-                vtChoiceSetColor(vogd, context: context, val: y)
+                vtChoiceSetColor(vogd, context: context, inval: y)
             }
             if going {
                 //DBGLog(@"moveto %f %f",x,y);
@@ -444,7 +444,7 @@ class graphTrackerV: UIScrollView {
             let x = CGFloat(nx.floatValue) + barStep
             let y = CGFloat((e?.nextObject() as? NSNumber)?.floatValue ?? 0.0)
             if vogd?.vo.vtype == VOT_CHOICE {
-                vtChoiceSetColor(vogd, context: context, val: y)
+                vtChoiceSetColor(vogd, context: context, inval: y)
             }
 
             if going {
@@ -652,6 +652,19 @@ class graphTrackerV: UIScrollView {
     }
 
     /// multi-threaded !!!!
+    override func draw(_ layer: CALayer, in ctx: CGContext) {
+        if self.doDrawGraph {
+            ctx.setAlpha(STD_ALPHA)
+            
+            DispatchQueue.main.sync {
+                let tm = CGAffineTransform(a: 1.0, b: 0.0, c: 0.0, d: -1.0, tx: 0.0, ty: self.bounds.size.height)
+                ctx.concatenate(tm)
+            }
+            
+            self.drawGraph(ctx)
+        }
+    }
+/*
     override func draw(_ layer: CALayer, in context: CGContext) {
         //NSLog(@"drawLayer here...");
 
@@ -660,7 +673,7 @@ class graphTrackerV: UIScrollView {
         //#else
         //-
     }
-
+*/
     required init?(coder aDecoder: NSCoder) {
         tm = CGAffineTransform(a: 1.0, b: 0.0, c: 0.0, d: -1.0, tx: 0.0, ty: 0.0)
         super.init(coder: aDecoder)
