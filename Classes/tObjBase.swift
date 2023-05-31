@@ -64,7 +64,7 @@ private func col_str_flt(_ udp: UnsafeMutableRawPointer?, _ lenA: Int, _ strA: U
     return r
 }
 */
-
+/*
 func col_str_flt(_ udp: UnsafeMutableRawPointer?, _ lenA: Int32, _ strA: UnsafeRawPointer?, _ lenB: Int32, _ strB: UnsafeRawPointer?) -> Int32 {
     guard let strA = strA?.assumingMemoryBound(to: CChar.self), let strB = strB?.assumingMemoryBound(to: CChar.self) else {
         return 0
@@ -87,7 +87,27 @@ func col_str_flt(_ udp: UnsafeMutableRawPointer?, _ lenA: Int32, _ strA: UnsafeR
     
     return Int32(r)
 }
-
+*/
+// gpt-4 version
+func col_str_flt(udp: UnsafeMutableRawPointer?, lenA: Int32, strA: UnsafeRawPointer?, lenB: Int32, strB: UnsafeRawPointer?) -> Int32 {
+    
+    let astr = strA!.assumingMemoryBound(to: CChar.self)
+    let bstr = strB!.assumingMemoryBound(to: CChar.self)
+    
+    let va = strtod(astr, nil)
+    let vb = strtod(bstr, nil)
+    
+    var r: Int32 = 0
+    if (va > vb) {
+        r = 1
+    }
+    if (va < vb) {
+        r = -1
+    }
+    //print("a= \(va)  b= \(vb)  r= \(r)")
+    
+    return r
+}
 
 class tObjBase: NSObject {
     /*{
