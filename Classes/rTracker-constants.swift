@@ -58,7 +58,10 @@ func f(_ x: Any) -> Float {
         return Float(doubleValueF)
     } else if let intValueF = x as? Int {
         return Float(intValueF)
+    } else if let cgfValueF = x as? CGFloat {
+        return Float(cgfValueF)
     } else {
+        dbgNSAssert(false, "unable to convert \(x) to Float")
         return 0.0 // or some default value
     }
 }
@@ -68,7 +71,10 @@ func d(_ x: Any) -> Double {
         return doubleValueD
     } else if let intValueD = x as? Int {
         return Double(intValueD)
+    } else if let cgfValueD = x as? CGFloat {
+        return Double(cgfValueD)
     } else {
+        dbgNSAssert(false, "unable to convert \(x) to Double")
         return 0.0 // or some default value
     }
 }
