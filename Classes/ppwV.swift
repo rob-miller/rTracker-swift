@@ -386,7 +386,7 @@ class ppwV: UIView, UITextFieldDelegate {
         var sql = "create table if not exists priv0 (key integer primary key, val text);"
         tob?.toExecSql(sql:sql)
         sql = "select count(*) from priv0 where key=0;"
-        if tob?.toQry2Int(sql:sql) != nil {
+        if tob?.toQry2Int(sql:sql) != 0 {
             DBGLog("password exists")
             return true
         } else {
