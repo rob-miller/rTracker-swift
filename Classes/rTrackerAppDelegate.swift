@@ -251,8 +251,8 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
 
        guard let bdn = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String else { return false }
        
-       print("openURL \(url)")
-       print("bundle id: \(bdn)")
+       DBGLog("openURL \(url)")
+       DBGLog("bundle id: \(bdn)")
        
        guard let navigationController = window?.rootViewController as? UINavigationController,
              let rootController = navigationController.viewControllers.first as? RootViewController else {
@@ -275,7 +275,7 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
         if scanner.scanInt(&tid) {
 
         //if scanner.scanString(base, into: nil) && scanner.scanString("tid=", into: nil) && scanner.scanInt(&tid) {
-            print("curl=\(urlas) format=\(format) tid=\(tid)")
+            DBGLog("curl=\(urlas) format=\(format) tid=\(tid)")
        
             let tlist = rootController.tlist
             tlist.loadTopLayoutTable()
@@ -289,7 +289,7 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
         } else if urlas == base {
             // do nothing because rTracker:// should open with default trackerList page
         } else if urlas.hasPrefix(base) || urlas.hasPrefix(base.lowercased()) {
-            print("sscanf fail curl=\(urlas) format=\(format)")
+            DBGLog("sscanf fail curl=\(urlas) format=\(format)")
             rTracker_resource.alert("bad URL", msg: "URL received was \(url.absoluteString) but should look like \(format)", vc: rootController)
         }
        

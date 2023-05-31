@@ -31,10 +31,12 @@ let DEBUGWARN = 1
 let DEBUGERR = 1
 
 // enable additional debugging code in these sections
+// Doesn't work in Swift need compile defs
+// xcode menu Product - scheme - manage schemes - select, edit...
 let SQLDEBUG = 0
 let FUNCTIONDBG = 0
 let REMINDERDBG = 0
-let GRAPHDBG = 0
+let GRAPHDBG = 1
 
 // enable Lukas Petr's GSTouchesShowingWindow (https://github.com/LukasCZ/GSTouchesShowingWindow - not included here)
 let SHOWTOUCHES = 0
@@ -66,7 +68,7 @@ func SYSTEM_VERSION_LESS_THAN_OR_EQUAL_TO(_ v: String) -> Bool {
 
 
 // implementation for debug messages:
-
+     
 func SQLDbg(_ message: String) {
 #if SQLDEBUG
     print(message)
@@ -85,7 +87,6 @@ func DBGLog(_ message: String, file: String = #file, function: String = #functio
 }
 
 func DBGWarn(_ message: String, file: String = #file, function: String = #function, line: Int = #line) {
-    print("dbgwarn called")
 #if DEBUGWARN
     print("dbgwarn enabled")
     let fileName = file.components(separatedBy: "/").last ?? ""
@@ -104,11 +105,10 @@ func DBGErr(_ message: String, file: String = #file, function: String = #functio
 }
 
 func dbgNSAssert(_ x: Bool, _ y: String) {
-#if RELEASE
     if !x {
         DBGErr(y)
     }
-#else
+#if !RELEASE
     assert(x,y)
 #endif
 }
