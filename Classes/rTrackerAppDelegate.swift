@@ -51,7 +51,7 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
             }
     }
 
-    func pleaseRegister(forNotifications rootController: RootViewController?) {
+    func pleaseRegister(forNotifications rootViewController: RootViewController) {
         // ios 8.1 must register for notifications
         if SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO("8.0") {
             if !rTracker_resource.getNotificationsEnabled() {
@@ -74,11 +74,12 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
                             rTracker_resource.setToldAboutNotifications(true)
                             UserDefaults.standard.set(true, forKey: "toldAboutNotifications")
                             UserDefaults.standard.synchronize()
-                            newMaintainer()
+                            //newMaintainer()
                         })
 
                     alert.addAction(defaultAction)
-                    rootController?.navigationController?.present(alert, animated: true)
+                    //rootController?.navigationController?.present(alert, animated: true)
+                    rootViewController.present(alert, animated: true)
                 }
             }
 
@@ -92,7 +93,10 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
         let sud = UserDefaults.standard
         if !sud.bool(forKey: "maintainerRqst") {
             // if not yet told
-            let rootController = (navigationController.viewControllers)[0] as? RootViewController
+            //let rootController = (navigationController.viewControllers)[0] as? RootViewController
+            let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+            let window = windowScene!.windows.first
+            let rootViewController = window!.rootViewController!
             let alert = UIAlertController(
                 title: "rTracker is 10!",
                 message: "rTracker is 10 years old and needs a new maintainer.",
@@ -109,7 +113,8 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
                 })
 
             alert.addAction(defaultAction)
-            rootController?.navigationController?.present(alert, animated: true)
+            //rootController?.navigationController?.present(alert, animated: true)
+            rootViewController.present(alert, animated: true)
         }
     }
 
@@ -164,6 +169,7 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
         //   as found in http://stackoverflow.com/questions/7520971
 
         //[self.window addSubview:[navigationController view]];
+
         let rootViewController = RootViewController()
         let navigationController = UINavigationController(rootViewController: rootViewController)
 
@@ -204,7 +210,7 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
                     UserDefaults.standard.set(true, forKey: "acceptLicense")
                     UserDefaults.standard.synchronize()
 
-                    pleaseRegister(forNotifications: rootController)
+                    pleaseRegister(forNotifications: rootViewController)
                 })
 
             let recoverAction = UIAlertAction(
@@ -217,9 +223,10 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
             alert.addAction(defaultAction)
             alert.addAction(recoverAction)
 
-            rootController?.navigationController?.present(alert, animated: true)
+            //rootController?.navigationController?.present(alert, animated: true)
+            rootViewController.present(alert, animated: true)
         } else {
-            newMaintainer()
+            //newMaintainer()
         }
 
         /*
@@ -489,7 +496,7 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
 
         //[rTracker_resource enableOrientationData];
 
-        newMaintainer()
+        //-newMaintainer()
 
         //navigationController.visibleViewController?.viewDidAppear(true)
 
