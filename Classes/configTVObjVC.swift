@@ -747,7 +747,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         let rtf = rTracker_resource.rrConfigTextField(
             frame,
             key: key,
-            target: target != nil ? (target as? configTVObjVC) : self,
+            target: target ?? self,
             delegate: self,
             action: action ?? #selector(tfDone(_:)),
             num: num,
