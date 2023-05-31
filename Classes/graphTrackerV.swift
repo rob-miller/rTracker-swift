@@ -66,12 +66,14 @@ class graphTrackerV: UIScrollView {
     override init(frame: CGRect) {
         tm = CGAffineTransform(a: 1.0, b: 0.0, c: 0.0, d: -1.0, tx: 0.0, ty: 0.0)
         super.init(frame: frame)
-        #if USELAYER
+        //#if USELAYER
+        
         //from scrollview programming guide listing 3-3
         let tempTiledLayer = layer as? CATiledLayer
         tempTiledLayer?.levelsOfDetail = 5
         tempTiledLayer?.levelsOfDetailBias = 2
-        #endif
+        
+        //#endif
         isOpaque = false
         doDrawGraph = true // rtm dbg
     }
@@ -664,6 +666,24 @@ class graphTrackerV: UIScrollView {
             self.drawGraph(ctx)
         }
     }
+ 
+        /*
+    // if not USELAYER
+    override func draw(_ rect: CGRect) {
+        let ctx = UIGraphicsGetCurrentContext()!
+        if self.doDrawGraph {
+            ctx.setAlpha(STD_ALPHA)
+            
+            //DispatchQueue.main.sync {
+                let tm = CGAffineTransform(a: 1.0, b: 0.0, c: 0.0, d: -1.0, tx: 0.0, ty: self.bounds.size.height)
+                ctx.concatenate(tm)
+            //}
+            
+            self.drawGraph(ctx)
+        }
+    }
+         */
+
 /*
     override func draw(_ layer: CALayer, in context: CGContext) {
         //NSLog(@"drawLayer here...");
