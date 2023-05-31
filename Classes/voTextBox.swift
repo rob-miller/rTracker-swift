@@ -682,7 +682,10 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
     }
 
     func getNames() {
-        //checkContactsAccess()
+        if namesArray != [] {
+            return
+        }
+        checkContactsAccess()
         if !accessAddressBook {
             return
         }
