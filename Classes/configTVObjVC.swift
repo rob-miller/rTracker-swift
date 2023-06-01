@@ -1096,7 +1096,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
                 frame.origin.y += MARGIN + frame.size.height;
             }
             */
-        //-- draw graphs button
+        //-- save returns to tracker list button
 
         frame = configCheckButton(
             frame,
