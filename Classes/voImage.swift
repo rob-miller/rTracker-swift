@@ -194,15 +194,15 @@ class voImage: voState, UINavigationControllerDelegate {
         return super.cleanOptDictDflts(key)
     }
 
-    override func voDrawOptions(_ ctvovc: configTVObjVC?) {
+    override func voDrawOptions(_ ctvovc: configTVObjVC) {
 
-        let labframe = ctvovc?.configLabel(
+        let labframe = ctvovc.configLabel(
             "need Image Location -- Options:",
-            frame: CGRect(x: MARGIN, y: ctvovc?.lasty ?? 0.0, width: 0.0, height: 0.0),
+            frame: CGRect(x: MARGIN, y: ctvovc.lasty, width: 0.0, height: 0.0),
             key: "ioLab",
             addsv: true)
 
-        ctvovc?.lasty += (labframe?.size.height ?? 0.0) + MARGIN
+        ctvovc.lasty += labframe.size.height + MARGIN
         super.voDrawOptions(ctvovc)
     }
 

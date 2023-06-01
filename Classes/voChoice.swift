@@ -373,14 +373,14 @@ class voChoice: voState {
         return super.cleanOptDictDflts(key)
     }
 
-    override func voDrawOptions(_ ctvovc: configTVObjVC?) {
+    override func voDrawOptions(_ ctvovc: configTVObjVC) {
         ctvovcp = ctvovc
-        var frame = CGRect(x: MARGIN, y: ctvovc?.lasty ?? 0.0, width: 0.0, height: 0.0)
+        var frame = CGRect(x: MARGIN, y: ctvovc.lasty, width: 0.0, height: 0.0)
 
-        var labframe = ctvovc?.configLabel("Choices:", frame: frame, key: "coLab", addsv: true)
+        var labframe = ctvovc.configLabel("Choices:", frame: frame, key: "coLab", addsv: true)
 
         frame.origin.x = MARGIN
-        frame.origin.y += (labframe?.size.height ?? 0.0) + MARGIN
+        frame.origin.y += labframe.size.height + MARGIN
 
         let tfvWidth = "-88 ".size(withAttributes: [
             NSAttributedString.Key.font: PrefBodyFont
@@ -389,14 +389,14 @@ class voChoice: voState {
             NSAttributedString.Key.font: PrefBodyFont
         ]).width
 
-        frame.size.height = ctvovc?.lfHeight ?? 0.0 // self.labelField.frame.size.height; // lab.frame.size.height;
+        frame.size.height = ctvovc.lfHeight // self.labelField.frame.size.height; // lab.frame.size.height;
 
         //var i: Int
         var j = 1
         for i in 0..<CHOICES {
             frame.size.width = tfvWidth
 
-            frame = ctvovc?.configTextField(
+            frame = ctvovc.configTextField(
                 frame,
                 key: String(format: "%dtfv", i),
                 target: self,
@@ -404,12 +404,12 @@ class voChoice: voState {
                 num: true,
                 place: "\(i + 1)",
                 text: vo.optDict["cv\(i)"],
-                addsv: true) ?? CGRect.zero
+                addsv: true)
 
             frame.origin.x += MARGIN + tfvWidth
             frame.size.width = tfWidth
 
-            frame = ctvovc?.configTextField(
+            frame = ctvovc.configTextField(
                 frame,
                 key: String(format: "%dtf", i),
                 target: self,
@@ -417,8 +417,7 @@ class voChoice: voState {
                 num: false,
                 place: "choice \(i + 1)",
                 text: vo.optDict["c\(i)"],
-                addsv: true) ?? CGRect.zero
-
+                addsv: true)
             frame.origin.x += MARGIN + tfWidth
 
             //frame.size.height = 1.2* frame.size.height;
@@ -437,15 +436,15 @@ class voChoice: voState {
             btn.titleLabel?.font = PrefBodyFont
 
             btn.addTarget(self, action: #selector(choiceColorButtonAction(_:)), for: .touchDown)
-            ctvovc!.wDict[String(format: "%dbtn", i)] = btn
+            ctvovc.wDict[String(format: "%dbtn", i)] = btn
             //[ctvovc.view addSubview:btn];
-            ctvovc?.scroll.addSubview(btn)
+            ctvovc.scroll.addSubview(btn)
 
-            ctvovc?.lastx = ((ctvovc?.lastx ?? 0.0) < frame.origin.x + frame.size.width + MARGIN ? frame.origin.x + frame.size.width + MARGIN : ctvovc?.lastx) ?? 0.0
+            ctvovc.lastx = (ctvovc.lastx < frame.origin.x + frame.size.width + MARGIN ? frame.origin.x + frame.size.width + MARGIN : ctvovc.lastx) 
 
-            frame.origin.x = MARGIN + (Double(j) * (tfvWidth + tfWidth + (ctvovc?.lfHeight ?? 0.0) + 3 * MARGIN))
+            frame.origin.x = MARGIN + (Double(j) * (tfvWidth + tfWidth + ctvovc.lfHeight + 3 * MARGIN))
             j = j != 0 ? 0 : 1 // j toggles 0-1
-            frame.origin.y += Double(j) * ((2 * MARGIN) + (ctvovc?.lfHeight ?? 0.0))
+            frame.origin.y += Double(j) * ((2 * MARGIN) + ctvovc.lfHeight)
 
             //frame.size.width = tfWidth;
             //frame.size.height = self.labelField.frame.size.height; // lab.frame.size.height;
@@ -456,39 +455,39 @@ class voChoice: voState {
 
         //-- general options label
 
-        labframe = ctvovc?.configLabel("Other options:", frame: frame, key: "goLab", addsv: true)
+        labframe = ctvovc.configLabel("Other options:", frame: frame, key: "goLab", addsv: true)
 
-        frame.origin.y += (labframe?.size.height ?? 0.0) + MARGIN
+        frame.origin.y += labframe.size.height + MARGIN
 
-        labframe = ctvovc?.configLabel("Shrink buttons:", frame: frame, key: "csbLab", addsv: true)
+        labframe = ctvovc.configLabel("Shrink buttons:", frame: frame, key: "csbLab", addsv: true)
 
-        frame = CGRect(x: (labframe?.size.width ?? 0.0) + MARGIN + SPACE, y: frame.origin.y, width: labframe?.size.height ?? 0.0, height: labframe?.size.height ?? 0.0)
+        frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
 
-        frame = ctvovc?.configCheckButton(
+        frame = ctvovc.configCheckButton(
             frame,
             key: "csbBtn",
             state: (vo.optDict["shrinkb"] == "1") /* default:0 */,
-            addsv: true) ?? CGRect.zero
+            addsv: true)
 
         // export values option
 
         frame.origin.x = MARGIN
-        frame.origin.y += (labframe?.size.height ?? 0.0) + MARGIN
+        frame.origin.y += labframe.size.height + MARGIN
 
-        labframe = ctvovc?.configLabel("CSV read/write values (not labels):", frame: frame, key: "cevLab", addsv: true)
+        labframe = ctvovc.configLabel("CSV read/write values (not labels):", frame: frame, key: "cevLab", addsv: true)
 
-        frame = CGRect(x: (labframe?.size.width ?? 0.0) + MARGIN + SPACE, y: frame.origin.y, width: labframe?.size.height ?? 0.0, height: labframe?.size.height ?? 0.0)
+        frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
 
-        frame = ctvovc?.configCheckButton(
+        frame = ctvovc.configCheckButton(
             frame,
             key: "cevBtn",
             state: (vo.optDict["exportvalb"] == "1") /* default:0 */,
-            addsv: true) ?? CGRect.zero
+            addsv: true)
 
 
 
-        ctvovc?.lasty = frame.origin.y + frame.size.height + MARGIN
-        ctvovc?.lastx = ((ctvovc?.lastx ?? 0.0) < frame.origin.x + frame.size.width + MARGIN ? frame.origin.x + frame.size.width + MARGIN : ctvovc?.lastx) ?? 0.0
+        ctvovc.lasty = frame.origin.y + frame.size.height + MARGIN
+        ctvovc.lastx = (ctvovc.lastx < frame.origin.x + frame.size.width + MARGIN ? frame.origin.x + frame.size.width + MARGIN : ctvovc.lastx)
 
         super.voDrawOptions(ctvovc)
     }

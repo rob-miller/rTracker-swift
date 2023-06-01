@@ -255,35 +255,35 @@ class voNumber: voState, UITextFieldDelegate {
         return super.cleanOptDictDflts(key)
     }
 
-    override func voDrawOptions(_ ctvovc: configTVObjVC?) {
+    override func voDrawOptions(_ ctvovc: configTVObjVC) {
 
-        var frame = CGRect(x: MARGIN, y: ctvovc?.lasty ?? 0.0, width: 0.0, height: 0.0)
+        var frame = CGRect(x: MARGIN, y: ctvovc.lasty, width: 0.0, height: 0.0)
 
-        var labframe = ctvovc?.configLabel("Start with last saved value:", frame: frame, key: "swlLab", addsv: true)
-        frame = CGRect(x: (labframe?.size.width ?? 0.0) + MARGIN + SPACE, y: frame.origin.y, width: labframe?.size.height ?? 0.0, height: labframe?.size.height ?? 0.0)
-        frame = ctvovc?.configCheckButton(
+        var labframe = ctvovc.configLabel("Start with last saved value:", frame: frame, key: "swlLab", addsv: true)
+        frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
+        frame = ctvovc.configCheckButton(
             frame,
             key: "swlBtn",
             state: vo.optDict["nswl"] == "1",
-            addsv: true) ?? CGRect.zero
+            addsv: true)
         frame.origin.x = MARGIN
         frame.origin.y += MARGIN + frame.size.height
 
-        frame = ctvovc?.yAutoscale(frame) ?? CGRect.zero
+        frame = ctvovc.yAutoscale(frame)
 
         frame.origin.y += frame.size.height + MARGIN
         frame.origin.x = MARGIN
 
-        labframe = ctvovc?.configLabel("graph decimal places (-1 auto):", frame: frame, key: "numddpLab", addsv: true)
+        labframe = ctvovc.configLabel("graph decimal places (-1 auto):", frame: frame, key: "numddpLab", addsv: true)
 
-        frame.origin.x += (labframe?.size.width ?? 0.0) + SPACE
+        frame.origin.x += labframe.size.width + SPACE
         let tfWidth = "99999".size(withAttributes: [
             NSAttributedString.Key.font: PrefBodyFont
         ]).width
         frame.size.width = tfWidth
-        frame.size.height = ctvovc?.lfHeight ?? 0.0 // self.labelField.frame.size.height; // lab.frame.size.height;
+        frame.size.height = ctvovc.lfHeight  // self.labelField.frame.size.height; // lab.frame.size.height;
 
-        frame = ctvovc?.configTextField(
+        frame = ctvovc.configTextField(
             frame,
             key: "numddpTF",
             target: nil,
@@ -291,16 +291,16 @@ class voNumber: voState, UITextFieldDelegate {
             num: true,
             place: "\(NUMDDPDFLT)",
             text: vo.optDict["numddp"],
-            addsv: true) ?? CGRect.zero
+            addsv: true)
 
 
         frame.origin.x = MARGIN
         frame.origin.y += MARGIN + frame.size.height
         //-- title label
 
-        labframe = ctvovc?.configLabel("Other options:", frame: frame, key: "noLab", addsv: true)
+        labframe = ctvovc.configLabel("Other options:", frame: frame, key: "noLab", addsv: true)
 
-        ctvovc?.lasty = frame.origin.y + (labframe?.size.height ?? 0.0) + MARGIN
+        ctvovc.lasty = frame.origin.y + labframe.size.height + MARGIN
 
         super.voDrawOptions(ctvovc)
     }

@@ -169,14 +169,14 @@ class voText: voState, UITextFieldDelegate {
         return super.cleanOptDictDflts(key)
     }
 
-    override func voDrawOptions(_ ctvovc: configTVObjVC?) {
-        let labframe = ctvovc?.configLabel(
+    override func voDrawOptions(_ ctvovc: configTVObjVC) {
+        let labframe = ctvovc.configLabel(
             "Options:",
-            frame: CGRect(x: MARGIN, y: ctvovc?.lasty ?? 0.0, width: 0.0, height: 0.0),
+            frame: CGRect(x: MARGIN, y: ctvovc.lasty, width: 0.0, height: 0.0),
             key: "gooLab",
             addsv: true)
 
-        ctvovc?.lasty += (labframe?.size.height ?? 0.0) + MARGIN
+        ctvovc.lasty += labframe.size.height + MARGIN
         super.voDrawOptions(ctvovc)
     }
 

@@ -207,19 +207,19 @@ class voBoolean: voState {
         btn?.backgroundColor = rTracker_resource.colorSet()[col]
     }
 
-    override func voDrawOptions(_ ctvovc: configTVObjVC?) {
-        var frame = CGRect(x: MARGIN, y: ctvovc?.lasty ?? 0.0, width: 0.0, height: 0.0)
+    override func voDrawOptions(_ ctvovc: configTVObjVC) {
+        var frame = CGRect(x: MARGIN, y: ctvovc.lasty, width: 0.0, height: 0.0)
 
-        var labframe = ctvovc?.configLabel("stored value:", frame: frame, key: "bvLab", addsv: true)
+        var labframe = ctvovc.configLabel("stored value:", frame: frame, key: "bvLab", addsv: true)
 
-        frame.origin.x = (labframe?.size.width ?? 0.0) + MARGIN + SPACE
+        frame.origin.x = labframe.size.width + MARGIN + SPACE
         let tfWidth = "9999999999".size(withAttributes: [
             NSAttributedString.Key.font: PrefBodyFont
         ]).width
         frame.size.width = tfWidth
-        frame.size.height = ctvovc?.lfHeight ?? 0.0
+        frame.size.height = ctvovc.lfHeight
 
-        frame = ctvovc?.configTextField(
+        frame = ctvovc.configTextField(
             frame,
             key: "bvalTF",
             target: nil,
@@ -227,31 +227,31 @@ class voBoolean: voState {
             num: true,
             place: BOOLVALDFLTSTR,
             text: vo.optDict["boolval"],
-            addsv: true) ?? CGRect.zero
+            addsv: true)
 
 
 
         // sets tracker date option
 
         frame.origin.x = MARGIN
-        frame.origin.y += (labframe?.size.height ?? 0.0) + MARGIN
+        frame.origin.y += labframe.size.height + MARGIN
 
-        labframe = ctvovc?.configLabel("Sets tracker date:", frame: frame, key: "stdLab", addsv: true)
+        labframe = ctvovc.configLabel("Sets tracker date:", frame: frame, key: "stdLab", addsv: true)
 
-        frame = CGRect(x: (labframe?.size.width ?? 0.0) + MARGIN + SPACE, y: frame.origin.y, width: labframe?.size.height ?? 0.0, height: labframe?.size.height ?? 0.0)
+        frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
 
-        frame = ctvovc?.configCheckButton(
+        frame = ctvovc.configCheckButton(
             frame,
             key: "stdBtn",
             state: (vo.optDict["setstrackerdate"] == "1") /* default:0 */,
-            addsv: true) ?? CGRect.zero
+            addsv: true)
 
         frame.origin.x = MARGIN
-        frame.origin.y += (labframe?.size.height ?? 0.0) + MARGIN
+        frame.origin.y += labframe.size.height + MARGIN
 
-        labframe = ctvovc?.configLabel("Active color:", frame: frame, key: "btnColrLab", addsv: true)
+        labframe = ctvovc.configLabel("Active color:", frame: frame, key: "btnColrLab", addsv: true)
 
-        frame.origin.x += (labframe?.size.width ?? 0.0) + MARGIN
+        frame.origin.x += labframe.size.width + MARGIN
         frame.size.width = frame.size.height
 
         let btn = UIButton(type: .custom)
@@ -269,14 +269,14 @@ class voBoolean: voState {
         btn.titleLabel?.font = PrefBodyFont
 
         btn.addTarget(self, action: #selector(boolColorButtonAction(_:)), for: .touchDown)
-        ctvovc!.wDict["boolColrBtn"] = btn
+        ctvovc.wDict["boolColrBtn"] = btn
         //[ctvovc.view addSubview:btn];
-        ctvovc!.scroll.addSubview(btn)
+        ctvovc.scroll.addSubview(btn)
 
 
         //-----
 
-        ctvovc?.lasty = frame.origin.y + (labframe?.size.height ?? 0.0) + MARGIN + SPACE
+        ctvovc.lasty = frame.origin.y + labframe.size.height + MARGIN + SPACE
 
         super.voDrawOptions(ctvovc)
     }

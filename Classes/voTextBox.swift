@@ -776,39 +776,39 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         return super.cleanOptDictDflts(key)
     }
 
-    override func voDrawOptions(_ ctvovc: configTVObjVC?) {
-        var frame = CGRect(x: MARGIN, y: ctvovc?.lasty ?? 0.0, width: 0.0, height: 0.0)
-        var labframe = ctvovc?.configLabel("Text box options:", frame: frame, key: "tboLab", addsv: true)
-        frame.origin.y += (labframe?.size.height ?? 0.0) + MARGIN
-        labframe = ctvovc?.configLabel("Use number of lines for graph value:", frame: frame, key: "tbnlLab", addsv: true) // can't do cleanly for function value (can't get linecount in sql and still use for other vtypes)
-        frame = CGRect(x: (labframe?.size.width ?? 0.0) + MARGIN + SPACE, y: frame.origin.y, width: labframe?.size.height ?? 0.0, height: labframe?.size.height ?? 0.0)
-        frame = ctvovc?.configCheckButton(
+    override func voDrawOptions(_ ctvovc: configTVObjVC) {
+        var frame = CGRect(x: MARGIN, y: ctvovc.lasty , width: 0.0, height: 0.0)
+        var labframe = ctvovc.configLabel("Text box options:", frame: frame, key: "tboLab", addsv: true)
+        frame.origin.y += labframe.size.height + MARGIN
+        labframe = ctvovc.configLabel("Use number of lines for graph value:", frame: frame, key: "tbnlLab", addsv: true) // can't do cleanly for function value (can't get linecount in sql and still use for other vtypes)
+        frame = CGRect(x:labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
+        frame = ctvovc.configCheckButton(
             frame,
             key: "tbnlBtn",
             state: (vo.optDict["tbnl"] == "1") /* default:0 */,
-            addsv: true) ?? CGRect.zero
+            addsv: true)
 
         // need index picker for contacts else unusable
 
         frame.origin.x = MARGIN
         frame.origin.y += MARGIN + frame.size.height
-        labframe = ctvovc?.configLabel("Names index:", frame: frame, key: "tbniLab", addsv: true)
-        frame = CGRect(x: (labframe?.size.width ?? 0.0) + MARGIN + SPACE, y: frame.origin.y, width: labframe?.size.height ?? 0.0, height: labframe?.size.height ?? 0.0)
-        frame = ctvovc?.configCheckButton(
+        labframe = ctvovc.configLabel("Names index:", frame: frame, key: "tbniLab", addsv: true)
+        frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
+        frame = ctvovc.configCheckButton(
             frame,
             key: "tbniBtn",
             state: !(vo.optDict["tbni"] == "0"),
-            addsv: true) ?? CGRect.zero
+            addsv: true)
 
         frame.origin.x = MARGIN
         frame.origin.y += MARGIN + frame.size.height
-        labframe = ctvovc?.configLabel("History index:", frame: frame, key: "tbhiLab", addsv: true)
-        frame = CGRect(x: (labframe?.size.width ?? 0.0) + MARGIN + SPACE, y: frame.origin.y, width: labframe?.size.height ?? 0.0, height: labframe?.size.height ?? 0.0)
-        frame = ctvovc?.configCheckButton(
+        labframe = ctvovc.configLabel("History index:", frame: frame, key: "tbhiLab", addsv: true)
+        frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
+        frame = ctvovc.configCheckButton(
             frame,
             key: "tbhiBtn",
             state: (vo.optDict["tbhi"] == "1") /* default:0 */,
-            addsv: true) ?? CGRect.zero
+            addsv: true)
 
         //*/
 
@@ -817,7 +817,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         //
         //	labframe = [self configLabel:@"Other options:" frame:frame key:@"soLab" addsv:YES];
 
-        ctvovc?.lasty = frame.origin.y + (labframe?.size.height ?? 0.0) + MARGIN
+        ctvovc.lasty = frame.origin.y + labframe.size.height + MARGIN
 
         super.voDrawOptions(ctvovc)
     }

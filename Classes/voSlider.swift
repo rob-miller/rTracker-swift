@@ -293,24 +293,24 @@ class voSlider: voState {
         return super.cleanOptDictDflts(key)
     }
 
-    override func voDrawOptions(_ ctvovc: configTVObjVC?) {
-        var frame = CGRect(x: MARGIN, y: ctvovc?.lasty ?? 0.0, width: 0.0, height: 0.0)
+    override func voDrawOptions(_ ctvovc: configTVObjVC) {
+        var frame = CGRect(x: MARGIN, y: ctvovc.lasty, width: 0.0, height: 0.0)
 
-        var labframe = ctvovc?.configLabel("Slider range:", frame: frame, key: "srLab", addsv: true)
+        var labframe = ctvovc.configLabel("Slider range:", frame: frame, key: "srLab", addsv: true)
 
         frame.origin.x = MARGIN
-        frame.origin.y += (labframe?.size.height ?? 0.0) + MARGIN
+        frame.origin.y += labframe.size.height + MARGIN
 
-        labframe = ctvovc?.configLabel("min:", frame: frame, key: "sminLab", addsv: true)
+        labframe = ctvovc.configLabel("min:", frame: frame, key: "sminLab", addsv: true)
 
-        frame.origin.x = (labframe?.size.width ?? 0.0) + MARGIN + SPACE
+        frame.origin.x = labframe.size.width + MARGIN + SPACE
         let tfWidth = "9999999999".size(withAttributes: [
             NSAttributedString.Key.font: PrefBodyFont
         ]).width
         frame.size.width = tfWidth
-        frame.size.height = ctvovc?.lfHeight ?? 0.0
+        frame.size.height = ctvovc.lfHeight
 
-        frame = ctvovc?.configTextField(
+        frame = ctvovc.configTextField(
             frame,
             key: "sminTF",
             target: nil,
@@ -318,16 +318,16 @@ class voSlider: voState {
             num: true,
             place: String(format: "%3.1f", SLIDRMINDFLT),
             text: vo.optDict["smin"],
-            addsv: true) ?? CGRect.zero
+            addsv: true)
 
         frame.origin.x += tfWidth + MARGIN
-        labframe = ctvovc?.configLabel(" max:", frame: frame, key: "smaxLab", addsv: true)
+        labframe = ctvovc.configLabel(" max:", frame: frame, key: "smaxLab", addsv: true)
 
-        frame.origin.x += (labframe?.size.width ?? 0.0) + SPACE
+        frame.origin.x += labframe.size.width + SPACE
         frame.size.width = tfWidth
-        frame.size.height = ctvovc?.lfHeight ?? 0.0
+        frame.size.height = ctvovc.lfHeight
 
-        frame = ctvovc?.configTextField(
+        frame = ctvovc.configTextField(
             frame,
             key: "smaxTF",
             target: nil,
@@ -335,18 +335,18 @@ class voSlider: voState {
             num: true,
             place: String(format: "%3.1f", SLIDRMAXDFLT),
             text: vo.optDict["smax"],
-            addsv: true) ?? CGRect.zero
+            addsv: true)
 
         frame.origin.y += frame.size.height + MARGIN
         frame.origin.x = 8 * MARGIN
 
-        labframe = ctvovc?.configLabel("default:", frame: frame, key: "sdfltLab", addsv: true)
+        labframe = ctvovc.configLabel("default:", frame: frame, key: "sdfltLab", addsv: true)
 
-        frame.origin.x += (labframe?.size.width ?? 0.0) + SPACE
+        frame.origin.x += labframe.size.width + SPACE
         frame.size.width = tfWidth
-        frame.size.height = ctvovc?.lfHeight ?? 0.0
+        frame.size.height = ctvovc.lfHeight
 
-        frame = ctvovc?.configTextField(
+        frame = ctvovc.configTextField(
             frame,
             key: "sdfltTF",
             target: nil,
@@ -354,40 +354,40 @@ class voSlider: voState {
             num: true,
             place: String(format: "%3.1f", SLIDRDFLTDFLT),
             text: vo.optDict["sdflt"],
-            addsv: true) ?? CGRect.zero
+            addsv: true)
 
         frame.origin.y += frame.size.height + MARGIN
         frame.origin.x = MARGIN
         //-- title label
 
-        labframe = ctvovc?.configLabel("Other options:", frame: frame, key: "soLab", addsv: true)
+        labframe = ctvovc.configLabel("Other options:", frame: frame, key: "soLab", addsv: true)
 
 
         frame.origin.x = MARGIN
-        frame.origin.y += (labframe?.size.height ?? 0.0) + MARGIN
+        frame.origin.y += labframe.size.height + MARGIN
 
-        labframe = ctvovc?.configLabel("integer steps:", frame: frame, key: "sisLab", addsv: true)
+        labframe = ctvovc.configLabel("integer steps:", frame: frame, key: "sisLab", addsv: true)
 
-        frame = CGRect(x: (labframe?.size.width ?? 0.0) + MARGIN + SPACE, y: frame.origin.y, width: labframe?.size.height ?? 0.0, height: labframe?.size.height ?? 0.0)
+        frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
 
-        frame = ctvovc?.configCheckButton(
+        frame = ctvovc.configCheckButton(
             frame,
             key: "sisBtn",
             state: (vo.optDict["integerstepsb"] == "1") /* default:0 */,
-            addsv: true) ?? CGRect.zero
+            addsv: true)
 
         frame.origin.x = MARGIN
-        frame.origin.y += (labframe?.size.height ?? 0.0) + MARGIN
+        frame.origin.y += labframe.size.height + MARGIN
 
-        labframe = ctvovc?.configLabel("starts with last:", frame: frame, key: "sswlLab", addsv: true)
+        labframe = ctvovc.configLabel("starts with last:", frame: frame, key: "sswlLab", addsv: true)
 
-        frame = CGRect(x: (labframe?.size.width ?? 0.0) + MARGIN + SPACE, y: frame.origin.y, width: labframe?.size.height ?? 0.0, height: labframe?.size.height ?? 0.0)
+        frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
 
-        frame = ctvovc?.configCheckButton(
+        frame = ctvovc.configCheckButton(
             frame,
             key: "sswlBtn",
             state: (vo.optDict["slidrswlb"] == "1") /* default:0 */,
-            addsv: true) ?? CGRect.zero
+            addsv: true)
 
 
 
@@ -411,7 +411,7 @@ class voSlider: voState {
 
 
 
-        ctvovc?.lasty = frame.origin.y + (labframe?.size.height ?? 0.0) + MARGIN
+        ctvovc.lasty = frame.origin.y + labframe.size.height + MARGIN
         super.voDrawOptions(ctvovc)
     }
 

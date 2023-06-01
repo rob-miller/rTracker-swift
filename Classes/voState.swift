@@ -27,9 +27,7 @@ import UIKit
 
 
 class voState: NSObject, voProtocol {
-    func voDrawOptions(_ ctvovc: Any?) {
-    }
-    
+
     /*{
 
     	valueObj *vo;

@@ -1925,11 +1925,11 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
     }
 
     func drawSelectedPage() {
-        ctvovcp?.lasty = 2 //frame.origin.y + frame.size.height + MARGIN;
+        ctvovcp!.lasty = 2 //frame.origin.y + frame.size.height + MARGIN;
         switch fnSegNdx {
         case FNSEGNDX_OVERVIEW:
             drawFuncOptsOverview()
-            super.voDrawOptions(ctvovcp)
+            super.voDrawOptions(ctvovcp!)
         case FNSEGNDX_RANGEBLD:
             drawFuncOptsRange()
         case FNSEGNDX_FUNCTBLD:
