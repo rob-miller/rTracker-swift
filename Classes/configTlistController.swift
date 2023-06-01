@@ -205,7 +205,7 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
 
 
     @IBAction func modeChoice(_ sender: UISegmentedControl) {
-        let selSegNdx = sender.selectedSegmentIndex
+        selSegNdx = sender.selectedSegmentIndex
         switch selSegNdx {
         case SegmentEdit:
             //DBGLog(@"ctlc: set edit mode");
