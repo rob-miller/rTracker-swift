@@ -171,7 +171,7 @@ class gtYAxV: UIView {
                     let choice = vogd?.vo.getChoiceIndex(forValue: "\(val)") ?? 0
                     vtChoiceSetColor(context, ndx: choice)
                     let ch = "c\(choice)"
-                    vstr = (vogd?.vo.optDict)?[ch] as? String
+                    vstr = vogd?.vo.optDict[ch] as? String
                 }
             case VOT_BOOLEAN:
                 if 1 == i {
@@ -204,8 +204,8 @@ class gtYAxV: UIView {
 
             default:
                 if vtype == VOT_FUNC {
-                    let fnddp = Int((vogd?.vo.optDict["fnddp"])!)
-                    fmt = String("%%0.\(fnddp)f")
+                    let fnddp = Int((vogd?.vo.optDict["fnddp"]) ?? "")
+                    fmt = String("%0.\(fnddp ?? 0)f")
                 } else if vtype == VOT_TEXTB {
                     fmt = "%0.1f"
                 } else {
@@ -225,7 +225,10 @@ class gtYAxV: UIView {
                         fmt = String(format: "%%0.%df", numddp)
                     }
                 }
+
                 vstr = String(format: fmt, val)
+
+
                 //if ([vstr isEqualToString:vsCopy])
                 //    vstr = nil;  // just do once, tho could do better at getting closer to actual value
                 //else
@@ -235,13 +238,12 @@ class gtYAxV: UIView {
             //[vstr drawAtPoint:(CGPoint) {(x2 - vh.width ),(y - (vh.height/1.5f))} withFont:self.myFont];
 
             var vh: CGSize? = nil
-            if let myFont {
-                vh = vstr?.size(withAttributes: [
+            if let myFont, let vstr {
+                vh = vstr.size(withAttributes: [
                     NSAttributedString.Key.font: myFont
                 ])
-            }
-            if let myFont {
-                vstr?.draw(at: CGPoint(x: x2 - (vh?.width ?? 0.0), y: y - ((vh?.height ?? 0.0) / 1.5)), withAttributes: [
+
+                vstr.draw(at: CGPoint(x: x2 - (vh?.width ?? 0.0), y: y - ((vh?.height ?? 0.0) / 1.5)), withAttributes: [
                     NSAttributedString.Key.font: myFont,
                     NSAttributedString.Key.foregroundColor: UIColor.white
                 ])
@@ -255,7 +257,7 @@ class gtYAxV: UIView {
             safeDispatchSync({ [self] in
                 if let myFont {
                     let myGraphColor = vogd.myGraphColor()
-                    vogd.vo.valueName?.draw(at: CGPoint(x: SPACE5, y: frame.size.height - BORDER), withAttributes: [
+                    vogd.vo.valueName?.draw(at: CGPoint(x: 3 * SPACE5, y: frame.size.height - BORDER), withAttributes: [
                         NSAttributedString.Key.font: myFont,
                         NSAttributedString.Key.foregroundColor: myGraphColor
                     ])
@@ -268,7 +270,7 @@ class gtYAxV: UIView {
         //Stroke
 
         // rtm debug
-        backgroundColor = .yellow
+        //backgroundColor = .yellow
     }
 
     override func draw(_ rect: CGRect) {

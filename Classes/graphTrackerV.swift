@@ -193,7 +193,7 @@ class graphTrackerV: UIScrollView {
             AddBigCircle(context, x, y)
         }
 
-        //Stroke(context)
+        Stroke(context)
     }
 
     /*
@@ -345,6 +345,10 @@ class graphTrackerV: UIScrollView {
             }
         }
 
+        // swift change
+        if vogd?.vo.vtype != VOT_CHOICE {
+            Stroke(context)
+        }
         //Stroke(context)
     }
 
@@ -502,6 +506,7 @@ class graphTrackerV: UIScrollView {
 
         if vo == gtvCurrVO {
             let ylineS = vo.optDict["yline1"]
+            
             if ylineS != nil && (ylineS != "") {
                 let ylineF = CGFloat(Float(ylineS ?? "") ?? 0.0)
                 if ((currVogd?.minVal ?? 0.0) < ylineF) && ((currVogd?.maxVal ?? 0.0) > ylineF) {
@@ -510,12 +515,12 @@ class graphTrackerV: UIScrollView {
                     context.setStrokeColor(UIColor(white: 0.90, alpha: 0.8).cgColor)
                     MoveTo(context, 0.0, yline)
                     safeDispatchSync({ [self] in
-                        AddLineTo(context, frame.size.width, yline)
+                       AddLineTo(context, frame.size.width, yline)
                     })
-                    //Stroke(context)
+                    Stroke(context)
                 }
             } else {
-                // draw zero line if no Y line spcified
+                // draw zero line if no Y line specified
                 if ((currVogd?.minVal ?? 0.0) < 0.0) && ((currVogd?.maxVal ?? 0.0) > 0.0) {
                     // draw line at 0 if needed
                     context.setStrokeColor(UIColor(white: 0.75, alpha: 0.5).cgColor)
@@ -523,10 +528,10 @@ class graphTrackerV: UIScrollView {
                     safeDispatchSync({ [self] in
                         AddLineTo(context, frame.size.width, currVogd!.yZero)
                     })
-                    //Stroke(context)
+                    Stroke(context)
                 }
             }
-
+            
             context.setLineWidth(DBL_LINE_WIDTH)
             selectedVO = true
         } else {
