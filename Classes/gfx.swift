@@ -28,17 +28,17 @@ import UIKit
 
 let GFXHDEBUG = 0
 
-func CGPush(_ c: CGContext) -> Void? {
+func CGPush(_ c: CGContext) {
     c.saveGState()
 }
-func CGPop(_ c: CGContext) -> Void? {
+func CGPop(_ c: CGContext){
     c.restoreGState()
 }
 
-func MTPrim(_ c: CGContext, _ x: Double, _ y: Double) -> Void? {
+func MTPrim(_ c: CGContext, _ x: Double, _ y: Double) {
     c.move(to: CGPoint(x: x, y: y))
 }
-func ALPrim(_ c: CGContext, _ x: Double, _ y: Double) -> Void? {
+func ALPrim(_ c: CGContext, _ x: Double, _ y: Double) {
     c.addLine(to: CGPoint(x: x, y: y))
 }
 func AEPrim(_ c: CGContext, _ x: Double, _ y: Double) {

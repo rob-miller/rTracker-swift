@@ -122,30 +122,31 @@ class tictacV: UIView {
         vstep = bounds.size.height * TTSF
         hstep = bounds.size.width * TTSF
 
-        let context = self.context
-
-        UIColor.green.set()
-        MoveTo(context!, hborder, vborder)
-        AddLineTo(context!, hborder + hlen, vborder)
-        AddLineTo(context!, hborder + hlen, vborder + vlen)
-        AddLineTo(context!, hborder, vborder + vlen)
-        AddLineTo(context!, hborder, vborder)
-        //Stroke
-
-        UIColor.black.set()
-
-        for i in 1...2 {
-            // horiz lines
-            MoveTo(context!, hborder, vborder + (CGFloat(i) * vstep))
-            AddLineTo(context!, hborder + hlen, vborder + (CGFloat(i) * vstep))
+        if let context = self.context {
+            
+            context.setStrokeColor(UIColor.green.cgColor)
+            MoveTo(context, hborder, vborder)
+            AddLineTo(context, hborder + hlen, vborder)
+            AddLineTo(context, hborder + hlen, vborder + vlen)
+            AddLineTo(context, hborder, vborder + vlen)
+            AddLineTo(context, hborder, vborder)
+            Stroke(context)
+            
+            context.setStrokeColor(UIColor.black.cgColor)
+            
+            for i in 1...2 {
+                // horiz lines
+                MoveTo(context, hborder, vborder + (CGFloat(i) * vstep))
+                AddLineTo(context, hborder + hlen, vborder + (CGFloat(i) * vstep))
+            }
+            
+            for i in 1...2 {
+                // vert lines
+                MoveTo(context, hborder + (CGFloat(i) * hstep), vborder)
+                AddLineTo(context, hborder + (CGFloat(i) * hstep), vborder + vlen)
+            }
+            Stroke(context)
         }
-
-        for i in 1...2 {
-            // vert lines
-            MoveTo(context!, hborder + (CGFloat(i) * hstep), vborder)
-            AddLineTo(context!, hborder + (CGFloat(i) * hstep), vborder + vlen)
-        }
-        //Stroke
     }
 
     // MARK: bitfuncs to get selected bits from key
@@ -175,7 +176,7 @@ class tictacV: UIView {
     // MARK: draw current state
 
     func drawBlank() {
-        UIColor.white.set()
+        context?.setStrokeColor(UIColor.white.cgColor)
         context?.fill(currRect)
         //self.layer.cornerRadius = 8;
 
@@ -186,7 +187,30 @@ class tictacV: UIView {
 
         //[str drawAtPoint:self.currRect.origin withFont:myFont];
         //[str drawInRect:self.currRect withFont:self.myFont lineBreakMode:NSLineBreakByClipping alignment:NSTextAlignmentCenter];
+        //let context = UIGraphicsGetCurrentContext()
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 18.0), // font size
+            .foregroundColor: UIColor.black, // font color
+        ]
 
+        context?.saveGState()
+
+        // flip the context coordinates
+        context?.textMatrix = CGAffineTransform.identity
+        context?.translateBy(x: 0, y: currRect.height)
+        context?.scaleBy(x: 1.0, y: -1.0)
+
+        // draw the text
+        UIGraphicsPushContext(context!)
+        str!.draw(in: currRect, withAttributes: attributes)
+        UIGraphicsPopContext()
+        /*
+        // pop the context to restore the previous state
+        context?.restoreGState()
+        context!.setFillColor(UIColor.blue.cgColor)
+        //context?.setFont(myFont! as! CGFont)  // (UIFont(name: "Helvetica", size: 24)!)
+        //context?.drawText(in: currRect, string: str)  // CGRect(origin: point, size: CGSize(width: bounds.width, height: bounds.height)), string: str)
+         
         let paragraphStyle = NSMutableParagraphStyle.default as? NSMutableParagraphStyle
         paragraphStyle?.lineBreakMode = .byClipping
         paragraphStyle?.alignment = .center
@@ -194,9 +218,13 @@ class tictacV: UIView {
         if let myFont, let paragraphStyle {
             str?.draw(in: currRect, withAttributes: [
                 NSAttributedString.Key.font: myFont,
-                NSAttributedString.Key.paragraphStyle: paragraphStyle
+                NSAttributedString.Key.paragraphStyle: paragraphStyle,
+                .foregroundColor: UIColor.red, // Set the foreground color to red
+                .backgroundColor: UIColor.yellow
             ])
         }
+        // ineffective Stroke(context!)
+         */
     }
 
     func setCurrPt(_ x: Int, y: Int) {
@@ -222,7 +250,7 @@ class tictacV: UIView {
 
     func drawCell() {
         drawBlank()
-        UIColor.black.set()
+        context!.setStrokeColor(UIColor.black.cgColor)
         switch REGIONVAL(key, currX, currY) {
         case 0x00:
             //DBGLog(@"00");
@@ -304,7 +332,7 @@ class tictacV: UIView {
     // MARK: api: draw current key
 
     func showKey(_ k: UInt) {
-        key = k //rtm lskdfjasldfjasdlfjksldfkj
+        key = k //rtm
         setNeedsDisplay()
     }
 
@@ -322,7 +350,7 @@ class tictacV: UIView {
         // Drawing code
         context = UIGraphicsGetCurrentContext()
         context?.setLineWidth(1.0)
-        context?.setAlpha(1.0)
+        context?.setAlpha(0.5)
         myFont = UIFont(name: String(FONTNAME), size: CGFloat(FONTSIZE))
         updateTT()
         drawTicTac()
