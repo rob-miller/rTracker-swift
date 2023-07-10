@@ -1450,8 +1450,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     var _privacyObj: privacyV?
     var privacyObj: privacyV {
         if _privacyObj == nil {
-            _privacyObj = privacyV(parentView: view)
-            _privacyObj!.parent = self
+            _privacyObj = privacyV(parentView: self)
         }
         _privacyObj!.tob = tlist // not set at init
         return _privacyObj!

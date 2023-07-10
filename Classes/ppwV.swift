@@ -74,6 +74,7 @@ class ppwV: UIView, UITextFieldDelegate {
     var tob: tObjBase?
     var parent: UIView?
     var parentAction: Selector?
+    var tbh: CGFloat = 0.0
     var topy: CGFloat = 0.0
     var ok: UInt = 0
     var cancel: UInt = 0
@@ -151,25 +152,30 @@ class ppwV: UIView, UITextFieldDelegate {
     //BOOL keyboardIsShown=NO;
     // CGRect saveFrame;
 
-    init(parentView pv: UIView?) {
+    init(parentView pv: UIView) {
 
         var frame: CGRect = CGRect.zero
         safeDispatchSync({
-            frame = pv?.frame ?? CGRect.zero
+            frame = pv.frame
         })
         DBGLog(String("ppwV parent: x=\(frame.origin.x) y=\(frame.origin.y) w=\(frame.size.width) h=\(frame.size.height)"))
 
-        frame.origin.x = 0.0
-        frame.origin.y = 372.0
+        //frame.origin.x = 0.0
+        //frame.origin.y = 372.0
         frame.size.width = 320.0
         frame.size.height = 130.0
         DBGLog(String("ppwV: x=\(frame.origin.x) y=\(frame.origin.y) w=\(frame.size.width) h=\(frame.size.height)"))
 
+        //tbh = par.navigationController!.toolbar.frame.height
+        //topy = pv.frame.size.height - (frame.size.height + tbh)
+        
         super.init(frame: frame)
+        /*
         let bg = UIImageView(image: UIImage(named: rTracker_resource.getLaunchImageName() ?? ""))
         addSubview(bg)
         sendSubviewToBack(bg)
-        backgroundColor = .red
+         */
+        backgroundColor = .clear
 
         layer.cornerRadius = 8
         parentView = pv
@@ -183,7 +189,7 @@ class ppwV: UIView, UITextFieldDelegate {
         //DBGLog(@"ppwv add view; parent has %d subviews",[pv.subviews count]);
         //[pv addSubview:self];
 
-        pv?.insertSubview(self, at: (pv?.subviews.count ?? 0) - 1) // 9.iii.14 change from -1 probably due to keyboard view
+        pv.insertSubview(self, at: pv.subviews.count - 1) // 9.iii.14 change from -1 probably due to keyboard view
         // 15.xii.14 -2 back to -1
         //[pv addSubview:self];    // <- try for debug!
         // Initialization code

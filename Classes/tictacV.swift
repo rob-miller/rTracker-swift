@@ -66,7 +66,7 @@ class tictacV: UIView {
             return theKey
         }
         set(k) {
-            DBGLog("setKey: \(theKey) -> \(k)")
+            DBGLog("setKey: \(theKey) \(String(theKey, radix: 2)) -> \(k) \(String(k, radix: 2))")
             theKey = k
         }
     }
@@ -99,7 +99,7 @@ class tictacV: UIView {
         ttf.origin.y = TICTACVRTFRAC * ttf.size.height
         ttf.size.width *= TICTACWIDFRAC
         ttf.size.height *= TICTACHGTFRAC
-        //DBGLog(@"ttv: x=%f y=%f w=%f h=%f",ttf.origin.x,ttf.origin.y,ttf.size.width, ttf.size.height);
+        DBGLog(String("ttv: x=\(ttf.origin.x) y=\(ttf.origin.y) w=\(ttf.size.width) h=\(ttf.size.height)"));
         super.init(frame: ttf)
         backgroundColor = .white
         layer.cornerRadius = 8 // doesn't work, probably overwriting rectangle elsewhere
@@ -113,6 +113,7 @@ class tictacV: UIView {
 
     func drawTicTac() {
         //var i: Int
+        DBGLog(String("\(frame)"))
         safeDispatchSync({ [self] in
             vborder = TTBF * frame.size.height
             hborder = TTBF * frame.size.width
@@ -176,7 +177,8 @@ class tictacV: UIView {
     // MARK: draw current state
 
     func drawBlank() {
-        context?.setStrokeColor(UIColor.white.cgColor)
+        //context?.setStrokeColor(UIColor.white.cgColor)
+        context?.setFillColor(UIColor.white.cgColor)
         context?.fill(currRect)
         //self.layer.cornerRadius = 8;
 
@@ -188,18 +190,23 @@ class tictacV: UIView {
         //[str drawAtPoint:self.currRect.origin withFont:myFont];
         //[str drawInRect:self.currRect withFont:self.myFont lineBreakMode:NSLineBreakByClipping alignment:NSTextAlignmentCenter];
         //let context = UIGraphicsGetCurrentContext()
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.alignment = .center
         let attributes: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: 18.0), // font size
             .foregroundColor: UIColor.black, // font color
+            .paragraphStyle: paragraphStyle
         ]
 
         context?.saveGState()
 
         // flip the context coordinates
+        /*
         context?.textMatrix = CGAffineTransform.identity
         context?.translateBy(x: 0, y: currRect.height)
         context?.scaleBy(x: 1.0, y: -1.0)
-
+         */
+        
         // draw the text
         UIGraphicsPushContext(context!)
         str!.draw(in: currRect, withAttributes: attributes)
@@ -291,7 +298,7 @@ class tictacV: UIView {
 
     func press(_ x: Int, y: Int) {
         setCurrPt(x, y: y)
-        DBGLog(String("press: (x),(y) => (currRect.origin.x) (currRect.origin.y) (currRect.size.width) (currRect.size.height)"))
+        DBGLog(String("press: \(x),\(y) => \(currRect.origin.x) \(currRect.origin.y) \(currRect.size.width) \(currRect.size.height)"))
 
         //unsigned int rmask = REGIONMASK(x,y);
         //unsigned int rinc =  REGIONINC(x,y);
@@ -310,21 +317,23 @@ class tictacV: UIView {
     // MARK: translate view coords to tic-tac-toe regions
 
     func ttx(_ x: Int) -> Int {
-        let i: Int = 0
-        for i in 1..<3 {
+        var i: Int = 1
+        while i<3 {
             if CGFloat(x) < hborder + (CGFloat(i) * hstep) {
                 return i - 1
             }
+            i+=1
         }
         return i - 1
     }
 
     func tty(_ y: Int) -> Int {
-        let i: Int = 0
-        for i in 1..<3 {
+        var i: Int = 1
+        while i<3 {
             if CGFloat(y) < vborder + (CGFloat(i) * vstep) {
                 return i - 1
             }
+            i+=1
         }
         return i - 1
     }
@@ -359,9 +368,9 @@ class tictacV: UIView {
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         let touch = touches.first
-        let touchPoint = touch?.location(in: self)
-        //DBGLog(@"ttv: I am touched at %f, %f => x:%d y:%d",touchPoint.x, touchPoint.y,[self ttx:touchPoint.x], [self tty:touchPoint.y]);
-        press(ttx(Int(touchPoint?.x ?? 0)), y: tty(Int(touchPoint?.y ?? 0)))
+        let touchPoint = touch!.location(in: self)
+        DBGLog(String("ttv: I am touched at \(touchPoint.x), \(touchPoint.y) => x:\(ttx(Int(touchPoint.x))) y:\(tty(Int(touchPoint.y)))"));
+        press(ttx(Int(touchPoint.x)), y: tty(Int(touchPoint.y)))
         resignFirstResponder()
     }
 

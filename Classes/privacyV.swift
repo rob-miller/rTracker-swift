@@ -132,7 +132,8 @@ class privacyV: UIView {
     }*/
     var parentView: UIView?
     var parent: RootViewController?
-
+    var tbh: CGFloat = 0.0
+    
     private var _ttv: tictacV?
     var ttv: tictacV? {
         if _ttv == nil {
@@ -145,14 +146,14 @@ class privacyV: UIView {
     private var _ppwv: ppwV?
     var ppwv: ppwV? {
         if nil == _ppwv {
-            _ppwv = ppwV(parentView: parentView)
+            _ppwv = ppwV(parentView: parentView!)
             //ppwv = [[ppwV alloc] initWithParentView:self];
-            _ppwv?.tob = tob
-            _ppwv?.parent = self
-            _ppwv?.parentAction = #selector(ppwvResponse)
-
-            _ppwv?.topy = (parentView?.frame.size.height ?? 0.0) - frame.size.height
-            DBGLog(String("pv.y = \(parentView?.frame.size.height ?? 0)  s.h = \(frame.size.height)  ty= \(_ppwv?.topy ?? 0)"))
+            _ppwv!.tob = tob
+            _ppwv!.parent = self
+            _ppwv!.parentAction = #selector(ppwvResponse)
+            tbh = parent!.navigationController!.toolbar.frame.height
+            _ppwv?.topy = frame.origin.y - (frame.size.height + tbh) // parentView!.frame.size.height - (frame.size.height /*+ tbh + CGFloat(49)*/)
+            DBGLog(String("pv.y = \(parentView!.frame.size.height)  s.h = \(frame.size.height)  ty= \(_ppwv!.topy)"))
         }
         return _ppwv
     }
@@ -460,21 +461,24 @@ class privacyV: UIView {
     // pvh hardcodes portrait keyboard height
     let PVH = 0.46
 
-    init(parentView pv: UIView?) {
-        DBGLog(String("privV enter parent= x=\(pv?.frame.origin.x ?? 0) y=\(pv?.frame.origin.y ?? 0) w=\(pv?.frame.size.width ?? 0) h=\(pv?.frame.size.height ?? 0)"))
+    init(parentView pv: RootViewController!) {
+        DBGLog(String("privV enter parent= x=\(pv?.view.frame.origin.x ?? 0) y=\(pv?.view.frame.origin.y ?? 0) w=\(pv?.view.frame.size.width ?? 0) h=\(pv?.view.frame.size.height ?? 0)"))
         //CGRect frame = CGRectMake(0.0f, pv.frame.size.height,pv.frame.size.width,(pv.frame.size.height * PVH));
         // like this but need to re-calc button positions too :-( CGRect frame = CGRectMake(pv.frame.size.width-320.0, pv.frame.size.height,320.0,171.0);
-        let frame = CGRect(x: 0.0, y: pv?.frame.size.height ?? 0.0, width: 320.0, height: 171.0)
-        DBGLog(String("privacyV: x=(frame.origin.x) y=(frame.origin.y) w=(frame.size.width) h=(frame.size.height)"))
+        tbh = pv.navigationController!.toolbar.frame.height
+        let frame = CGRect(x: 0.0, y: pv.view.frame.size.height - tbh, width: 320.0, height: 171.0)
+        DBGLog(String("privacyV: x=\(frame.origin.x) y=\(frame.origin.y) w=\(frame.size.width) h=\(frame.size.height)"))
         super.init(frame: frame)
-        parentView = pv
+        parent = pv
+        parentView = pv.view
         _pwState = PWNEEDPRIVOK //PWNEEDPASS;
+        /*
         let bg = UIImageView(image: UIImage(named: rTracker_resource.getLaunchImageName() ?? ""))
 
         addSubview(bg)
         sendSubviewToBack(bg)
-
-        backgroundColor = .white
+         */
+        backgroundColor = .clear  //.white
 
         layer.cornerRadius = 8
         showing = PVNOSHOW
@@ -599,13 +603,14 @@ class privacyV: UIView {
     func showPVQ(_ state: Bool) {
         DBGLog(String("parent v h= (parentView?.frame.size.height ?? 0.0) pvh= (PVH) prod= ((parentView?.frame.size.height ?? 0.0) * PVH)"))
         DBGLog(String(format: "x= %f y= %f w= %f h= %f", frame.origin.x, frame.origin.y, frame.size.width, frame.size.height))
+        //tbh = parent!.navigationController!.toolbar.frame.height
         if state {
             // show
             lastShow = Date().timeIntervalSinceReferenceDate
             configBtn?.setTitle(CFGBTNCONFIG, for: .normal)
             //self.transform = CGAffineTransformMakeTranslation(0, -(self.parentView.frame.size.height * PVH));
             //self.transform = CGAffineTransformMakeTranslation(0, -(self.parentView.frame.size.height * PVH));
-            transform = CGAffineTransform(translationX: 0, y: -(frame.size.height))
+            transform = CGAffineTransform(translationX: 0, y: -(frame.size.height + tbh))
             //self.parentView.userInteractionEnabled=NO;  // sadly kills interaction for child view as well
         } else {
             // hide
@@ -619,7 +624,7 @@ class privacyV: UIView {
 
             //self.transform = CGAffineTransformMakeTranslation(0, (self.parentView.frame.size.height * PVH));
             //self.transform = CGAffineTransformMakeTranslation(0, (self.parentView.frame.size.height * PVH));
-            transform = CGAffineTransform(translationX: 0, y: frame.size.height)
+            transform = CGAffineTransform(translationX: 0, y: (frame.size.height + tbh))
             //self.parentView.userInteractionEnabled=YES;
         }
     }
