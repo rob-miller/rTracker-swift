@@ -1680,7 +1680,11 @@ class trackerObj: tObjBase {
             DBGLog(String("saveDate says \(Date(timeIntervalSince1970: TimeInterval(saveNR?.saveDate ?? 0)))"))
         }
         //[saveNR save:self];
-        reminders[reminderNdx] = saveNR!  // .setObject(saveNR, atIndexedSubscript: reminderNdx)
+        if reminderNdx == reminders.count {
+            reminders.append(saveNR!)
+        } else {
+            reminders[reminderNdx] = saveNR!  // .setObject(saveNR, atIndexedSubscript: reminderNdx)
+        }
 
 
         #if REMINDERDBG
