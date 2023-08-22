@@ -107,7 +107,7 @@ class ppwV: UIView, UITextFieldDelegate {
         if nil == _topTF {
             _topTF = UITextField(frame: genFrame(0.4))
             //[topTF setHidden:TRUE];
-            _topTF?.backgroundColor = .white
+            _topTF?.backgroundColor = .systemBackground
             _topTF?.returnKeyType = .done
             _topTF?.autocapitalizationType = .none
             _topTF?.clearButtonMode = .whileEditing

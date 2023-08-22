@@ -591,11 +591,11 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 ]) // @"Name this Tracker"
                 nameField.backgroundColor = .systemBackground
             } else {
-                nameField.textColor = .black
+                nameField.textColor = .label
                 nameField.attributedPlaceholder = NSAttributedString(string: "Name this Tracker", attributes: [
                     .foregroundColor: UIColor.darkGray
                 ]) // @"Name this Tracker"
-                nameField.backgroundColor = .white
+                nameField.backgroundColor = .systemBackground
             }
 
             view.bringSubviewToFront(nameField)

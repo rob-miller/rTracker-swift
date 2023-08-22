@@ -340,7 +340,7 @@ class privacyV: UIView {
                 borg: CGPoint(x: frame.origin.x + (frame.size.width * (TICTACHRZFRAC / 2.0)), y: frame.size.height * TICTACVRTFRAC))
             _clearBtn?.addTarget(self, action: #selector(doClear(_:)), for: .touchUpInside)
             _clearBtn?.layer.cornerRadius = CGFloat(BTNRADIUS)
-            //clearBtn.backgroundColor = [UIColor whiteColor];
+            //clearBtn.backgroundColor = [UIColor systemBackgroundColor];
         }
         return _clearBtn
     }

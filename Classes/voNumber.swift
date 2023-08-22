@@ -46,8 +46,8 @@ class voNumber: voState, UITextFieldDelegate {
                 _dtf?.textColor = .label
                 _dtf?.backgroundColor = .secondarySystemBackground
             } else {
-                _dtf?.textColor = .black
-                _dtf?.backgroundColor = .white
+                _dtf?.textColor = .label
+                _dtf?.backgroundColor = .systemBackground
             }
             
             _dtf?.borderStyle = .roundedRect //Bezel;

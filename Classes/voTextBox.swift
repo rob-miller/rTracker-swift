@@ -330,13 +330,12 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
     override func dataEditVDidLoad(_ vc: UIViewController) {
         //self.devc = vc;
         //CGRect visFrame = vc.view.frame;
-
         textView = UITextView(frame: voDataEdit.getInitTVF(vc), textContainer: nil) // ]vc.view.frame];
 
-        textView?.textColor = .black
+        textView?.textColor = .label
         textView?.font = PrefBodyFont // [UIFont fontWithName:@"Arial" size:18];
         textView?.delegate = self
-        textView?.backgroundColor = .white
+        textView?.backgroundColor = .systemBackground
 
         textView?.text = vo.value
         textView?.returnKeyType = .default

@@ -173,6 +173,8 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
         let rootViewController = RootViewController()
         let navigationController = UINavigationController(rootViewController: rootViewController)
 
+        window?.backgroundColor = .systemBackground
+
         window?.rootViewController = navigationController
         window?.makeKeyAndVisible()
 

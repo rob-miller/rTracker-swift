@@ -45,8 +45,8 @@ class voText: voState, UITextFieldDelegate {
                 _dtf?.textColor = .label
                 _dtf?.backgroundColor = .secondarySystemBackground
             } else {
-                _dtf?.textColor = .black
-                _dtf?.backgroundColor = .white
+                _dtf?.textColor = .label
+                _dtf?.backgroundColor = .systemBackground
             }
             
             _dtf?.borderStyle = .roundedRect //Bezel;
@@ -92,7 +92,7 @@ class voText: voState, UITextFieldDelegate {
         //DBGLog(@"tf end editing");
         if startStr != textField.text {
             vo.value = textField.text ?? ""
-            //textField.textColor = [UIColor blackColor];
+            //textField.textColor = .label  //[UIColor blackColor];
             NotificationCenter.default.post(name: NSNotification.Name(rtValueUpdatedNotification), object: self)
             startStr = nil
         }

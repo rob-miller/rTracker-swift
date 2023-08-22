@@ -326,7 +326,7 @@ class voState: NSObject, voProtocol {
             darkMode = vc?.traitCollection.userInterfaceStyle == .dark
             label.backgroundColor = darkMode ? UIColor.systemBackground : UIColor.clear
         } else {
-            label.textColor = .black
+            label.textColor = .label
             label.backgroundColor = .clear
         }
 
@@ -353,7 +353,7 @@ class voState: NSObject, voProtocol {
                 label.textColor = .label
                 label.backgroundColor = darkMode ? UIColor.systemBackground : UIColor.clear
             } else {
-                label.textColor = .black
+                label.textColor = .label
                 label.backgroundColor = .clear
             }
 
@@ -477,7 +477,7 @@ class voState: NSObject, voProtocol {
             let darkMode = vc?.traitCollection.userInterfaceStyle == .dark
             label.backgroundColor = darkMode ? UIColor.systemBackground : UIColor.clear
         } else {
-            label.textColor = .black
+            label.textColor = .label
             label.backgroundColor = .clear
         }
         label.alpha = 1.0

@@ -89,10 +89,10 @@ class voDataEdit: UIViewController, UITextViewDelegate {
         } else {
             // generic text editor
             textView = UITextView(frame: view.frame)
-            textView?.textColor = .black
+            textView?.textColor = .label
             textView?.font = PrefBodyFont // [UIFont fontWithName:@"Arial" size:18];
             textView?.delegate = self
-            textView?.backgroundColor = .white
+            textView?.backgroundColor = .systemBackground
 
             //self.textView.text = self.vo.value;
             textView?.returnKeyType = .default

@@ -262,7 +262,7 @@ class rTracker_resource: NSObject {
         if #available(iOS 13.0, *) {
             _checkButton.backgroundColor = .tertiarySystemBackground
         } else {
-            _checkButton.backgroundColor = .white
+            _checkButton.backgroundColor = .systemBackground
         }
         _checkButton.titleLabel?.font = PrefBodyFont
         _checkButton.contentVerticalAlignment = .center
@@ -486,7 +486,7 @@ class rTracker_resource: NSObject {
         }
 
         outerView = UIView(frame: CGRect(x: 75, y: 155, width: 170, height: 170))
-        outerView?.backgroundColor = UIColor(red: 0, green: 0, blue: 0, alpha: 0.5)
+        outerView?.backgroundColor = .systemBackground // UIColor(red: 0, green: 0, blue: 0, alpha: 0.5)
         outerView?.clipsToBounds = true
         outerView?.layer.cornerRadius = 10.0
 
@@ -507,7 +507,7 @@ class rTracker_resource: NSObject {
 
         captionLabel = UILabel(frame: CGRect(x: 20, y: 115, width: 130, height: 22))
         captionLabel?.backgroundColor = .clear
-        captionLabel?.textColor = .white
+        captionLabel?.textColor = .label
         captionLabel?.adjustsFontSizeToFitWidth = true
         captionLabel?.textAlignment = .center // ios6 UITextAlignmentCenter;
         captionLabel?.text = str

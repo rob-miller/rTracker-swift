@@ -101,7 +101,7 @@ class tictacV: UIView {
         ttf.size.height *= TICTACHGTFRAC
         DBGLog(String("ttv: x=\(ttf.origin.x) y=\(ttf.origin.y) w=\(ttf.size.width) h=\(ttf.size.height)"));
         super.init(frame: ttf)
-        backgroundColor = .white
+        backgroundColor = .systemBackground //.white
         layer.cornerRadius = 8 // doesn't work, probably overwriting rectangle elsewhere
     }
 
@@ -133,7 +133,7 @@ class tictacV: UIView {
             AddLineTo(context, hborder, vborder)
             Stroke(context)
             
-            context.setStrokeColor(UIColor.black.cgColor)
+            context.setStrokeColor(UIColor.label.cgColor)
             
             for i in 1...2 {
                 // horiz lines
@@ -178,7 +178,7 @@ class tictacV: UIView {
 
     func drawBlank() {
         //context?.setStrokeColor(UIColor.white.cgColor)
-        context?.setFillColor(UIColor.white.cgColor)
+        context?.setFillColor(UIColor.systemBackground.cgColor)   // (UIColor.white.cgColor)
         context?.fill(currRect)
         //self.layer.cornerRadius = 8;
 
@@ -194,7 +194,7 @@ class tictacV: UIView {
         paragraphStyle.alignment = .center
         let attributes: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: 18.0), // font size
-            .foregroundColor: UIColor.black, // font color
+            .foregroundColor: UIColor.label,  // UIColor.black, // font color
             .paragraphStyle: paragraphStyle
         ]
 
@@ -257,7 +257,7 @@ class tictacV: UIView {
 
     func drawCell() {
         drawBlank()
-        context!.setStrokeColor(UIColor.black.cgColor)
+        context!.setStrokeColor(UIColor.label.cgColor)
         switch REGIONVAL(key, currX, currY) {
         case 0x00:
             //DBGLog(@"00");
