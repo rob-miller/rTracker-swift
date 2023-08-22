@@ -312,10 +312,15 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
 
     private var _fnTitles: [NSNumber]?
     var fnTitles: [NSNumber] {
-        if _fnTitles == nil {
-            _fnTitles = []
+        get {
+            if _fnTitles == nil {
+                _fnTitles = []
+            }
+            return _fnTitles!
         }
-        return _fnTitles!
+        set {
+            _fnTitles = newValue
+        }
     }
 
     private var _fnArray: [NSNumber]?
@@ -1263,7 +1268,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             rlab?.backgroundColor = .clear // was whiteColor
             rlab?.text = valstr
         } else {
-            rlab?.backgroundColor = .lightGray
+            rlab?.backgroundColor = .systemBackground  //.lightGray
             rlab?.text = "-"
         }
 
@@ -1744,7 +1749,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
 
         // ep is hours / days / months entry
         let anEpTitles = epTitles[ep2]
-        return "\(component != 0 ? "+" : "-")\(Int(vo.optDict[vkey]!)!) \(anEpTitles)"
+        return "\(component != 0 ? "+" : "-")\(Int(vo.optDict[vkey] ?? "0")!) \(anEpTitles)"
     }
 
     func voRangeStr(_ dbg: Bool) -> String? {
@@ -2018,11 +2023,6 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         ctvovcp = ctvovc
         reloadEmptyFnArray()
         drawSelectedPage()
-
-        if !checkVOs() {
-            noVarsAlert()
-        }
-
     }
 
     // MARK: -
@@ -2041,16 +2041,16 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         //}
         for i in 0..<ARG1CNT {
             let aFn1args = NSNumber(value:fn1args[i])
-            _fnTitles!.append(aFn1args)
+            fnTitles.append(aFn1args)
         }
-        _fnTitles!.append(NSNumber(value:FNCONSTANT))  // String("\(FNCONSTANT)"))
+        fnTitles.append(NSNumber(value:FNCONSTANT))  // String("\(FNCONSTANT)"))
     }
 
     func ftAddTimeSet() {
         //var i: Int
         for i in 0..<TIMECNT {
             let aFnTimeOps = NSNumber(value:fnTimeOps[i])
-            _fnTitles!.append(aFnTimeOps)
+            fnTitles.append(aFnTimeOps)
         }
         //for (i=FNTIMEFIRST;i>=FNTIMELAST;i--) {
         //	[self.fnTitles addObject:[NSNumber numberWithInt:i]];   xxx
@@ -2061,7 +2061,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         //var i: Int
         for i in 0..<ARG2CNT {
             let aFn2args = NSNumber(value:fn2args[i])
-            _fnTitles!.append(aFn2args)
+            fnTitles.append(aFn2args)
             
         }
         //for (i=FN2ARGFIRST;i>=FN2ARGLAST;i--) {
@@ -2072,7 +2072,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
     func ftAddVOs() {
         for valo in MyTracker.valObjTable {
             if valo != vo {
-                _fnTitles!.append(NSNumber(value: valo.vid))
+                fnTitles.append(NSNumber(value: valo.vid))
             }
         }
     }
@@ -2088,20 +2088,20 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             }
         }
         if pcount > 0 {
-            _fnTitles!.append(NSNumber(value:FNPARENCLOSE))  // String(utf8String: FNPARENCLOSE) ?? "")
+            fnTitles.append(NSNumber(value:FNPARENCLOSE))  // String(utf8String: FNPARENCLOSE) ?? "")
         }
     }
 
     func ftStartSet() {
         ftAddFnSet()
         ftAddTimeSet()
-        _fnTitles!.append(NSNumber(value:FNPARENOPEN))  // String(utf8String: FNPARENOPEN) ?? "")
+        fnTitles.append(NSNumber(value:FNPARENOPEN))  // String(utf8String: FNPARENOPEN) ?? "")
         ftAddVOs()
     }
 
     func updateFnTitles() {
-        // create array fnTitles of nsnumber tokens which should be presented in picker for current last of fn being built
-        _fnTitles!.removeAll()
+        // create array fnTitles of nsnumber tokens which should be presented in picker for current list of fn being built
+        fnTitles.removeAll()
         hideConstTF()
         DBGLog(String("fnArray= \(fnArray)"))
         if fnArray.count == 0 {
@@ -2135,7 +2135,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
     func fnTokenToStr(_ tok: Int) -> String {
         // convert token to str
         if isFn(tok) {
-            return String("\(fnStrDict[NSNumber(value: tok)])")
+            return String("\(fnStrDict[NSNumber(value: tok)]!)")
             //tok = (tok * -1) -1;
             //return [self.fnStrs objectAtIndex:tok];
         } else {
@@ -2247,7 +2247,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             } else if row <= votc {
                 vo.optDict[key] = String("\(votWoSelf[row - 1].vid)")  // NSNumber(value: votWoSelf[row - 1].vid)
             } else {
-                vo.optDict[key] = String("\((row - votc) + 1) * -1)")  // NSNumber(value: ((row - votc) + 1) * -1)
+                vo.optDict[key] = String("\(((row - votc) + 1) * -1)")  // NSNumber(value: ((row - votc) + 1) * -1)
                 updateValTF(row, component: component)
             }
             DBGLog(String("picker sel row \(row) \(key) now= \(vo.optDict[key])"))
