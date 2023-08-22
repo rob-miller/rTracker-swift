@@ -83,17 +83,16 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         return _weekdayBtns
     }
 
-    private var _everyTrackerNames: [AnyHashable]?
-    var everyTrackerNames: [AnyHashable]? {
+    private var _everyTrackerNames: [String]?
+    var everyTrackerNames: [String] {
         if nil == _everyTrackerNames {
-            var mtnames = [AnyHashable](repeating: 0, count: tracker!.valObjTable.count + 1)
-            mtnames.append(tracker?.trackerName ?? "")
+            _everyTrackerNames = []
+            _everyTrackerNames?.append(tracker!.trackerName!)
             for vo in tracker!.valObjTable{
-                mtnames.append(vo.valueName ?? "")
+                _everyTrackerNames!.append(vo.valueName!)
             }
-            _everyTrackerNames = mtnames
         }
-        return _everyTrackerNames
+        return _everyTrackerNames!
     }
     var chkImg: UIImage?
     var unchkImg: UIImage?
@@ -116,7 +115,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
     @IBOutlet var wdButton5: UIButton!
     @IBOutlet var wdButton6: UIButton!
     @IBOutlet var wdButton7: UIButton!
-    @IBOutlet var monthDaysLabel: UILabel!
+    //@IBOutlet var monthDaysLabel: UILabel!
     @IBOutlet var monthDays: UITextField!
     @IBOutlet var everyTF: UITextField!
     @IBOutlet var everyButton: UIButton!
@@ -377,20 +376,20 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
 
         if nil == nr {
             nr = notifyReminder()
-            nr?.msg = tracker?.trackerName
-            nr?.tid = tracker?.toid ?? 0
-            nr?.fromLast = true // default to this as probably more common
-            nr?.reminderEnabled = true // if nothing in database, enable by default -- nrFromGui will clear and read from gui setting
+            nr!.msg = tracker!.trackerName
+            nr!.tid = tracker!.toid
+            nr!.fromLast = true // default to this as probably more common
+            nr!.reminderEnabled = true // if nothing in database, enable by default -- nrFromGui will clear and read from gui setting
             //self.tmpReminder=TRUE;
         } else {
             //self.tmpReminder=FALSE;
         }
         DBGLog(String("\(nr)"))
-        enableButton.isSelected = nr?.reminderEnabled ?? false
+        enableButton.isSelected = nr!.reminderEnabled
         updateCheckBtn(enableButton)
         msgTF.text = nr?.msg
 
-        if (nr?.start ?? 0) > -1 {
+        if nr!.start > -1 {
             enableStartControls(true)
             startSlider.value = Float(nr!.start)
             sliderUpdate(Int(startSlider.value), hrtf: startHr, mntf: startMin, ampml: startTimeAmPm)
@@ -398,7 +397,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
             enableStartControls(false)
         }
 
-        if nr?.untilEnabled ?? false {
+        if nr!.untilEnabled {
             enableFinishButton.isSelected = true
             finishSlider.value = Float(nr!.until)
             repeatTimes.text = String(format: "%ld", Int(nr?.times ?? 0))
@@ -411,7 +410,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
 
         doEFbtnState()
 
-        if nr?.monthDays != nil {
+        if nr!.monthDays != 0 {
             //self.weekMonthEvery.selectedSegmentIndex=SEGMONTH;
             setDelayDaysButtonTitle(true)
             var nma: [String] = [] // (repeating: nil, count: 32)
@@ -428,15 +427,15 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
             //self.weekMonthEvery.selectedSegmentIndex=SEGEVERY;
             setDelayDaysButtonTitle(false)
             doDelayDaysButtonState()
-            everyTF.text = String(format: "%ld", Int(nr?.everyVal ?? 0))
-            everyMode = nr?.everyMode ?? 0
+            everyTF.text = String(format: "%ld", Int(nr!.everyVal))
+            everyMode = nr!.everyMode
             everyBtnStateUpdate()
-            if nr?.fromLast ?? false {
+            if nr!.fromLast {
                 fromLastButton.isSelected = true
-                if nr?.vid != nil {
+                if nr!.vid != 0 {
                     let c = tracker?.valObjTable.count ?? 0
                     for i in 0..<c {
-                        if nr?.vid == ((tracker?.valObjTable)?[i] as? valueObj)?.vid {
+                        if nr!.vid == ((tracker!.valObjTable)[i]).vid {
                             everyTrackerNdx = i + 1
                         }
                     }
@@ -837,13 +836,14 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
     }
 
     func setEveryTrackerBtnName() {
-        everyTrackerButton.setTitle((everyTrackerNames)?[everyTrackerNdx] as? String, for: .normal)
+        everyTrackerButton.setTitle(everyTrackerNames[everyTrackerNdx], for: .normal)
+        DBGLog(String("everyTracker name \(everyTrackerNames[everyTrackerNdx])"))
         everyTrackerButton.setTitleColor(everyTrackerNdx != 0 ? UIColor.blue : UIColor(red: 0.5, green: 0.0, blue: 1.0, alpha: 1.0), for: .normal)
         updateMessage()
     }
 
     @IBAction func everyTrackerBtn(_ sender: Any) {
-        everyTrackerNdx = everyTrackerNdx < (everyTrackerNames?.count ?? 0) - 1 ? everyTrackerNdx + 1 : 0
+        everyTrackerNdx = everyTrackerNdx < everyTrackerNames.count - 1 ? everyTrackerNdx + 1 : 0
         setEveryTrackerBtnName()
     }
 
@@ -872,7 +872,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
     }
 
     func hideMonthdays(_ state: Bool) {
-        monthDaysLabel.isHidden = state
+        //monthDaysLabel.isHidden = state
         monthDays.isHidden = state
     }
 
@@ -1164,7 +1164,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
 
     // MARK: -
 
-    @IBAction func tFdidBeginEditing(_ textField: Any) {
+    @IBAction func TFdidBeginEditing(_ textField: Any) {
         DBGLog("tf begin editing")
         activeField = textField as? UITextField
     }
