@@ -41,7 +41,7 @@ class notifyReminderVC2: UIViewController, UIPickerViewDelegate, UIPickerViewDat
     override init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) {
         super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)
         var sfa: [String] = []
-        datePicker.date = Date(timeIntervalSince1970: TimeInterval(parentNRVC!.nr!.saveDate))
+        //datePicker.date = Date(timeIntervalSince1970: TimeInterval(parentNRVC!.nr!.saveDate))
 
         var files: [String]? = nil
         do {
