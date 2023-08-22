@@ -299,7 +299,7 @@ class voChoice: voState {
         }
 
         if "" != tf?.text {
-            DBGLog(String("set choice value \(i): \(tf!.text)"))
+            DBGLog(String("set choice value \(i): \(tf!.text!)"))
             vo.optDict["cv\(i)"] = tf?.text
         } else {
             vo.optDict.removeValue(forKey: "cv\(i)")
