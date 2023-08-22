@@ -126,6 +126,7 @@ class notifyReminder: NSObject {
         notifContent = nil
         saveDate = Int(Date().timeIntervalSince1970)
         soundFileName = nil
+        self.clearNR()
     }
     
     //@property (nonatomic,retain) trackerObj *to;
