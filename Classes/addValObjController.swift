@@ -376,7 +376,13 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
 
     @IBAction func btnSetup(_ sender: Any) {
         //DBGLog(@"addVObjC: config was pressed!");
-
+        if (tempValObj?.vtype == VOT_FUNC) {
+            let tvof = tempValObj!.vos as! voFunction
+            if !tvof.checkVOs() {
+                tvof.noVarsAlert()
+                return
+            }
+        }
         let ctvovc = configTVObjVC(nibName: "configTVObjVC", bundle: nil)
         ctvovc.to = parentTrackerObj
         //[parentTrackerObj retain];
