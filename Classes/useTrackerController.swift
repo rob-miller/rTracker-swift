@@ -432,8 +432,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             showSaveBtn()
             updateTrackerTableView() // need to force redisplay and set sliders, so reload in viewdidappear not so noticeable
 
-            navigationController?.toolbar.backgroundColor = .white
-            navigationController?.navigationBar.backgroundColor = .white
+            navigationController?.toolbar.backgroundColor = .systemBackground
+            navigationController?.navigationBar.backgroundColor = .systemBackground
             navigationController?.setToolbarHidden(false, animated: false)
 
             updateToolBar()
