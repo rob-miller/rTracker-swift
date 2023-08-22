@@ -169,9 +169,6 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
         csvReadCount += 1
 
-
-
-
     }
 
     func startLoadActivityIndicator(_ str: String?) {
@@ -1195,7 +1192,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         restorePriv()
 
         navigationController?.setToolbarHidden(false, animated: false)
-
+        tableView?.reloadData()
         super.viewWillAppear(animated)
     }
 
