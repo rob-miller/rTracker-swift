@@ -661,14 +661,14 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
             nkey = nil
 
             let currPriv = privacyValue
-            var newPriv = Int(tf?.text ?? "") ?? 0
+            var newPriv = Int(tf?.text ?? "") ?? 1
             if newPriv > currPriv {
                 //newPriv = currPriv;
                 tf?.text = "\(currPriv)"
                 let msg = "rTracker's privacy level is currently set to \(currPriv).  Setting an item to a higher privacy level than the current setting is disallowed."
                 rTracker_resource.alert("Privacy higher than current", msg: msg, vc: self)
             }
-            newPriv = Int(tf?.text ?? "") ?? 0
+            newPriv = Int(tf?.text ?? "") ?? 1
             if newPriv < PRIVDFLT {
                 tf?.text = "\(PRIVDFLT)"
                 let msg = "Setting a privacy level below \(PRIVDFLT) is disallowed."
