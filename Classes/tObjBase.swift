@@ -241,8 +241,8 @@ class tObjBase: NSObject {
             sqlite3_close(tDb)
             tDb = nil
             DBGLog(String("closed tDb: \(dbName!)"))
-        } else {
-            DBGLog(String("hey! tdb close when tDb already closed \(dbName!)"))
+        //} else {
+            // DBGLog(String("hey! tdb close when tDb already closed \(dbName!)"))
         }
     }
 
