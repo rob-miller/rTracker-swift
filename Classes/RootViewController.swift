@@ -176,6 +176,90 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     }
 
     func loadTrackerCsvFiles() {
+        let docsDir = rTracker_resource.ioFilePath(nil, access: true)
+        let localFileManager = FileManager.default
+        var newRtcsvTracker = false
+
+        jumpMaxPriv()
+
+        do {
+            let files = try localFileManager.contentsOfDirectory(atPath: docsDir)
+            for fileName in files {
+                let fullPath = URL(fileURLWithPath: docsDir).appendingPathComponent(fileName)
+                var to: trackerObj? = nil
+                let fname = URL(fileURLWithPath: fileName).lastPathComponent
+                var tname: String? = nil
+                var validMatch = false
+                var loadObj: String?
+
+                switch fullPath.pathExtension {
+                case "csv":
+                    loadObj = "_in.csv"
+                    if fileName.hasSuffix("_in.csv") {
+                        validMatch = true
+                    }
+                case "rtcsv":
+                    loadObj = ".rtcsv"
+                    if fileName.hasSuffix(".rtcsv") {
+                        validMatch = true
+                    }
+                default:
+                    continue
+                }
+
+                if validMatch {
+                    tname = String(fileName.dropLast(loadObj!.count))  // String(fileName.prefix(fileName.count - (loadObj!.count + 1))) // Removing suffix
+                    DBGLog("\(loadObj!) load input: \(fname) as \(tname!)")
+
+                    let tid = tlist.getTIDfromName(tname)
+                    if tid != 0 {
+                        to = trackerObj(tid)
+                        DBGLog("found existing tracker tid \(tid) with matching name")
+                    } else if fullPath.pathExtension == "rtcsv" {
+                        to = trackerObj()
+                        to?.trackerName = tname
+                        to?.toid = tlist.getUnique()
+                        to?.saveConfig()
+                        tlist.add(toTopLayoutTable: to!)
+                        newRtcsvTracker = true
+                        DBGLog("created new tracker for rtcsv, id= \(to?.toid ?? 0)")
+                    }
+
+                    if let to = to {
+                        safeDispatchSync { [self] in
+                            rTracker_resource.startActivityIndicator(view, navItem: nil, disable: false, str: "loading \(tname ?? "")...")
+                        }
+
+                        do {
+                            let csvString = try String(contentsOfFile: fullPath.path, encoding: .utf8)
+                            safeDispatchSync { [self] in
+                                UIApplication.shared.isIdleTimerDisabled = true
+                                doCSVLoad(csvString, to: to, fname: fname)
+                                UIApplication.shared.isIdleTimerDisabled = false
+                            }
+                            try localFileManager.removeItem(at: fullPath)
+                        } catch {
+                            print("Error reading or deleting file: \(error)")
+                        }
+
+                        safeDispatchSync { [self] in
+                            rTracker_resource.finishActivityIndicator(view, navItem: nil, disable: false)
+                        }
+                    }
+                }
+            }
+        } catch {
+            print("Error enumerating files: \(error.localizedDescription)")
+        }
+
+        restorePriv()
+
+        if newRtcsvTracker {
+            refreshViewPart2()
+        }
+    }
+
+    func rtm_xloadTrackerCsvFiles() {
         //DBGLog(@"loadTrackerCsvFiles");
         let docsDir = rTracker_resource.ioFilePath(nil, access: true)
         let localFileManager = FileManager.default
@@ -259,7 +343,8 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                             UIApplication.shared.isIdleTimerDisabled = false
                         })
                         _ = rTracker_resource.deleteFile(atPath: target.absoluteString)
-                    } catch {
+                    } catch let e {
+                        DBGErr(String("Error on delete \(target): \(e)"))
                     }
 
                     //[rTracker_resource stashProgressBarMax:(int)[rTracker_resource countLines:csvString]];
@@ -401,8 +486,71 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
         return tid
     }
-
+    
     func loadTrackerPlistFiles() -> Bool {
+        DBGLog("loadTrackerPlistFiles")
+        var rtrkTid = 0
+
+        let docsDir = rTracker_resource.ioFilePath(nil, access: true)
+        let localFileManager = FileManager.default
+
+        var filesToProcess: [URL] = []
+
+        do {
+            let files = try localFileManager.contentsOfDirectory(atPath: docsDir)
+            for fileName in files {
+                let fullPath = URL(fileURLWithPath: docsDir).appendingPathComponent(fileName)
+                if fileName.hasSuffix("_in.plist") {
+                    filesToProcess.append(fullPath)
+                } else if fullPath.pathExtension == "rtrk" {
+                    filesToProcess.append(fullPath)
+                }
+            }
+        } catch {
+            print("Error enumerating files: \(error.localizedDescription)")
+        }
+
+        for file in filesToProcess {
+            let fname = file.lastPathComponent
+            DBGLog("process input: \(fname)")
+
+            let newTarget = file.path + "_reading".replacingOccurrences(of: "Documents/Inbox/", with: "Documents/")
+            
+            do {
+                try localFileManager.moveItem(atPath: file.path, toPath: newTarget)
+            } catch {
+                DBGErr("Error on move \(file) to \(newTarget): \(error)")
+            }
+
+            readingFile = true
+
+            safeDispatchSync { [self] in
+                UIApplication.shared.isIdleTimerDisabled = true
+
+                if fname.hasSuffix("_in.plist") {
+                    rtrkTid = handleOpenFileURL(URL(fileURLWithPath: newTarget), tname: String(fname.prefix(fname.count - 9)))
+                } else {
+                    rtrkTid = handleOpenFileURL(URL(fileURLWithPath: newTarget), tname: nil)
+                }
+
+                UIApplication.shared.isIdleTimerDisabled = false
+            }
+
+            if fname.hasSuffix("_in.plist") {
+                rTracker_resource.rmStashedTracker(0)
+            } else {
+                stashedTIDs.append(NSNumber(value: rtrkTid))
+            }
+
+            readingFile = false
+            rTracker_resource.setProgressVal(Float(plistReadCount) / Float(plistLoadCount))
+            plistReadCount += 1
+        }
+
+        return (rtrkTid != 0)
+    }
+
+    func rtm_xloadTrackerPlistFiles() -> Bool {
         // called on refresh, loads any _in.plist files as trackers
         // also called if any .rtrk files exist
         DBGLog("loadTrackerPlistFiles")
@@ -440,11 +588,11 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
             //target = file // URL(fileURLWithPath: docsDir ?? "").appendingPathComponent(file ?? "").path
 
-            newTarget = file.absoluteString + "_reading".replacingOccurrences(of: "Documents/Inbox/", with: "Documents/")
+            newTarget = file.path + "_reading".replacingOccurrences(of: "Documents/Inbox/", with: "Documents/")
 
             var err: Error?
             do {
-                try localFileManager.moveItem(atPath: file.absoluteString, toPath: newTarget ?? "")
+                try localFileManager.moveItem(atPath: file.path, toPath: newTarget ?? "")
             } catch let e {
                 err = e
                 DBGErr(String("Error on move \(file) to \(newTarget): \(err)"))
@@ -576,21 +724,22 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
         let docsDir = rTracker_resource.ioFilePath(nil, access: true)
         let localFileManager = FileManager.default
-        let dirEnum = localFileManager.enumerator(atPath: docsDir)
 
-        while let file = dirEnum?.nextObject() as? URL {
-            let fname = file.lastPathComponent
-            //DBGLog(@"consider input file %@",fname);
-            let inmatch = (fname as NSString?)?.range(of: targ_ext ?? "", options: [.backwards, .anchored])
-            if inmatch?.location != NSNotFound {
-                DBGLog(String("existsInputFiles: match on \(fname)"))
-                retval += 1
-                
+        do {
+            let files = try localFileManager.contentsOfDirectory(atPath: docsDir)
+            for file in files {
+                if file.hasSuffix(targ_ext ?? "") {
+                    DBGLog("existsInputFiles: match on \(file)")
+                    retval += 1
+                }
             }
+        } catch {
+            print("Error enumerating files: \(error.localizedDescription)")
         }
 
         return retval
     }
+
 
     func loadInputFiles() {
         if loadingInputFiles {
@@ -1198,43 +1347,35 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
     func fixFileProblem(_ choice: Int) {
         let docsDir = rTracker_resource.ioFilePath(nil, access: true)
-
         let localFileManager = FileManager.default
-        let dirEnum = localFileManager.enumerator(atPath: docsDir)
-
-
-        while let file = dirEnum?.nextObject() as? String {
-            if URL(fileURLWithPath: file).pathExtension == "rtrk_reading" {
-                var err: Error?
-                var target: String?
-                target = URL(fileURLWithPath: docsDir).appendingPathComponent(file).path
-
-                if 0 == choice {
-                    // delete it
-                    _ = rTracker_resource.deleteFile(atPath: target)
-                } else {
-                    // try again -- rename from .rtrk_reading to .rtrk
-                    var newTarget: String?
-                    newTarget = target?.replacingOccurrences(of: "rtrk_reading", with: "rtrk")
-                    do {
-                        try localFileManager.moveItem(atPath: target ?? "", toPath: newTarget ?? "")
-                    } catch let e {
-                        err = e
-                        DBGLog(String("Error on move \(target) to \(newTarget): \(err)"))
+        
+        do {
+            let files = try localFileManager.contentsOfDirectory(atPath: docsDir)
+            for fileName in files {
+                if fileName.hasSuffix(".rtrk_reading") {
+                    let fullPath = URL(fileURLWithPath: docsDir).appendingPathComponent(fileName)
+                    
+                    if choice == 0 {
+                        // delete it
+                        try? localFileManager.removeItem(atPath: fullPath.path)
+                    } else {
+                        // try again -- rename from .rtrk_reading to .rtrk
+                        let newTarget = fullPath.path.replacingOccurrences(of: "rtrk_reading", with: "rtrk")
+                        do {
+                            try localFileManager.moveItem(atPath: fullPath.path, toPath: newTarget)
+                        } catch {
+                            DBGLog("Error on move \(fullPath) to \(newTarget): \(error)")
+                        }
                     }
                 }
             }
+        } catch {
+            print("Error enumerating files: \(error.localizedDescription)")
         }
 
         viewDidAppearRestart()
-
     }
 
-    /*
-    - (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
-        [self fixFileProblem:buttonIndex];
-    }
-    */
     func viewDidAppearRestart() {
         refreshView()
 
@@ -1257,60 +1398,55 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     }
 
     public override func viewDidAppear(_ animated: Bool) {
-
-        //DBGLog(@"rvc: viewDidAppear privacy= %d", [privacyObj getPrivacyValue]);
+        super.viewDidAppear(animated)
 
         if !readingFile {
-            if 0 < stashedTIDs.count {
+            if !stashedTIDs.isEmpty {
                 doRejectableTracker()
             } else {
                 let docsDir = rTracker_resource.ioFilePath(nil, access: true)
-                let localFileManager = FileManager.default
-                let dirEnum = localFileManager.enumerator(atPath: docsDir)
-
-                while let file = dirEnum?.nextObject() as? String {
-                    let fu = URL(fileURLWithPath: file)
-                    if fu.pathExtension == "rtrk_reading" {
-                        //let fname = fu.lastPathComponent
-                        let rtrkName = fu.deletingPathExtension().path
-                        let title = "Problem reading .rtrk file?"
-                        let msg = "There was a problem while loading the \(rtrkName) rtrk file"
-                        let btn0 = "Delete it"
-                        let btn1 = "Try again"
-                        let alert = UIAlertController(
-                            title: title,
-                            message: msg,
-                            preferredStyle: .alert)
-
-                        let deleteAction = UIAlertAction(
-                            title: btn0,
-                            style: .default,
-                            handler: { [self] action in
-                                fixFileProblem(0)
-                            })
-                        let retryAction = UIAlertAction(
-                            title: btn1,
-                            style: .default,
-                            handler: { [self] action in
-                                fixFileProblem(1)
-                            })
-
-                        alert.addAction(deleteAction)
-                        alert.addAction(retryAction)
-
-                        present(alert, animated: true)
+                
+                do {
+                    let files = try FileManager.default.contentsOfDirectory(atPath: docsDir)
+                    for fileName in files where fileName.hasSuffix(".rtrk_reading") {
+                        let fullPath = URL(fileURLWithPath: docsDir).appendingPathComponent(fileName)
+                        let rtrkName = fullPath.deletingPathExtension().lastPathComponent
+                        presentProblemAlert(for: rtrkName)
+                        return
                     }
+                } catch {
+                    print("Error enumerating files: \(error.localizedDescription)")
                 }
             }
         } else {
-            //if (self.readingFile) {
             UIApplication.shared.isIdleTimerDisabled = true
         }
+        
         stashAnimated = animated
         viewDidAppearRestart()
-
-        // [super viewDidApeear] called in [self viewDidAppearRestart]
     }
+
+    private func presentProblemAlert(for rtrkName: String) {
+        let title = "Problem reading .rtrk file?"
+        let msg = "There was a problem while loading the \(rtrkName) rtrk file"
+        let btn0 = "Delete it"
+        let btn1 = "Try again"
+        
+        let alert = UIAlertController(title: title, message: msg, preferredStyle: .alert)
+        let deleteAction = UIAlertAction(title: btn0, style: .default) { [weak self] _ in
+            self?.fixFileProblem(0)
+        }
+        let retryAction = UIAlertAction(title: btn1, style: .default) { [weak self] _ in
+            self?.fixFileProblem(1)
+        }
+        
+        alert.addAction(deleteAction)
+        alert.addAction(retryAction)
+        
+        present(alert, animated: true)
+    }
+
+
 
     public override func viewWillDisappear(_ animated: Bool) {
         DBGLog("rvc viewWillDisappear")
@@ -1586,7 +1722,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         if let tid {
             src = (scheduledReminderCounts[tid] as? NSNumber)?.intValue ?? 0
         }
-        DBGLog(String("src: \(src)  erc:  \(erc) \(tlist.topLayoutNames![row]) (\(tid))"))
+        DBGLog(String("src: \(src)  erc:  \(erc) \(tlist.topLayoutNames![row]) (\(tid!))"))
         //NSString *formatString = @"%@";
         //UIColor *bg = [UIColor clearColor];
         if erc != src {
