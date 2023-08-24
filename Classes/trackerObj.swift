@@ -1300,8 +1300,8 @@ class trackerObj: tObjBase {
                 var valobjID: Int
                 var valobjPriv: Int
                 var valobjType: Int
-                let csvha: [String] = csvHeaderDict[key]!
-                if [] == csvha {
+                let csvha: [String]? = csvHeaderDict[key]
+                if nil == csvha {
                     let splitPos = (key as NSString).range(of: ":", options: .backwards)
                     voName = (key as NSString).substring(to: splitPos.location)
                     voRank = Int((key as NSString).substring(from: splitPos.location + splitPos.length)) ?? 0
@@ -1311,11 +1311,11 @@ class trackerObj: tObjBase {
                     (valobjID, valobjPriv, valobjType) = toQry2IntIntInt(sql: sql)!
                     csvHeaderDict[key] = [voName, String(voRank), String(valobjID), String(valobjPriv), String(valobjType)]
                 } else {
-                    voName = csvha[0]
-                    voRank = Int(csvha[1])!
-                    valobjID = Int(csvha[2])!
-                    valobjPriv = Int(csvha[3])!
-                    valobjType = Int(csvha[4])!
+                    voName = csvha![0]
+                    voRank = Int(csvha![1])!
+                    valobjID = Int(csvha![2])!
+                    valobjPriv = Int(csvha![3])!
+                    valobjType = Int(csvha![4])!
                 }
 
                 DBGLog(String("name=\(voName) rank=\(voRank) val=\(val) id=\(valobjID) priv=\(valobjPriv) type=\(valobjType)"))
