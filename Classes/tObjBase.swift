@@ -225,14 +225,14 @@ class tObjBase: NSObject {
     */
 
     func deleteTDb() {
-        DBGLog(String("deleteTDb dbName= \(dbName) id=\(toid)"))
+        DBGLog(String("deleteTDb dbName= \(dbName!) id=\(toid)"))
         dbgNSAssert(dbName != nil && dbName != "", "deleteTDb called with no dbName set")
         sqlite3_close(tDb)
         tDb = nil
         if rTracker_resource.deleteFile(atPath: rTracker_resource.ioFilePath(dbName!, access: DBACCESS)) {
             dbName = nil
         } else {
-            DBGErr(String("error removing tDb named \(dbName)"))
+            DBGErr(String("error removing tDb named \(dbName!)"))
         }
     }
 
@@ -240,9 +240,9 @@ class tObjBase: NSObject {
         if tDb != nil {
             sqlite3_close(tDb)
             tDb = nil
-            DBGLog(String("closed tDb: \(dbName)"))
+            DBGLog(String("closed tDb: \(dbName!)"))
         } else {
-            DBGLog(String("hey! tdb close when tDb already closed \(dbName)"))
+            DBGLog(String("hey! tdb close when tDb already closed \(dbName!)"))
         }
     }
 
@@ -279,17 +279,17 @@ class tObjBase: NSObject {
     // MARK: sql db errors
 
     func tobPrepError(_ sql: String?) {
-        DBGErr(String("tob error preparing -> \(sql) <- : \(sqlite3_errmsg(tDb)!) toid \(toid) dbName \(dbName)"))
+        DBGErr(String("tob error preparing -> \(sql) <- : \(sqlite3_errmsg(tDb)!) toid \(toid) dbName \(dbName!)"))
     }
 
     func tobDoneCheck(_ rslt: Int, sql: String?) {
         if rslt != SQLITE_DONE {
-            DBGErr(String("tob error not SQL_DONE (\(rslt)) -> \(sql) <- : \(sqlite3_errmsg(tDb)!) toid \(toid) dbName \(dbName)"))
+            DBGErr(String("tob error not SQL_DONE (\(rslt)) -> \(sql) <- : \(sqlite3_errmsg(tDb)!) toid \(toid) dbName \(dbName!)"))
         }
     }
 
     func tobExecError(_ sql: String?) {
-        DBGErr(String("tob error executing -> \(sql) <- : \(sqlite3_errmsg(tDb)!) toid \(toid) dbName \(dbName)"))
+        DBGErr(String("tob error executing -> \(sql) <- : \(sqlite3_errmsg(tDb)!) toid \(toid) dbName \(dbName!)"))
     }
 
     // MARK: -
@@ -297,7 +297,7 @@ class tObjBase: NSObject {
 
     func toQry2AryS(sql: String) -> [String] {
 
-        SQLDbg(String("toQry2AryS: \(dbName) => _\(sql)_"))
+        SQLDbg(String("toQry2AryS: \(dbName!) => _\(sql)_"))
         dbgNSAssert(tDb != nil, "toQry2AryS called with no tDb")
 
         var stmt: OpaquePointer?  // sqlite3_stmt?
@@ -322,7 +322,7 @@ class tObjBase: NSObject {
 
     func toQry2AryIS(sql: String) -> [(Int, String)] {
 
-        SQLDbg(String("toQry2AryIS: \(dbName) => _\(sql)_"))
+        SQLDbg(String("toQry2AryIS: \(dbName!) => _\(sql)_"))
         dbgNSAssert(tDb != nil, "toQry2AryIS called with no tDb")
 
         var stmt: OpaquePointer?  // sqlite3_stmt?
@@ -347,7 +347,7 @@ class tObjBase: NSObject {
 
     func toQry2AryISI(sql: String) -> [(Int, String, Int)] {
         
-        SQLDbg(String("toQry2AryISI: \(dbName) => _\(sql)_"))
+        SQLDbg(String("toQry2AryISI: \(dbName!) => _\(sql)_"))
         guard let tDb = tDb else {
             dbgNSAssert(false, "toQry2AryISI called with no tDb")
             return []
@@ -374,7 +374,7 @@ class tObjBase: NSObject {
 
     func toQry2AryISII(sql: String) -> [(Int, String, Int, Int)] {
         
-        SQLDbg(String("toQry2AryISII: \(dbName) => _\(sql)_"))
+        SQLDbg(String("toQry2AryISII: \(dbName!) => _\(sql)_"))
         guard let tDb = tDb else {
             dbgNSAssert(false, "toQry2AryISII called with no tDb")
             return []
@@ -401,7 +401,7 @@ class tObjBase: NSObject {
 
     func toQry2ArySS(sql: String) -> [(String, String)] {
         
-        SQLDbg(String("toQry2ArySS: \(dbName) => _\(sql)_"))
+        SQLDbg(String("toQry2ArySS: \(dbName!) => _\(sql)_"))
         guard let tDb = tDb else {
             dbgNSAssert(false, "toQry2ArySS called with no tDb")
             return []
@@ -427,7 +427,7 @@ class tObjBase: NSObject {
 
     func toQry2AryIIS(sql: String) -> [(Int, Int, String)] {
         
-        SQLDbg(String("toQry2AryIIS: \(dbName) => _\(sql)_"))
+        SQLDbg(String("toQry2AryIIS: \(dbName!) => _\(sql)_"))
         guard let tDb = tDb else {
             dbgNSAssert(false, "toQry2AryIIS called with no tDb")
             return []
@@ -454,7 +454,7 @@ class tObjBase: NSObject {
 
     func toQry2AryIISIII(sql: String) -> [(Int, Int, String, Int, Int, Int)] {
         
-        SQLDbg(String("toQry2AryIISIII: \(dbName) => _\(sql)_"))
+        SQLDbg(String("toQry2AryIISIII: \(dbName!) => _\(sql)_"))
         guard let tDb = tDb else {
             dbgNSAssert(false, "toQry2AryIISIII called with no tDb")
             return []
@@ -483,7 +483,7 @@ class tObjBase: NSObject {
 
     func toQry2AryID(sql: String) -> [(Int, Double)] {
         
-        SQLDbg(String("toQry2AryID: \(dbName) => _\(sql)_"))
+        SQLDbg(String("toQry2AryID: \(dbName!) => _\(sql)_"))
         guard let tDb = tDb else {
             dbgNSAssert(false, "toQry2AryID called with no tDb")
             return []
@@ -508,7 +508,7 @@ class tObjBase: NSObject {
 
     func toQry2AryI(sql: String) -> [Int] {
         
-        SQLDbg(String("toQry2AryI: \(dbName) => _\(sql)_"))
+        SQLDbg(String("toQry2AryI: \(dbName!) => _\(sql)_"))
         guard let tDb = tDb else {
             dbgNSAssert(false, "toQry2AryI called with no tDb")
             return []
@@ -532,7 +532,7 @@ class tObjBase: NSObject {
     }
 
     func toQry2DictII(sql: String?) -> [Int : Int] {
-        SQLDbg(String("toQry2DictII: \(dbName) => _\(sql)_"))
+        SQLDbg(String("toQry2DictII: \(dbName!) => _\(sql)_"))
         guard let tDb = tDb else {
             dbgNSAssert(false, "toQry2DictII called with no tDb")
             return [:]
@@ -557,7 +557,7 @@ class tObjBase: NSObject {
     }
 
     func toQry2SetI(sql: String) -> Set<Int> {
-        SQLDbg(String("toQry2SetI: \(dbName) => _\(sql)_"))
+        SQLDbg(String("toQry2SetI: \(dbName!) => _\(sql)_"))
         guard let tDb = tDb else {
             dbgNSAssert(false, "toQry2SetI called with no tDb")
             return []
@@ -583,7 +583,7 @@ class tObjBase: NSObject {
     }
 
     func toQry2IntInt(sql: String) -> (Int, Int)? {
-        SQLDbg(String("toQry2AryII: \(dbName) => _\(sql)_"))
+        SQLDbg(String("toQry2AryII: \(dbName!) => _\(sql)_"))
         guard let tDb = tDb else {
             dbgNSAssert(false, "toQry2AryII called with no tDb")
             return nil
@@ -607,7 +607,7 @@ class tObjBase: NSObject {
     }
 
     func toQry2IntIntInt(sql: String) -> (Int, Int, Int)? {
-            SQLDbg(String("toQry2IntIntInt: \(dbName) => _\(sql)_"))
+            SQLDbg(String("toQry2IntIntInt: \(dbName!) => _\(sql)_"))
             guard let tDb = tDb else {
                 dbgNSAssert(false, "toQry2IntIntInt called with no tDb")
                 return nil
@@ -632,7 +632,7 @@ class tObjBase: NSObject {
         }
 
     func toQry2Int(sql: String) -> Int? {
-        SQLDbg(String("toQry2Int: \(dbName) => _\(sql)_"))
+        SQLDbg(String("toQry2Int: \(dbName!) => _\(sql)_"))
         guard let tDb = tDb else {
             dbgNSAssert(false, "toQry2Int called with no tDb")
             return nil
@@ -654,7 +654,7 @@ class tObjBase: NSObject {
     }
 
     func toQry2Str(sql: String) -> String? {
-        SQLDbg(String("toQry2StrCopy: \(dbName) => _\(sql)_"))
+        SQLDbg(String("toQry2StrCopy: \(dbName!) => _\(sql)_"))
         guard let tDb = tDb else {
             dbgNSAssert(false, "toQry2StrCopy called with no tDb")
             return nil
@@ -685,7 +685,7 @@ class tObjBase: NSObject {
 
     func toQry2I12aS1(sql: String) -> ([Int], String)? {
 
-        SQLDbg(String("toQry2AryI11S1: \(dbName) => _\(sql)_"))
+        SQLDbg(String("toQry2AryI11S1: \(dbName!) => _\(sql)_"))
         guard let tDb = tDb else {
             dbgNSAssert(false, "toQry2AryI11S1 called with no tDb")
             return nil
@@ -715,7 +715,7 @@ class tObjBase: NSObject {
     }
 
     func toQry2Float(sql: String) -> Float? {
-        SQLDbg(String("toQry2Float: \(dbName) => _\(sql)_"))
+        SQLDbg(String("toQry2Float: \(dbName!) => _\(sql)_"))
         guard let tDb = tDb else {
             dbgNSAssert(false, "toQry2Float called with no tDb")
             return nil
@@ -738,7 +738,7 @@ class tObjBase: NSObject {
     }
 
     func toQry2Double(sql: String) -> Double? {
-        SQLDbg(String("toQry2Double: \(dbName) => _\(sql)_"))
+        SQLDbg(String("toQry2Double: \(dbName!) => _\(sql)_"))
         guard let tDb = tDb else {
             dbgNSAssert(false, "toQry2Double called with no tDb")
             return nil
@@ -762,7 +762,7 @@ class tObjBase: NSObject {
     }
 
     func toExecSql(sql: String) {
-        SQLDbg(String("toExecSql: \(dbName) => _\(sql)_"))
+        SQLDbg(String("toExecSql: \(dbName!) => _\(sql)_"))
         guard let tDb = tDb else {
             dbgNSAssert(false, "toExecSql called with no tDb")
             return
@@ -781,7 +781,7 @@ class tObjBase: NSObject {
 
     // so we can ignore error when adding column
     func toExecSqlIgnErr(sql: String) {
-        SQLDbg(String("toExecSqlIgnErr: \(dbName) => _\(sql)_"))
+        SQLDbg(String("toExecSqlIgnErr: \(dbName!) => _\(sql)_"))
         guard let tDb = tDb else {
             dbgNSAssert(false, "toExecSqlIgnErr called with no tDb")
             return
@@ -797,7 +797,7 @@ class tObjBase: NSObject {
 
     func toQry2Log(sql: String) {
         #if DEBUGLOG
-        SQLDbg(String("toQry2Log: \(dbName) => _\(sql)_"))
+        SQLDbg(String("toQry2Log: \(dbName!) => _\(sql)_"))
         guard let tDb = tDb else {
             dbgNSAssert(false, "toQry2Log called with no tDb")
             return
