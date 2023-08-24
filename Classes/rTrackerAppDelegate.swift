@@ -181,7 +181,7 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
         let prod = Bundle.main.infoDictionary?["CFBundleName"]
         let ver = Bundle.main.infoDictionary?["CFBundleShortVersionString"]
         let bld = Bundle.main.infoDictionary?["CFBundleVersion"]
-        DBGLog(String("product \(prod) version \(ver) build \(bld)  db_ver \(RTDB_VERSION)  fn_ver \(RTFN_VERSION) samples_ver \(SAMPLES_VERSION) demos_ver \(DEMOS_VERSION)"))
+        DBGLog(String("product \(prod!) version \(ver!) build \(bld!)  db_ver \(RTDB_VERSION)  fn_ver \(RTFN_VERSION) samples_ver \(SAMPLES_VERSION) demos_ver \(DEMOS_VERSION)"))
 
         //NSURL *url = (NSURL *)[launchOptions valueForKey:UIApplicationLaunchOptionsURLKey];
         // docs say app openURL below is called anyway, so don't do here which is only if app not already open
