@@ -286,7 +286,7 @@ class voBoolean: voState {
 
     override func mapCsv2Value(_ inCsv: String) -> String {
 
-        if Float(vo.optDict["boolval"]!) != Float(inCsv) {
+        if Float(vo.optDict["boolval"] ?? "") != Float(inCsv) {
             vo.optDict["boolval"] = inCsv
         }
         return inCsv
