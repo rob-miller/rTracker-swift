@@ -183,7 +183,7 @@ class tObjBase: NSObject {
             sqlite3_close(tDb)
             dbgNSAssert(false, "error opening rTracker database")
         } else {
-            //DBGLog(@"opened tDb %@",self.dbName);
+            DBGLog(String("opened tDb \(dbName)"))
             var c: Int
             toExecSql(sql:"create table if not exists uniquev (id integer primary key, value integer);")
             c = toQry2Int(sql:"select count(*) from uniquev where id=0;")!
@@ -471,9 +471,10 @@ class tObjBase: NSObject {
                 let i4 = Int(sqlite3_column_int(stmt, 4))
                 let i5 = Int(sqlite3_column_int(stmt, 5))
                 results.append((i1, i2, s1, i3, i4, i5))
-                SQLDbg(String("  rslt: \(i1) \(i2) \(s1) \(i3) \(i4) \(i5)"))
+                //SQLDbg(String("  rslt: \(i1) \(i2) \(s1) \(i3) \(i4) \(i5)"))
             }
             sqlite3_finalize(stmt)
+            SQLDbg(String("    rslt: \(results)"))
             return results
         } else {
             tobPrepError(sql)
