@@ -64,7 +64,7 @@ class trackerObj: tObjBase {
 
     var reminders: [notifyReminder] = []
     var reminderNdx = 0
-    let recalcFnLock = AtomicTestAndSet(initialValue: false)
+    let recalcFnLock = AtomicTestAndSet()  //(initialValue: false)
     
     private var _maxLabel = CGSize.zero
     var maxLabel: CGSize {
@@ -564,7 +564,7 @@ class trackerObj: tObjBase {
 
     // delete default settings from vo.optDict to save space
 
-    func clearVoOptDict(_ vo: valueObj) {
+    func clearVoOptDictDflts(_ vo: valueObj) {
         //var s1: [String] = []
         var sql = String(format: "select field from voInfo where id=%ld;", Int(vo.vid))
         var s1 = toQry2AryS(sql: sql)
@@ -727,7 +727,7 @@ class trackerObj: tObjBase {
     }
 
     func saveVoOptdict(_ vo: valueObj) {
-        clearVoOptDict(vo)
+        clearVoOptDictDflts(vo)  // wipe default values to save space
         var sql: String
         for (key, val) in vo.optDict {
             sql = String("insert or replace into voInfo (id, field, val) values (\(vo.vid), '\(key)', '\(val)')")
@@ -1282,7 +1282,7 @@ class trackerObj: tObjBase {
                 return
             }
             trackerDate = ts
-            DBGLog(String("ts str: \(aRecord[TIMESTAMP_KEY])   ts read: \(ts)"))
+            DBGLog(String("ts str: \(aRecord[TIMESTAMP_KEY]!)   ts read: \(ts!)"))
             its = Int(ts?.timeIntervalSince1970 ?? 0)
         }
 
@@ -1297,19 +1297,18 @@ class trackerObj: tObjBase {
 
                 var voName: String
                 var voRank: Int
-                var valobjID: Int
-                var valobjPriv: Int
-                var valobjType: Int
+                var valobjID: Int = 0
+                var valobjPriv: Int = -1
+                var valobjType: Int = -1
                 let csvha: [String]? = csvHeaderDict[key]
                 if nil == csvha {
-                    let splitPos = (key as NSString).range(of: ":", options: .backwards)
-                    voName = (key as NSString).substring(to: splitPos.location)
-                    voRank = Int((key as NSString).substring(from: splitPos.location + splitPos.length)) ?? 0
-
-                    sql = "select id, priv, type from voConfig where name='\(rTracker_resource.toSqlStr(voName) ?? "")';"
-
-                    (valobjID, valobjPriv, valobjType) = toQry2IntIntInt(sql: sql)!
-                    csvHeaderDict[key] = [voName, String(voRank), String(valobjID), String(valobjPriv), String(valobjType)]
+                    let keyComponents = key.components(separatedBy: ":")
+                    (voName, voRank) = (keyComponents[0], Int(keyComponents[1]) ?? 0)
+                    if its != 0 {  // if no timestamp this is config data, so do not put in csvHeaderDict yet
+                        sql = "select id, priv, type from voConfig where name='\(rTracker_resource.toSqlStr(voName) ?? "")';"
+                        (valobjID, valobjPriv, valobjType) = toQry2IntIntInt(sql: sql)!
+                        csvHeaderDict[key] = [voName, String(voRank), String(valobjID), String(valobjPriv), String(valobjType)]
+                    }
                 } else {
                     voName = csvha![0]
                     voRank = Int(csvha![1])!
@@ -1318,29 +1317,33 @@ class trackerObj: tObjBase {
                     valobjType = Int(csvha![4])!
                 }
 
-                DBGLog(String("name=\(voName) rank=\(voRank) val=\(val) id=\(valobjID) priv=\(valobjPriv) type=\(valobjType)"))
+                DBGLog(String("name=\(voName) rank=\(voRank) val/config=\(val) id/0=\(valobjID) priv=\(valobjPriv) type=\(valobjType)"))
 
                 var configuredValObj = false
                 if 0 == its {
-                    // no timestamp for tracker config data
+                    // no timestamp for tracker config data, but still use variable settings from nil == csvha case above
                     // voType : color : vid
                     let valComponents = val.components(separatedBy: ":")
                     let c = valComponents.count
+                    let inVot = valComponents[0]
+                    var inVcolor: String?
                     var inVid = 0
-                    if c > 2 {
-                        inVid = Int(valComponents[2])!
+                    if c>1 {
+                        inVcolor = valComponents[1]
+                        if c > 2 {
+                            inVid = Int(valComponents[2])!
+                        }
                     }
 
                     if (0 == valobjID) || (inVid == valobjID) {
                         // no vo exists with this name or we match the specified ID
                         valobjID = createVOinDb(voName, inVid: inVid)
-                        DBGLog(String("created new / updated valObj with id=\(valobjID)"))
                         csvReadFlags |= CSVCREATEDVO
-
-                        configuredValObj = configVOinDb(valobjID, vots: valComponents[0], vocs: c > 1 ? valComponents[1] : nil, rank: voRank)
+                        configuredValObj = configVOinDb(valobjID, vots: inVot, vocs: inVcolor, rank: voRank)
                         if configuredValObj {
                             csvReadFlags |= CSVCONFIGVO
                         }
+                        DBGLog(String("created new / updated valObj with id=\(valobjID) name= \(voName) type= \(inVot) color= \(inVcolor ?? "not set") rank = \(voRank)"))
 
                         let vo = valueObj(fromDB: self, in_vid: valobjID)
                         valObjTable.append(vo)
@@ -1368,7 +1371,7 @@ class trackerObj: tObjBase {
                                 mp = valobjPriv // only fields with data
                             }
                             gotData = true
-                            sql = String(format: "insert or replace into voData (id, date, val) values (%ld,%d,'%@');", valobjID, its, val2Store ?? "")
+                            sql = String(format: "insert or replace into voData (id, date, val) values (%ld,%d,'%@');", valobjID, its, val2Store!)
                         }
                         toExecSql(sql:sql)
 
@@ -2507,6 +2510,7 @@ class trackerObj: tObjBase {
 
     func recalculateFns() {
         // deprecated ios10 if (0 != OSAtomicTestAndSet(0, &(_recalcFnLock))) {
+        DBGLog("try atomic set recalcFnLock")
         if recalcFnLock.testAndSet(newValue: true) {
             // wasn't 0 before, so we didn't get lock, so leave because shake handling already in process
             return
@@ -2525,6 +2529,7 @@ class trackerObj: tObjBase {
             goRecalculate = false
         }
 
+            DBGLog("release atomic recalcFnLock")
         _ = recalcFnLock.testAndSet(newValue: false)
     }
 

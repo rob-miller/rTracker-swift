@@ -69,7 +69,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     var readingFile = false
 
     //var refreshLock: Bool = false
-    let atomicLock = AtomicTestAndSet(initialValue: false)
+    let loadFilesLock = AtomicTestAndSet()  // (initialValue: false)
     
     //var aAdSupport: adSupport?
     //loadInputFiles
@@ -132,12 +132,12 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
     func doCSVLoad(_ csvString: String?, to: trackerObj?, fname: String?) {
 
-        DBGLog(String("start csv parser \(to?.trackerName)"))
+        DBGLog(String("start csv parser \(to!.trackerName) to-toid: \(to!.toid)"))
         let parser = CSVParser(string: csvString, separator: ",", hasHeader: true, fieldNames: nil)
         to?.csvProblem = nil
         to?.csvReadFlags = 0
         parser.parseRows(forReceiver: to, selector: #selector(trackerObj.receiveRecord(_:))) // receiveRecord in trackerObj.m
-        DBGLog(String("csv parser done \(to?.trackerName)"))
+        DBGLog(String("csv parser done \(to!.trackerName) to-toid: \(to!.toid)"))
 
         to?.loadConfig()
 
@@ -199,8 +199,11 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                         validMatch = true
                     }
                 case "rtcsv":
-                    loadObj = ".rtcsv"
-                    if fileName.hasSuffix(".rtcsv") {
+                    loadObj = "_in.rtcsv"
+                    if fileName.hasSuffix(loadObj!) {
+                        validMatch = true
+                    } else {
+                        loadObj = ".rtcsv"  // accept _in above, already know it has .rtcsv extension
                         validMatch = true
                     }
                 default:
@@ -222,7 +225,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                         to?.saveConfig()
                         tlist.add(toTopLayoutTable: to!)
                         newRtcsvTracker = true
-                        DBGLog("created new tracker for rtcsv, id= \(to?.toid ?? 0)")
+                        DBGLog("created new tracker for rtcsv, id= \(to!.toid)")
                     }
 
                     if let to = to {
@@ -239,7 +242,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                             }
                             try localFileManager.removeItem(at: fullPath)
                         } catch {
-                            print("Error reading or deleting file: \(error)")
+                            DBGWarn("Error reading or deleting file: \(error)")
                         }
 
                         safeDispatchSync { [self] in
@@ -648,7 +651,8 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
             // give up lock
             //refreshLock = false
-            _ = atomicLock.testAndSet(newValue: false)
+            DBGLog("release atomic loadFilesLock")
+            _ = loadFilesLock.testAndSet(newValue: false)
             loadingCsvFiles = false
             DispatchQueue.main.async(execute: { [self] in
                 refreshToolBar(true)
@@ -786,7 +790,8 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
         refreshViewPart2()
         //refreshLock = false
-        _ = atomicLock.testAndSet(newValue: false)
+        DBGLog("release atomic loadFilesLock")
+        _ = loadFilesLock.testAndSet(newValue: false)
         DBGLog("finished, no files to load - lock off")
 
         return
@@ -1152,7 +1157,8 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         //DBGLog(@"rvc: viewDidLoad privacy= %d",[privacyObj getPrivacyValue]);
 
         //refreshLock = false
-        _ = atomicLock.testAndSet(newValue: false)
+        DBGLog("release atomic loadFilesLock")
+        _ = loadFilesLock.testAndSet(newValue: false)
         readingFile = false
 
         let vsize = rTracker_resource.get_visible_size(self)
@@ -1317,11 +1323,12 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     func refreshView() {
 
         // deprecated ios 10 - if (0 != OSAtomicTestAndSet(0, &(_refreshLock))) {
-        if atomicLock.testAndSet(newValue: true) {  // was 0 in objective-c ? this should be where take the lock?
-            // wasn't 0 before, so we didn't get lock, so leave because refresh already in process
+        DBGLog("try atomic set loadFilesLock")
+        if loadFilesLock.testAndSet(newValue: true) {
+            // wasn't false before, so we didn't get lock, so leave because refresh already in process
             return
         }
-
+        DBGLog("got atomic set")
         //DBGLog(@"refreshView");
         scrollState()
 
