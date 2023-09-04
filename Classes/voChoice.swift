@@ -126,7 +126,7 @@ class voChoice: voState {
             if nil == val {
                 rslt = String(format: "%lu", UInt(segNdx) + 1)
             } else {
-                rslt = val ?? ""
+                rslt = val!
             }
             #if DEBUGLOG
             let chTitle = segmentedControl?.titleForSegment(at: segNdx)
@@ -523,30 +523,32 @@ class voChoice: voState {
      */
 
     override func mapCsv2Value(_ inCsv: String) -> String {
-        var optDict = vo.optDict
-        if optDict["exportvalb"] == "1" {
+        //var optDict = vo.optDict
+        if vo.optDict["exportvalb"] == "1" {
             // we simply store the value, up to the user to provide a choice to match it
             return inCsv
         }
         //var ndx: Int
-        let count = optDict.count
+        let count = vo.optDict.count
         var maxc = -1
         var firstBlank = -1
         var lastColor = -1
         DBGLog(String("inCsv= \(inCsv)"))
         for ndx in 0..<count {
             let key = "c\(ndx)"
-            let val = optDict[key]
+            let val = vo.optDict[key]
             if nil != val {
                 maxc = ndx
-                lastColor = Int(optDict["cc\(ndx)"]!)!
+                if let lc = vo.optDict["cc\(ndx)"] {
+                    lastColor = Int(lc)!
+                }
                 if val == inCsv {
                     //DBGLog(@"matched, returning %d",ndx+1);
                     //return [NSString stringWithFormat:@"%d",ndx+1];    // found match, return 1-based index and be done
                     // change for can spec value for choice
                     DBGLog(String("matched, ndx=\(ndx)"))
                     let key = "cv\(ndx)"
-                    return optDict[key]!
+                    return vo.optDict[key] ?? String("\(ndx+1)")
                 } else if (-1 == firstBlank) && ("" == val) {
                     firstBlank = ndx
                 }
@@ -556,7 +558,7 @@ class voChoice: voState {
         // did not find inCsv as an object in optDict for a c%d key.
 
         // is inCsv a digit from a pre-1.0.5 csv save file?
-        // TODO: remove this because is only for upgrade to 1.0.5
+        // -- remove this because is only for upgrade to 1.0.5
         //int intval = [inCsv intValue];
         //if ((0<intval) && (intval < CHOICES+1)) {
         //    return inCsv;
@@ -571,14 +573,14 @@ class voChoice: voState {
             maxc += 1 // maxc is last one used because there were no blanks, so inc to next
         }
 
-        optDict["c\(maxc)"] = inCsv
+        vo.optDict["c\(maxc)"] = inCsv
 
         lastColor += 1
         if lastColor >= rTracker_resource.colorSet().count {
             lastColor = 0
         }
 
-        optDict["cc\(maxc)"] = String("\(lastColor)")
+        vo.optDict["cc\(maxc)"] = String("\(lastColor)")
 
         DBGLog(String("created choice \(inCsv) choice c\(maxc) color \(lastColor)"))
 

@@ -152,6 +152,7 @@ class trackerObj: tObjBase {
     var swipeEnable = false
     var changedDateFrom = 0
     var csvHeaderDict: [String : [String]] = [:]
+    var csvChoiceDict: [String : Int] = [:]
 
     func initTDb() {
         var c: Int
@@ -701,9 +702,9 @@ class trackerObj: tObjBase {
             return rslt
         }
 
-        DBGLog(String("search for \(vocs)"))
+        DBGLog(String("search for \(vocs!)"))
 
-        var voc = -1 // default to VOT_CHOICE
+        var voc = -1 // default to VOT_CHOICE: choice color is -1 for no color as need to check optdict
         if VOT_CHOICE != vot {
             voc = rTracker_resource.colorNames().firstIndex(of: vocs ?? "") ?? NSNotFound
             if NSNotFound == voc {
@@ -711,9 +712,9 @@ class trackerObj: tObjBase {
             }
         }
 
-        DBGLog(String("voc= \(UInt(voc))"))
+        DBGLog(String("voc= \(Int(voc))"))
 
-        sql = String(format: "update voConfig set color=%lu where id=%ld", UInt(voc), valObjID)
+        sql = String(format: "update voConfig set color=%ld where id=%ld", Int(voc), valObjID)
         toExecSql(sql:sql)
 
         // rank only 0 for timestamp
@@ -1258,6 +1259,7 @@ class trackerObj: tObjBase {
     // MARK: read in from export
 
     @objc func receiveRecord(_ aRecord: [String : String]) {
+        DBGLog(String("input csv: \(aRecord)"))
         guard let tsStr = aRecord[TIMESTAMP_KEY] else {
             csvReadFlags |= CSVNOTIMESTAMP
             return
@@ -1304,9 +1306,10 @@ class trackerObj: tObjBase {
                 if nil == csvha {
                     let keyComponents = key.components(separatedBy: ":")
                     (voName, voRank) = (keyComponents[0], Int(keyComponents[1]) ?? 0)
+                    
+                    sql = "select id, priv, type from voConfig where name='\(rTracker_resource.toSqlStr(voName) ?? "")';"
+                    (valobjID, valobjPriv, valobjType) = toQry2IntIntInt(sql: sql)!
                     if its != 0 {  // if no timestamp this is config data, so do not put in csvHeaderDict yet
-                        sql = "select id, priv, type from voConfig where name='\(rTracker_resource.toSqlStr(voName) ?? "")';"
-                        (valobjID, valobjPriv, valobjType) = toQry2IntIntInt(sql: sql)!
                         csvHeaderDict[key] = [voName, String(voRank), String(valobjID), String(valobjPriv), String(valobjType)]
                     }
                 } else {
@@ -1317,7 +1320,7 @@ class trackerObj: tObjBase {
                     valobjType = Int(csvha![4])!
                 }
 
-                DBGLog(String("name=\(voName) rank=\(voRank) val/config=\(val) id/0=\(valobjID) priv=\(valobjPriv) type=\(valobjType)"))
+                DBGLog(String("name=\(voName) rank=\(voRank) val/config=\(val) id=\(valobjID) priv=\(valobjPriv) type=\(valobjType)"))
 
                 var configuredValObj = false
                 if 0 == its {
@@ -1347,6 +1350,26 @@ class trackerObj: tObjBase {
 
                         let vo = valueObj(fromDB: self, in_vid: valobjID)
                         valObjTable.append(vo)
+                    } else if (VOT_CHOICE == valobjType && val != "") {
+                        if csvChoiceDict.count == 0 {
+                            for i in 0...CHOICES {
+                                sql = "select val from voInfo where id=\(valobjID) and field='c\(i)'"
+                                let choice = toQry2Str(sql: sql)
+                                if let chc = choice, !chc.isEmpty {
+                                    csvChoiceDict[choice!] = i
+                                }
+                            }
+                        }
+                        if !csvChoiceDict.keys.contains(val) {
+                            let newInt = (csvChoiceDict.values.max() ?? -1)+1
+                            csvChoiceDict[val] = newInt
+                            sql = "insert into voInfo (id, field, val) values (\(valobjID), 'c\(newInt)', '\(val)')"
+                            toExecSql(sql: sql)
+                        }
+                        configuredValObj = true
+                    } else {
+                        // rtm TODO: should add function def string to rtcsv data
+                        configuredValObj = true
                     }
                 }
                 //[idDict setObject:[NSNumber numberWithInt:valobjID] forKey:key];
