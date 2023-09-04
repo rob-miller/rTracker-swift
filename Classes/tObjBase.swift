@@ -665,12 +665,13 @@ class tObjBase: NSObject {
         var srslt : String?
         
         if sqlite3_prepare_v2(tDb, sql, -1, &stmt, nil) == SQLITE_OK {
-            if (sqlite3_step(stmt)) == SQLITE_ROW {
+            let step = sqlite3_step(stmt)
+            if step == SQLITE_ROW {
                 let textPointer = sqlite3_column_text(stmt, 0)
                 if let textPointer = textPointer {
                     srslt = rTracker_resource.fromSqlStr(String(cString: textPointer))
                 }
-            } else {
+            } else if step != SQLITE_DONE {
                 tobExecError(sql)
             }
             //[self tobDoneCheck:rslt];
@@ -679,7 +680,7 @@ class tObjBase: NSObject {
         }
         sqlite3_finalize(stmt)
         objc_sync_exit(self)
-        SQLDbg(String("  returns _\(srslt)_"))
+        SQLDbg(String("  returns _\(srslt ?? "nil")_"))
 
         return srslt
     }
