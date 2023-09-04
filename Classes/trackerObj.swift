@@ -1338,37 +1338,23 @@ class trackerObj: tObjBase {
                         }
                     }
 
-                    if (0 == valobjID) || (inVid == valobjID) {
-                        // no vo exists with this name or we match the specified ID
+                    if (0 == valobjID) {
+                        // no vo exists with this name so create and configure (reading rtcsv)
+
                         valobjID = createVOinDb(voName, inVid: inVid)
                         csvReadFlags |= CSVCREATEDVO
+                        //}
                         configuredValObj = configVOinDb(valobjID, vots: inVot, vocs: inVcolor, rank: voRank)
                         if configuredValObj {
                             csvReadFlags |= CSVCONFIGVO
                         }
                         DBGLog(String("created new / updated valObj with id=\(valobjID) name= \(voName) type= \(inVot) color= \(inVcolor ?? "not set") rank = \(voRank)"))
-
+                        
                         let vo = valueObj(fromDB: self, in_vid: valobjID)
                         valObjTable.append(vo)
-                    } else if (VOT_CHOICE == valobjType && val != "") {
-                        if csvChoiceDict.count == 0 {
-                            for i in 0...CHOICES {
-                                sql = "select val from voInfo where id=\(valobjID) and field='c\(i)'"
-                                let choice = toQry2Str(sql: sql)
-                                if let chc = choice, !chc.isEmpty {
-                                    csvChoiceDict[choice!] = i
-                                }
-                            }
-                        }
-                        if !csvChoiceDict.keys.contains(val) {
-                            let newInt = (csvChoiceDict.values.max() ?? -1)+1
-                            csvChoiceDict[val] = newInt
-                            sql = "insert into voInfo (id, field, val) values (\(valobjID), 'c\(newInt)', '\(val)')"
-                            toExecSql(sql: sql)
-                        }
-                        configuredValObj = true
-                    } else {
-                        // rtm TODO: should add function def string to rtcsv data
+
+                    } else if (inVid == valobjID) {
+                        // input vid matches database valobjid for this name, mark as already configured (processing rtcsv line with :'s)
                         configuredValObj = true
                     }
                 }
@@ -1378,12 +1364,13 @@ class trackerObj: tObjBase {
                     var val2Store = rTracker_resource.toSqlStr(val)
 
                     if "" != val2Store {
-                        // could still be config data, timestamp not needed
+                        // could still be config data for choice or bool, timestamp not needed
                         if (VOT_CHOICE == valobjType) || (VOT_BOOLEAN == valobjType) {
                             let vo = getValObj(valobjID)!
                             val2Store = vo.vos!.mapCsv2Value(val2Store!) // updates dict val for bool; for choice maps to choice number, adds choice to dict if needed
                             saveVoOptdict(vo)
                         }
+                        // rtm TODO: should add function def string to rtcsv data
                     }
                     if its != 0 {
                         // if have date - then not config data
