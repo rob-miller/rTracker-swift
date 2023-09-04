@@ -199,7 +199,7 @@ class trackerList: tObjBase {
         dbgNSAssert(tObj.toid != 0, "confirmTLE: toid=0")
         var privVal = (tObj.optDict["privacy"] as? NSNumber)?.intValue ?? 1
         privVal = (privVal != 0 ? privVal : PRIVDFLT) // default is 1 not 0;
-        sql = String(format: "insert or replace into toplevel (rank, id, name, priv, remindercount) values (%li, %li, \"%@\", %i, %i);", rank!, Int(tObj.toid ), rTracker_resource.toSqlStr(tObj.trackerName)!, privVal, tObj.enabledReminderCount() )
+        sql = String(format: "insert or replace into toplevel (rank, id, name, priv, remindercount) values (%li, %li, \"%@\", %i, %i);", rank!, Int(tObj.toid ), rTracker_resource.toSqlStr(tObj.trackerName) ?? "noName", privVal, tObj.enabledReminderCount() )
         toExecSql(sql:sql)
     }
 
