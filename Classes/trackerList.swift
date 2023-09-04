@@ -156,7 +156,7 @@ class trackerList: tObjBase {
             topLayoutReminderCount?.append(NSNumber(value: rc))
         }
         //self.sql = nil;
-        DBGLog(String("loadTopLayoutTable finished, priv=\(privacyValue) tlt=\(topLayoutNames)"))
+        DBGLog(String("loadTopLayoutTable finished, priv=\(privacyValue) tlt=\(topLayoutNames! as! [String])"))
         //DBGTLIST(self);
     }
 
