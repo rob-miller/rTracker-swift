@@ -31,6 +31,7 @@ class voSlider: voState {
     }*/
 
     private var _sliderCtl: UISlider?
+    var sdflt: CGFloat = 0.0
     var sliderCtl: UISlider? {
         if _sliderCtl != nil && _sliderCtl?.frame.size.width != vosFrame.size.width {
             _sliderCtl = nil // first time around thinks size is 320, handle larger devices
@@ -55,12 +56,12 @@ class voSlider: voState {
             // in case the parent view draws with a custom color or gradient, use a transparent color
             _sliderCtl?.backgroundColor = .clear
 
-            let smin = vo.optDict["smin"] != nil ? Double(vo.optDict["smin"]!) : SLIDRMINDFLT
-            let smax = vo.optDict["smax"] != nil ? Double(vo.optDict["smax"]!) : SLIDRMAXDFLT
-            //let sdflt = vo.optDict["sdflt"] != nil ? Double(vo.optDict["sdflt"]!) : SLIDRDFLTDFLT
+            let smin = vo.optDict["smin"] ?? String(SLIDRMINDFLT)
+            let smax = vo.optDict["smax"] ?? String(SLIDRMAXDFLT)
+            sdflt = CGFloat((vo.optDict["sdflt"] as? NSString)?.doubleValue ?? Double(SLIDRDFLTDFLT))
 
-            _sliderCtl?.minimumValue = Float(smin!)
-            _sliderCtl?.maximumValue = Float(smax!)
+            _sliderCtl?.minimumValue = Float(smin)!
+            _sliderCtl?.maximumValue = Float(smax)!
             _sliderCtl?.isContinuous = true
             // Add an accessibility label that describes the slider.
             //[sliderCtl setAccessibilityLabel:NSLocalizedString(@"StandardSlider", @"")];
@@ -81,7 +82,6 @@ class voSlider: voState {
 
         return _sliderCtl
     }
-    var sdflt: CGFloat = 0.0
 
     override init(vo valo: valueObj) {
         super.init(vo: valo)
