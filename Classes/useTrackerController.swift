@@ -1049,6 +1049,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         } else {
             tbi.append(fixed1SpaceButtonItem)
         }
+        _tsCalVC = nil  // reload calendar to reflect searchSet or not
+        
         tbi.append(flexibleSpaceButtonItem)
         if postD != 0 || (lastD == currD) {
             tbi.append(skip2EndBtn)
@@ -1449,7 +1451,10 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         }
         var targD = tracker!.prevDate()
         if targD == 0 {
-            targD = -1
+            targD = -1  // no previous date available
+        } else if let searchSet {
+            let filteredValues = searchSet.filter { $0 <= targD }
+            targD = filteredValues.max() ?? -1  // no more values
         }
         setTrackerDate(targD)
 
@@ -1462,7 +1467,11 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         if !tracker!.swipeEnable {
             return
         }
-        let targD = tracker!.postDate()
+        var targD = tracker!.postDate()
+        if targD > 0, let searchSet {
+            let filteredValues = searchSet.filter { $0 >= targD }
+            targD = filteredValues.min() ?? 0  // past last search targ go to blank tracker
+        }
         setTrackerDate(targD)
         if targD > 0 {
             tableView!.reloadSections(NSIndexSet(index: 0) as IndexSet, with: .left)
@@ -1667,7 +1676,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     }
 
     @objc func btnSearch() {
-        rTracker_resource.alert("Search results", msg: String(format: "%ld entries highlighted in calendar and graph views", Int(searchSet!.count)), vc: self)
+        rTracker_resource.alert("Search results", msg: String(format: "%ld entries highlighted in calendar and graph views, or swipe right/left", Int(searchSet!.count)), vc: self)
     }
 
     var _delBtn: UIBarButtonItem?

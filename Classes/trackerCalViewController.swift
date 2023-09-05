@@ -34,7 +34,7 @@ class trackerCalViewController: UIViewController, TSQCalendarViewDelegate {
             tabBarItem.title = ci
         }
     }
-    var dateSelDict: [AnyHashable : Any]?
+    var dateSelDict: [Date : Any] = [:]
     var specDate = false
     var parentUTC: Any?
     private var timer: Timer?
@@ -45,7 +45,7 @@ class trackerCalViewController: UIViewController, TSQCalendarViewDelegate {
         
         calendarView.calendar = Calendar(identifier: .gregorian)   // Calendar.current
         calendar = calendarView.calendar
-        dateSelDict = [:]
+        //dateSelDict = [:]
 
         //var idColors: [AnyHashable : Any] = [:]
         var sql = "select id,color from voConfig where id not in  (select id from voInfo where field='graph' and val=0)"
@@ -131,21 +131,21 @@ class trackerCalViewController: UIViewController, TSQCalendarViewDelegate {
 
             if haveNoGraphNoFn && (0 == targVid) {
                 // only have no graph data point
-                dateSelDict?[date] = "" // set for no color
+                dateSelDict[date!] = "" // set for no color
                 DBGLog(String("date: \(date) - have vid but no graph"))
             } else if targVid != 0 {
                 let cndx = idColors[targVid]!
                 if (cndx < 0) || (cndx > colorSet.count) {
-                    dateSelDict?[date] = "" // set for no color
+                    dateSelDict[date!] = "" // set for no color
                 } else {
-                    dateSelDict?[date] = colorSet[cndx]
+                    dateSelDict[date!] = colorSet[cndx]
                     DBGLog(String("date: \(date)  valobj \(targVid) UIColor \(colorSet[cndx]) name \(rTracker_resource.colorNames()[cndx])"))
                 }
             }
 
 
             if let date {
-                DBGLog(String("data for date \(date) = \(dateSelDict?[date] as? UIColor)"))
+                DBGLog(String("data for date \(date) = \(dateSelDict[date])"))  // as? UIColor)"))
             }
         }
 
@@ -162,13 +162,12 @@ class trackerCalViewController: UIViewController, TSQCalendarViewDelegate {
         calendarView.scroll(to: dpr?.date, animated: false)
         view = calendarView
 
-        let swipe = UISwipeGestureRecognizer(target: self, action: #selector(addTrackerController.handleViewSwipeRight(_:)))
+        var swipe = UISwipeGestureRecognizer(target: self, action: #selector(trackerCalViewController.handleViewSwipeRight(_:)))
         swipe.direction = .right
         view.addGestureRecognizer(swipe)
-
-
-
-
+        swipe = UISwipeGestureRecognizer(target: self, action: #selector(trackerCalViewController.handleViewSwipeLeft(_:)))
+        swipe.direction = .left
+        view.addGestureRecognizer(swipe)
     }
 
     func leaveCalendar() {
@@ -179,6 +178,9 @@ class trackerCalViewController: UIViewController, TSQCalendarViewDelegate {
     }
 
     @objc func handleViewSwipeRight(_ gesture: UISwipeGestureRecognizer?) {
+        leaveCalendar()
+    }
+    @objc func handleViewSwipeLeft(_ gesture: UISwipeGestureRecognizer?) {
         leaveCalendar()
     }
 
@@ -253,7 +255,7 @@ class trackerCalViewController: UIViewController, TSQCalendarViewDelegate {
 
     @objc func calendarView(_ calendarView: TSQCalendarView?, shouldSelect date: Date?) -> Bool {
         if let date {
-            if nil != dateSelDict?[date] {
+            if nil != dateSelDict[date] {
                 return true
             }
         }
@@ -281,12 +283,12 @@ class trackerCalViewController: UIViewController, TSQCalendarViewDelegate {
     @objc func calendarView(_ calendarView: TSQCalendarView?, colorFor date: Date?) -> UIColor? {
         var obj: Any? = nil
         if let date {
-            obj = dateSelDict?[date]
+            obj = dateSelDict[date]
         }
         if nil == obj {
             return nil
-        } else if "" == obj as! String{
-            return nil
+        //} else if "" == obj as! String{
+        //    return nil
         }
         return obj as? UIColor
     }
