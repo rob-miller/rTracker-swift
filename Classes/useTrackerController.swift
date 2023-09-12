@@ -169,12 +169,12 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         // load if present in viewdidload [?]
         // delete all on program start [?]
     }
-
+/*
     override func loadView() {
         // Ensure that we don't load an .xib file for this viewcontroller
         view = UIView()
     }
-
+*/
     // Implement viewDidLoad to do additional setup after loading the view, typically from a nib.
     override func viewDidLoad() {
 
@@ -212,7 +212,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         //CGFloat statusBarHeight = statusBarFrame.size.height;
 
         var tableFrame = bg.frame
-        tableFrame.size.height = rTracker_resource.get_visible_size(self).height //- ( 2 * statusBarHeight ) ;
+        tableFrame.size.height = rTracker_resource.getVisibleSize(of:self).height //- ( 2 * statusBarHeight ) ;
 
 
         DBGLog(String("tvf \(tableFrame)"))  // origin x %f y %f size w %f h %f", tableFrame.origin.x, tableFrame.origin.y, tableFrame.size.width, tableFrame.size.height)
@@ -541,6 +541,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     func rejectTracker() {
         DBGLog(String("rejecting input tracker \(tracker!.toid) \(tracker!.trackerName)  prevTID= \(tracker!.prevTID)"))
+        // RootViewController:loadTrackerDict() sets prevTID to -1 if this is new = no name or existing tid match (rejectable tracker)
+        // also loadTrackerDict sets tid to -1 in error condition but never checked
         tlist!.updateTLtid(Int(tracker!.toid), new: tracker!.prevTID) // revert topLevel to before
         tracker!.deleteTrackerDB()
         rTracker_resource.unStashTracker(tracker!.prevTID) // this view and tracker going away now so dont need to clear rejectable or prevTID
@@ -1303,7 +1305,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             return
         }
 
-        if (tracker!.optDict)["savertn"] as! String == "0" {
+        if tracker!.optDict["savertn"] as? String ?? "1" == "0" {
             // default:1
             // do not return to tracker list after save, so generate clear form
             //if !(toolbarItems?.contains(postDateBtn) ?? false) {
@@ -1415,7 +1417,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     }
 
     func checkPrivWarn() {
-        let tpriv = ((tracker!.optDict)["privacy"] as? NSNumber)?.intValue ?? 0
+        let tpriv = Int(tracker!.optDict["privacy"] as? String ?? "1") ?? 1
         var vprivmax = PRIVDFLT
 
         for vo in tracker!.valObjTable {

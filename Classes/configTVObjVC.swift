@@ -202,7 +202,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
             addVOFields(vo?.vtype ?? 0)
         }
         //self.scroll.contentOffset = CGPointMake(0, -self.navBar.frame.size.height);
-        var svsize = rTracker_resource.get_visible_size(self)
+        var svsize = rTracker_resource.getVisibleSize(of:self)
         if svsize.width < lastx {
             svsize.width = lastx
         }
@@ -474,9 +474,9 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
     }
 
     @objc func checkBtnAction(_ btn: UIButton?) {
-        var okey: String? = nil
+        var okey: String?
         var dflt: String?
-        var ndflt: String? = nil
+        var ndflt: String?
         var img: String?
         var dfltState = AUTOSCALEDFLT
 
@@ -547,7 +547,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         }
 
         if vo == nil {
-            if (to!.optDict[okey!] as! String) == ndflt {
+            if to!.optDict[okey!] as? String ?? "" == ndflt {
                 to!.optDict[okey!] = dflt
                 img = dfltState ? "checked.png" : "unchecked.png" // going to default state
             } else {
@@ -1101,7 +1101,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         frame = configCheckButton(
             frame,
             key: "srBtn",
-            state: !((to!.optDict["savertn"] as? String) == "0"),
+            state: !(to!.optDict["savertn"] as? String ?? "" == "0"),  // default is true "1"
             addsv: true)
 
         //-- privacy level label

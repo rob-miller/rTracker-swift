@@ -486,7 +486,7 @@ class rTracker_resource: NSObject {
         }
 
         outerView = UIView(frame: CGRect(x: 75, y: 155, width: 170, height: 170))
-        outerView?.backgroundColor = .systemBackground // UIColor(red: 0, green: 0, blue: 0, alpha: 0.5)
+        outerView?.backgroundColor = .clear  // .systemBackground // UIColor(red: 0, green: 0, blue: 0, alpha: 0.5)
         outerView?.clipsToBounds = true
         outerView?.layer.cornerRadius = 10.0
 
@@ -1205,7 +1205,55 @@ class rTracker_resource: NSObject {
     ///***********************
 
     // copied from http://www.creativepulse.gr/en/blog/2013/how-to-find-the-visible-width-and-height-in-an-ios-app
-    class func get_visible_size(_ vc: UIViewController?) -> CGSize {
+    class func getVisibleSize(of viewController: UIViewController?) -> CGSize {
+        var result: CGSize = .zero
+
+        let screenSize = UIScreen.main.bounds.size
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene else {
+            return result
+        }
+
+        let orientation = windowScene.interfaceOrientation
+        
+        if orientation.isLandscape {
+            result.width = screenSize.height
+            result.height = screenSize.width
+        } else {
+            result.width = screenSize.width
+            result.height = screenSize.height
+        }
+
+        guard let viewController = viewController else { return result }
+        let rootViewController = viewController.navigationController?.viewControllers.first
+
+        if viewController == rootViewController {
+            let statusBarManager = windowScene.statusBarManager
+            let statusBarSize = statusBarManager?.statusBarFrame.size ?? .zero
+            result.height -= min(statusBarSize.width, statusBarSize.height)
+        }
+
+        if let navigationController = viewController.navigationController {
+            if viewController == rootViewController {
+                let navigationBarSize = navigationController.navigationBar.frame.size
+                result.height -= min(navigationBarSize.width, navigationBarSize.height)
+            }
+
+            if let toolbar = navigationController.toolbar {
+                let toolbarSize = toolbar.frame.size
+                result.height -= min(toolbarSize.width, toolbarSize.height)
+            }
+        }
+
+        if let tabBarController = viewController.tabBarController {
+            let tabBarSize = tabBarController.tabBar.frame.size
+            result.height -= min(tabBarSize.width, tabBarSize.height)
+        }
+
+        return result
+    }
+
+    
+    class func rtmx_get_visible_size(_ vc: UIViewController?) -> CGSize {
         var result: CGSize = CGSize.zero
 
         var size = UIScreen.main.bounds.size

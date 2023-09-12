@@ -197,7 +197,7 @@ class voInfo: voState {
 
         frame.origin.x = MARGIN
         frame.origin.y += (labframe?.size.height ?? 0.0) + MARGIN
-        frame.size.width = rTracker_resource.get_visible_size(ctvovc).width - 2 * MARGIN //ctvovc.view.frame.size.width - (2*MARGIN) ;
+        frame.size.width = rTracker_resource.getVisibleSize(of:ctvovc).width - 2 * MARGIN //ctvovc.view.frame.size.width - (2*MARGIN) ;
         //frame.size.width = 2 * ctvovc.view.frame.size.width ;
 
         let tsize = vo.optDict["infourl"]?.size(withAttributes: [
