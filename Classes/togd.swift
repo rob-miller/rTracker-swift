@@ -58,7 +58,7 @@ class Togd: NSObject {
         var sql = "select max(date) from voData;"
         lastDate = pto?.toQry2Int(sql:sql) ?? 0
 
-        var gmd = (pto?.optDict["graphMaxDays"] as? NSNumber)?.intValue ?? 0
+        var gmd = Int(pto?.optDict["graphMaxDays"] as? String ?? "0") ?? 0
         if 0 != gmd {
             var tFirstDate: Int
             gmd *= 60 * 60 * 24 // secs per day

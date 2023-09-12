@@ -505,12 +505,12 @@ class valueObj: NSObject, UITextFieldDelegate {
     func describe(_ od: Bool) {
         #if DEBUGLOG
         if od {
-            DBGLog(String("value id \(vid) name \(valueName) type \(vtype) value .\(value). optDict:"))
+            DBGLog(String("value id \(vid) name \(valueName ?? "") type \(vtype) value >\(value)< optDict:"))
             for (key, value) in optDict {
                 DBGLog(String(" \(key) = \(value) "))
             }
         } else {
-            DBGLog(String("value id \(vid) name \(valueName) type \(vtype) value .\(value)."))
+            DBGLog(String("value id \(vid) name \(valueName ?? "") type \(vtype) value >\(value)<"))
         }
         #endif
     }

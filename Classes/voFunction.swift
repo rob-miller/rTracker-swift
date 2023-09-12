@@ -935,7 +935,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                     //		  vid,epd0,epd1];
                     //result = [to toQry2Float:sql];  // --> + v1;
 
-                    var c = Double(vo.optDict["frv0"]!)! // if ep has assoc value, then avg is over that num with date/time range already determined
+                    var c = Double(vo.optDict["frv0"] ?? "") ?? 0 // if ep has assoc value, then avg is over that num with date/time range already determined
                     // in other words, is it avg over 'frv' number of hours/days/weeks then that is our denominator
                     if c == 0.0 {
                         // else denom is number of entries between epd0 to epd1 
