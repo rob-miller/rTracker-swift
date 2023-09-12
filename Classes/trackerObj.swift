@@ -39,7 +39,7 @@ class trackerObj: tObjBase {
     var trackerName: String? {
         get {
             if nil == _trackerName {
-                _trackerName = optDict["name"] as? String
+                _trackerName = optDict["name"] as! String?
             }
             return _trackerName
         }
@@ -58,7 +58,7 @@ class trackerObj: tObjBase {
     }
     var trackerDate: Date?
 
-    var optDict: [String : Any] = [:]
+    var optDict: [String : Any] = [:]  // trackerObj level optDict in dtabase as text : any
 
     var valObjTable: [valueObj] = []
 
@@ -70,8 +70,8 @@ class trackerObj: tObjBase {
     var maxLabel: CGSize {
         get {
             if (_maxLabel.height == 0) || (_maxLabel.width == 0) {
-                let w = CGFloat((optDict["width"] as? NSNumber)?.floatValue ?? 0.0)
-                let h = CGFloat((optDict["height"] as? NSNumber)?.floatValue ?? 0.0)
+                let w = CGFloat(optDict["width"] as? Double ?? 0)
+                let h = CGFloat(optDict["height"] as? Double ?? 0)
                 _maxLabel = CGSize(width: w, height: h)
             }
             return _maxLabel
@@ -80,8 +80,8 @@ class trackerObj: tObjBase {
             if (_maxLabel.height != maxLabelValue.height) || (_maxLabel.width != maxLabelValue.width) {
                 _maxLabel = maxLabelValue
                 if _maxLabel.height != 0.0 && _maxLabel.width != 0.0 {
-                    optDict["width"] = NSNumber(value: Float(_maxLabel.width))
-                    optDict["height"] = NSNumber(value: Float(_maxLabel.height))
+                    optDict["width"] = String(Float(_maxLabel.width))
+                    optDict["height"] = String(Float(_maxLabel.height))
                 } else {
                     optDict.removeValue(forKey: "width")
                     optDict.removeValue(forKey: "height")
@@ -138,11 +138,11 @@ class trackerObj: tObjBase {
 
     var prevTID: Int {
         get {
-            return (optDict["prevTID"] as? NSNumber)?.intValue ?? 0
+            return Int(optDict["prevTID"] as? String ?? "0")!
         }
         set(prevTIDvalue) {
             if prevTIDvalue != 0 {
-                optDict["prevTID"] = NSNumber(value: prevTIDvalue)
+                optDict["prevTID"] = String(prevTIDvalue)
             } else {
                 optDict.removeValue(forKey: "prevTID")
             }
@@ -217,10 +217,10 @@ class trackerObj: tObjBase {
         loadConfig()
     }
 
-    convenience init(dict: [AnyHashable : Any]?) {
+    convenience init(dict: [String : Any]) {
         self.init()
         //DBGLog(@"init trackerObj from dict id: %d",[dict objectForKey:@"tid"]);
-        super.toid = (dict?["tid"] as? NSNumber)?.intValue ?? 0
+        super.toid = dict["tid"] as! Int
         confirmDb()
         loadConfig(fromDict: dict)
     }
@@ -291,7 +291,7 @@ class trackerObj: tObjBase {
     func confirmTOdict(_ dict: [AnyHashable : Any]?) {
 
         //---- optDict ----//
-        if let newOptDict = dict?["optDict"] as? [String : Any] {
+        if let newOptDict = dict?["optDict"] as? [String : String] {
             for (key, value) in newOptDict {
                 self.optDict[key] = value
             }
@@ -447,8 +447,8 @@ class trackerObj: tObjBase {
 
         //self.trackerName = [self.optDict objectForKey:@"name"];
 
-        let w = CGFloat((optDict["width"] as? NSNumber)?.floatValue ?? 0.0)
-        let h = CGFloat((optDict["height"] as? NSNumber)?.floatValue ?? 0.0)
+        let w = CGFloat(Double(optDict["width"] as? Double ?? 0))
+        let h = CGFloat(Double(optDict["height"] as? Double ?? 0))
         maxLabel = CGSize(width: w, height: h)
 
         //self.sql = @"select id, type, name, color, graphtype from voConfig order by rank;";
@@ -505,11 +505,11 @@ class trackerObj: tObjBase {
     // load tracker config, valObjs from supplied dictionary
     // self.trackerName from dictionary:optDict:trackerName
     //
-    func loadConfig(fromDict dict: [AnyHashable : Any]?) {
+    func loadConfig(fromDict dict: [String : Any]) {
 
         dbgNSAssert(super.toid != 0, "tObj load from dict toid=0")
 
-        optDict = (dict?["optDict"] as? [String : Any])!
+        optDict = dict["optDict"] as! [String : Any]
 
         setTrackerVersion()
         setToOptDictDflts() // probably redundant
@@ -522,9 +522,9 @@ class trackerObj: tObjBase {
         //CGFloat h = [[self.optDict objectForKey:@"height"] floatValue];
         //self.maxLabel = (CGSize) {w,h};
 
-        let voda = dict?["valObjTable"] as? [AnyHashable]
+        let voda = dict["valObjTable"] as? [AnyHashable]
         for vod in voda ?? [] {
-            guard let vod = vod as? [AnyHashable : Any] else {
+            guard let vod = vod as? [String : Any] else {
                 continue
             }
             let vo = valueObj(dict: self, dict: vod)
@@ -542,7 +542,7 @@ class trackerObj: tObjBase {
             vo.vos?.loadConfig() // loads from vo optDict
         }
 
-        let rda = dict?["reminders"] as? [AnyHashable]
+        let rda = dict["reminders"] as? [AnyHashable]
         for rd in rda ?? [] {
             guard let rd = rd as? [AnyHashable : Any] else {
                 continue
@@ -592,10 +592,10 @@ class trackerObj: tObjBase {
     func setTrackerVersion() {
 
         if nil == optDict["rt_build"] {
-            optDict["rtdb_version"] = NSNumber(value: RTDB_VERSION)
-            optDict["rtfn_version"] = NSNumber(value: RTFN_VERSION)
-            optDict["rt_version"] = Bundle.main.infoDictionary?["CFBundleShortVersionString"]
-            optDict["rt_build"] = Bundle.main.infoDictionary?["CFBundleVersion"]
+            optDict["rtdb_version"] = String(RTDB_VERSION)
+            optDict["rtfn_version"] = String(RTFN_VERSION)
+            optDict["rt_version"] = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
+            optDict["rt_build"] = Bundle.main.infoDictionary?["CFBundleVersion"] as? String
             saveToOptDict()
 
             DBGLog("tracker init version info")
@@ -623,12 +623,12 @@ class trackerObj: tObjBase {
         var val: String?
 
         for key in s1 {
-            val = optDict[key] as? String
+            val = optDict[key] as? String? ?? nil
             sql = "delete from trkrInfo where field='\(key)';"
 
             if val == nil {
                 toExecSql(sql:sql)
-            } else if ((key == "savertn") && (val == (SAVERTNDFLT ? "1" : "0"))) || ((key == "privacy") && (Int(val ?? "") ?? 0 == PRIVDFLT)) || ((key == "graphMaxDays") && (Int(val!) ?? 0 == GRAPHMAXDAYSDFLT)) {
+            } else if ((key == "savertn") && (val == (SAVERTNDFLT ? "1" : "0"))) || ((key == "privacy") && (Int(val ?? "") ?? PRIVDFLT == PRIVDFLT)) || ((key == "graphMaxDays") && (Int(val ?? "") ?? GRAPHMAXDAYSDFLT == GRAPHMAXDAYSDFLT)) {
                 toExecSql(sql:sql)
                 optDict.removeValue(forKey: key)
             }
@@ -1598,7 +1598,7 @@ class trackerObj: tObjBase {
         //var rids: [AnyHashable] = []
         let sql = "select rid from reminders order by rid"
         let rids = toQry2AryI(sql: sql)
-        DBGLog(String("toid \(UInt(super.toid)) has \(UInt(rids.count)) reminders in db"))
+        DBGLog(String("toid \(super.toid) has \(rids.count) reminders in db"))
         if 0 < rids.count {
             for rid in rids {
                 let tnr = notifyReminder(NSNumber(value:rid), to: self)
@@ -2465,7 +2465,7 @@ class trackerObj: tObjBase {
     // MARK: utility methods
 
     func describe() {
-        DBGLog(String("tracker id \(super.toid) name \(trackerName) dbName \(dbName)"))
+        DBGLog(String("tracker id \(super.toid) name \(trackerName ?? "") dbName \(dbName ?? "")"))
         DBGLog(
             String("db ver \(optDict["rtdb_version"] ?? "") fn ver \(optDict["rtfn_version"] ?? "") created by rt ver \(optDict["rt_version"] ?? "") build \(optDict["rt_build"] ?? "")"))
         //NSEnumerator *enumer = [self.valObjTable objectEnumerator];
@@ -2553,8 +2553,7 @@ class trackerObj: tObjBase {
 
 
     func getPrivacyValue() -> Int {
-        
-        return Int(optDict["privacy"] as! String)!
+        return Int(optDict["privacy"] as? String ?? "") ?? 1
     }
 
 }

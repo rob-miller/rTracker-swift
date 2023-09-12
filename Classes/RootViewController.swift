@@ -182,78 +182,83 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
         jumpMaxPriv()
 
-        do {
-            let files = try localFileManager.contentsOfDirectory(atPath: docsDir)
-            for fileName in files {
-                let fullPath = URL(fileURLWithPath: docsDir).appendingPathComponent(fileName)
-                var to: trackerObj? = nil
-                let fname = URL(fileURLWithPath: fileName).lastPathComponent
-                var tname: String? = nil
-                var validMatch = false
-                var loadObj: String?
 
-                switch fullPath.pathExtension {
-                case "csv":
-                    loadObj = "_in.csv"
-                    if fileName.hasSuffix("_in.csv") {
-                        validMatch = true
-                    }
-                case "rtcsv":
-                    loadObj = "_in.rtcsv"
-                    if fileName.hasSuffix(loadObj!) {
-                        validMatch = true
-                    } else {
-                        loadObj = ".rtcsv"  // accept _in above, already know it has .rtcsv extension
-                        validMatch = true
-                    }
-                default:
-                    continue
+        //let files = try localFileManager.contentsOfDirectory(atPath: docsDir)
+        let directoryURL = URL(fileURLWithPath: docsDir)
+        let enumerator = localFileManager.enumerator(at: directoryURL, includingPropertiesForKeys: [.isDirectoryKey], options: [])
+        
+        var files: [String] = []
+        while let url = enumerator?.nextObject() as? URL {
+            files.append(url.lastPathComponent)
+        }
+        for fileName in files {
+            let fullPath = URL(fileURLWithPath: docsDir).appendingPathComponent(fileName)
+            var to: trackerObj? = nil
+            let fname = URL(fileURLWithPath: fileName).lastPathComponent
+            var tname: String? = nil
+            var validMatch = false
+            var loadObj: String?
+
+            switch fullPath.pathExtension {
+            case "csv":
+                loadObj = "_in.csv"
+                if fileName.hasSuffix("_in.csv") {
+                    validMatch = true
+                }
+            case "rtcsv":
+                loadObj = "_in.rtcsv"
+                if fileName.hasSuffix(loadObj!) {
+                    validMatch = true
+                } else {
+                    loadObj = ".rtcsv"  // accept _in above, already know it has .rtcsv extension
+                    validMatch = true
+                }
+            default:
+                continue
+            }
+
+            if validMatch {
+                tname = String(fileName.dropLast(loadObj!.count))  // String(fileName.prefix(fileName.count - (loadObj!.count + 1))) // Removing suffix
+                DBGLog("\(loadObj!) load input: \(fname) as \(tname!)")
+
+                let tid = tlist.getTIDfromName(tname)
+                if tid != 0 {
+                    to = trackerObj(tid)
+                    DBGLog("found existing tracker tid \(tid) with matching name")
+                } else if fullPath.pathExtension == "rtcsv" {
+                    to = trackerObj()
+                    to?.trackerName = tname
+                    to?.toid = tlist.getUnique()
+                    to?.saveConfig()
+                    tlist.add(toTopLayoutTable: to!)
+                    newRtcsvTracker = true
+                    DBGLog("created new tracker for rtcsv, id= \(to!.toid)")
                 }
 
-                if validMatch {
-                    tname = String(fileName.dropLast(loadObj!.count))  // String(fileName.prefix(fileName.count - (loadObj!.count + 1))) // Removing suffix
-                    DBGLog("\(loadObj!) load input: \(fname) as \(tname!)")
-
-                    let tid = tlist.getTIDfromName(tname)
-                    if tid != 0 {
-                        to = trackerObj(tid)
-                        DBGLog("found existing tracker tid \(tid) with matching name")
-                    } else if fullPath.pathExtension == "rtcsv" {
-                        to = trackerObj()
-                        to?.trackerName = tname
-                        to?.toid = tlist.getUnique()
-                        to?.saveConfig()
-                        tlist.add(toTopLayoutTable: to!)
-                        newRtcsvTracker = true
-                        DBGLog("created new tracker for rtcsv, id= \(to!.toid)")
+                if let to = to {
+                    safeDispatchSync { [self] in
+                        rTracker_resource.startActivityIndicator(view, navItem: nil, disable: false, str: "loading \(tname ?? "")...")
                     }
 
-                    if let to = to {
+                    do {
+                        let csvString = try String(contentsOfFile: fullPath.path, encoding: .utf8)
                         safeDispatchSync { [self] in
-                            rTracker_resource.startActivityIndicator(view, navItem: nil, disable: false, str: "loading \(tname ?? "")...")
+                            UIApplication.shared.isIdleTimerDisabled = true
+                            doCSVLoad(csvString, to: to, fname: fname)
+                            UIApplication.shared.isIdleTimerDisabled = false
                         }
+                        try localFileManager.removeItem(at: fullPath)
+                    } catch {
+                        DBGWarn("Error reading or deleting file: \(error)")
+                    }
 
-                        do {
-                            let csvString = try String(contentsOfFile: fullPath.path, encoding: .utf8)
-                            safeDispatchSync { [self] in
-                                UIApplication.shared.isIdleTimerDisabled = true
-                                doCSVLoad(csvString, to: to, fname: fname)
-                                UIApplication.shared.isIdleTimerDisabled = false
-                            }
-                            try localFileManager.removeItem(at: fullPath)
-                        } catch {
-                            DBGWarn("Error reading or deleting file: \(error)")
-                        }
-
-                        safeDispatchSync { [self] in
-                            rTracker_resource.finishActivityIndicator(view, navItem: nil, disable: false)
-                        }
+                    safeDispatchSync { [self] in
+                        rTracker_resource.finishActivityIndicator(view, navItem: nil, disable: false)
                     }
                 }
             }
-        } catch {
-            print("Error enumerating files: \(error.localizedDescription)")
         }
+
 
         restorePriv()
 
@@ -382,10 +387,10 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     //
     //  added nov 2012
     //
-    func loadTrackerDict(_ tdict: [AnyHashable : Any]?, tname: String?) -> Int {
+    func loadTrackerDict(_ tdict: [String : Any], tname: String?) -> Int {
 
         // get input tid
-        let newTID = (tdict?["tid"])! as! Int
+        let newTID = tdict["tid"] as! Int  // rejectable if not there, better than crash but still wrong
         DBGLog(String("load input: \(tname) tid \(newTID)"))
 
         let newTIDi = newTID
@@ -437,7 +442,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
     func handleOpenFileURL(_ url: URL?, tname: String?) -> Int {
         var tname = tname
-        var tdict: [AnyHashable : Any]? = nil
+        var tdict: [String : Any] = [:]
         var dataDict: [String : [String : String]]? = nil
         var tid: Int
 
@@ -447,19 +452,48 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         if nil != tname {
             // if tname set it is just a plist
             if let url {
-                tdict = NSDictionary(contentsOf: url) as Dictionary?
+                tdict = (NSDictionary(contentsOf: url) as Dictionary? as! [String : Any])
             }
         } else {
             // else is an rtrk
-            var rtdict: [AnyHashable : Any]? = nil
+            var rtdict: [String : Any] = [:]
             if let url {
-                rtdict = NSDictionary(contentsOf: url) as Dictionary?
+                rtdict = NSDictionary(contentsOf: url) as Dictionary? as! [String : Any]
+                /*
+                 "trackerName" : String
+                 "dataDict" : [String : [String : String] ]
+                 "tid" : String
+                 "configDict" :
+                    ["reminders: : []],
+                    ["tid" : int],
+                    ["optDict", Any] =>
+                        ["height" : Double]
+                        ["graphMaxDays" : String]
+                        ["rt_version" : String]
+                        ["prevTID" : String]
+                        ["privacy" : String]
+                        ["rt_build" : String]
+                        ["rtdb_version" : String]
+                        ["savertn" : String]
+                        ["width : Double]
+                        ["name" : String]
+                    ["valObjTable" : Any] =>
+                        ["vcolor" : Int]
+                        ["vGraphType" : Int]
+                        ["vpriv" : Int]
+                        ["valueName" : String]
+                        ["vid" : Int]
+                        ["vtype" : Int]
+                        ["optDict" : [String : String]
+                 */
             }
-            tname = rtdict?["trackerName"] as? String
-            tdict = rtdict?["configDict"] as? [AnyHashable : Any]
-            dataDict = rtdict?["dataDict"] as? [String : [String : String]]
+            tname = rtdict["trackerName"] as? String
+            tdict = (rtdict["configDict"] ?? [:]) as! [String : Any]
+            dataDict = rtdict["dataDict"] as? [String : [String : String]]
+            //let ttid: Int? = Int(tdict["tid"] as? String ?? "")
+            let ttid = tdict["tid"] as! Int
             if loadingDemos {
-                tlist.deleteTrackerAllTID(tdict?["tid"] as? NSNumber, name: tname) // wipe old demo tracker otherwise starts to look ugly
+                tlist.deleteTrackerAllTID(ttid, name: tname) // wipe old demo tracker otherwise starts to look ugly
             }
         }
 
@@ -499,18 +533,23 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
         var filesToProcess: [URL] = []
 
-        do {
-            let files = try localFileManager.contentsOfDirectory(atPath: docsDir)
-            for fileName in files {
-                let fullPath = URL(fileURLWithPath: docsDir).appendingPathComponent(fileName)
-                if fileName.hasSuffix("_in.plist") {
-                    filesToProcess.append(fullPath)
-                } else if fullPath.pathExtension == "rtrk" {
-                    filesToProcess.append(fullPath)
+
+        let directoryURL = URL(fileURLWithPath: docsDir)
+        let enumerator = FileManager.default.enumerator(at: directoryURL, includingPropertiesForKeys: [.isDirectoryKey], options: [])
+
+        while let url = enumerator?.nextObject() as? URL {
+            do {
+                let resourceValues = try url.resourceValues(forKeys: [.isDirectoryKey])
+                if !resourceValues.isDirectory! {
+                    if url.lastPathComponent.hasSuffix("_in.plist") {
+                        filesToProcess.append(url)
+                    } else if url.pathExtension == "rtrk" {
+                        filesToProcess.append(url)
+                    }
                 }
+            } catch {
+                print("Error retrieving resource values for file: \(url.path), error: \(error)")
             }
-        } catch {
-            print("Error enumerating files: \(error.localizedDescription)")
         }
 
         for file in filesToProcess {
@@ -648,6 +687,8 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                 rTracker_resource.finishProgressBar(view, navItem: navigationItem, disable: true)
                 rTracker_resource.finishActivityIndicator(view, navItem: navigationItem, disable: false)
             })
+            
+            // rtmx reorderDbFromTLT here ?
 
             // give up lock
             //refreshLock = false
@@ -669,7 +710,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
     func refreshViewPart2() {
         //DBGLog(@"entry");
-        tlist.confirmToplevelTIDs()
+        // rtmx tlist.confirmToplevelTIDs()
         tlist.loadTopLayoutTable()
         DispatchQueue.main.async(execute: { [self] in
             tableView!.reloadData()
@@ -703,7 +744,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
             if loadTrackerPlistFiles() {
                 // this thread now completes updating rvc display of trackerList as next step is load csv data and trackerlist won't change (unless rtrk files)
                 tlist.loadTopLayoutTable() // called again in refreshviewpart2, but need for re-order to set ranks
-                tlist.reorderFromTLT()
+                tlist.reorderDbFromTLT()
             }
 
             safeDispatchSync({ [self] in
@@ -729,23 +770,29 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         let docsDir = rTracker_resource.ioFilePath(nil, access: true)
         let localFileManager = FileManager.default
 
-        do {
-            let files = try localFileManager.contentsOfDirectory(atPath: docsDir)
-            for file in files {
-                if file.hasSuffix(targ_ext ?? "") {
-                    DBGLog("existsInputFiles: match on \(file)")
-                    retval += 1
-                }
-            }
-        } catch {
-            print("Error enumerating files: \(error.localizedDescription)")
+
+        //let files = try localFileManager.contentsOfDirectory(atPath: docsDir)
+        let directoryURL = URL(fileURLWithPath: docsDir)
+        let enumerator = localFileManager.enumerator(at: directoryURL, includingPropertiesForKeys: [.isDirectoryKey], options: [])
+        
+        var files: [String] = []
+        while let url = enumerator?.nextObject() as? URL {
+            files.append(url.lastPathComponent)
         }
+        for file in files {
+            if file.hasSuffix(targ_ext ?? "") {
+                DBGLog("existsInputFiles: match on \(file)")
+                retval += 1
+            }
+        }
+
 
         return retval
     }
 
 
     func loadInputFiles() {
+        DBGLog("loadInputFiles")
         if loadingInputFiles {
             return
         }
@@ -826,7 +873,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
             if doLoad {
                 // load now into trackerObj - needs progressBar
-                let tdict = NSDictionary(contentsOfFile: p) as Dictionary?
+                let tdict = NSDictionary(contentsOfFile: p) as Dictionary? as! [String : Any]
                 tlist.fixDictTID(tdict)
                 let newTracker = trackerObj(dict: tdict)
 
@@ -1161,8 +1208,9 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         _ = loadFilesLock.testAndSet(newValue: false)
         readingFile = false
 
-        let vsize = rTracker_resource.get_visible_size(self)
-
+        //let vsize = rTracker_resource.get_visible_size(self)
+        let vsize = rTracker_resource.getVisibleSize(of: self)
+        
         navigationItem.rightBarButtonItem = addBtn
         navigationItem.leftBarButtonItem = editBtn
 
@@ -1175,7 +1223,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         var tableFrame: CGRect = CGRect.zero
         tableFrame.origin.x = 0.0
         tableFrame.origin.y = 0.0
-        tableFrame.size.height = vsize.height
+        tableFrame.size.height = vsize.height // + 100  rtmx
         tableFrame.size.width = vsize.width
 
         DBGLog(String("tvf \(tableFrame)"))  // origin x %f y %f size w %f h %f"), tableFrame.origin.x, tableFrame.origin.y, tableFrame.size.width, tableFrame.size.height)
@@ -1356,28 +1404,31 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         let docsDir = rTracker_resource.ioFilePath(nil, access: true)
         let localFileManager = FileManager.default
         
-        do {
-            let files = try localFileManager.contentsOfDirectory(atPath: docsDir)
-            for fileName in files {
-                if fileName.hasSuffix(".rtrk_reading") {
-                    let fullPath = URL(fileURLWithPath: docsDir).appendingPathComponent(fileName)
-                    
-                    if choice == 0 {
-                        // delete it
-                        try? localFileManager.removeItem(atPath: fullPath.path)
-                    } else {
-                        // try again -- rename from .rtrk_reading to .rtrk
-                        let newTarget = fullPath.path.replacingOccurrences(of: "rtrk_reading", with: "rtrk")
+
+        //let files = try localFileManager.contentsOfDirectory(atPath: docsDir)
+        let directoryURL = URL(fileURLWithPath: docsDir)
+        let enumerator = localFileManager.enumerator(at: directoryURL, includingPropertiesForKeys: [.isDirectoryKey], options: [])
+        
+        var files: [URL] = []
+        while let url = enumerator?.nextObject() as? URL {
+            files.append(url)
+        }
+        for fileURL in files {
+            if fileURL.lastPathComponent.hasSuffix("_reading") {
+                if choice == 0 {
+                    // delete it
+                    try? localFileManager.removeItem(at: fileURL)
+                } else {
+                    // try again -- rename from .rtrk_reading to .rtrk
+                    if let newTarget = URL(string:fileURL.absoluteString.replacingOccurrences(of: "_reading", with: "")) {
                         do {
-                            try localFileManager.moveItem(atPath: fullPath.path, toPath: newTarget)
+                            try localFileManager.moveItem(at: fileURL, to: newTarget)
                         } catch {
-                            DBGLog("Error on move \(fullPath) to \(newTarget): \(error)")
+                            DBGLog("Error on move \(fileURL) to \(newTarget): \(error)")
                         }
                     }
                 }
             }
-        } catch {
-            print("Error enumerating files: \(error.localizedDescription)")
         }
 
         viewDidAppearRestart()
@@ -1393,8 +1444,8 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         openTracker(nsnTid?.intValue ?? 0, rejectable: true)
     }
 
-    @objc func doOpenTracker(_ nsnTid: NSNumber?) {
-        openTracker(nsnTid?.intValue ?? 0, rejectable: false)
+    @objc func doOpenTracker(_ nsnTid: Int) {
+        openTracker(nsnTid, rejectable: false)
     }
 
     func doRejectableTracker() {
@@ -1413,17 +1464,22 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
             } else {
                 let docsDir = rTracker_resource.ioFilePath(nil, access: true)
                 
-                do {
-                    let files = try FileManager.default.contentsOfDirectory(atPath: docsDir)
-                    for fileName in files where fileName.hasSuffix(".rtrk_reading") {
-                        let fullPath = URL(fileURLWithPath: docsDir).appendingPathComponent(fileName)
-                        let rtrkName = fullPath.deletingPathExtension().lastPathComponent
-                        presentProblemAlert(for: rtrkName)
-                        return
-                    }
-                } catch {
-                    print("Error enumerating files: \(error.localizedDescription)")
+                //let files = try FileManager.default.contentsOfDirectory(atPath: docsDir)
+                let directoryURL = URL(fileURLWithPath: docsDir)
+                let localFileManager = FileManager.default
+                let enumerator = localFileManager.enumerator(at: directoryURL, includingPropertiesForKeys: [.isDirectoryKey], options: [])
+                
+                var files: [String] = []
+                while let url = enumerator?.nextObject() as? URL {
+                    files.append(url.lastPathComponent)
                 }
+                for fileName in files where fileName.hasSuffix("_reading") {
+                    let fullPath = URL(fileURLWithPath: docsDir).appendingPathComponent(fileName)
+                    let rtrkName = fullPath.lastPathComponent.replacingOccurrences(of: "_reading", with: "")  //.deletingPathExtension().lastPathComponent
+                    presentProblemAlert(for: rtrkName)
+                    return
+                }
+
             }
         } else {
             UIApplication.shared.isIdleTimerDisabled = true
@@ -1434,8 +1490,8 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     }
 
     private func presentProblemAlert(for rtrkName: String) {
-        let title = "Problem reading .rtrk file?"
-        let msg = "There was a problem while loading the \(rtrkName) rtrk file"
+        let title = "Problem reading file?"
+        let msg = "There was a problem while loading the \(rtrkName) file"
         let btn0 = "Delete it"
         let btn1 = "Try again"
         
@@ -1606,10 +1662,10 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
             
             for i in 0..<notifications.count {
                 let oneEvent = notifications[i]
-                let userInfoCurrent = oneEvent.content.userInfo
+                let userInfoCurrent = oneEvent.content.userInfo as! [String : Int]
                 DBGLog(String("\(i) uic: \(userInfoCurrent)"))
-                if let tid = userInfoCurrent["tid"] as? NSNumber {
-                    var c = (self.scheduledReminderCounts[tid] as? Int) ?? 0
+                if let tid = userInfoCurrent["tid"] {
+                    var c = self.scheduledReminderCounts[tid] ?? 0
                     c += 1
                     self.scheduledReminderCounts[tid] = c
                 }
@@ -1675,7 +1731,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     // MARK: Table view methods
     
 
-    var scheduledReminderCounts: [AnyHashable : Any] = [:]
+    var scheduledReminderCounts: [Int : Int] = [:]
 
 
     public func numberOfSections(in tableView: UITableView) -> Int {
@@ -1691,14 +1747,11 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         var erc = 0
         var src = 0
         for nsn in tlist.topLayoutReminderCount ?? [] {
-            guard let nsn = nsn as? NSNumber else {
-                continue
-            }
-            erc += nsn.intValue
+            erc += nsn
         }
         for (tid, _) in scheduledReminderCounts {
-            if let count = scheduledReminderCounts[tid] as? NSNumber {
-                src += count.intValue
+            if let count = scheduledReminderCounts[tid] {
+                src += count
             }
         }
 
@@ -1721,13 +1774,13 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
         // Configure the cell.
         let row = indexPath.row
-        let tid = (tlist.topLayoutIDs)?[row] as? NSNumber
+        let tid = (tlist.topLayoutIDs)?[row]
         let cellLabel = NSMutableAttributedString()
 
         let erc = ((tlist.topLayoutReminderCount)?[row] as? NSNumber)?.intValue ?? 0
         var src: Int? = nil
         if let tid {
-            src = (scheduledReminderCounts[tid] as? NSNumber)?.intValue ?? 0
+            src = scheduledReminderCounts[tid] ?? 0
         }
         DBGLog(String("src: \(src)  erc:  \(erc) \(tlist.topLayoutNames![row]) (\(tid!))"))
         //NSString *formatString = @"%@";
@@ -1796,9 +1849,8 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         utc.tlist = tlist // required so reject can fix topLevel list
         utc.saveFrame = view.frame // self.tableView.frame; //  view.frame;
         utc.rvcTitle = title
-
-        navigationController?.pushViewController(utc, animated: true)
-
+        
+        self.navigationController!.pushViewController(utc, animated: true)
     }
 
     // Override to support row selection in the table view.

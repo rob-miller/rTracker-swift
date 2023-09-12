@@ -263,8 +263,7 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
        DBGLog("openURL \(url)")
        DBGLog("bundle id: \(bdn)")
        
-       guard let navigationController = window?.rootViewController as? UINavigationController,
-             let rootController = navigationController.viewControllers.first as? RootViewController else {
+       guard let rootController = getRootController() else {
            return false
        }
        
@@ -288,9 +287,9 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
        
             let tlist = rootController.tlist
             tlist.loadTopLayoutTable()
-            let tidNumber = NSNumber(value: tid)
-            if tlist.topLayoutIDs!.contains(tidNumber) {
-                rootController.performSelector(onMainThread: #selector(rootController.doOpenTracker(_:)), with: tidNumber, waitUntilDone: false)
+
+            if tlist.topLayoutIDs!.contains(tid) {
+                rootController.performSelector(onMainThread: #selector(rootController.doOpenTracker(_:)), with: tid, waitUntilDone: false)
             } else {
                 rTracker_resource.alert("no tracker found", msg: "No tracker with ID \(tid) found in \(bdn).  Edit the tracker, tap the ⚙, and look in 'database info' for the tracker id.", vc: rootController)
             }
@@ -505,8 +504,32 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
         //navigationController.visibleViewController?.beginAppearanceTransition(true, animated: true)
 
     }
-
+    
+    func getRootController() -> RootViewController? {
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            if let navController = windowScene.windows.first!.rootViewController as? UINavigationController,
+               let rootController = navController.viewControllers.first as? RootViewController {
+                return rootController
+            }
+        }
+        return nil
+    }
+    
     func application(_ application: UIApplication, performActionFor shortcutItem: UIApplicationShortcutItem, completionHandler: @escaping (Bool) -> Void) {
+
+        if let rootController = getRootController() {
+            if let tid = shortcutItem.userInfo?["tid"] {
+                rootController.performSelector(onMainThread: #selector(RootViewController.doOpenTracker(_:)), with: tid, waitUntilDone: false)
+                completionHandler(true)
+            } else {
+                completionHandler(false)
+            }
+        } else {
+            completionHandler(false)
+        }
+    }
+
+    func xxapplication(_ application: UIApplication, performActionFor shortcutItem: UIApplicationShortcutItem, completionHandler: @escaping (Bool) -> Void) {
         let rootController = (navigationController.viewControllers)[0] as? RootViewController
         rootController?.performSelector(onMainThread: #selector(RootViewController.doOpenTracker(_:)), with: (shortcutItem.userInfo)?["tid"], waitUntilDone: false)
     }

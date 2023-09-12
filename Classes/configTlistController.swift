@@ -324,7 +324,7 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
 
         DBGLog(String("ctlc: move row from \(UInt(fromRow)) to \(UInt(toRow))"))
         tlist?.reorderTLT(fromRow, toRow: toRow)
-        tlist?.reorderFromTLT()
+        tlist?.reorderDbFromTLT()
 
     }
 
