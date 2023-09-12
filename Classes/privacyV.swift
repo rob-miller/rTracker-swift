@@ -78,7 +78,7 @@ var lastShow: TimeInterval = 0
 func jumpMaxPriv() {
     if nil == stashedPriv {
         stashedPriv = NSNumber(value: privacyValue)
-        DBGLog(String("stashed priv \(stashedPriv)"))
+        DBGLog(String("stashed priv \(stashedPriv!)"))
     }
 
     //[self.privacyObj setPrivacyValue:MAXPRIV];  // temporary max privacy level so see all
@@ -93,7 +93,7 @@ func restorePriv() {
     //if (YES == self.openUrlLock) {
     //    return;
     //}
-    DBGLog(String("restore priv to \(stashedPriv)"))
+    DBGLog(String("restore priv to \(stashedPriv!)"))
     //[self.privacyObj setPrivacyValue:[self.stashedPriv intValue]];  // return to privacy level
     privacyValue = stashedPriv?.intValue ?? 0
     stashedPriv = nil
@@ -466,7 +466,7 @@ class privacyV: UIView {
         //CGRect frame = CGRectMake(0.0f, pv.frame.size.height,pv.frame.size.width,(pv.frame.size.height * PVH));
         // like this but need to re-calc button positions too :-( CGRect frame = CGRectMake(pv.frame.size.width-320.0, pv.frame.size.height,320.0,171.0);
         tbh = pv.navigationController!.toolbar.frame.height
-        let frame = CGRect(x: 0.0, y: pv.view.frame.size.height - 0*tbh, width: 320.0, height: 171.0)
+        let frame = CGRect(x: 0.0, y: pv.view.frame.size.height - tbh, width: 320.0, height: 171.0)
         DBGLog(String("privacyV: x=\(frame.origin.x) y=\(frame.origin.y) w=\(frame.size.width) h=\(frame.size.height)"))
         super.init(frame: frame)
         parent = pv
@@ -478,7 +478,7 @@ class privacyV: UIView {
         addSubview(bg)
         sendSubviewToBack(bg)
          */
-        backgroundColor = .clear  //.white
+        backgroundColor = .systemBackground  // .clear  //.white
 
         layer.cornerRadius = 8
         showing = PVNOSHOW
