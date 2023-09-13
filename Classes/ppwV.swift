@@ -175,7 +175,7 @@ class ppwV: UIView, UITextFieldDelegate {
         addSubview(bg)
         sendSubviewToBack(bg)
          */
-        backgroundColor = .systemBackground // .clear
+        backgroundColor = .secondarySystemBackground // .clear
 
         layer.cornerRadius = 8
         parentView = pv

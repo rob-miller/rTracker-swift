@@ -42,13 +42,10 @@ class voNumber: voState, UITextFieldDelegate {
             DBGLog(String("init \(vo.valueName) : x=\(vosFrame.origin.x) y=\(vosFrame.origin.y) w=\(vosFrame.size.width) h=\(vosFrame.size.height)"))
             _dtf = UITextField(frame: vosFrame)
             
-            if #available(iOS 13.0, *) {
-                _dtf?.textColor = .label
-                _dtf?.backgroundColor = .secondarySystemBackground
-            } else {
-                _dtf?.textColor = .label
-                _dtf?.backgroundColor = .systemBackground
-            }
+
+            _dtf?.textColor = .label
+            _dtf?.backgroundColor = .secondarySystemBackground
+
             
             _dtf?.borderStyle = .roundedRect //Bezel;
             _dtf?.font = PrefBodyFont // [UIFont systemFontOfSize:17.0];

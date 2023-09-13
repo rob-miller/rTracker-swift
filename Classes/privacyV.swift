@@ -465,10 +465,12 @@ class privacyV: UIView {
         DBGLog(String("privV enter parent= x=\(pv?.view.frame.origin.x ?? 0) y=\(pv?.view.frame.origin.y ?? 0) w=\(pv?.view.frame.size.width ?? 0) h=\(pv?.view.frame.size.height ?? 0)"))
         //CGRect frame = CGRectMake(0.0f, pv.frame.size.height,pv.frame.size.width,(pv.frame.size.height * PVH));
         // like this but need to re-calc button positions too :-( CGRect frame = CGRectMake(pv.frame.size.width-320.0, pv.frame.size.height,320.0,171.0);
+        
         tbh = pv.navigationController!.toolbar.frame.height
-        let frame = CGRect(x: 0.0, y: pv.view.frame.size.height - tbh, width: 320.0, height: 171.0)
+        let frame = CGRect(x: 0.0, y: pv.view.frame.size.height - tbh + 15, width: 320.0, height: 171.0)  // rtmx what is +15?
         DBGLog(String("privacyV: x=\(frame.origin.x) y=\(frame.origin.y) w=\(frame.size.width) h=\(frame.size.height)"))
         super.init(frame: frame)
+        
         parent = pv
         parentView = pv.view
         _pwState = PWNEEDPRIVOK //PWNEEDPASS;
@@ -478,7 +480,7 @@ class privacyV: UIView {
         addSubview(bg)
         sendSubviewToBack(bg)
          */
-        backgroundColor = .systemBackground  // .clear  //.white
+        backgroundColor = .secondarySystemBackground  // .clear  //.white
 
         layer.cornerRadius = 8
         showing = PVNOSHOW

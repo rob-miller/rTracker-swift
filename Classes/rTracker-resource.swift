@@ -259,11 +259,9 @@ class rTracker_resource: NSObject {
 
         //[_checkButton setTitle:@"\u2714" forState:UIControlStateNormal];
         _checkButton.setTitle("", for: .normal)
-        if #available(iOS 13.0, *) {
-            _checkButton.backgroundColor = .tertiarySystemBackground
-        } else {
-            _checkButton.backgroundColor = .systemBackground
-        }
+
+        _checkButton.backgroundColor = .tertiarySystemBackground
+
         _checkButton.titleLabel?.font = PrefBodyFont
         _checkButton.contentVerticalAlignment = .center
         _checkButton.contentHorizontalAlignment = .center //Center;;  // UIControlContentHorizontalAlignmentRight; //Center;
@@ -486,7 +484,7 @@ class rTracker_resource: NSObject {
         }
 
         outerView = UIView(frame: CGRect(x: 75, y: 155, width: 170, height: 170))
-        outerView?.backgroundColor = .clear  // .systemBackground // UIColor(red: 0, green: 0, blue: 0, alpha: 0.5)
+        outerView?.backgroundColor = .secondarySystemBackground  // .clear  // .systemBackground // UIColor(red: 0, green: 0, blue: 0, alpha: 0.5)
         outerView?.clipsToBounds = true
         outerView?.layer.cornerRadius = 10.0
 
@@ -1362,7 +1360,7 @@ class rTracker_resource: NSObject {
             }
         }
 
-        if #available(iOS 13.0, *) {
+        //if #available(iOS 13.0, *) {
             if vc?.traitCollection.userInterfaceStyle == .dark {
                 vc?.view.backgroundColor = .systemBackground
                 bgView?.isHidden = true
@@ -1373,7 +1371,7 @@ class rTracker_resource: NSObject {
                 vc?.navigationController?.toolbar.setBackgroundImage(nil, forToolbarPosition: .any, barMetrics: .default)
                 return
             }
-        }
+        //}
 
         bgView?.isHidden = false
         vc?.view.backgroundColor = .clear

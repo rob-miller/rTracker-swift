@@ -1268,7 +1268,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             rlab?.backgroundColor = .clear // was whiteColor
             rlab?.text = valstr
         } else {
-            rlab?.backgroundColor = .systemBackground  //.lightGray
+            rlab?.backgroundColor = .secondarySystemBackground  //.lightGray
             rlab?.text = "-"
         }
 

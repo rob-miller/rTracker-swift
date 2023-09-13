@@ -81,7 +81,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         if #available(iOS 13.0, *) {
             if traitCollection.userInterfaceStyle == .dark {
                 // if darkMode
-                tableView.backgroundColor = .secondarySystemBackground
+                tableView.backgroundColor = .systemBackground
                 return
             }
         }
@@ -589,13 +589,13 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 nameField.attributedPlaceholder = NSAttributedString(string: "Name this Tracker", attributes: [
                     .foregroundColor: UIColor.label
                 ]) // @"Name this Tracker"
-                nameField.backgroundColor = .systemBackground
+                nameField.backgroundColor = .secondarySystemBackground
             } else {
                 nameField.textColor = .label
                 nameField.attributedPlaceholder = NSAttributedString(string: "Name this Tracker", attributes: [
                     .foregroundColor: UIColor.darkGray
                 ]) // @"Name this Tracker"
-                nameField.backgroundColor = .systemBackground
+                nameField.backgroundColor = .secondarySystemBackground
             }
 
             view.bringSubviewToFront(nameField)

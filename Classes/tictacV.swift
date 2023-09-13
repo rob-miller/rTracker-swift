@@ -101,7 +101,7 @@ class tictacV: UIView {
         ttf.size.height *= TICTACHGTFRAC
         DBGLog(String("ttv: x=\(ttf.origin.x) y=\(ttf.origin.y) w=\(ttf.size.width) h=\(ttf.size.height)"));
         super.init(frame: ttf)
-        backgroundColor = .systemBackground //.white
+        backgroundColor = .secondarySystemBackground //.white
         layer.cornerRadius = 8 // doesn't work, probably overwriting rectangle elsewhere
     }
 
@@ -178,7 +178,7 @@ class tictacV: UIView {
 
     func drawBlank() {
         //context?.setStrokeColor(UIColor.white.cgColor)
-        context?.setFillColor(UIColor.systemBackground.cgColor)   // (UIColor.white.cgColor)
+        context?.setFillColor(UIColor.secondarySystemBackground.cgColor)   // (UIColor.white.cgColor)
         context?.fill(currRect)
         //self.layer.cornerRadius = 8;
 

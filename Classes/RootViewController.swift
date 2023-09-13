@@ -1220,6 +1220,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         // title setup
         initTitle()
 
+        /*
         var tableFrame: CGRect = CGRect.zero
         tableFrame.origin.x = 0.0
         tableFrame.origin.y = 0.0
@@ -1228,7 +1229,27 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
         DBGLog(String("tvf \(tableFrame)"))  // origin x %f y %f size w %f h %f"), tableFrame.origin.x, tableFrame.origin.y, tableFrame.size.width, tableFrame.size.height)
         tableView = UITableView(frame: tableFrame, style: .plain)
+         */
+        
+        // Create a new UITableView instance
+        tableView = UITableView(frame: .zero, style: .plain)
+        
+        // Set tableView's translatesAutoresizingMaskIntoConstraints property to false
+        // This allows us to add our own constraints to the tableView
+        tableView!.translatesAutoresizingMaskIntoConstraints = false
 
+        // Add the tableView as a subview of the current view
+        view.addSubview(tableView!)
+
+        // Set up constraints to pin the tableView to the edges of the safe area
+        let guide = view.safeAreaLayoutGuide
+        NSLayoutConstraint.activate([
+            tableView!.topAnchor.constraint(equalTo: guide.topAnchor),
+            tableView!.leadingAnchor.constraint(equalTo: guide.leadingAnchor),
+            tableView!.trailingAnchor.constraint(equalTo: guide.trailingAnchor),
+            tableView!.bottomAnchor.constraint(equalTo: guide.bottomAnchor)
+        ])
+        
         //self.tableView!.translatesAutoresizingMaskIntoConstraints = NO;
         tableView!.dataSource = self
         tableView!.delegate = self
@@ -1856,7 +1877,8 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     // Override to support row selection in the table view.
     public func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
 
-        if PVNOSHOW != privacyObj.showing {
+        
+        if _privacyObj != nil && PVNOSHOW != privacyObj.showing {
             return
         }
 

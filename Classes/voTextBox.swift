@@ -335,7 +335,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         textView?.textColor = .label
         textView?.font = PrefBodyFont // [UIFont fontWithName:@"Arial" size:18];
         textView?.delegate = self
-        textView?.backgroundColor = .systemBackground
+        textView?.backgroundColor = .secondarySystemBackground
 
         textView?.text = vo.value
         textView?.returnKeyType = .default

@@ -211,13 +211,33 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         //CGRect statusBarFrame = [self.navigationController.view.window convertRect:UIApplication.sharedApplication.statusBarFrame toView:self.navigationController.view];
         //CGFloat statusBarHeight = statusBarFrame.size.height;
 
+        /*
         var tableFrame = bg.frame
         tableFrame.size.height = rTracker_resource.getVisibleSize(of:self).height //- ( 2 * statusBarHeight ) ;
 
 
         DBGLog(String("tvf \(tableFrame)"))  // origin x %f y %f size w %f h %f", tableFrame.origin.x, tableFrame.origin.y, tableFrame.size.width, tableFrame.size.height)
         tableView = UITableView(frame: tableFrame, style: .plain) // because getLaunchImageName worked out size! //self.saveFrame
+         */
+        // Create a new UITableView instance
+        tableView = UITableView(frame: .zero, style: .plain)
+        
+        // Set tableView's translatesAutoresizingMaskIntoConstraints property to false
+        // This allows us to add our own constraints to the tableView
+        tableView!.translatesAutoresizingMaskIntoConstraints = false
 
+        // Add the tableView as a subview of the current view
+        view.addSubview(tableView!)
+
+        // Set up constraints to pin the tableView to the edges of the safe area
+        let guide = view.safeAreaLayoutGuide
+        NSLayoutConstraint.activate([
+            tableView!.topAnchor.constraint(equalTo: guide.topAnchor),
+            tableView!.leadingAnchor.constraint(equalTo: guide.leadingAnchor),
+            tableView!.trailingAnchor.constraint(equalTo: guide.trailingAnchor),
+            tableView!.bottomAnchor.constraint(equalTo: guide.bottomAnchor)
+        ])
+        
         //self.tableView.translatesAutoresizingMaskIntoConstraints = NO;
         tableView!.dataSource = self
         tableView!.delegate = self
@@ -432,8 +452,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             showSaveBtn()
             updateTrackerTableView() // need to force redisplay and set sliders, so reload in viewdidappear not so noticeable
 
-            navigationController?.toolbar.backgroundColor = .systemBackground
-            navigationController?.navigationBar.backgroundColor = .systemBackground
+            navigationController?.toolbar.backgroundColor = .tertiarySystemBackground
+            navigationController?.navigationBar.backgroundColor = .tertiarySystemBackground
             navigationController?.setToolbarHidden(false, animated: false)
 
             updateToolBar()
