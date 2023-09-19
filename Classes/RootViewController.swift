@@ -1209,7 +1209,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         readingFile = false
 
         //let vsize = rTracker_resource.get_visible_size(self)
-        let vsize = rTracker_resource.getVisibleSize(of: self)
+        //let vsize = rTracker_resource.getVisibleSize(of: self)
         
         navigationItem.rightBarButtonItem = addBtn
         navigationItem.leftBarButtonItem = editBtn
@@ -1264,14 +1264,13 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         setViewMode()
         view.addSubview(tableView!)
 
-        if SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO("9.0") {
-            let existingShortcutItems = UIApplication.shared.shortcutItems
-            if 0 == (existingShortcutItems?.count ?? 0) /*|| ([rTracker_resource getSCICount] != [existingShortcutItems count]) */ {
-                // can't set more than 4 or prefs messed up
-                tlist.updateShortcutItems()
-            }
+        let existingShortcutItems = UIApplication.shared.shortcutItems
+        if 0 == (existingShortcutItems?.count ?? 0) /*|| ([rTracker_resource getSCICount] != [existingShortcutItems count]) */ {
+            // can't set more than 4 or prefs messed up
+            tlist.updateShortcutItems()
         }
-
+        
+        refreshView()
     }
 
     public override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
@@ -1842,6 +1841,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     }
 
     func exceedsPrivacy(_ tid: Int) -> Bool {
+        DBGLog("curr priv \(privacyValue)  tid \(tid)  tid priv \(tlist.getPrivFromLoadedTID(tid))")
         return privacyValue < (tlist.getPrivFromLoadedTID(tid))
     }
 
