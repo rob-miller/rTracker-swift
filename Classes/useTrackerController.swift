@@ -439,9 +439,11 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
             NotificationCenter.default.addObserver(
                 self,
-                selector: #selector(configTVObjVC.keyboardWillShow(_:)),
+                selector: #selector(keyboardWillShow(_:)),
                 name: UIResponder.keyboardWillShowNotification,
                 object: view.window)
+
+
             NotificationCenter.default.addObserver(
                 self,
                 selector: #selector(configTVObjVC.keyboardWillHide(_:)),
@@ -797,120 +799,12 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     */
 
     @objc func keyboardWillShow(_ n: Notification?) {
-        DBGLog("UTC keyboardwillshow")
-
-        let coff = tableView!.contentOffset
-        //DBGLog(@"coff x=%f y=%f",coff.x,coff.y);
-        //DBGLog(@"k will show, y= %f",viewFrame.origin.y);
-
-        var boty: CGFloat
-
-        #if DEBUGLOG
-        if let ac = tracker!.activeControl {
-            //var acsv = ac.forBaselineLayout
-            var vf = ac.frame
-            DBGLog(String("frame1: \(vf.origin.x) \(vf.origin.y) \(vf.size.width) \(vf.size.height)"))
-            var acsv = ac.superview!
-            vf = acsv.frame
-            DBGLog(String("frame2: \(vf.origin.x) \(vf.origin.y) \(vf.size.width) \(vf.size.height)"))
-            acsv = (ac.superview?.superview)!
-            vf = acsv.frame
-            DBGLog(String("frame3: \(vf.origin.x) \(vf.origin.y) \(vf.size.width) \(vf.size.height)"))
-            acsv = (ac.superview?.superview?.superview)!
-            vf = acsv.frame
-            DBGLog(String("frame4: \(vf.origin.x) \(vf.origin.y) \(vf.size.width) \(vf.size.height)"))
-        } else {
-            DBGLog("keyboardWill Show but no active control")
-        }
-
-        let acsv = view
-        let vf = acsv!.frame
-        DBGLog(String("self frame: \(vf.origin.x) \(vf.origin.y) \(vf.size.width) \(vf.size.height)"))
-
-        #endif
-        /*
-            if (kIS_LESS_THAN_IOS7) {
-                boty = self.tracker.activeControl.superview.superview.frame.origin.y - coff.y;
-                // activeField.superview.superview.frame.origin.y - coff.y ;
-                //+ activeField.superview.superview.frame.size.height + MARGIN;
-            } else if (kIS_LESS_THAN_IOS8) {
-                boty = self.tracker.activeControl.superview.superview.superview.frame.origin.y - coff.y;
-                boty += self.tracker.activeControl.superview.superview.superview.frame.size.height;
-            } else {  // ios 8 and above
-             */
-        boty = (tracker!.activeControl?.superview?.superview?.frame.origin.y ?? 0.0) + (tracker!.activeControl?.superview?.superview?.frame.size.height ?? 0.0) - coff.y
-        //}
-
-        DBGLog(String("dispatching to wsk, boty= (boty) kis=(keyboardIsShown)"))
-        rTracker_resource.willShowKeyboard(n, view: view, boty: boty)
-
-
-        /*
-            if (keyboardIsShown) { // need bit more logic to handle additional scrolling for another textfield
-                return;
-            }
-
-        	//DBGLog(@"handling keyboard will show: %@",[n object]);
-        	self.saveFrame = self.view.frame;
-
-            NSDictionary* userInfo = [n userInfo];
-
-            // get the size of the keyboard
-            NSValue* boundsValue = [userInfo objectForKey:UIKeyboardFrameEndUserInfoKey];  //FrameBeginUserInfoKey 
-            CGSize keyboardSize = [boundsValue CGRectValue].size;
-
-        	CGRect viewFrame = self.view.frame;
-        	CGPoint coff = self.table.contentOffset;
-        	DBGLog(@"coff x=%f y=%f",coff.x,coff.y);
-        	DBGLog(@"k will show, y= %f",viewFrame.origin.y);
-
-        	CGFloat boty;
-
-            if (kIS_LESS_THAN_IOS7) {
-                boty = self.tracker.activeControl.superview.superview.frame.origin.y - coff.y;
-                // activeField.superview.superview.frame.origin.y - coff.y ;
-                //+ activeField.superview.superview.frame.size.height + MARGIN;
-            } else {
-                boty = self.tracker.activeControl.superview.superview.superview.frame.origin.y - coff.y;
-                boty += self.tracker.activeControl.superview.superview.superview.frame.size.height;
-            }
-            CGFloat topk = viewFrame.size.height - keyboardSize.height;  // - viewFrame.origin.y;
-        	if (boty <= topk) {
-        		DBGLog(@"activeField visible, do nothing  boty= %f  topk= %f",boty,topk);
-        	} else {
-        		DBGLog(@"activeField hidden, scroll up  boty= %f  topk= %f",boty,topk);
-
-        		viewFrame.origin.y -= (boty - topk);
-        		//viewFrame.size.height -= self.navigationController.toolbar.frame.size.height;
-
-        		[UIView beginAnimations:nil context:NULL];
-        		[UIView setAnimationBeginsFromCurrentState:YES];
-        		[UIView setAnimationDuration:kAnimationDuration];
-
-        		[self.view setFrame:viewFrame];
-
-        		[UIView commitAnimations];
-        	}
-
-            keyboardIsShown = YES;
-        	*/
+        rTracker_resource.willShowKeyboard(n, vwTarg:tracker!.activeControl!.superview!, vwScroll: view)  // superview is table cell holding active control
     }
 
     @objc func keyboardWillHide(_ n: Notification?) {
         DBGLog("handling keyboard will hide")
         rTracker_resource.willHideKeyboard()
-
-        /*
-        	[UIView beginAnimations:nil context:NULL];
-        	[UIView setAnimationBeginsFromCurrentState:YES];
-        	[UIView setAnimationDuration:kAnimationDuration];
-
-        	[self.view setFrame:self.saveFrame];
-
-        	[UIView commitAnimations];
-
-            keyboardIsShown = NO;
-             */
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {

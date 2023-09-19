@@ -275,8 +275,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         btnDone(nil)
     }
 
-    override func viewWillAppear(_ animated: Bool) {
-
+    func registerForKeyboard() {
         // register for keyboard notifications
         keyboardIsShown = false
         NotificationCenter.default.addObserver(
@@ -289,13 +288,9 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
             selector: #selector(keyboardWillHide(_:)),
             name: UIResponder.keyboardWillHideNotification,
             object: view.window)
-
-        navigationController?.setToolbarHidden(false, animated: false)
-
-        super.viewWillAppear(animated)
     }
-
-    override func viewWillDisappear(_ animated: Bool) {
+    
+    func deregisterForKeyboard() {
         //DBGLog(@"remove kybd will show notifcation");
         // unregister for keyboard notifications while not visible.
         NotificationCenter.default.removeObserver(
@@ -308,6 +303,17 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
             name: UIResponder.keyboardWillHideNotification,
             object: nil)
 
+    }
+    override func viewWillAppear(_ animated: Bool) {
+
+        registerForKeyboard()
+        navigationController?.setToolbarHidden(false, animated: false)
+
+        super.viewWillAppear(animated)
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        deregisterForKeyboard()
         super.viewWillDisappear(animated)
     }
 
@@ -379,68 +385,15 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
     // MARK: -
     // MARK: keyboard notifications
 
-    @objc func keyboardWillShow(_ n: Notification?) {
-        //DBGLog(@"configTVObjVC keyboardwillshow");
-        let boty = (activeField?.frame.origin.y ?? 0.0) + (activeField?.frame.size.height ?? 0.0) + MARGIN
-        rTracker_resource.willShowKeyboard(n, view: scroll, boty: boty)
-        //[rTracker_resource willShowKeyboard:n view:self.view boty:boty];
+    @objc func keyboardWillShow(_ n: Notification?) { 
 
-        /*
-            if (keyboardIsShown) { // need bit more logic to handle additional scrolling for another textfield
-                return;
-            }
+        rTracker_resource.willShowKeyboard(n, vwTarg: activeField!, vwScroll: scroll)
 
-        	//DBGLog(@"handling keyboard will show");
-        	self.saveFrame = self.view.frame;
-
-            NSDictionary* userInfo = [n userInfo];
-
-            // get the size of the keyboard
-            NSValue* boundsValue = [userInfo objectForKey:UIKeyboardFrameBeginUserInfoKey];
-            CGSize keyboardSize = [boundsValue CGRectValue].size;
-
-        	CGRect viewFrame = self.view.frame;
-        	//DBGLog(@"k will show, y= %f",viewFrame.origin.y);
-        	CGFloat boty = activeField.frame.origin.y + activeField.frame.size.height + MARGIN;
-
-            CGFloat topk = viewFrame.size.height - keyboardSize.height;  // - viewFrame.origin.y;
-        	if (boty <= topk) {
-        		//DBGLog(@"activeField visible, do nothing  boty= %f  topk= %f",boty,topk);
-        	} else {
-        		//DBGLog(@"activeField hidden, scroll up  boty= %f  topk= %f",boty,topk);
-
-        		viewFrame.origin.y -= (boty - topk);
-        		//viewFrame.size.height -= self.toolBar.frame.size.height - MARGIN;
-                viewFrame.size.height +=  MARGIN;
-
-        		[UIView beginAnimations:nil context:NULL];
-        		[UIView setAnimationBeginsFromCurrentState:YES];
-        		[UIView setAnimationDuration:kAnimationDuration];
-
-        		[self.view setFrame:viewFrame];
-
-        		[UIView commitAnimations];
-        	}
-
-            keyboardIsShown = YES;
-        	*/
     }
 
     @objc func keyboardWillHide(_ n: Notification?) {
         //DBGLog(@"handling keyboard will hide");
         rTracker_resource.willHideKeyboard()
-
-        /*
-        	[UIView beginAnimations:nil context:NULL];
-        	[UIView setAnimationBeginsFromCurrentState:YES];
-        	[UIView setAnimationDuration:kAnimationDuration];
-
-        	[self.view setFrame:self.saveFrame];
-
-        	[UIView commitAnimations];
-
-            keyboardIsShown = NO;	
-             */
     }
 
     // MARK: -
@@ -926,19 +879,14 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
     @objc func notifyReminderView() {
         DBGLog("notify reminder view!")
         let nrvc = notifyReminderViewController(nibName: "notifyReminderViewController", bundle: nil)
-        //nrvc.view.hidden = NO;
         nrvc.tracker = to
         nrvc.modalTransitionStyle = .flipHorizontal
-        //if ( SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"6.0") ) {
-        present(nrvc, animated: true)
-        //} else {
-        //    [self presentModalViewController:nrvc animated:YES];
-        //}
-        //[self.navigationController pushViewController:nrvc animated:YES];
-
-
-
-
+        deregisterForKeyboard()
+        present(nrvc, animated: true) {
+            nrvc.dismissalHandler = { [weak self] in
+                self?.registerForKeyboard()
+            }
+        }
     }
 
     // prefer don't do this - better to just reload plist
@@ -973,6 +921,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         }
     }
     */
+        
     @objc func setRemindersBtn() {
         to?.reminders2db()
         to?.setReminders()

@@ -928,8 +928,40 @@ class rTracker_resource: NSObject {
 
     // MARK: -
     // MARK: keyboard support
+    
+    class func calculateScreenOffset(of view: UIView?) -> CGFloat? {
+        var currentView = view
+        var totalYOrigin: CGFloat = 0.0
+        
+        while let unwrappedCurrentView = currentView {
+            totalYOrigin += unwrappedCurrentView.frame.origin.y
+            currentView = unwrappedCurrentView.superview
+        }
+        
+        guard let initialView = view else { return nil }
+        return totalYOrigin + initialView.frame.height
+    }
+    class func calculateBottomYCoordinate(of view: UIView?) -> CGFloat? {
+        guard let view = view, let window = view.window else {
+            return nil
+        }
+        
+        let bottomLeftPointInLocalCoordinates = CGPoint(x: 0, y: view.bounds.height)
 
-    class func willShowKeyboard(_ n: Notification?, view: UIView?, boty: CGFloat) {
+        if let cell = view as? UITableViewCell {
+            if let tableView = cell.superview as? UITableView {
+                let pointInTableView = cell.convert(bottomLeftPointInLocalCoordinates, to: tableView)
+                let pointInWindow = tableView.convert(pointInTableView, to: tableView.window)
+                return pointInWindow.y
+            }
+        }
+        
+        // view is not a UITableViewCell, or the superview is not a UITableView
+        let bottomLeftPointInWindowCoordinates = view.convert(bottomLeftPointInLocalCoordinates, to: window)
+        return bottomLeftPointInWindowCoordinates.y
+    }
+
+    @objc class func willShowKeyboard(_ n: Notification?, vwTarg: UIView, vwScroll: UIView? = nil) {
         //var n = n
 
         if keyboardIsShown {
@@ -937,46 +969,48 @@ class rTracker_resource: NSObject {
             return
         }
 
-        DBGLog(String("handling keyboard will show: \(n?.object)"))
-        currKeyboardView = view
-        currKeyboardSaveFrame = view?.frame ?? CGRect.zero
+        let vwS = vwScroll ?? vwTarg
+        DBGLog(String("handling keyboard will show"))
+        currKeyboardView = vwS
+        currKeyboardSaveFrame = vwS.frame
 
         let userInfo = n?.userInfo
 
         // get the size of the keyboard
         let boundsValue = userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue //FrameBeginUserInfoKey
-        let keyboardSize = boundsValue?.cgRectValue.size
+        let keyboardOrigin = boundsValue?.cgRectValue.origin
+        //let keyboardSize = boundsValue?.cgRectValue.size
 
-        var viewFrame = view?.frame
-        let topk = (viewFrame?.size.height ?? 0.0) - (keyboardSize?.height ?? 0.0) // - viewFrame.origin.y;
+        var viewFrame = vwS.frame
+        //let topk = (viewFrame?.size.height ?? 0.0) - (keyboardSize?.height ?? 0.0) // - viewFrame.origin.y;
+        let topk = keyboardOrigin!.y // + keyboardSize!.height
+        
+        //if var boty = calculateScreenOffset(of: vwTarg) {
+        if var boty = calculateBottomYCoordinate(of: vwTarg) {
+            boty += MARGIN
+            if boty <= topk {
+                DBGLog(String("activeField visible, do nothing  boty= \(boty)  topk= \(topk)"))
+            } else {
+                DBGLog(String("activeField hidden, scroll up  boty= \(boty)  topk= \(topk)"))
+                viewFrame.origin.y -= boty - topk
 
-        if boty <= topk {
-            DBGLog(String("activeField visible, do nothing  boty= \(boty)  topk= \(topk)"))
-        } else {
-            DBGLog(String("activeField hidden, scroll up  boty= \(boty)  topk= \(topk)"))
-            viewFrame?.origin.y -= boty - topk
+                UIView.animate(withDuration: 0.2, animations: {
+                    if vwS.responds(to: #selector(UIScrollView.flashScrollIndicators)) {
+                        // if is scrollview
+                        let sv = vwS as? UIScrollView
+                        var scrollPos = sv?.contentOffset
+                        scrollPos?.y += boty - topk
+                        sv?.contentOffset = scrollPos ?? CGPoint.zero
+                    } else {
+                        vwS.frame = viewFrame
+                    }
+                })
 
-            //viewFrame.size.height -= self.navigationController.toolbar.frame.size.height;
-
-            //[UIView beginAnimations:nil context:NULL];
-            //[UIView setAnimationBeginsFromCurrentState:YES];
-            //[UIView setAnimationDuration:kAnimationDuration];
-            UIView.animate(withDuration: 0.2, animations: {
-                if view?.responds(to: #selector(UIScrollView.flashScrollIndicators)) ?? false {
-                    // if is scrollview
-                    let sv = view as? UIScrollView
-                    var scrollPos = sv?.contentOffset
-                    scrollPos?.y += boty - topk
-                    sv?.contentOffset = scrollPos ?? CGPoint.zero
-                } else {
-                    view?.frame = viewFrame ?? CGRect.zero
-                }
-            })
-
-            //[UIView commitAnimations];
+            }
+            
+            keyboardIsShown = true
         }
 
-        keyboardIsShown = true
 
     }
 

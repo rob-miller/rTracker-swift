@@ -203,7 +203,7 @@ class ppwV: UIView, UITextFieldDelegate {
         if newState {
             NotificationCenter.default.addObserver(
                 self,
-                selector: #selector(configTVObjVC.keyboardWillShow(_:)),
+                selector: #selector(keyboardWillShow(_:)),
                 name: UIResponder.keyboardWillShowNotification,
                 object: window)
             NotificationCenter.default.addObserver(
@@ -251,10 +251,7 @@ class ppwV: UIView, UITextFieldDelegate {
         isHidden = false
         DBGLog(String("show: topy= \(topy)  f= \(f.origin.x) \(f.origin.y) \(f.size.width) \(f.size.height)"))
 
-        //[rTracker_resource willShowKeyboard:n view:self.view boty:boty];
-
         f.origin.y = topy - frame.size.height
-
 
         toggleKeyboardNotifications(true)
 
@@ -262,15 +259,7 @@ class ppwV: UIView, UITextFieldDelegate {
     }
 
     @objc func keyboardWillShow(_ n: Notification?) {
-        DBGLog("keyboardwillshow")
-        //CGRect f = self.topTF.frame;
-        //CGRect f2 = self.frame;
-
-        var boty: CGFloat
-        boty = (topTF?.frame.origin.y ?? 0.0) + ((topTF?.frame.size.height) ?? 0.0) + MARGIN - (frame.size.height)
-
-        rTracker_resource.willShowKeyboard(n, view: self, boty: boty)
-
+        rTracker_resource.willShowKeyboard(n, vwTarg: self)
     }
 
     @objc func keyboardWillHide(_ n: Notification?) {
@@ -319,11 +308,14 @@ class ppwV: UIView, UITextFieldDelegate {
         //[UIView beginAnimations:nil context:NULL];
         //[UIView setAnimationDuration:kAnimationDuration];
 
-        UIView.animate(withDuration: 0.2, animations: { [self] in
-            show()
+        UIView.animate(withDuration: 0.2, animations: {
+            self.show()
+        }) {(_) in
+            // Code to be executed after the animation completes
+            self.topTF?.becomeFirstResponder()
+        }
+            
 
-            topTF?.becomeFirstResponder() //prints warning: @setting the first responder view of the table but we don't know its type (cell/header/footer)@
-        })
         //[UIView commitAnimations];
     }
 

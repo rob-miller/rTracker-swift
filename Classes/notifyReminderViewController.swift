@@ -152,6 +152,8 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
     @IBOutlet var btnDoneOutlet: UIBarButtonItem!
     @IBOutlet var btnHelpOutlet: UIBarButtonItem!
 
+    var dismissalHandler: (() -> Void)?  // so presenting controller configTVObjVC can know when we finish
+
     override init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) {
         super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)
         //self.tmpReminder=TRUE;
@@ -258,7 +260,6 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         swipe.direction = .right
         view.addGestureRecognizer(swipe)
 
-
         super.viewDidLoad()
         // Do any additional setup after loading the view from its nib.
     }
@@ -326,12 +327,12 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
 
         NotificationCenter.default.addObserver(
             self,
-            selector: #selector(configTVObjVC.keyboardWillShow(_:)),
+            selector: #selector(keyboardWillShow(_:)),
             name: UIResponder.keyboardWillShowNotification,
             object: view.window)
         NotificationCenter.default.addObserver(
             self,
-            selector: #selector(configTVObjVC.keyboardWillHide(_:)),
+            selector: #selector(keyboardWillHide(_:)),
             name: UIResponder.keyboardWillHideNotification,
             object: view.window)
 
@@ -353,6 +354,8 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
             object: nil)
 
         super.viewWillDisappear(animated)
+        
+        dismissalHandler?()  // so presenting controller configTVObjVC can know when we finish
     }
 
     // MARK: -
@@ -1170,9 +1173,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
     }
 
     @objc func keyboardWillShow(_ n: Notification?) {
-        //DBGLog(@"configTVObjVC keyboardwillshow");
-        let boty = (activeField?.frame.origin.y ?? 0.0) + (activeField?.frame.size.height ?? 0.0) + MARGIN
-        rTracker_resource.willShowKeyboard(n, view: view, boty: boty)
+        rTracker_resource.willShowKeyboard(n, vwTarg: activeField!, vwScroll: view)
     }
 
     @objc func keyboardWillHide(_ n: Notification?) {
