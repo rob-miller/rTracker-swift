@@ -518,8 +518,9 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication, performActionFor shortcutItem: UIApplicationShortcutItem, completionHandler: @escaping (Bool) -> Void) {
 
         if let rootController = getRootController() {
-            if let tid = shortcutItem.userInfo?["tid"] {
-                rootController.performSelector(onMainThread: #selector(RootViewController.doOpenTracker(_:)), with: tid, waitUntilDone: false)
+            if let tid = shortcutItem.userInfo?["tid"] as? Int {
+                rootController.doOpenTracker(tid)
+                //rootController.performSelector(onMainThread: #selector(RootViewController.doOpenTracker(_:)), with: NSNumber(value: tid), waitUntilDone: false)
                 completionHandler(true)
             } else {
                 completionHandler(false)
