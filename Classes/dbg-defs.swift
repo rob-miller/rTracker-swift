@@ -95,7 +95,7 @@ func DBGLog(_ message: String, file: String = #file, function: String = #functio
 
 func DBGWarn(_ message: String, file: String = #file, function: String = #function, line: Int = #line) {
 #if DEBUGWARN
-    print("dbgwarn enabled")
+    //print("dbgwarn enabled")
     let fileName = file.components(separatedBy: "/").last ?? ""
     print("**warning** [\(fileName):\(line)] \(function): \(message)")
     //#define DBGWarn(args...) NSLog(@"%@",[NSString stringWithFormat: args])

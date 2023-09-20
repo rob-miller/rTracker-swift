@@ -182,9 +182,9 @@ class tObjBase: NSObject {
             SQLITE_OPEN_FILEPROTECTION_COMPLETE | SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, nil) != SQLITE_OK {
             if let errorPointer = sqlite3_errmsg(tDb) {
                     let errorMessage = String(cString: errorPointer)
-                    print("SQLite error: \(errorMessage)")
+                    DBGWarn("SQLite error: \(errorMessage)")
                 } else {
-                    print("SQLite error with unknown error message")
+                    DBGWarn("SQLite error with unknown error message")
                 }
             sqlite3_close(tDb)
             dbgNSAssert(false, "error opening rTracker database \(dbName!)")
@@ -297,9 +297,9 @@ class tObjBase: NSObject {
     func tobExecError(_ sql: String?) {
         if let errorPointer = sqlite3_errmsg(tDb) {
             let errorMessage = String(cString: errorPointer)
-            print("SQLite error: \(errorMessage)")
+            DBGWarn("SQLite error: \(errorMessage)")
         } else {
-            print("No error message provided")
+            DBGWarn("No error message provided")
         }
 
         DBGErr(String("tob error executing -> \(sql) <- : \(sqlite3_errmsg(tDb)!) toid \(toid) dbName \(dbName!)"))

@@ -54,7 +54,7 @@ class CustomAccessoryView: UIView {
 
     }
     @IBAction func addButtonPressed(_ sender: Any) {
-        print("addButton pressed")
+        //print("addButton pressed")
         votb.addPickerData()
     }
     
@@ -63,7 +63,7 @@ class CustomAccessoryView: UIView {
     }
     
     @IBAction func segmentChanged(_ sender: UISegmentedControl) {
-        print("seg changed")
+        //print("seg changed")
         votb.segmentChanged(sender.selectedSegmentIndex)
     }
     

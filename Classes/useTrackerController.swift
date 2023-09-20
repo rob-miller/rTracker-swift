@@ -799,7 +799,10 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     */
 
     @objc func keyboardWillShow(_ n: Notification?) {
-        rTracker_resource.willShowKeyboard(n, vwTarg:tracker!.activeControl!.superview!, vwScroll: view)  // superview is table cell holding active control
+        if let sv = tracker?.activeControl?.superview {
+            // can get here after closing voTextBox with nil activeControl
+            rTracker_resource.willShowKeyboard(n, vwTarg:sv, vwScroll: view)  // superview is table cell holding active control
+        }
     }
 
     @objc func keyboardWillHide(_ n: Notification?) {

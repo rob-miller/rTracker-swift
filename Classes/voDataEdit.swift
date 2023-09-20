@@ -128,7 +128,7 @@ class voDataEdit: UIViewController, UITextViewDelegate {
 
         NotificationCenter.default.addObserver(
             self,
-            selector: #selector(configTVObjVC.keyboardWillShow(_:)),
+            selector: #selector(keyboardWillShow(_:)),
             name: UIResponder.keyboardWillChangeFrameNotification /*UIKeyboardWillShowNotification */,
             object: view.window)
         NotificationCenter.default.addObserver(
@@ -186,21 +186,10 @@ class voDataEdit: UIViewController, UITextViewDelegate {
             return
         }
 
-        // the keyboard is showing so resize the table's height
-        //self.saveFrame = self.textView.frame;
         let userInfo = aNotification?.userInfo
         let keyboardRect = userInfo![UIResponder.keyboardFrameEndUserInfoKey] as! CGRect // ?.cgRectValue
         DBGLog(String("keyboard rect: \(keyboardRect.origin.x) \(keyboardRect.origin.y) \(keyboardRect.size.width) \(keyboardRect.size.height)"))
-        /*
-            if (self.vo) {
-                keyboardRect = [self.vo.vos.vc.view convertRect:keyboardRect fromView:nil];
-            } else {
-                keyboardRect = [self.view convertRect:keyboardRect fromView:nil];
-            }
-            */
-        //DBGLog(@"keyboard rect conv: %f %f %f %f",keyboardRect.origin.x,keyboardRect.origin.y,keyboardRect.size.width,keyboardRect.size.height);
 
-        //NSTimeInterval animationDuration = [[aNotification userInfo][UIKeyboardAnimationDurationUserInfoKey] doubleValue];
         var frame = voDataEdit.getInitTVF(self)
         frame.size.height -= keyboardRect.size.height
         //UIView *iav = ((voTextBox*)self.vo.vos).textView.inputAccessoryView;
@@ -212,16 +201,12 @@ class voDataEdit: UIViewController, UITextViewDelegate {
 
         DBGLog(String("keyboard TVF: \(frame.origin.x) \(frame.origin.y) \(frame.size.width) \(frame.size.height)"))
 
-        //[UIView beginAnimations:@"ResizeForKeyboard" context:nil];
-        //[UIView setAnimationDuration:animationDuration];
-
         UIView.animate(withDuration: 0.2, animations: { [self] in
             textView?.frame = frame
             if let selectedRange = textView?.selectedRange {
                 textView?.scrollRangeToVisible(selectedRange)
             }
         })
-        //[UIView commitAnimations];
 
         keyboardIsShown = true
 
@@ -245,15 +230,6 @@ class voDataEdit: UIViewController, UITextViewDelegate {
 
         keyboardIsShown = false
     }
-    /*
-    func saveAction(sender: Any) {
-        print("save me")
-        // Use performSelector, if needed
-        // saveClass.perform(self.saveSelector, with: "FOOOO", afterDelay: 0)
-        saveClass!.perform(self.saveSelector!, with: self.textView!.text, afterDelay: 0)
-        self.dismiss(animated: true, completion: nil)
-    }
-     */
 
     @objc func saveAction(_ sender: Any?) {
         DBGLog("save me")

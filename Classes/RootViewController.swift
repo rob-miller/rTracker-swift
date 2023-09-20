@@ -548,7 +548,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                     }
                 }
             } catch {
-                print("Error retrieving resource values for file: \(url.path), error: \(error)")
+                DBGLog("Error retrieving resource values for file: \(url.path), error: \(error)")
             }
         }
 
