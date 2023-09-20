@@ -414,44 +414,16 @@ class voState: NSObject, voProtocol {
         if cell == nil {
             cell = UITableViewCell(style: .default, reuseIdentifier: voState.voTVCellCellIdentifier)
             cell?.selectionStyle = .none
-            //cell.backgroundColor=nil;
-            //ell.backgroundColor = [UIColor clearColor];
-            //cell.backgroundColor = [UIColor blueColor];
             //DBGLog(@"new cell");
         } else {
-            // the cell is being recycled, remove old embedded controls
-            /*
-                    NSArray *subviews = [cell.contentView subviews];
-                    for (UIView *sv in subviews) {
-                        [sv removeFromSuperview];
-                    }
-                    */
 
-            //var viewToRemove: UIView? = nil
             while let viewToRemove = cell?.contentView.viewWithTag(kViewTag) {
                 //DBGLog(@"removing");
                 viewToRemove.removeFromSuperview()
             }
 
-            // removes too much [cell.contentView removeFromSuperview];
-
-            //DBGLog(@"recycled cell");
         }
 
-        /*
-        #if DEBUGLOG
-            CGFloat cellWidth = cell.bounds.size.width;
-            //DBGLog(@"cell width= %f kw width= %f",cellWidth,[rTracker_resource getKeyWindowWidth]);
-        #endif
-            */
-
-        /*
-        	cell.textLabel.text = self.vo.valueName;
-            //DBGLog(@"text= %@",cell.textLabel.text);
-            cell.textLabel.textColor = [UIColor blackColor];
-            cell.textLabel.backgroundColor = [UIColor clearColor];
-        	//cell.textLabel.tag = kViewTag;
-            */
         cell?.backgroundColor = .clear
 
         bounds.origin.x = MARGIN
@@ -472,18 +444,15 @@ class voState: NSObject, voProtocol {
         var label = UILabel(frame: bounds)
         label.tag = kViewTag
         label.font = PrefBodyFont
-        if #available(iOS 13.0, *) {
-            label.textColor = .label
-            let darkMode = vc?.traitCollection.userInterfaceStyle == .dark
-            label.backgroundColor = darkMode ? UIColor.systemBackground : UIColor.clear
-        } else {
-            label.textColor = .label
-            label.backgroundColor = .clear
-        }
-        label.alpha = 1.0
-        label.textAlignment = .left // ios6 UITextAlignmentLeft;
 
-        //don't use - messes up for loarger displays -- label.autoresizingMask = UIViewAutoresizingFlexibleRightMargin; // | UIViewAutoresizingFlexibleHeight;
+        label.textColor = .label
+        let darkMode = vc?.traitCollection.userInterfaceStyle == .dark
+        label.backgroundColor = darkMode ? UIColor.systemBackground : UIColor.clear
+
+        label.alpha = 1.0
+        label.textAlignment = .left
+
+        //don't use - messes up for larger displays -- label.autoresizingMask = UIViewAutoresizingFlexibleRightMargin; // | UIViewAutoresizingFlexibleHeight;
         label.contentMode = .topLeft
         label.text = vo.valueName
         //label.enabled = YES;
@@ -517,18 +486,14 @@ class voState: NSObject, voProtocol {
         }
 
         if (labelSize.width > maxLabel.width) || longTitleSize.height > 0 {
-            bounds.origin.x = (cell?.frame.origin.x ?? 0.0) + MARGIN
+            bounds.origin.x = cell!.frame.origin.x + MARGIN
             bounds.origin.y += bounds.size.height + MARGIN //   maxLabel.height + (2*MARGIN);
             bounds.size.width = rTracker_resource.getKeyWindowWidth() - MARGIN - RMARGIN
             bounds.size.height = maxLabel.height + MARGIN
         } else {
-            //CGSize screenSize = [[UIScreen mainScreen] bounds].size;
-            bounds.origin.x = cell!.frame.origin.x + maxLabel.width + LMARGIN
-            //bounds.origin.x = cell.frame.origin.x + (cell.frame.size.width )
-            //bounds.origin.y = maxLabel.height - (MARGIN*1.5);
+            bounds.origin.x = maxLabel.width + LMARGIN
             bounds.origin.y = MARGIN
             bounds.size.width = rTracker_resource.getKeyWindowWidth() - maxLabel.width - LMARGIN - RMARGIN // cell.frame.size.width - maxLabel.width - LMARGIN - RMARGIN;
-            //bounds.size.width = screenSize.width - maxLabel.width - LMARGIN - RMARGIN;
             bounds.size.height = maxLabel.height + MARGIN
 
             //DBGLog(@"maxLabel: % f %f",self.tracker.maxLabel.width, self.tracker.maxLabel.height);

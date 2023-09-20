@@ -1390,7 +1390,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         }
         setTrackerDate(targD)
         if targD > 0 {
-            tableView!.reloadSections(NSIndexSet(index: 0) as IndexSet, with: .left)
+            tableView!.reloadData()
         }
 
     }
@@ -1709,7 +1709,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             //[self presentModalViewController:mailer animated:YES];
         }
         #if RELEASE
-        rTracker_resource.deleteFile(atPath: tracker.getPath(ext))
+        _ = rTracker_resource.deleteFile(atPath: tracker!.getPath(ext))
         #else
         DBGErr(String("leaving rtrk at path: (tracker.getPath(ext))"))
         #endif
