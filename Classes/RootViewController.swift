@@ -592,7 +592,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         return (rtrkTid != 0)
     }
 
-    func rtm_xloadTrackerPlistFiles() -> Bool {
+    func rtmx_loadTrackerPlistFiles() -> Bool {
         // called on refresh, loads any _in.plist files as trackers
         // also called if any .rtrk files exist
         DBGLog("loadTrackerPlistFiles")
@@ -1030,117 +1030,6 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         
         title = rtitle
         DBGLog("title= \(rtitle!)")
-        
-        /*
-        let c = words.count
-        var name: String? = nil
-
-        for i in 0..<c {
-            var w: String? = nil
-            w = words[i]
-            if "" != w {
-                name = w
-            }
-        }
-
-
-        let prodNdx = 0
-        var longName = words[0]
-
-        for prodNdx in 0..<c {
-            if (.orderedSame == "iphone".caseInsensitiveCompare(words[prodNdx])) || (.orderedSame == "ipad".caseInsensitiveCompare(words[prodNdx])) || (.orderedSame == "ipod".caseInsensitiveCompare(words[prodNdx])) || (.orderedSame == "itouch".caseInsensitiveCompare(words[prodNdx])) {
-                break
-            }
-        }
-        if (1 <= prodNdx) && (prodNdx < c) {
-            for i in 1..<prodNdx {
-                longName = longName + " \(words[i])"
-            }
-        } else if (0 == prodNdx) || (prodNdx >= c) {
-            longName = ""
-        }
-        #if RELEASE
-        let ReleaseFlag = true
-        #else
-        let ReleaseFlag = false
-        #endif
-        #if NONAME
-        let NoNameFlag = true
-        #else
-        let NoNameFlag = false
-        #endif
-        
-        if (nil == name)
-            || (ReleaseFlag && ((name == "iPhone") || (name == "iPad")))
-            || (0 == (name?.count ?? 0))
-            || NoNameFlag  {
-            title = Bundle.main.infoDictionary?["CFBundleName"] as? String // @"rTracker";
-        } else {
-         
-            var bw1: CGFloat = 0.0
-            var bw2: CGFloat = 0.0
-            let view = editBtn.value(forKey: "view") as? UIView
-            bw1 = view != nil ? ((view?.frame.size.width ?? 0.0) + (view?.frame.origin.x ?? 0.0)) : CGFloat(53.0) // hardcode after change from leftBarButton to backBarButton
-            let view2 = addBtn.value(forKey: "view") as? UIView
-            bw2 = (view2 != nil ? view2?.frame.origin.x : CGFloat(282.0)) ?? 0.0
-
-            if (0.0 == bw1) || (0.0 == bw2) {
-                rtitle = "rTracker"
-            } else {
-                var tname: String? = nil
-                var tn2: String?
-
-                let r0 = (name as NSString?)?.rangeOfCharacter(from: CharacterSet(charactersIn: "'`’´‘"), options: .backwards)
-                if NSNotFound != r0?.location {
-                    let len = name?.count ?? 0
-                    let pos = (r0?.location ?? 0) + (r0?.length ?? 0)
-                    if pos == (len - 1) {
-                        let c = name?[name!.index(name!.startIndex, offsetBy: pos)]  // unichar(from: name?[(name?.index(name!.startIndex, offsetBy: UInt(pos)))!] ?? 0)
-                        if ("s" == c) || ("S" == c) {
-                            tname = (name ?? "") + " tracks"
-                            tn2 = (name ?? "") + "  tracks"
-                        }
-                    } else if pos == len {
-                        tname = (name ?? "") + " tracks"
-                        tn2 = (name ?? "") + "  tracks"
-                    }
-                }
-
-                if nil == tname {
-                    tname = (name ?? "") + "’s tracks"
-                    tn2 = (name ?? "") + " ’s tracks"
-                }
-
-                DBGLog(String("tname= \(tname) longname = \(longName)"))
-
-                let ltname = longName + " tracks"
-                let ltn2 = longName + "  tracks"
-
-                let maxWidth = (bw2 - bw1) - 8 //self.view.bounds.size.width - btnWidths;
-                //DBGLog(@"view wid= %f bw1= %f bw2= %f",self.view.bounds.size.width ,bw1,bw2);
-
-                let namesize = tn2?.size(withAttributes: [
-                    NSAttributedString.Key.font: UIFont.boldSystemFont(ofSize: 20.0)
-                ])
-                let nameWidth = ceil(namesize!.width)
-
-                let lnamesize = ltn2.size(withAttributes: [
-                    NSAttributedString.Key.font: UIFont.boldSystemFont(ofSize: 20.0)
-                ])
-
-                let lnameWidth = ceil(lnamesize.width)
-
-                //DBGLog(@"name wid= %f  maxwid= %f  name= %@",nameWidth,maxWidth,tname);
-                if ("" != longName) && (lnameWidth < maxWidth) {
-                    title = ltname
-                } else if nameWidth < maxWidth {
-                    title = tname
-                } else {
-                    title = "rTracker"
-                }
-            }
-        }
-         */
     }
 
 
@@ -1219,17 +1108,6 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
         // title setup
         initTitle()
-
-        /*
-        var tableFrame: CGRect = CGRect.zero
-        tableFrame.origin.x = 0.0
-        tableFrame.origin.y = 0.0
-        tableFrame.size.height = vsize.height // + 100  rtmx
-        tableFrame.size.width = vsize.width
-
-        DBGLog(String("tvf \(tableFrame)"))  // origin x %f y %f size w %f h %f"), tableFrame.origin.x, tableFrame.origin.y, tableFrame.size.width, tableFrame.size.height)
-        tableView = UITableView(frame: tableFrame, style: .plain)
-         */
         
         // Create a new UITableView instance
         tableView = UITableView(frame: .zero, style: .plain)

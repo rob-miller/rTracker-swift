@@ -129,11 +129,7 @@ class voBoolean: voState {
         vosFrame = bounds
 
         if vo.value == "" {
-            if #available(iOS 13.0, *) {
-                rTracker_resource.clrCheck(checkButton, colr: .tertiarySystemBackground)
-            } else {
-                rTracker_resource.clrCheck(checkButton, colr: .white)
-            }
+            rTracker_resource.clrCheck(checkButton, colr: .tertiarySystemBackground)
         } else {
             rTracker_resource.setCheck(checkButton, colr: rTracker_resource.colorSet()[Int(vo.optDict["btnColr"]!)!])
         }

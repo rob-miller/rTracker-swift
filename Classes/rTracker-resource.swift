@@ -1005,9 +1005,7 @@ class rTracker_resource: NSObject {
                         vwS.frame = viewFrame
                     }
                 })
-
             }
-            
             keyboardIsShown = true
         }
 
