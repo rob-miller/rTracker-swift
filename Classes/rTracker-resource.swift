@@ -22,6 +22,7 @@
 //
 
 import AudioToolbox
+import AVFoundation
 import CoreText
 import Foundation
 import UIKit
@@ -1026,28 +1027,30 @@ class rTracker_resource: NSObject {
     }
 
     class func playSound(_ soundFileName: String?) {
-
-        if nil == soundFileName {
+        
+        // Guard against nil filename
+        guard let soundFileName = soundFileName else {
+            DBGLog("Error: Sound filename is nil")
             return
         }
-
-        let soundURL = Bundle.main.url(
-            forResource: soundFileName,
-            withExtension: nil)
-
-        DBGLog(String("soundfile = \(soundFileName) soundurl= \(soundURL)"))
-
-        if let url = soundURL as CFURL? {
-            AudioServicesCreateSystemSoundID(url, UnsafeMutablePointer<SystemSoundID>(mutating: &sound1))
+        
+        guard let soundURL = Bundle.main.url(forResource: soundFileName, withExtension: nil) else {
+            DBGLog("Error: Unable to find resource with filename \(soundFileName)")
+            return
         }
-        AudioServicesAddSystemSoundCompletion(
-            sound1,
-            nil,
-            nil,
-            systemAudioCallback,
-            nil)
-
-        AudioServicesPlayAlertSound(sound1)
+        
+        DBGLog("soundfile = \(soundFileName) soundurl= \(soundURL)")
+        
+        var soundID: SystemSoundID = 0
+        let result = AudioServicesCreateSystemSoundID(soundURL as CFURL, &soundID)
+        if result != kAudioServicesNoError {
+            DBGLog("Error creating audio system sound with ID: \(result)")
+            return
+        }
+        
+        AudioServicesAddSystemSoundCompletion(soundID, nil, nil, systemAudioCallback, nil)
+        
+        AudioServicesPlayAlertSound(soundID)
     }
 
     //---------------------------
