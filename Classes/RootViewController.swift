@@ -981,8 +981,8 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
         // set up the window title, try to get owner's name
 
-        let devname = UIDevice.current.name
-        //DBGLog(@"name = %@",devname);
+        let devname = UIDevice.current.name  // this no longer works from iOS 16, need an 'entitlement'
+        DBGLog("name = \(devname)");
         let words = devname.components(separatedBy: " ")
         let bname = Bundle.main.infoDictionary?["CFBundleName"] as? String // @"rTracker";  default title
         var rtitle = bname
