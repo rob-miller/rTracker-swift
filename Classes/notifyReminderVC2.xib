@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="19162" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="22154" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
     <device id="retina6_1" orientation="portrait" appearance="light"/>
+    <accessibilityOverrides isEnabled="YES"/>
     <dependencies>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="19144"/>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="22130"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
         <capability name="System colors in document resources" minToolsVersion="11.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
@@ -24,27 +26,32 @@
             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
             <subviews>
                 <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Start Date:" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="tuu-EB-uSs">
-                    <rect key="frame" x="10" y="63" width="83" height="20.5"/>
+                    <rect key="frame" x="10" y="67" width="82" height="20.5"/>
+                    <accessibility key="accessibilityConfiguration" hint="start for delay if not last tracker" label="start Date"/>
                     <fontDescription key="fontDescription" type="system" pointSize="17"/>
                     <nil key="highlightedColor"/>
                 </label>
                 <datePicker contentMode="scaleToFill" verticalCompressionResistancePriority="500" contentHorizontalAlignment="center" contentVerticalAlignment="center" datePickerMode="dateAndTime" minuteInterval="1" style="wheels" translatesAutoresizingMaskIntoConstraints="NO" id="ARu-3J-MtR">
-                    <rect key="frame" x="10" y="88.5" width="404" height="216"/>
+                    <rect key="frame" x="10" y="92.5" width="404" height="216"/>
                 </datePicker>
                 <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Sound:" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="S5U-xH-gBz">
-                    <rect key="frame" x="10" y="309.5" width="54" height="20.5"/>
+                    <rect key="frame" x="10" y="313.5" width="54" height="20.5"/>
                     <fontDescription key="fontDescription" type="system" pointSize="17"/>
                     <nil key="highlightedColor"/>
                 </label>
                 <pickerView contentMode="scaleToFill" verticalCompressionResistancePriority="500" translatesAutoresizingMaskIntoConstraints="NO" id="ZOi-vZ-ifs">
-                    <rect key="frame" x="10" y="335" width="404" height="216"/>
+                    <rect key="frame" x="10" y="339" width="404" height="216"/>
+                    <accessibility key="accessibilityConfiguration" hint="sound to play with notification" identifier="nr-sound-chooser" label="sound choice">
+                        <bool key="isElement" value="YES"/>
+                    </accessibility>
                     <connections>
                         <outlet property="dataSource" destination="-1" id="NKz-2V-R4A"/>
                         <outlet property="delegate" destination="-1" id="7Ap-oy-Gjk"/>
                     </connections>
                 </pickerView>
                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="ptc-mh-Pkl">
-                    <rect key="frame" x="333" y="305" width="51" height="30"/>
+                    <rect key="frame" x="333" y="309" width="51" height="30"/>
+                    <accessibility key="accessibilityConfiguration" hint="tap to play selected sound" identifier="nr-sound-play" label="play sample"/>
                     <state key="normal" title="Sample">
                         <color key="titleShadowColor" red="0.5" green="0.5" blue="0.5" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                     </state>

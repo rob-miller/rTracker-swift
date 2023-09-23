@@ -83,6 +83,28 @@ class CustomAccessoryView: UIView {
         segControl.setTitleTextAttributes([
             .font: UIFont.systemFont(ofSize: fsize)
         ], for: .normal)
+        
+        segControl.subviews[0].accessibilityLabel = "Contacts"
+        segControl.subviews[0].accessibilityHint = "tap to chose from Contacts"
+        segControl.subviews[0].accessibilityIdentifier = "tbox-seg-contacts"
+        
+        // Custom accessibility elements
+        let contactsElement = UIAccessibilityElement(accessibilityContainer: segControl!)
+        contactsElement.accessibilityLabel = "Contacts"
+        contactsElement.accessibilityHint = "tap to chose from Contacts"
+        contactsElement.accessibilityIdentifier = "tbox-seg-contacts"
+        contactsElement.accessibilityFrameInContainerSpace = segControl.subviews[0].frame
+
+        let historyElement = UIAccessibilityElement(accessibilityContainer: segControl!)
+        historyElement.accessibilityLabel = "History"
+        historyElement.accessibilityFrameInContainerSpace = segControl.subviews[1].frame
+
+        let keyboardElement = UIAccessibilityElement(accessibilityContainer: segControl!)
+        keyboardElement.accessibilityLabel = "Keyboard"
+        keyboardElement.accessibilityFrameInContainerSpace = segControl.subviews[2].frame
+
+        //segControl.accessibilityElements = [contactsElement, historyElement, keyboardElement]
+
         searchSeg.setTitleTextAttributes([
             .font: UIFont.systemFont(ofSize: fsize)
         ], for: .normal)
