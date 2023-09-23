@@ -521,24 +521,6 @@ class notifyReminder: NSObject {
             callback(ridArray)
         }
     }
-    /*
-     //+(NSMutableArray *) getRidArray:(UNUserNotificationCenter*) center tid:(NSInteger) tid;
-     class func useRidArray(_ center: UNUserNotificationCenter?, tid: Int, callback: @escaping ([AnyHashable]?) -> Void) {
-     var ridArray: [AnyHashable] = []
-     center?.getPendingNotificationRequests(completionHandler: {
-     for i in 0..<notifications.count {
-     let oneEvent = notifications[i] //as? UNNotificationRequest
-     let userInfoCurrent = oneEvent.content.userInfo
-     if (userInfoCurrent["tid"] as? NSNumber)?.intValue ?? 0 == tid {
-     let tidRid = oneEvent.identifier.components(separatedBy: "-")
-     ridArray.append(tidRid[1]) // just add rid
-     }
-     }
-     callback(ridArray)
-     })
-     
-     }
-     */
 }
      
     
