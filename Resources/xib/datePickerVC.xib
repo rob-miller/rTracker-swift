@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="19162" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="22154" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
     <device id="retina6_1" orientation="portrait" appearance="light"/>
     <dependencies>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="19144"/>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="22130"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
         <capability name="System colors in document resources" minToolsVersion="11.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
@@ -34,6 +35,7 @@
                             <button key="customView" opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" id="xGn-qo-KOr">
                                 <rect key="frame" x="20" y="12" width="374" height="30"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <accessibility key="accessibilityConfiguration" hint="tap to exit date picker" identifier="exitTrkrDate" label="Leave"/>
                                 <state key="normal" title="❌">
                                     <color key="titleShadowColor" red="0.5" green="0.5" blue="0.5" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                 </state>
@@ -49,6 +51,7 @@
                 </datePicker>
                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="8">
                     <rect key="frame" x="10" y="723" width="73" height="30"/>
+                    <accessibility key="accessibilityConfiguration" hint="tap for new entry with this date" identifier="trkrNewDate" label="New Entry"/>
                     <constraints>
                         <constraint firstAttribute="width" constant="73" id="sI4-FA-CIf"/>
                     </constraints>
@@ -62,6 +65,7 @@
                 </button>
                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="9">
                     <rect key="frame" x="172" y="723" width="70" height="30"/>
+                    <accessibility key="accessibilityConfiguration" hint="tap to set date for this entry" identifier="trkrSetDate" label="Set Date"/>
                     <constraints>
                         <constraint firstAttribute="width" constant="70" id="O4B-py-VEW"/>
                     </constraints>
@@ -75,6 +79,7 @@
                 </button>
                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="10">
                     <rect key="frame" x="324" y="723" width="80" height="30"/>
+                    <accessibility key="accessibilityConfiguration" hint="tap to go to entry nearest this date" identifier="trkrGotoDate" label="Go To Date"/>
                     <constraints>
                         <constraint firstAttribute="width" constant="80" id="SiU-Ol-afP"/>
                     </constraints>

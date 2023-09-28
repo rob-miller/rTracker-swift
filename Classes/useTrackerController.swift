@@ -873,6 +873,10 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 barButtonSystemItem: .save,
                 target: self,
                 action: #selector(addTrackerController.btnSave))
+            
+            _calBtn!.accessibilityLabel = "Save"
+            _calBtn!.accessibilityHint = "tap to save this entry"
+            _calBtn!.accessibilityIdentifier = "trkrSave"
         }
         return _saveBtn!
     }
@@ -887,11 +891,19 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                     target: self,
                     action: #selector(btnAccept))
                 _menuBtn!.tintColor = .green
+                
+                _menuBtn!.accessibilityLabel = "Accept"
+                _menuBtn!.accessibilityHint = "tap to accept importing this tracker"
+                _menuBtn!.accessibilityIdentifier = "trkrAccept"
             } else {
                 _menuBtn = UIBarButtonItem(
                     barButtonSystemItem: .action,
                     target: self,
                     action: #selector(btnMenu))
+                
+                _menuBtn!.accessibilityLabel = "Share Menu"
+                _menuBtn!.accessibilityHint = "tap to show sharing options"
+                _menuBtn!.accessibilityIdentifier = "trkrMenu"
             }
         }
 
@@ -1523,6 +1535,10 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 style: .plain,
                 target: self,
                 action: #selector(btnCurrDate))
+            
+            _currDateBtn!.accessibilityLabel = "Date"
+            _currDateBtn!.accessibilityHint = "tap modify entry time and date"
+            _currDateBtn!.accessibilityIdentifier = "trkrDate"
         }
 
         return _currDateBtn!
@@ -1568,6 +1584,10 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 //,NSForegroundColorAttributeName: [UIColor greenColor]
                 ],
                 for: .normal)
+            
+            _calBtn!.accessibilityLabel = "Calendar"
+            _calBtn!.accessibilityHint = "tap to select entries by date"
+            _calBtn!.accessibilityIdentifier = "trkrCal"
         }
 
         return _calBtn!
@@ -1589,6 +1609,11 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 //,NSForegroundColorAttributeName: [UIColor greenColor]
                 ],
                 for: .normal)
+            
+            _searchBtn!.accessibilityLabel = "trkrSearch"
+            _searchBtn!.accessibilityHint = "tap for search instructions"
+            _searchBtn!.accessibilityIdentifier = "trkrSearch"
+            
         }
 
         return _searchBtn!
@@ -1622,6 +1647,11 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 barButtonSystemItem: .fastForward,
                 target: self,
                 action: #selector(btnSkip2End))
+            
+            _calBtn!.accessibilityLabel = "Skip"
+            _calBtn!.accessibilityHint = "tap to skip to new entry"
+            _calBtn!.accessibilityIdentifier = "trkrSkip"
+            
             //_calBtn.tintColor = [UIColor colorWithRed:0.0 green:0.8 blue:0.0 alpha:1.0];
             //_calBtn.tintColor = [UIColor greenColor];
             //[_calBtn setTitleTextAttributes:@{

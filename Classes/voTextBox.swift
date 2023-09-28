@@ -85,31 +85,44 @@ class CustomAccessoryView: UIView {
         ], for: .normal)
         
         segControl.subviews[0].accessibilityLabel = "Contacts"
-        segControl.subviews[0].accessibilityHint = "tap to chose from Contacts"
+        segControl.subviews[0].accessibilityHint = "select to choose from Contacts"
         segControl.subviews[0].accessibilityIdentifier = "tbox-seg-contacts"
         
-        // Custom accessibility elements
-        let contactsElement = UIAccessibilityElement(accessibilityContainer: segControl!)
-        contactsElement.accessibilityLabel = "Contacts"
-        contactsElement.accessibilityHint = "tap to chose from Contacts"
-        contactsElement.accessibilityIdentifier = "tbox-seg-contacts"
-        contactsElement.accessibilityFrameInContainerSpace = segControl.subviews[0].frame
-
-        let historyElement = UIAccessibilityElement(accessibilityContainer: segControl!)
-        historyElement.accessibilityLabel = "History"
-        historyElement.accessibilityFrameInContainerSpace = segControl.subviews[1].frame
-
-        let keyboardElement = UIAccessibilityElement(accessibilityContainer: segControl!)
-        keyboardElement.accessibilityLabel = "Keyboard"
-        keyboardElement.accessibilityFrameInContainerSpace = segControl.subviews[2].frame
-
-        //segControl.accessibilityElements = [contactsElement, historyElement, keyboardElement]
-
+        segControl.subviews[1].accessibilityLabel = "History"
+        segControl.subviews[1].accessibilityHint = "select to choose lines from previous entries"
+        segControl.subviews[1].accessibilityIdentifier = "tbox-seg-history"
+        
+        segControl.subviews[2].accessibilityLabel = "Keyboard"
+        segControl.subviews[2].accessibilityHint = "select to use keyboard"
+        segControl.subviews[2].accessibilityIdentifier = "tbox-seg-keyboard"
+        
         searchSeg.setTitleTextAttributes([
             .font: UIFont.systemFont(ofSize: fsize)
         ], for: .normal)
+        
+        searchSeg.subviews[1].accessibilityLabel = "Use"
+        searchSeg.subviews[1].accessibilityHint = "select to use text for this entry"
+        searchSeg.subviews[1].accessibilityIdentifier = "tbox-mode-use"
+
+        searchSeg.subviews[0].accessibilityLabel = "Search"
+        searchSeg.subviews[0].accessibilityHint = "select to use text for searching previous entries"
+        searchSeg.subviews[0].accessibilityIdentifier = "tbox-mode-srch"
+        
+        orAndSeg.setTitleTextAttributes([
+            .font: UIFont.systemFont(ofSize: fsize)
+        ], for: .normal)
+        
+        orAndSeg.subviews[0].accessibilityLabel = "And"
+        orAndSeg.subviews[0].accessibilityHint = "search for entries with all lines"
+        orAndSeg.subviews[0].accessibilityIdentifier = "tbox-srch-and"
+
+        orAndSeg.subviews[1].accessibilityLabel = "Or"
+        orAndSeg.subviews[1].accessibilityHint = "search for entries with any of lines"
+        orAndSeg.subviews[1].accessibilityIdentifier = "tbox-srch-or"
+
     }
-}
+    
+}  // end of accessoryView
 
 
 class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextViewDelegate {
@@ -388,6 +401,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         if vo.value == "" {
             textView?.becomeFirstResponder()
         }
+        
     }
 
     override func dataEditVWAppear(_ vc: UIViewController?) {
@@ -632,6 +646,11 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
             barButtonSystemItem: .save,
             target: self,
             action: #selector(voDataEdit.saveAction(_:)))
+        
+        saveItem.accessibilityLabel = "Save"
+        saveItem.accessibilityHint = "tap to save text to entry"
+        saveItem.accessibilityIdentifier = "tbox-save"
+        
         devc?.navigationItem.rightBarButtonItem = saveItem
     }
 

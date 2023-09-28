@@ -1457,6 +1457,10 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
             _privateBtn = UIBarButtonItem(
                 customView: pbtn)
             privBtnSetImg(_privateBtn!.customView as? UIButton, noshow: true)
+            
+            _privateBtn!.accessibilityLabel = "Privacy"
+            _privateBtn!.accessibilityHint = "tap to show privacy filter"
+            _privateBtn!.accessibilityIdentifier = "privacy"
         } else {
             var noshow = true
             if _privacyObj != nil {
@@ -1485,6 +1489,10 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                 style: .plain,
                 target: self,
                 action: #selector(btnHelp))
+            
+            _helpBtn!.accessibilityLabel = "Help"
+            _helpBtn!.accessibilityHint = "tap visit rTracker help web pages"
+            _helpBtn!.accessibilityIdentifier = "help"
         }
         return _helpBtn!
     }
@@ -1498,6 +1506,10 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                 action: #selector(btnAddTracker))
 
             _addBtn!.style = UIBarButtonItem.Style.done
+            
+            _addBtn!.accessibilityLabel = "Add"
+            _addBtn!.accessibilityHint = "tap create a new tracker"
+            _addBtn!.accessibilityIdentifier = "add"
         }
         return _addBtn!
     }
@@ -1511,6 +1523,11 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                 action: #selector(btnEdit))
 
             _editBtn!.style = UIBarButtonItem.Style.plain
+            
+            _editBtn!.accessibilityLabel = "Edit"
+            _editBtn!.accessibilityHint = "tap modify existing trackers"
+            _editBtn!.accessibilityIdentifier = "edit"
+            
         }
         return _editBtn!
     }

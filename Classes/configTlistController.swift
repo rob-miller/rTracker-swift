@@ -88,7 +88,7 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
 
         DBGLog("export all")
         let navframe = navigationController?.navigationBar.frame
-        rTracker_resource.alert("exporting trackers", msg: "_out.csv and _out.plist files are being saved to the rTracker Documents directory on this device.  Access them through iTunes on your PC/Mac, or with a program like iExplorer from Macroplant.com.  Import by changing the names to _in.csv and _in.plist, and read about .rtcsv file import capabilities in the help pages.", vc: self)
+        rTracker_resource.alert("exporting trackers", msg: "_out.csv and _out.plist files are being saved to the rTracker Documents directory on this device.  Access them through iTunes/Finder on your PC/Mac, or with a program like iExplorer from Macroplant.com.  Import by changing the names to _in.csv and _in.plist, and read about .rtcsv file import capabilities in the help pages.", vc: self)
         rTracker_resource.startProgressBar(view, navItem: navigationItem, disable: true, yloc: (navframe?.size.height ?? 0.0) + (navframe?.origin.y ?? 0.0))
 
         Thread.detachNewThreadSelector(#selector(startExport), toTarget: self, with: nil)
@@ -101,6 +101,10 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
             style: .plain,
             target: self,
             action: #selector(btnExport))
+        
+        exportBtn!.accessibilityIdentifier = "exportAll"
+        exportBtn!.accessibilityLabel = "Export All"
+        exportBtn!.accessibilityHint = "tap to save all trackers in rTracker's Documents folder"
         return exportBtn
     }
 
@@ -138,6 +142,18 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
         let swipe = UISwipeGestureRecognizer(target: self, action: #selector(addTrackerController.handleViewSwipeRight(_:)))
         swipe.direction = .right
         view.addGestureRecognizer(swipe)
+        
+        modeSegment.subviews[2].accessibilityIdentifier = "tlistModify"
+        modeSegment.subviews[2].accessibilityLabel = "Modify"
+        modeSegment.subviews[2].accessibilityHint = "select tracker to modify"
+
+        modeSegment.subviews[0].accessibilityIdentifier = "tlistCopy"
+        modeSegment.subviews[0].accessibilityLabel = "Copy"
+        modeSegment.subviews[0].accessibilityHint = "selected tracker will be duplicated at bottom of list"
+
+        modeSegment.subviews[1].accessibilityIdentifier = "tlistMoveDel"
+        modeSegment.subviews[1].accessibilityLabel = "Move or Delete"
+        modeSegment.subviews[1].accessibilityHint = "re-order or delete trackers"
 
         super.viewDidLoad()
     }
@@ -203,7 +219,8 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
     // MARK: -
     // MARK: button press action methods
 
-
+    @IBOutlet weak var modeSegment: UISegmentedControl!
+    
     @IBAction func modeChoice(_ sender: UISegmentedControl) {
         selSegNdx = sender.selectedSegmentIndex
         switch selSegNdx {
