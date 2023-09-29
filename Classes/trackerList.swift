@@ -247,7 +247,7 @@ class trackerList: tObjBase {
     func reloadFromTLT() {
         // called when deleting tracker from TLT
         //DBGTLIST(self);
-        var nrank = 1
+        var nrank = 0
         var sql = "delete from toplevel where priv <= \(privacyValue);"
         toExecSql(sql:sql)
         for tracker in topLayoutNames! {
@@ -255,10 +255,12 @@ class trackerList: tObjBase {
             let priv = topLayoutPriv![nrank]
             let rc = topLayoutReminderCount![nrank]
 
+            nrank += 1  // arrays above 0-indexed, rank in db non-0 so increment here and cover both.
+            
             //DBGLog(@" %@ id %d to rank %d",tracker,tid,nrank);
             sql = String(format: "insert into toplevel (rank, id, name, priv,remindercount) values (%i, %ld, \"%@\", %ld, %ld);", nrank, tid, rTracker_resource.toSqlStr(tracker)!, priv, rc) // rank in db always non-0
             toExecSql(sql:sql) // better if used bind vars, but this keeps access in tObjBase
-            nrank += 1
+
         }
     }
 
