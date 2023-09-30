@@ -248,7 +248,7 @@ class rTracker_resource: NSObject {
 
     //---------------------------
 
-    class func getCheckButton(_ frame: CGRect) -> UIButton? {
+    class func rtmx_getCheckButton(_ frame: CGRect) -> UIButton? {
         let _checkButton = UIButton(type: .custom)
         _checkButton.backgroundColor = .clear
 
@@ -270,18 +270,44 @@ class rTracker_resource: NSObject {
         return _checkButton
     }
 
-    class func setCheck(_ cb: UIButton?, colr: UIColor?) {
+    class func getSwitch(_ frame: CGRect) -> UISwitch? {
+        let _switch = UISwitch()
+        let swSize = _switch.intrinsicContentSize   // frame size is ignored for switch
+        var frame = frame
+        frame.origin.x = (frame.origin.x + frame.size.width) - swSize.width
+        frame.origin.y = frame.origin.y + (frame.size.height - swSize.height)/2
+
+        _switch.frame = frame
+        return _switch
+    }
+    
+    class func rtmx_setCheck(_ cb: UIButton?, colr: UIColor?) {
         if let colr {
             cb?.backgroundColor = colr
         }
         cb?.setTitle("\u{2714}", for: .normal)
     }
 
-    class func clrCheck(_ cb: UIButton?, colr: UIColor?) {
+    class func rtmx_clrCheck(_ cb: UIButton?, colr: UIColor?) {
         if let colr {
             cb?.backgroundColor = colr
         }
         cb?.setTitle("", for: .normal)
+    }
+    
+    class func setSwitch(_ sw: UISwitch, colr: UIColor?) {
+        //if let colr {
+            //sw.onTintColor = colr
+        //}
+        sw.isOn = true
+    }
+
+    class func clrSwitch(_ sw: UISwitch, colr: UIColor?) {
+        //if let colr {
+            //sw.backgroundColor = colr
+        //}
+        sw.isOn = false
+
     }
 
     // MARK: -

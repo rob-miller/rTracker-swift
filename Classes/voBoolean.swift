@@ -25,31 +25,21 @@ import Foundation
 import UIKit
 
 class voBoolean: voState {
-    /*{
-        UIButton *imageButton;
-    }*/
 
-    private var _checkButton: UIButton?
-    var checkButton: UIButton? {
-        var frame = vosFrame
+    private var _bSwitch: UISwitch?  // UIButton?
+    var bSwitch: UISwitch? {
 
-        frame.origin.x = (frame.origin.x + frame.size.width) - (frame.size.height)
-        frame.size.width = frame.size.height
-
-        if _checkButton != nil && _checkButton?.frame.size.width != frame.size.width {
-            _checkButton = nil // first time around thinks size is 320, handle larger devices
+        if nil == _bSwitch {
+            _bSwitch = rTracker_resource.getSwitch(vosFrame)
+            _bSwitch?.addTarget(self, action: #selector(boolBtnAction(_:)), for: .valueChanged) // .touchDown)
+            _bSwitch?.tag = kViewTag // tag this view for later so we can remove it from recycled table cells
+            _bSwitch?.accessibilityIdentifier = "\(self.tvn())_switch"
         }
-
-        if nil == _checkButton {
-            _checkButton = rTracker_resource.getCheckButton(frame)
-            _checkButton?.addTarget(self, action: #selector(boolBtnAction(_:)), for: .touchDown)
-            _checkButton?.tag = kViewTag // tag this view for later so we can remove it from recycled table cells
-        }
-        return _checkButton
+        return _bSwitch
     }
 
 
-    @objc func boolBtnAction(_ checkButton: UIButton?) {
+    @objc func boolBtnAction(_ bSwitch: UIButton?) {
         // default is unchecked or nil // 25.i.14 use assigned val // was "so only certain is if =1" ?
         if vo.value == "" {
             let bv = vo.optDict["boolval"]
@@ -58,17 +48,13 @@ class voBoolean: voState {
             //[self.vo.optDict setObject:bv forKey:@"boolval"];
             //}
             vo.value = bv!
-            rTracker_resource.setCheck(self.checkButton, colr: rTracker_resource.colorSet()[Int(vo.optDict["btnColr"]!)!])
+            rTracker_resource.setSwitch(self.bSwitch!, colr: rTracker_resource.colorSet()[Int(vo.optDict["btnColr"]!)!])
             if "1" == vo.optDict["setstrackerdate"] {
                 vo.setTrackerDateToNow()
             }
         } else {
             vo.value = ""
-            if #available(iOS 13.0, *) {
-                rTracker_resource.clrCheck(self.checkButton, colr: .tertiarySystemBackground)
-            } else {
-                rTracker_resource.clrCheck(self.checkButton, colr: .white)
-            }
+            rTracker_resource.clrSwitch(self.bSwitch!, colr: .tertiarySystemBackground)
         }
 
         //self.vo.display = nil; // so will redraw this cell only
@@ -79,13 +65,13 @@ class voBoolean: voState {
         vosFrame = bounds
 
         if vo.value == "" {
-            rTracker_resource.clrCheck(checkButton, colr: .tertiarySystemBackground)
+            rTracker_resource.clrSwitch(bSwitch!, colr: .tertiarySystemBackground)
         } else {
-            rTracker_resource.setCheck(checkButton, colr: rTracker_resource.colorSet()[Int(vo.optDict["btnColr"]!)!])
+            rTracker_resource.setSwitch(bSwitch!, colr: rTracker_resource.colorSet()[Int(vo.optDict["btnColr"]!)!])
         }
 
         DBGLog(String("bool data= \(vo.value)"))
-        return checkButton!
+        return bSwitch!
     }
 
     override func voGraphSet() -> [String] {

@@ -28,22 +28,11 @@ import UIKit
 
 class voState: NSObject, voProtocol {
 
-    /*{
-
-    	valueObj *vo;
-        CGRect vosFrame;
-
-    }*/
     var vo: valueObj
     var MyTracker: trackerObj
     var vosFrame = CGRect.zero
     weak var vc: UIViewController?
 
-        /*
-    override convenience init() {
-        self.init(vo: nil)
-    }
-         */
     init(vo valo: valueObj) {
         vo = valo
         MyTracker = vo.parentTracker
@@ -156,6 +145,12 @@ class voState: NSObject, voProtocol {
         vc?.present(navCon, animated: true)
     }
 
+    func tvn() -> String {
+        let tname = self.vo.parentTracker.trackerName ?? "tnull"
+        let vname = self.vo.valueName ?? "vnull"
+        return "\(tname)_\(vname)"
+    }
+    
     func voDrawOptions(_ ctvovc: configTVObjVC) {
         var frame = CGRect(x: MARGIN, y: ctvovc.lasty, width: 0.0, height: 0.0)
         var labframe = ctvovc.configLabel("Draw graph:", frame: frame, key: "ggLab", addsv: true)

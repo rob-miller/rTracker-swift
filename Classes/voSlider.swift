@@ -25,10 +25,6 @@ import Foundation
 import UIKit
 
 class voSlider: voState {
-    /*{
-        UISlider *sliderCtl;
-        CGFloat sdflt;
-    }*/
 
     private var _sliderCtl: UISlider?
     var sdflt: CGFloat = 0.0
@@ -66,18 +62,8 @@ class voSlider: voState {
             // Add an accessibility label that describes the slider.
             //[sliderCtl setAccessibilityLabel:NSLocalizedString(@"StandardSlider", @"")];
             _sliderCtl?.accessibilityLabel = "\(vo.valueName ?? "") slider"
+            _sliderCtl?.accessibilityIdentifier = "\(self.tvn())_slider"
 
-            //sliderCtl.tag = kViewTag;	// tag this view for later so we can remove it from recycled table cells
-
-            /*
-                    if ([self.vo.value isEqualToString:@""]) {
-                        self.sliderCtl.value = self.sdflt;  
-                        //[self.sliderCtl setValue:self.sdflt animated:NO];
-                    } else {
-                        self.sliderCtl.value = [self.vo.value floatValue];
-                        //[self.sliderCtl setValue:[self.vo.value floatValue] animated:NO];
-                    }
-                     */
         }
 
         return _sliderCtl
