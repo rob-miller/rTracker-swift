@@ -227,6 +227,9 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
             //,NSForegroundColorAttributeName: [UIColor greenColor]
             ],
             for: .normal)
+        gearButton.accessibilityLabel = "Configure"
+        gearButton.accessibilityIdentifier = "nrvc_config"
+        
         btnHelpOutlet.setTitleTextAttributes(
             [
                 .font: UIFont.systemFont(ofSize: 28.0)
@@ -235,6 +238,9 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
             for: .normal)
 
         btnDoneOutlet.title = "\u{2611}"
+        btnDoneOutlet.accessibilityLabel = "Done"
+        btnDoneOutlet.accessibilityIdentifier = "nrvc_done"
+        
         btnDoneOutlet.setTitleTextAttributes(
             [
                 .font: UIFont.systemFont(ofSize: 28.0)
@@ -249,6 +255,10 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
             //,NSForegroundColorAttributeName: [UIColor greenColor]
             ],
             for: .normal)
+        
+        nextAddBarButton.accessibilityLabel = "Next"
+        nextAddBarButton.accessibilityIdentifier = "nrvc_next"
+        
         prevBarButton.setTitleTextAttributes(
             [
                 .font: UIFont.systemFont(ofSize: 28.0)
@@ -256,6 +266,19 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
             ],
             for: .normal)
 
+        prevBarButton.accessibilityLabel = "Previous"
+        prevBarButton.accessibilityIdentifier = "nrvc_prev"
+        
+        enableButton.accessibilityLabel = "Enable"
+        enableButton.accessibilityIdentifier = "nrvc_enable"
+        
+        fromLastButton.accessibilityHint = "enable to trigger based on last entry"
+        fromLastButton.accessibilityIdentifier = "nrvc_fromLastEnable"
+        
+        fromLastButton.accessibilityHint = "tap to cycle values or tracker"
+        fromLastButton.accessibilityIdentifier = "nrvc_fromLastLabel"
+        
+        
         let swipe = UISwipeGestureRecognizer(target: self, action: #selector(addTrackerController.handleViewSwipeRight(_:)))
         swipe.direction = .right
         view.addGestureRecognizer(swipe)
@@ -404,7 +427,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
             enableFinishButton.isSelected = true
             finishSlider.value = Float(nr!.until)
             repeatTimes.text = String(format: "%ld", Int(nr?.times ?? 0))
-            intervalButton.setTitle(nr?.timesRandom ?? false ? "random" : "interval", for: .normal)
+            intervalButton.setTitle(nr?.timesRandom ?? false ? "Random" : "Equal Intervals", for: .normal)
             sliderUpdate(Int(finishSlider.value), hrtf: finishHr, mntf: finishMin, ampml: finishTimeAmPm)
         } else {
             enableFinishButton.isSelected = false
@@ -521,7 +544,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
             nr?.until = Int(finishSlider.value)
             nr?.times = Int(repeatTimes.text ?? "") ?? 0
             if 1 < (nr?.times ?? 0) {
-                nr?.timesRandom = intervalButton.title(for: .normal) == "random"
+                nr?.timesRandom = intervalButton.title(for: .normal) == "Random"
             }
             nr?.untilEnabled = true
         } else {
@@ -816,7 +839,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
 
     @IBAction func btnHelp(_ sender: Any) {
         DBGLog("btnHelp")
-        rTracker_resource.alert("Reminders", msg: "Blue labels are buttons, tap to see the options.\nSet a delay from the last time this tracker (or value) was saved and the weekdays the reminder should trigger, or choose calendar days.\nSet a single time for the reminder to fire, or a time range with equal or random  intervals.\nWhen settings are OK, an 'enable' checkbox appears in the lower right.\nTo delete a reminder, leave the form when the enable checkbox is not shown.\nMultiple reminders may be set using the < and +> buttons in the titlebar.", vc: self)
+        rTracker_resource.alert("Reminders", msg: "Blue labels are buttons, tap to see the options.\nSet a delay from the last time this tracker (or value) was saved and the weekdays the reminder should trigger, or choose calendar days.\nSet a single time for the reminder to fire, or a time range with equal or random intervals.\nWhen settings are OK, an 'enable' checkbox appears in the lower right.\nTo delete a reminder, leave the form when the enable checkbox is not shown.\nMultiple reminders may be set using the < and +> buttons in the titlebar.", vc: self)
     }
 
     @IBAction func monthDaysChange(_ sender: Any) {
@@ -1060,10 +1083,10 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
     @IBAction func intervalBtn(_ sender: UIButton) {
         DBGLog(String("intervalBtn \(sender.currentTitle)"))
         DBGLog(String("everyBtn \(intervalButton.title(for: .normal))"))
-        if intervalButton.title(for: .normal) == "random" {
-            intervalButton.setTitle("interval", for: .normal)
+        if intervalButton.title(for: .normal) == "Random" {
+            intervalButton.setTitle("Equal Intervals", for: .normal)
         } else {
-            intervalButton.setTitle("random", for: .normal)
+            intervalButton.setTitle("Random", for: .normal)
         }
         //((UIButton*)sender).selected = ! ((UIButton*)sender).selected;
     }

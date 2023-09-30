@@ -60,18 +60,6 @@ class voDataEdit: UIViewController, UITextViewDelegate {
     var saveSelector: Selector?
     var text: String?
 
-    /*
-     // The designated initializer.  Override if you create the controller programmatically and want to perform customization that is not appropriate for viewDidLoad.
-    - (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil {
-        if ((self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil])) {
-            // Custom initialization
-        }
-        return self;
-    }
-    */
-
-
-    // Implement viewDidLoad to do additional setup after loading the view, typically from a nib.
     override func viewDidLoad() {
 
         super.viewDidLoad()
@@ -108,6 +96,7 @@ class voDataEdit: UIViewController, UITextViewDelegate {
             // note: for UITextView, if you don't like autocompletion while typing use:
             // myTextView.autocorrectionType = UITextAutocorrectionTypeNo;
 
+            textView?.accessibilityIdentifier = "\(vo!.vos!.tvn())_textBox"
             if let textView {
                 view.addSubview(textView)
             }

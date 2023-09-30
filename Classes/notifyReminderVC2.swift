@@ -67,6 +67,11 @@ class notifyReminderVC2: UIViewController, UIPickerViewDelegate, UIPickerViewDat
             for: .normal)
 
         btnDoneOutlet.title = "\u{2611}"
+        
+        btnDoneOutlet.accessibilityLabel = "done"
+        btnDoneOutlet.accessibilityIdentifier = "nrvc2_done"
+
+        
         btnDoneOutlet.setTitleTextAttributes(
             [
                 .font: UIFont.systemFont(ofSize: 28.0)
@@ -74,6 +79,9 @@ class notifyReminderVC2: UIViewController, UIPickerViewDelegate, UIPickerViewDat
             ],
             for: .normal)
 
+        
+        datePicker.accessibilityIdentifier = "nrvc2_datepicker"
+        
         let swipe = UISwipeGestureRecognizer(target: self, action: #selector(addTrackerController.handleViewSwipeRight(_:)))
         swipe.direction = .right
         view.addGestureRecognizer(swipe)

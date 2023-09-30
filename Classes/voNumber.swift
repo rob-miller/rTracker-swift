@@ -92,6 +92,7 @@ class voNumber: voState, UITextFieldDelegate {
             // Add an accessibility label that describes what the text field is for.
             _dtf?.accessibilityLabel = NSLocalizedString("enter a number", comment: "")
             _dtf?.text = ""
+            _dtf?.accessibilityIdentifier = "\(self.tvn())_numberfield"
             _dtf?.addTarget(self, action: #selector(textFieldDidChange(_:)), for: .editingChanged)
         }
         //DBGLog(@"num dtf rc= %d",[dtf retainCount]);

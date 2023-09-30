@@ -85,6 +85,7 @@ class voChoice: voState {
             //        }
         }
 
+        _segmentedControl?.accessibilityIdentifier = "\(self.tvn())_choices"
         return _segmentedControl
     }
     var processingTfDone = false

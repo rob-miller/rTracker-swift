@@ -63,6 +63,8 @@ class voText: voState, UITextFieldDelegate {
             _dtf?.accessibilityLabel = NSLocalizedString("NormalTextField", comment: "")
             _dtf?.text = ""
             _dtf?.addTarget(self, action: #selector(voNumber.textFieldDidChange(_:)), for: .editingChanged)
+            
+            _dtf?.accessibilityIdentifier = "\(self.tvn())_textfield"
         }
     
         return _dtf!

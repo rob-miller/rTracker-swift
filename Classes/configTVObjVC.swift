@@ -50,23 +50,7 @@
 import UIKit
 
 class configTVObjVC: UIViewController, UITextFieldDelegate {
-    /*
-    {
 
-    	BOOL vdlConfigVO;
-    	trackerObj *to;
-    	valueObj *vo;
-
-    	NSMutableDictionary *wDict;  // widget dictionary
-
-    	CGFloat lasty;
-    	CGRect saveFrame;
-    	CGFloat LFHeight;
-
-        BOOL processingTfDone;
-
-    }
-    */
     var vdlConfigVO = false
     var to: trackerObj?
     var vo: valueObj?
@@ -215,6 +199,9 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
             target: self,
             action: #selector(btnDone(_:)))
 
+        doneBtn.accessibilityLabel = "Done"
+        doneBtn.accessibilityIdentifier = "configtvo_done"
+        
         doneBtn.setTitleTextAttributes(
             [
                 .font: UIFont.systemFont(ofSize: 28.0)
@@ -505,6 +492,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
                 to!.optDict[okey!] = ndflt
                 img = dfltState ? "unchecked.png" : "checked.png" // going to not default state
             }
+
         } else {
             if (vo!.optDict[okey!]) == ndflt {
                 vo!.optDict[okey!] = dflt
@@ -513,6 +501,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
                 vo!.optDict[okey!] = ndflt
                 img = dfltState ? "unchecked.png" : "checked.png" // going to not default state
             }
+            
         }
         btn?.setImage(UIImage(named: img ?? ""), for: .normal)
 
@@ -539,6 +528,12 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
             UIImage(named: state ? "checked.png" : "unchecked.png"),
             for: .normal)
 
+        if vo == nil {
+            imageButton.accessibilityIdentifier = "\(to!.trackerName ?? "tnull")_\(key!)"
+        } else {
+            imageButton.accessibilityIdentifier = "\(vo!.vos!.tvn())_\(key!)"
+        }
+        
         if addsv {
             //[self.view addSubview:imageButton];
             scroll.addSubview(imageButton)
@@ -706,7 +701,12 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
             text: text)
 
         wDict[key ?? ""] = rtf
-
+        if vo == nil {
+            rtf?.accessibilityIdentifier = "\(to?.trackerName ?? "tnull")_\(key!)"
+        } else {
+            rtf?.accessibilityIdentifier = "\(vo!.vos!.tvn())_\(key!)"
+        }
+        
         if addsv {
             if let rtf {
                 scroll.addSubview(rtf)
@@ -754,6 +754,11 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         myPickerView.dataSource = caller as? UIPickerViewDataSource
 
         wDict[key ?? ""] = myPickerView
+        if vo == nil {
+            myPickerView.accessibilityIdentifier = "\(to!.trackerName ?? "tnull")_\(key!)"
+        } else {
+            myPickerView.accessibilityIdentifier = "\(vo!.vos!.tvn())_\(key!)"
+        }
         scroll.addSubview(myPickerView)
 
         return frame
@@ -1203,93 +1208,16 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
 
     func addVOFields(_ vot: Int) {
         vo?.vos?.voDrawOptions(self)
-        /*
-
-        	switch(vot) {
-        		case VOT_NUMBER: 
-        			// uilabel 'autoscale graph'   uibutton checkbutton
-        			// uilabel 'graph min' uitextfield uilabel 'max' ; enabled/disabled by checkbutton
-        			//[self drawNumOpts];
-        			//[self drawGeneralVoOpts];
-        			[self.vo.vos voDrawOptions:self];
-        			break;
-        		case VOT_TEXT:
-        			//[self drawGenOptsOnly];
-        			//[self drawGeneralVoOpts];
-        			[self.vo.vos voDrawOptions:self];
-        			break;
-        		case VOT_TEXTB:
-        			//[self drawTextbOpts];
-        			//[self drawGeneralVoOpts];
-        			[self.vo.vos voDrawOptions:self];
-        			break;
-        		case VOT_SLIDER:
-        			// uilabel 'min' uitextfield uilabel 'max' uitextfield uilabel 'default' uitextfield
-        			//[self drawSliderOpts];
-        			//[self drawGeneralVoOpts];
-        			[self.vo.vos voDrawOptions:self];
-        			break;
-        		case VOT_CHOICE:
-        			// 6 rows uitextfield + button with color ; button cycles color on press ; button blank/off if no text in textfield
-        			// uilabel 'dynamic width' uibutton checkbutton
-        			//[self drawChoiceOpts];
-        			//[self drawGeneralVoOpts];
-        			[self.vo.vos voDrawOptions:self];
-        			break;
-        		case VOT_BOOLEAN:
-        			[self.vo.vos voDrawOptions:self];
-        			//[self drawGenOptsOnly];
-        			//[self drawGeneralVoOpts];
-        			break;
-                    / *
-        		case VOT_IMAGE:
-        			//[self drawImageOpts];
-        			[self.vo.vos voDrawOptions:self];
-        			break;
-                     * /
-        		case VOT_FUNC:
-        			// uitextfield for function, picker or buttons for available valObjs and functions?
-        			//[self drawFuncOptsOverview];
-        			//if ([self.to.valObjTable count] == 0) {
-        				[self.vo.vos voDrawOptions:self];
-        			//}
-        			break;
-                case VOT_INFO:
-                    [self.vo.vos voDrawOptions:self];
-                    break;
-        		default:
-        			break;
-        	}
-         */
-
-
     }
 
     func addTOFields() {
-
         drawGeneralToOpts()
-
-
-
-
     }
 
     required init?(coder aDecoder: NSCoder) {
         super.init(coder: aDecoder)
     }
-    /*
-    - (void) updateScrollView:(NSInteger) vot 
-    {
-    //	[UIView beginAnimations:nil context:NULL];
-    //	[UIView setAnimationBeginsFromCurrentState:YES];
-    //	[UIView setAnimationDuration:kAnimationDuration];
 
-    	//[self removeSVFields];
-    	[self addVOFields:vot];
-
-    //	[UIView commitAnimations];
-    }
-    */
 }
 
-//  private methods including properties can go here!
+

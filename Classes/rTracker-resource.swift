@@ -296,16 +296,16 @@ class rTracker_resource: NSObject {
     }
     
     class func setSwitch(_ sw: UISwitch, colr: UIColor?) {
-        //if let colr {
-            //sw.onTintColor = colr
-        //}
+        if let colr {
+            sw.onTintColor = colr
+        }
         sw.isOn = true
     }
 
     class func clrSwitch(_ sw: UISwitch, colr: UIColor?) {
-        //if let colr {
-            //sw.backgroundColor = colr
-        //}
+        if let colr {
+            sw.backgroundColor = colr
+        }
         sw.isOn = false
 
     }
@@ -444,7 +444,7 @@ class rTracker_resource: NSObject {
     class func colorSet() -> [UIColor] {
         return [
             UIColor.red,
-            UIColor.green,
+            UIColor.systemGreen,  //green,
             UIColor.blue,
             UIColor.cyan,
             UIColor.yellow,

@@ -164,6 +164,8 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
             _tbButton?.tag = kViewTag // tag this view for later so we can remove it from recycled table cells
             _tbButton?.titleLabel?.font = PrefBodyFont
             // rtm 06 feb 2012
+            _tbButton?.accessibilityHint = "tap to edit textbox"
+            _tbButton?.accessibilityIdentifier = "\(tvn())_tbButton"
         }
         return _tbButton
     }
