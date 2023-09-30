@@ -100,13 +100,14 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             target: self,
             action: #selector(btnCancel))
         navigationItem.leftBarButtonItem = cancelBtn
-
+        navigationItem.leftBarButtonItem?.accessibilityIdentifier = "addTrkrCancel"
 
         let saveBtn = UIBarButtonItem(
             barButtonSystemItem: .save,
             target: self,
             action: #selector(btnSave))
         navigationItem.rightBarButtonItem = saveBtn
+        navigationItem.rightBarButtonItem?.accessibilityIdentifier = "addTrkrSave"
 
 
         // list manage / configure segmented control on bottom toolbar
@@ -119,13 +120,19 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             tempTrackerObj = tto
             //tempTrackerObj.trackerName = @"";
             //[self.tempTrackerObj init];
-            tempTrackerObj?.toid = tlist?.getUnique() ?? 0
-            //[self.tempTrackerObj release];  // rtm 05 feb 2012 +1 alloc/init +1 retained self.tempTrackerObj
+            tempTrackerObj?.toid = tlist!.getUnique()
             title = "Add tracker"
             toolbar.isHidden = true
         } else {
-            title = "Modify tracker"
+            //title = "Modify tracker"
             toolbar.isHidden = false
+            let titleLabel = UILabel()
+            titleLabel.text = "Modify tracker"
+            titleLabel.accessibilityHint = "left widget to enable delete button, center to modify value, right widget to change order"
+            navigationItem.titleView = titleLabel
+
+            //toolbar.leftBarButtonItem?.accessibilityHint = "leave without saving"
+            //toolbar.leftBarButtonItem?
         }
 
         tableView.setEditing(true, animated: true)
@@ -265,61 +272,15 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     }
 
     func configureToolbarItems() {
-        /*
-            UIBarButtonItem *flexibleSpaceButtonItem = [[UIBarButtonItem alloc]
-        												initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace
-        												target:nil action:nil];
 
-        	// Create and configure the segmented control
-        	UISegmentedControl *editToggle = [[UISegmentedControl alloc]
-        									  initWithItems:@[@"Edit tracker",
-        													 @"Edit items"]];
-        	editToggle.segmentedControlStyle = UISegmentedControlStyleBar;
-        	editToggle.selectedSegmentIndex = 0;
-        	editMode = 0;
-        	[editToggle addTarget:self action:@selector(toggleEdit:)
-        		 forControlEvents:UIControlEventValueChanged];
-
-        	// Create the bar button item for the segmented control
-        	UIBarButtonItem *editToggleButtonItem = [[UIBarButtonItem alloc]
-        											 initWithCustomView:editToggle];
-
-            //UIButton *infoBtn = [UIButton buttonWithType:UIButtonTypeInfoLight];
-            UIButton *infoBtn = [UIButton buttonWithType:UIButtonTypeSystem];
-            [infoBtn setTitle:@"⚙" forState:UIControlStateNormal];
-         */
         infoBtn.titleLabel?.font = .systemFont(ofSize: 28.0)
-        /*
-            [infoBtn addTarget:self action:@selector(btnSetup) forControlEvents:UIControlEventTouchUpInside];
-            infoBtn.frame = CGRectMake(0, 0, 44, 44);
-            UIBarButtonItem *setupBtnItem = [[UIBarButtonItem alloc] initWithCustomView:infoBtn];
-            */
-
-        /*
-        	UIBarButtonItem *setupBtnItem = [[UIBarButtonItem alloc]
-        								 initWithTitle:@"Setup"
-        								 style:UIBarButtonItemStylePlain
-        								 target:self
-        								 action:@selector(btnSetup)];
-        	*/
-
-        // Set our toolbar items
-        /*
-        	self.toolbarItems = @[setupBtnItem,
-                                 flexibleSpaceButtonItem,
-                                 editToggleButtonItem,
-                                 flexibleSpaceButtonItem,
-                                 //[self.itemCopyBtn autorelease], // analyze wants this but crashes later!
-                                 self.itemCopyBtn];
-            */
-
-        //self.itemCopyBtn = nil;  // this stops crash, but lose control in toggleEdit() below
-        //[itemCopyBtn release];
 
 
     }
 
     //@property (nonatomic,retain) UIActivityIndicatorView *spinner;
+    // UISegmentedControl hidden because modify valueObjs accessible from move/del view
+    // so this is not called
     @IBAction func toggleEdit(_ sender: UISegmentedControl) {
         editMode = sender.selectedSegmentIndex
         //[table reloadData];
@@ -578,53 +539,23 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 action: #selector(nameFieldDone(_:)),
                 for: .editingDidEndOnExit)
             nameField.tag = kViewTag
+            //nameField.accessibilityLabel = "tracker name"
+            nameField.accessibilityIdentifier = "addTrkrName"
+            
             cell?.contentView.addSubview(nameField)
 
             cell?.selectionStyle = .none
             nameField.font = PrefBodyFont
             nameField.text = tempTrackerObj?.trackerName
 
-            if #available(iOS 13.0, *) {
-                nameField.textColor = .label
-                nameField.attributedPlaceholder = NSAttributedString(string: "Name this Tracker", attributes: [
-                    .foregroundColor: UIColor.label
-                ]) // @"Name this Tracker"
-                nameField.backgroundColor = .secondarySystemBackground
-            } else {
-                nameField.textColor = .label
-                nameField.attributedPlaceholder = NSAttributedString(string: "Name this Tracker", attributes: [
-                    .foregroundColor: UIColor.darkGray
-                ]) // @"Name this Tracker"
-                nameField.backgroundColor = .secondarySystemBackground
-            }
-
+            nameField.textColor = .label
+            nameField.attributedPlaceholder = NSAttributedString(string: "Name this Tracker", attributes: [
+                .foregroundColor: UIColor.label
+            ])
+            nameField.backgroundColor = .secondarySystemBackground
+            
             view.bringSubviewToFront(nameField)
-            // no help! self.nameField.layer.zPosition=10;
-            //DBGLog(@"loaded section 0, %@ = %@",self.nameField.text , self.tempTrackerObj.trackerName);
-
-            //		} else {   // row = 1
-            //			cell.textLabel.text = @"privacy level:";
-            //			self.privField = nil;
-            //			privField = [[UITextField alloc] initWithFrame:CGRectMake(180,10,60,25) ];
-            //			self.privField.borderStyle = UITextBorderStyleRoundedRect;
-            //			self.privField.clearsOnBeginEditing = NO;
-            //			[self.privField setDelegate:self];
-            //			self.privField.returnKeyType = UIReturnKeyDone;
-            //			[self.privField addTarget:self
-            //						  action:@selector(privFieldDone:)
-            //				forControlEvents:UIControlEventEditingDidEndOnExit];
-            //			self.privField.tag = kViewTag;
-            //			[cell.contentView addSubview:privField];
-            //			
-            //			cell.selectionStyle = UITableViewCellSelectionStyleNone;
-            //		
-            //			self.privField.text = self.tempTrackerObj.trackerName;
-            //
-            //			self.privField.keyboardType = UIKeyboardTypeNumbersAndPunctuation;	// use the number input only
-            //			self.privField.text = [NSString stringWithFormat:@"%d",self.tempTrackerObj.privacy];
-            //			self.privField.placeholder = @"num";
-            //			self.privField.textAlignment = UITextAlignmentRight;
-            //		}
+ 
         } else {
             cell = tableView.dequeueReusableCell(withIdentifier: addTrackerController.tableViewValCellID)
             if cell == nil {
@@ -639,11 +570,14 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 } else {
                     cell?.detailTextLabel?.text = "add another thing to track"
                 }
+                cell?.accessibilityIdentifier = "trkrAddValue"
+                
                 cell?.textLabel?.text = ""
             } else {
                 let vo = (tempTrackerObj?.valObjTable)?[row] as? valueObj
                 //DBGLog(@"starting section 1 cell for %@",vo.valueName);
                 cell?.textLabel?.text = vo?.valueName
+                cell?.accessibilityIdentifier = "\(vo?.parentTracker.trackerName ?? "tNull")_\(vo?.valueName ?? "vNull")"
                 cell?.accessoryType = .detailDisclosureButton
                 //cell.detailTextLabel.text = [self.tempTrackerObj.votArray objectAtIndex:vo.vtype];
                 /*

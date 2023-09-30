@@ -47,57 +47,7 @@ class voBoolean: voState {
         }
         return _checkButton
     }
-    //@property (nonatomic,strong) NSAttributedString *checkedBtn;
-    //@property (nonatomic,strong) NSAttributedString *uncheckedBtn;
 
-    //@synthesize checkedBtn=_checkedBtn, uncheckedBtn=_uncheckedBtn;
-
-    // 25.i.14 allow assigned values so use default (10) size
-    //- (int) getValCap {  // NSMutableString size for value
-    //    return 1;
-    //}
-    /*
-    - (UIImage *) boolBtnImage {
-    	// default is not checked
-        return ( [self.vo.value isEqualToString:@""] ? [UIImage imageNamed:@"unchecked.png"] : [UIImage imageNamed:@"checked.png"] );
-    }
-    */
-    /*
-    - (NSAttributedString*) checkedBtn {
-        if (nil == _checkedBtn) {
-            CGFloat psize = [PrefBodyFont pointSize];
-            if (psize < 28.0) psize = 28.0;
-            _checkedBtn = [[NSAttributedString alloc]
-                           initWithString:@"\u2714" //@"\u2611"
-                           attributes:@{NSFontAttributeName:[UIFont fontWithName:@"AppleColorEmoji" size:psize]
-                                        //,
-                                        //NSForegroundColorAttributeName:[UIColor greenColor],
-                                        //NSBackgroundColorAttributeName:[rTracker_resource colorSet][[(self.vo.optDict)[@"btnColr"] integerValue]]
-                                        }];
-                                        //NSForegroundColorAttributeName:[rTracker_resource colorSet][[(self.vo.optDict)[@"btnColr"] integerValue]] }];
-        }
-        return _checkedBtn;
-    }
-    - (NSAttributedString*) uncheckedBtn {
-        if (nil == _uncheckedBtn) {
-            CGFloat psize = [PrefBodyFont pointSize];
-            if (psize < 28.0) psize = 28.0;
-            _uncheckedBtn = [[NSAttributedString alloc]
-                           initWithString:@"\u2714" //@"\u2611"
-                           attributes:@{NSFontAttributeName:[UIFont fontWithName:@"AppleColorEmoji" size:psize]
-                                        //,
-                                        //NSForegroundColorAttributeName:[UIColor clearColor]
-                                        }];
-        }
-        return _uncheckedBtn;
-    }
-    */
-    /*
-    -(UIColor*) boolBtnColor {
-    	// default is not checked
-        return ( [self.vo.value isEqualToString:@""] ? [UIColor whiteColor] : [rTracker_resource colorSet][[(self.vo.optDict)[@"btnColr"] integerValue] ]);
-    }
-    */
 
     @objc func boolBtnAction(_ checkButton: UIButton?) {
         // default is unchecked or nil // 25.i.14 use assigned val // was "so only certain is if =1" ?
