@@ -146,25 +146,7 @@ protocol voProtocol: AnyObject {
 
 
 class valueObj: NSObject, UITextFieldDelegate {
-    /*{
-    	NSInteger vid;   
-    	NSInteger vtype;
-    	NSInteger vpriv;
-    	NSString *valueName;
-    	NSMutableString *value;
-    	NSInteger vcolor;
-    	NSInteger vGraphType;
-    	UIView *display;
-    	BOOL useVO;
-    	//BOOL retrievedData;
-    	NSMutableDictionary *optDict;
-    	id parentTracker;
-    	id <voProtocol> vos;
-    	id vogd;
-    	UIButton *checkButtonUseVO;
-    }*/
 
-    //+ (NSArray *) votArray;
     var vid = 0
 
     private var _vtype = 0
@@ -259,17 +241,17 @@ class valueObj: NSObject, UITextFieldDelegate {
     //@property (nonatomic) BOOL retrievedData;
     var parentTracker: trackerObj
 
-    private var _checkButtonUseVO: UIButton?
-    var checkButtonUseVO: UIButton? {
-        if _checkButtonUseVO == nil {
-            _checkButtonUseVO = UIButton(type: .custom)
-            _checkButtonUseVO?.frame = CGRect.zero
-            _checkButtonUseVO?.contentVerticalAlignment = .center
-            _checkButtonUseVO?.contentHorizontalAlignment = .center
-            _checkButtonUseVO?.tag = kViewTag
-            _checkButtonUseVO?.addTarget(self, action: #selector(checkAction(_:)), for: .touchDown)
+    private var _switchUseVO: UISwitch?
+    var switchUseVO: UISwitch? {
+        if _switchUseVO == nil {
+            _switchUseVO = UISwitch()  // UIButton(type: .custom)
+            _switchUseVO?.frame = CGRect.zero
+            _switchUseVO?.contentVerticalAlignment = .center
+            _switchUseVO?.contentHorizontalAlignment = .center
+            _switchUseVO?.tag = kViewTag
+            _switchUseVO?.addTarget(self, action: #selector(switchAction(_:)), for: .valueChanged)
         }
-        return _checkButtonUseVO
+        return _switchUseVO
     }
 
  //, retrievedData;
@@ -437,26 +419,28 @@ class valueObj: NSObject, UITextFieldDelegate {
     }
 
     // MARK: -
-    // MARK: checkButton support
+    // MARK: switchUseVO support
 
     func enableVO() {
         if !useVO {
             useVO = true
-            checkButtonUseVO?.setImage(UIImage(named: "checked.png"), for: .normal)
+            switchUseVO?.isOn = true
+            //checkButtonUseVO?.setImage(UIImage(named: "checked.png"), for: .normal)
         }
     }
 
     func disableVO() {
         if useVO {
             useVO = false
-            checkButtonUseVO?.setImage(UIImage(named: "unchecked.png"), for: .normal)
+            switchUseVO?.isOn = false
+            //checkButtonUseVO?.setImage(UIImage(named: "unchecked.png"), for: .normal)
         }
     }
 
-    // called when the checkmark button is touched 
-    @objc func checkAction(_ sender: Any?) {
-        DBGLog(String("checkbox ticked for \(valueName) new state= \(!useVO)"))
-        var checkImage: UIImage?
+    // called when the cell enable switch value changes
+    @objc func switchAction(_ sender: Any?) {
+        DBGLog(String("switch ticked for \(valueName) new state= \(!useVO)"))
+        //var checkImage: UIImage?
 
         // note: we don't use 'sender' because this action method can be called separate from the button (i.e. from table selection)
         //self.useVO = !self.useVO;
@@ -465,14 +449,14 @@ class valueObj: NSObject, UITextFieldDelegate {
         useVO.toggle()
         if useVO {
             // if new state=TRUE (toggle useVO and set)   // enableVO ... disableVO
-            checkImage = UIImage(named: "checked.png")
+            //checkImage = UIImage(named: "checked.png")
             //   do in update():
             if vtype == VOT_SLIDER {
                 _value = "\((display as? UISlider)?.value ?? 0.0)"
             }
         } else {
             // new state = FALSE
-            checkImage = UIImage(named: "unchecked.png")
+            //checkImage = UIImage(named: "unchecked.png")
             if vtype == VOT_CHOICE {
                 (display as? UISegmentedControl)?.selectedSegmentIndex = UISegmentedControl.noSegment
             } else if vtype == VOT_SLIDER {
@@ -495,7 +479,8 @@ class valueObj: NSObject, UITextFieldDelegate {
         }
 
         NotificationCenter.default.post(name: NSNotification.Name(rtValueUpdatedNotification), object: self)
-        checkButtonUseVO?.setImage(checkImage, for: .normal)
+
+        //checkButtonUseVO?.setImage(checkImage, for: .normal)
 
     }
 

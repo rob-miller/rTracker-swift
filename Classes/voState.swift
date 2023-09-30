@@ -268,7 +268,7 @@ class voState: NSObject, voProtocol {
 
         // checkButton top row left
 
-        let checkImage = UIImage(named: "checked.png")
+        //let checkImage = UIImage(named: "checked.png")
 
         bounds.origin.x = MARGIN
         bounds.origin.y = MARGIN
@@ -280,30 +280,35 @@ class voState: NSObject, voProtocol {
         bounds.size.height = 30.0
 
 
-        vo.checkButtonUseVO?.frame = bounds
-        vo.checkButtonUseVO?.tag = kViewTag
-        vo.checkButtonUseVO?.backgroundColor = cell?.backgroundColor
+        vo.switchUseVO?.frame = bounds
+        vo.switchUseVO?.tag = kViewTag
+        //vo.switchUseVO?.backgroundColor = cell?.backgroundColor
 
-        //if (! self.vo.retrievedData) {  // only show enable checkbox if this is data entry mode (not show historical)  
+        vo.switchUseVO?.accessibilityHint = "enable this control"
+        vo.switchUseVO?.accessibilityIdentifier = "\(tvn())_enable"
+        
+        //if (! self.vo.retrievedData) {  // only show enable checkbox if this is data entry mode (not show historical)
         // 26 mar 2011 -- why not show for historical ?
-        // 30 mar 2011 -- seems like checkbuttonusevo should be correct state if use enablevo everywhere; else don't use it
-        let image = vo.useVO ? checkImage : UIImage(named: "unchecked.png")
-        let newImage = image?.stretchableImage(withLeftCapWidth: Int(12.0), topCapHeight: Int(0.0))
-        vo.checkButtonUseVO?.setImage(newImage, for: .normal)
-        if let aCheckButtonUseVO = vo.checkButtonUseVO {
-            cell?.contentView.addSubview(aCheckButtonUseVO)
+        // 30 mar 2011 -- seems like switchUseVO should be correct state if use enablevo everywhere; else don't use it
+        //let image = vo.useVO ? checkImage : UIImage(named: "unchecked.png")
+        //let newImage = image?.stretchableImage(withLeftCapWidth: Int(12.0), topCapHeight: Int(0.0))
+        //vo.switchUseVO?.setImage(newImage, for: .normal)
+        
+        vo.switchUseVO?.isOn = vo.useVO
+        if let aswitchUseVO = vo.switchUseVO {
+            cell?.contentView.addSubview(aswitchUseVO)
         }
-        //}
 
         cell?.backgroundColor = .clear
 
         // cell label top row right
 
-        bounds.origin.x += (checkImage?.size.width ?? 0.0) + MARGIN
+        let swSize = vo.switchUseVO?.intrinsicContentSize
+        bounds.origin.x += (swSize?.width ?? 0.0) + MARGIN
 
         // [rTracker_resource getKeyWindowWidth] - maxLabel.width - LMARGIN - RMARGIN;
         let screenSize = UIScreen.main.bounds.size
-        bounds.size.width = screenSize.width - (checkImage?.size.width ?? 0.0) - (2.0 * MARGIN) //cell.frame.size.width - checkImage.size.width - (2.0*MARGIN);
+        bounds.size.width = screenSize.width - (swSize?.width ?? 0.0) - (2.0 * MARGIN) //cell.frame.size.width - checkImage.size.width - (2.0*MARGIN);
         bounds.size.height = maxLabel.height + MARGIN //CELL_HEIGHT_TALL/2.0; //self.tracker.maxLabel.height + BMARGIN;
 
 
