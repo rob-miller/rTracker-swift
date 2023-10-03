@@ -328,7 +328,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             tempTrackerObj?.saveConfig()
 
             tlist?.add(toTopLayoutTable: tempTrackerObj!)
-            tlist?.loadTopLayoutTable()
+            tlist?.loadTopLayoutTable()  // rtmx this deletes old ranking of table, temptrackerobj now at bottom
 
             DispatchQueue.main.async(execute: { [self] in
                 rTracker_resource.finishActivityIndicator(view, navItem: navigationItem, disable: true)

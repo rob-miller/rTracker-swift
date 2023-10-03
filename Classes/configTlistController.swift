@@ -314,6 +314,7 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
         let row = indexPath.row
         cell.textLabel?.text = tlist!.topLayoutNames![row]
         cell.textLabel?.textColor = .label
+        cell.accessibilityIdentifier = "configt_\(cell.textLabel!.text!)"
         return cell
     }
 
@@ -420,6 +421,7 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
             atc.tlist = tlist
             let tto = trackerObj(toid)
             atc.tempTrackerObj = tto
+            // rtmx need to log rank of toid here so can put tto at that position on save
             tto.removeTempTrackerData() // ttd array no longer valid if make any changes, can't be sure from here so wipe it
 
             navigationController?.pushViewController(atc, animated: true)

@@ -458,6 +458,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             navigationController?.navigationBar.backgroundColor = .tertiarySystemBackground
             navigationController?.setToolbarHidden(false, animated: false)
 
+            navigationController?.toolbar.accessibilityIdentifier = "useT_toolbar"
             updateToolBar()
 
         }

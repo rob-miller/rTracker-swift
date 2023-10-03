@@ -49,6 +49,20 @@
 
 import UIKit
 
+extension UIView {
+    func viewWithAccessibilityIdentifier(_ identifier: String) -> UIView? {
+        if self.accessibilityIdentifier == identifier {
+            return self
+        }
+        for subview in subviews {
+            if let found = subview.viewWithAccessibilityIdentifier(identifier) {
+                return found
+            }
+        }
+        return nil
+    }
+}
+
 class configTVObjVC: UIViewController, UITextFieldDelegate {
 
     var vdlConfigVO = false
@@ -84,7 +98,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         processingTfDone = false
         rDates = []
     }
-
+    
     
     // MARK: -
     // MARK: view support
@@ -573,6 +587,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
 
         button.addTarget(target, action: action, for: .touchUpInside)
 
+        button.accessibilityIdentifier = "configtv_\(key!)"
         //[self.view addSubview:button];
         scroll.addSubview(button)
 
@@ -732,6 +747,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         //[rtv scrollRangeToVisible: (NSRange) { (NSUInteger) ([text length]-1), (NSUInteger)1 }];  // works 1st time but text is cached so doesn't work subsequently
 
         //[self.view addSubview:rtv];
+        rtv.accessibilityIdentifier = "configtv_\(key!)"
         scroll.addSubview(rtv)
 
         return frame

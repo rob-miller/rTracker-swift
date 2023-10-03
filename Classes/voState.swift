@@ -461,6 +461,8 @@ class voState: NSObject, voProtocol {
 
         cell?.contentView.addSubview(label)
 
+        cell?.accessibilityIdentifier = "useT_\(vo.vos!.tvn())"
+        
         if longTitleSize.height > 0 {
             DBGLog(String("longTitle:\(vo.optDict["longTitle"])"))
 

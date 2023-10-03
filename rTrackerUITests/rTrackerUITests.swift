@@ -1,65 +1,55 @@
-//  Converted to Swift 5.7.2 by Swiftify v5.7.25331 - https://swiftify.com/
 //
 //  rTrackerUITests.swift
 //  rTrackerUITests
 //
-//  Created by Rob Miller on 29/09/2015.
-//  Copyright © 2015 Robert T. Miller. All rights reserved.
+//  Created by Robert Miller on 03/10/2023.
+//  Copyright © 2023 Robert T. Miller. All rights reserved.
 //
 
-class rTrackerUITests: XCTestCase {
-    override func setUp() {
-        super.setUp()
+import XCTest
 
+final class rTrackerUITests: XCTestCase {
+
+    override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.
 
         // In UI tests it is usually best to stop immediately when a failure occurs.
         continueAfterFailure = false
-        // UI tests must launch the application that they test. Doing this in setup will make sure it happens for each test method.
-        XCUIApplication().launch()
 
         // In UI tests it’s important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
     }
 
-    override func tearDown() {
+    override func tearDownWithError() throws {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
-        super.tearDown()
     }
 
-    func testExample() {
-        // Use recording to get started writing UI tests.
-
+    func testExample() throws {
+        // UI tests must launch the application that they test.
         let app = XCUIApplication()
-        app.navigationBars["rTracker"].buttons["Add"].tap()
+        app.launch()
 
-        let tablesQuery = app.tables
-        tablesQuery?.textFields["Name this Tracker"]?.tap()
-        tablesQuery?.children(matching: .cell).element(boundBy: 0).children(matching: .textField).element.typeText("Newt")
-        tablesQuery?.staticTexts["Add an item or value to track"]?.tap()
-
-        let textField = app.children(matching: .window).element(boundBy: 0).children(matching: .other).element.children(matching: .other).element.children(matching: .other).element.children(matching: .other).element.children(matching: .other).element(boundBy: 1).children(matching: .textField).element
-        textField.tap()
-        textField.typeText("n")
-        app.keys["more, numbers"].tap()
-        textField.typeText("1")
-        app.typeText("\n")
-        app.pickerWheels["1 of 12"].swipeUp()
-        app.pickerWheels["dots, 1 of 4"].swipeUp()
-
-        let saveButton = app.navigationBars.matching(identifier: "Configure Item").buttons["Save"] as? XCUIElement
-        saveButton?.tap()
-        tablesQuery?.staticTexts["add another thing to track"]?.tap()
-        app.pickerWheels["number, 1 of 8"].press(forDuration: 1.1)
-        textField.tap()
-        textField.typeText("t1")
-        app.typeText("\n")
-
-        let toolbarsQuery = app.toolbars
-        toolbarsQuery?.buttons["2699"]?.tap()
-        app.buttons["checked"].tap()
-        toolbarsQuery?.buttons["2611"]?.tap()
-        saveButton?.tap()
-        app.navigationBars["Add tracker"].buttons["Save"].tap()
         // Use XCTAssert and related functions to verify your tests produce the correct results.
+    }
+
+    func testTrackerDemoInstall() throws {
+        // UI tests must launch the application that they test.
+        let app = XCUIApplication()
+        app.launch()
+        app.tables.cells["trkr_👣rTracker demo{\n}"].tap()
+
+        app.swipeRight()
+        sleep(1)
+
+        let fnTotalLabel = app.staticTexts["fnVal_total"]
+        XCTAssertEqual(fnTotalLabel.label, "22.00")
+    }
+
+    func testLaunchPerformance() throws {
+        if #available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 7.0, *) {
+            // This measures how long it takes to launch your application.
+            measure(metrics: [XCTApplicationLaunchMetric()]) {
+                XCUIApplication().launch()
+            }
+        }
     }
 }

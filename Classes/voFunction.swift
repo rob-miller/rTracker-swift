@@ -342,6 +342,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             _rlab = UILabel(frame: vosFrame)
             _rlab?.textAlignment = .right // ios6 UITextAlignmentRight;
             _rlab?.font = PrefBodyFont
+            _rlab?.accessibilityIdentifier = "fnVal_\(vo.valueName!)"
         }
         return _rlab
     }
@@ -1275,6 +1276,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         //return [rlab autorelease];
         DBGLog(String("fn voDisplay: \(rlab?.text ?? "")"))
         //self.rlab.tag = kViewTag;
+
         return rlab!
     }
 
@@ -1911,6 +1913,13 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             segmentedControl.addTarget(self, action: #selector(fnSegmentAction(_:)), for: .valueChanged)
             //segmentedControl.segmentedControlStyle = UISegmentedControlStyleBar;
             segmentedControl.selectedSegmentIndex = fnSegNdx //= 0;
+            
+            segmentedControl.subviews[0].accessibilityIdentifier = "fnRange"
+            segmentedControl.subviews[1].accessibilityIdentifier = "fnDefinition"
+            segmentedControl.subviews[2].accessibilityIdentifier = "fnOverview"
+
+            segmentedControl.accessibilityIdentifier = "fnConfigSeg"
+            
             let scButtonItem = UIBarButtonItem(
                 customView: segmentedControl)
             let fnHelpButtonItem = UIBarButtonItem(title: "Help", style: .plain, target: self, action: #selector(RootViewController.btnHelp))
