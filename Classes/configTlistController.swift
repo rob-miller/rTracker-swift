@@ -421,7 +421,7 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
             atc.tlist = tlist
             let tto = trackerObj(toid)
             atc.tempTrackerObj = tto
-            // rtmx need to log rank of toid here so can put tto at that position on save
+            atc.ttoRank = tlist!.toQry2Int(sql:"select rank from toplevel where id = '\(toid)'") // save to put temp tracker at this rank
             tto.removeTempTrackerData() // ttd array no longer valid if make any changes, can't be sure from here so wipe it
 
             navigationController?.pushViewController(atc, animated: true)

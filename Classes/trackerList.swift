@@ -160,7 +160,7 @@ class trackerList: tObjBase {
         //DBGTLIST(self);
     }
 
-    func add(toTopLayoutTable tObj: trackerObj) {
+    func add(toTopLayoutTable tObj: trackerObj, nrank: Int? = nil) {
         DBGLog(String("\(tObj.trackerName) toid \(tObj.toid)"))
 
         topLayoutIDs?.append(tObj.toid)
@@ -168,13 +168,13 @@ class trackerList: tObjBase {
         topLayoutPriv?.append(Int(tObj.optDict["privacy"] as? String ?? "1") ?? 1)
         topLayoutReminderCount?.append(tObj.enabledReminderCount())
 
-        confirmToplevelEntry(tObj)
+        confirmToplevelEntry(tObj, nrank: nrank)
     }
 
     /*
      ensure there is accurate entry in db table toplevel for passed trackerObj
      */
-    func confirmToplevelEntry(_ tObj: trackerObj) {
+    func confirmToplevelEntry(_ tObj: trackerObj, nrank: Int? = nil) {
         dbgNSAssert(tObj.toid != 0, "confirmTLE: toid=0")
         
         //self.sql = @"select * from toplevel";
@@ -184,7 +184,7 @@ class trackerList: tObjBase {
         var sql = "select rank, name, priv, remindercount from toplevel where id = \(tObj.toid)"
         let rslt = tObj.toQry2AryISII(sql:sql).first!
         let (torank, toname, topriv, toremindercount) = rslt
-        var rank = torank
+        var rank = (nrank != nil ? nrank! : torank)
 
         //var sql = String(format: "select rank from toplevel where id=%ld;", Int(tObj.toid))
         //var rank = toQry2Int(sql:sql) // returns 0 if not found

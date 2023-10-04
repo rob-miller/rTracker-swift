@@ -62,6 +62,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     @IBOutlet weak var segcEditTrackerEditItems: UISegmentedControl!
     var deleteIndexPath: IndexPath? // remember row to delete if user confirms in checkTrackerDelete alert
     var deleteVOs: [AnyHashable]? // VOs to be deleted on save
+    var ttoRank: Int? = nil
 
     // MARK: -
     // MARK: core object methods and support
@@ -327,8 +328,8 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
             tempTrackerObj?.saveConfig()
 
-            tlist?.add(toTopLayoutTable: tempTrackerObj!)
-            tlist?.loadTopLayoutTable()  // rtmx this deletes old ranking of table, temptrackerobj now at bottom
+            tlist?.add(toTopLayoutTable: tempTrackerObj!, nrank: ttoRank)
+            tlist?.loadTopLayoutTable()
 
             DispatchQueue.main.async(execute: { [self] in
                 rTracker_resource.finishActivityIndicator(view, navItem: navigationItem, disable: true)
