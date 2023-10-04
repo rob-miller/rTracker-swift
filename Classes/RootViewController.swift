@@ -1116,6 +1116,8 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         // This allows us to add our own constraints to the tableView
         tableView!.translatesAutoresizingMaskIntoConstraints = false
 
+        tableView?.accessibilityIdentifier = "trackerList"
+        
         // Add the tableView as a subview of the current view
         view.addSubview(tableView!)
 

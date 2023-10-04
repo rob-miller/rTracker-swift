@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="19162" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="22154" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
     <device id="retina6_1" orientation="portrait" appearance="light"/>
     <dependencies>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="19144"/>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="22130"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
@@ -22,7 +23,7 @@
             <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
             <subviews>
                 <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="8r5-Pv-PCI" userLabel="itemNameContainer">
-                    <rect key="frame" x="0.0" y="231" width="414" height="54"/>
+                    <rect key="frame" x="0.0" y="235" width="414" height="54"/>
                     <subviews>
                         <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleToFill" text="Label" lineBreakMode="tailTruncation" minimumFontSize="10" translatesAutoresizingMaskIntoConstraints="NO" id="5">
                             <rect key="frame" x="10" y="10" width="42" height="34"/>
@@ -49,7 +50,8 @@
                     </constraints>
                 </view>
                 <pickerView opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="TopLeft" translatesAutoresizingMaskIntoConstraints="NO" id="6">
-                    <rect key="frame" x="0.0" y="355.5" width="414" height="216"/>
+                    <rect key="frame" x="0.0" y="359.5" width="414" height="216"/>
+                    <accessibility key="accessibilityConfiguration" hint="left wheel sets value type" identifier="avoPicker"/>
                     <connections>
                         <outlet property="dataSource" destination="-1" id="13"/>
                         <outlet property="delegate" destination="-1" id="14"/>
@@ -73,12 +75,12 @@
                     </items>
                 </toolbar>
                 <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleToFill" text="Type" lineBreakMode="tailTruncation" minimumFontSize="10" translatesAutoresizingMaskIntoConstraints="NO" id="9">
-                    <rect key="frame" x="80" y="315" width="38" height="20.5"/>
+                    <rect key="frame" x="80" y="319" width="38" height="20.5"/>
                     <fontDescription key="fontDescription" type="system" pointSize="17"/>
                     <nil key="highlightedColor"/>
                 </label>
                 <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" text="Graph" lineBreakMode="tailTruncation" minimumFontSize="10" translatesAutoresizingMaskIntoConstraints="NO" id="16">
-                    <rect key="frame" x="287" y="315" width="47" height="20.5"/>
+                    <rect key="frame" x="287" y="319" width="47" height="20.5"/>
                     <fontDescription key="fontDescription" type="system" pointSize="17"/>
                     <color key="highlightedColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                 </label>

@@ -97,12 +97,14 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
             barButtonSystemItem: .cancel,
             target: self,
             action: #selector(addTrackerController.btnCancel))
+        cancelBtn.accessibilityIdentifier = "avoCancel"
         navigationItem.leftBarButtonItem = cancelBtn
 
         let saveBtn = UIBarButtonItem(
             barButtonSystemItem: .save,
             target: self,
             action: #selector(addTrackerController.btnSave))
+        saveBtn.accessibilityIdentifier = "avoSave"
         navigationItem.rightBarButtonItem = saveBtn
 
 

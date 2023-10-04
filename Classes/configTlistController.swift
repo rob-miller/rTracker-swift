@@ -129,6 +129,8 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
         navigationController?.setToolbarHidden(true, animated: false)
         navigationItem.setRightBarButton(getExportBtn(), animated: false)
 
+        // doesn't work? navigationItem.backBarButtonItem!.accessibilityIdentifier = "configTlistReturn"
+        
         let bg = UIImageView(image: rTracker_resource.get_background_image(self))
         bg.tag = BGTAG
         view.addSubview(bg)

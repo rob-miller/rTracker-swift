@@ -225,7 +225,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         // Set tableView's translatesAutoresizingMaskIntoConstraints property to false
         // This allows us to add our own constraints to the tableView
         tableView!.translatesAutoresizingMaskIntoConstraints = false
-
+        tableView?.accessibilityIdentifier = "useTracker_\(title!)"
+        
         // Add the tableView as a subview of the current view
         view.addSubview(tableView!)
 
