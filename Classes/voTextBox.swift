@@ -84,6 +84,7 @@ class CustomAccessoryView: UIView {
             .font: UIFont.systemFont(ofSize: fsize)
         ], for: .normal)
         
+        segControl.accessibilityIdentifier = "tbox-seg-control"
         segControl.subviews[0].accessibilityLabel = "Contacts"
         segControl.subviews[0].accessibilityHint = "select to choose from Contacts"
         segControl.subviews[0].accessibilityIdentifier = "tbox-seg-contacts"
@@ -389,6 +390,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         // note: for UITextView, if you don't like autocompletion while typing use:
         // myTextView.autocorrectionType = UITextAutocorrectionTypeNo;
 
+        textView?.accessibilityIdentifier = "tbox-textview"
         if let textView {
             if textView.inputAccessoryView == nil {
                 cav = CustomAccessoryView.instanceFromNib(self)

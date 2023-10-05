@@ -200,7 +200,7 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
             let freeMsg = "Copyright 2010-2023 Robert T. Miller\n\nrTracker is free and open source software, distributed under the Apache License, Version 2.0.\n\nrTracker is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n\nrTracker source code is available at https://github.com/rob-miller/rTracker\n\nThe full Apache License is available at http://www.apache.org/licenses/LICENSE-2.0"
 
             let alert = UIAlertController(
-                title: "rTracker is free software.\n",
+                title: "rTracker is free software.",
                 message: freeMsg,
                 preferredStyle: .alert)
 
