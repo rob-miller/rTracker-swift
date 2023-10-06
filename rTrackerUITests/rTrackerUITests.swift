@@ -33,6 +33,20 @@ final class rTrackerUITests: XCTestCase {
         
         app.launch()
         // In UI tests it’s important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
+        
+        // clear alerts if first run
+        sleep(1)
+        
+        let apacheAlert = app.alerts["rTracker is free software."]
+        if apacheAlert.exists {
+            apacheAlert.buttons["Accept"].tap()
+            sleep(1)
+        }
+        let authAlert = app.alerts["Authorise notifications"]
+        if authAlert.exists {
+            authAlert.buttons["OK"].tap()
+            sleep(1)
+        }
     }
 
     override func tearDownWithError() throws {
@@ -47,6 +61,8 @@ final class rTrackerUITests: XCTestCase {
 
         let fnTotalLabel = app.staticTexts["fnVal_total"]
         XCTAssertEqual(fnTotalLabel.label, "22.00")
+        
+        app.buttons["< rTracker"].tap()
     }
 
     func testEditTrackerRank() throws {
@@ -82,22 +98,125 @@ final class rTrackerUITests: XCTestCase {
 
         XCTAssertEqual(initialTitles, newTitles, "The order of cell titles has changed!")
 
+        // restore original config
+        app.buttons["edit"].tap()
+        app.tables.cells["configt_👣rTracker demo"].tap()
+        
+        //let targCell = app.tables.cells["👣rTracker demo_Yes!"]
+        //let coordinate = targCell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)) // center of the cell
+        coordinate.tap()
+        //app.tables.cells["👣rTracker demo_Yes!"].tap()
+        
+        //let voPicker = app.otherElements["avoPicker"]
+        app.pickerWheels.element(boundBy: 2).adjust(toPickerWheelValue: "dots")
+        app.buttons["avoSave"].tap()
+        app.buttons["addTrkrSave"].tap()
+        app.buttons["rTracker"].tap()
+    }
+    
+    func testSearchSetup() throws {
+        let carCell = app.tables.cells["trkr_🚗 Car{\n}"]
+        carCell.tap()
+        
+        let odFld = app.textFields["🚗 Car_odometer_numberfield"]
+        let fuFld = app.textFields["🚗 Car_fuel_numberfield"]
+        let tcFld = app.textFields["🚗 Car_total cost_numberfield"]
+        let tfSw = app.switches["🚗 Car_tank full_switch"]
+        let tbBtn = app.buttons["🚗 Car_notes_tbButton"]
+        let tbtv = app.textViews["tbox-textview"]
+
+        for i in 1...5 {
+            odFld.tap()
+            odFld.typeText("\(i)")
+            fuFld.tap()
+            fuFld.typeText("2")
+            tcFld.tap()
+            tcFld.typeText("4")
+            tfSw.tap()
+            tbBtn.tap()
+            sleep(1)
+            tbtv.tap()
+            tbtv.typeText("target \(i)\n")
+            if i<4 && i>1 {
+                tbtv.typeText("extra\n")
+            }
+            
+            // save and leave textbox editor
+            app.buttons["tbox-save"].tap()
+            app.buttons["🚗 Car"].tap()
+            // save and return to car tracker
+            app.buttons["trkrSave"].tap()
+            if i != 5 {
+                sleep(1)
+                carCell.tap()
+            }
+        }
+    }
+    
+    func testSearch() throws {
+        let carCell = app.tables.cells["trkr_🚗 Car{\n}"]
+        carCell.tap()
+        
+        let odFld = app.textFields["🚗 Car_odometer_numberfield"]
+        let fuFld = app.textFields["🚗 Car_fuel_numberfield"]
+        let tcFld = app.textFields["🚗 Car_total cost_numberfield"]
+        let tfSw = app.switches["🚗 Car_tank full_switch"]
+        let tbBtn = app.buttons["🚗 Car_notes_tbButton"]
+        let tbtv = app.textViews["tbox-textview"]
+        
+        XCTAssertEqual(odFld.value as! String, "54321", "odometer field not last value")
+        
+        tbBtn.tap()
+        tbtv.tap()
+        tbtv.typeText("extra\n")
+        
+        let srchSeg = app.segmentedControls["tbox-seg-search"]
+        srchSeg.buttons["tbox-mode-srch"].tap()
+        app.buttons["tbox-save"].tap()
+        app.buttons["🚗 Car"].tap()
+        sleep(1)
+        let srchBtn = app.buttons["trkrSearch"]
+        XCTAssert(srchBtn.exists, "no mag glass button")
+        srchBtn.tap()
+        let srchAlert = app.alerts["Search results"]
+        XCTAssert(srchAlert.exists, "no search results alert")
+        let alertBodyText = srchAlert.staticTexts.element(boundBy: 1).label
+        let firstThreeWords = alertBodyText.split(separator: " ").prefix(3).joined(separator: " ")
+        XCTAssertEqual(firstThreeWords, "2 entries highlighted", "alert text wrong")
+        srchAlert.buttons["OK"].tap()
+        app.swipeRight()
+        XCTAssertEqual(odFld.value as! String, "321", "odometer field not first result 321")
+        app.swipeRight()
+        XCTAssertEqual(odFld.value as! String, "21", "odometer field not second result 21")
+        
+        let ffBtn = app.buttons["Fast forward"]
+        XCTAssert(ffBtn.exists, "no skip forward button")
+        ffBtn.tap()
+        
+        // rtmx still more to do here
+    }
+    
+    func testSearchClear() throws {
+        app.buttons["edit"].tap()
+        app.segmentedControls["configTlistMode"].buttons["tlistMoveDel"].tap()
+        let carCell = app.tables.cells["configt_🚗 Car"]
+        carCell.tap()
+        sleep(1)
+        carCell.buttons["Delete"].tap()
+        let delAlert = app.alerts["Delete tracker 🚗 Car"]
+        let delRecBtn = delAlert.buttons["Remove records only"]
+        if delRecBtn.exists {
+            delRecBtn.tap()
+        } else {
+            delAlert.buttons["Cancel"].tap()
+        }
+
+        app.buttons["rTracker"].tap()
+        //app.tables.cells["configt_👣rTracker demo"].tap()
     }
     
     func testTrackerDemoUse() throws {
         let rTdemoCell = app.tables.cells["trkr_👣rTracker demo{\n}"]
-        sleep(1)
-        
-        let apacheAlert = app.alerts["rTracker is free software."]
-        if apacheAlert.exists {
-            apacheAlert.buttons["Accept"].tap()
-            sleep(1)
-        }
-        let authAlert = app.alerts["Authorise notifications"]
-        if authAlert.exists {
-            authAlert.buttons["OK"].tap()
-            sleep(1)
-        }
 
         // enter demo tracker, if old data then discard, exit and re-enter
         rTdemoCell.tap()
@@ -196,7 +315,7 @@ Kate Bell
         app.buttons["👣rTracker demo"].tap()
         
         // confirm textbox button shows first line
-        XCTAssertEqual(tbButton.label, expectedTbContent.replacingOccurrences(of: "\n", with: " "), "textBox button label not 'rTracker'")
+        XCTAssertEqual(tbButton.label, expectedTbContent.replacingOccurrences(of: "\n", with: " "), "textBox button label not as expected")
         
         // set text string
         let olField = app.textFields["👣rTracker demo_One liner_textfield"]
@@ -236,9 +355,28 @@ Kate Bell
         app.buttons["👣rTracker demo"].tap()
         exitTrkrBtn.tap()
         XCTAssert(rTdemoCell.exists, "did not retrun to tracker list")
-        
-        
     }
+    
+    func testTrackerDemoClear() throws {
+        let rTdemoCell = app.tables.cells["trkr_👣rTracker demo{\n}"]
+
+        // enter demo tracker, if old data then discard, exit and re-enter
+        rTdemoCell.tap()
+        let exitTrkrBtn = app.buttons["< rTracker"]
+        exitTrkrBtn.tap()
+        let modAlert = app.alerts["👣rTracker demo modified"]
+        if modAlert.exists {
+            modAlert.buttons["Discard"].tap()
+            sleep(1)
+        }
+        rTdemoCell.tap()
+        sleep(1)
+        app.swipeRight()
+        app.buttons["Delete"].tap()
+        app.alerts["Delete entry"].buttons["Yes, delete"].tap()
+        exitTrkrBtn.tap()
+    }
+    
     func testLaunchPerformance() throws {
         if #available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 7.0, *) {
             // This measures how long it takes to launch your application.

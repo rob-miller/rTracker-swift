@@ -145,6 +145,8 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
         swipe.direction = .right
         view.addGestureRecognizer(swipe)
         
+        modeSegment.accessibilityIdentifier = "configTlistMode"
+        
         modeSegment.subviews[2].accessibilityIdentifier = "tlistModify"
         modeSegment.subviews[2].accessibilityLabel = "Modify"
         modeSegment.subviews[2].accessibilityHint = "select tracker to modify"

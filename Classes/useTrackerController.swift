@@ -876,9 +876,9 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 target: self,
                 action: #selector(addTrackerController.btnSave))
             
-            _calBtn!.accessibilityLabel = "Save"
-            _calBtn!.accessibilityHint = "tap to save this entry"
-            _calBtn!.accessibilityIdentifier = "trkrSave"
+            _saveBtn!.accessibilityLabel = "Save"
+            _saveBtn!.accessibilityHint = "tap to save this entry"
+            _saveBtn!.accessibilityIdentifier = "trkrSave"
         }
         return _saveBtn!
     }

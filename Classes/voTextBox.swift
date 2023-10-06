@@ -101,6 +101,7 @@ class CustomAccessoryView: UIView {
             .font: UIFont.systemFont(ofSize: fsize)
         ], for: .normal)
         
+        searchSeg.accessibilityIdentifier = "tbox-seg-search"
         searchSeg.subviews[1].accessibilityLabel = "Use"
         searchSeg.subviews[1].accessibilityHint = "select to use text for this entry"
         searchSeg.subviews[1].accessibilityIdentifier = "tbox-mode-use"
