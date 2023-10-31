@@ -304,6 +304,21 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
             rTracker_resource.alert("Save Item", msg: "Please set a name for this value to save", vc: self)
             return
         }
+        
+        if (VOT_CHOICE == tempValObj!.vtype) {
+            if tempValObj!.optDict["c0"] == nil {
+                rTracker_resource.alert("Save Choice", msg: "Please configure some choices to save (configure button at bottom)", vc: self)
+                return
+            }
+        }
+        /*
+        if VOT_FUNC == tempValObj!.vtype {
+            if tempValObj!.optDict["frep0"] == nil {
+                rTracker_resource.alert("Save Function", msg: "Please configure function range (configure button at bottom)", vc: self)
+                return
+            }
+        }
+         */
         voOptDictStash = nil
 
         tempValObj!.valueName = labelField.text // in case neglected to 'done' keyboard

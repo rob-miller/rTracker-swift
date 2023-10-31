@@ -132,7 +132,7 @@ protocol voProtocol: AnyObject {
     func setFnVals(_ tDate: Int)
     func doTrimFnVals()
     func resetData()
-    func mapValue2Csv() -> String
+    func mapValue2Csv() -> String?
     func mapCsv2Value(_ inCsv: String) -> String
 }
 
@@ -643,14 +643,14 @@ class valueObj: NSObject, UITextFieldDelegate {
             if nil == tstVal {
                 tstVal = "\(Float(i) + 1)" // added 7.iv.2013 - need default value
             } else {
-                tstVal = "\(Float(tstVal ?? "") ?? 0.0)"
+                tstVal = "\(Float(tstVal!)!)"
             }
             //DBGLog(@"gciv test against %d: %@",i,tstVal);
             if tstVal == inVal {
                 return i
             }
 
-            let tstValF = CGFloat(Float(tstVal ?? "") ?? 0.0)
+            let tstValF = CGFloat(Float(tstVal!)!)
             if minValF > tstValF {
                 minValF = tstValF
             }
@@ -669,7 +669,7 @@ class valueObj: NSObject, UITextFieldDelegate {
         if (-1 != closestNdx) && (inValF > minValF) && (inValF < maxValF) {
             return closestNdx
         }
-        return CHOICES
+        return CHOICES-1
 
     }
 }

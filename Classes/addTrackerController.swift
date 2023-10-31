@@ -376,7 +376,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             Thread.detachNewThreadSelector(#selector(btnSaveSlowPart), toTarget: self, with: nil)
         } else {
             saving = false
-            rTracker_resource.alert("save Tracker", msg: "Please set a name for this tracker to save", vc: self)
+            rTracker_resource.alert("Save Tracker", msg: "Please set a name for this tracker to save", vc: self)
         }
     }
 

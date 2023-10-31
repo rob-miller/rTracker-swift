@@ -454,7 +454,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
 
         for i in 0..<2 {
             let key = String(format: "frep%lu", UInt(i))
-            let ep = Int(vo.optDict[key]!)
+            let ep = Int(vo.optDict[key] ?? "")
             if ep == oldVID {
                 vo.optDict[key] = String("\(newVID)")
             }
@@ -1609,13 +1609,22 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         let pkr = (ctvovcp?.wDict)?["fdPkr"] as? UIPickerView
         let row = pkr?.selectedRow(inComponent: 0) ?? 0
         let ntok = fnTitles[row] // get tok from fnTitle and add to fnArray
-        _fnArray!.append(ntok)
+
         if FNCONSTANT == ntok.intValue {
             // constant has const_tok on both sides to help removal
             let vtf = (ctvovcp?.wDict)?[CTFKEY] as? UITextField
-            _fnArray!.append(NSNumber(value: Double(vtf!.text!)!))
+            if let vtftd = Double(vtf!.text ?? "") {
+                _fnArray!.append(ntok)
+                _fnArray!.append(NSNumber(value: vtftd))
+                _fnArray!.append(ntok)
+                ctvovcp?.tfDone(vtf)
+            } else {
+                rTracker_resource.alert("Need Value", msg: "Please set a value for the constant.", vc: nil)
+                return
+            }
+
+        } else {
             _fnArray!.append(ntok)
-            ctvovcp?.tfDone(vtf)
         }
         updateFnTitles()
         pkr?.reloadComponent(0)

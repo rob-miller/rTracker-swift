@@ -411,7 +411,8 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         rlab.font = PrefBodyFont
         rlab.text = text
         rlab.backgroundColor = .clear
-
+        //rlab.accessibilityIdentifier = key
+        
         // wDict[key] = rlab
         wDict[key] = rlab
         
@@ -587,7 +588,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
 
         button.addTarget(target, action: action, for: .touchUpInside)
 
-        button.accessibilityIdentifier = "configtv_\(key!)"
+        button.accessibilityIdentifier = "configtv_\(key ?? label!)"
         //[self.view addSubview:button];
         scroll.addSubview(button)
 
@@ -775,6 +776,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         } else {
             myPickerView.accessibilityIdentifier = "\(vo!.vos!.tvn())_\(key!)"
         }
+        DBGLog("print picker acc id: \(myPickerView.accessibilityIdentifier!)")
         scroll.addSubview(myPickerView)
 
         return frame

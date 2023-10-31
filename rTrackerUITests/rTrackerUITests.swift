@@ -54,7 +54,7 @@ final class rTrackerUITests: XCTestCase {
     }
 
     func testTrackerDemoInstall() throws {
-        app.tables.cells["trkr_👣rTracker demo{\n}"].tap()
+        app.tables.cells["trkr_👣rTracker demo"].tap()
 
         app.swipeRight()
         sleep(1)
@@ -79,7 +79,7 @@ final class rTrackerUITests: XCTestCase {
         app.buttons["edit"].tap()
         app.tables.cells["configt_👣rTracker demo"].tap()
         
-        let targCell = app.tables.cells["👣rTracker demo_Yes!"]
+        var targCell = app.tables.cells["👣rTracker demo_Yes!"]
         let coordinate = targCell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)) // center of the cell
         coordinate.tap()
         //app.tables.cells["👣rTracker demo_Yes!"].tap()
@@ -112,10 +112,38 @@ final class rTrackerUITests: XCTestCase {
         app.buttons["avoSave"].tap()
         app.buttons["addTrkrSave"].tap()
         app.buttons["rTracker"].tap()
+        
+        app.buttons["edit"].tap()
+        app.segmentedControls["configTlistMode"].buttons["tlistMoveDel"].tap()
+        targCell = app.tables.cells["configt_🚴 Exercise"]
+        let moveToCell = app.tables.cells["configt_☕️🍷 Drinks"]
+        var moveBtn = targCell.buttons["Reorder 🚴 Exercise"]
+        moveBtn.press(forDuration: 0.5, thenDragTo: moveToCell)
+        app.buttons["rTracker"].tap()
+        
+        sleep(1)
+        
+        let temp = initialTitles[2]
+        initialTitles[2] = initialTitles[3]
+        initialTitles[3] = temp
+        
+        newTitles = []
+        for i in 0..<table.cells.count {
+            let cell = table.cells.element(boundBy: i)
+            newTitles.append(cell.staticTexts.firstMatch.label)
+        }
+        
+        XCTAssertEqual(initialTitles, newTitles, "The order of cell titles is wrong")
+        
+        app.buttons["edit"].tap()
+        app.segmentedControls["configTlistMode"].buttons["tlistMoveDel"].tap()
+        
+        moveBtn = moveToCell.buttons["Reorder ☕️🍷 Drinks"]
+        moveBtn.press(forDuration: 0.5, thenDragTo: targCell)
     }
     
     func testSearchSetup() throws {
-        let carCell = app.tables.cells["trkr_🚗 Car{\n}"]
+        let carCell = app.tables.cells["trkr_🚗 Car"]
         carCell.tap()
         
         let odFld = app.textFields["🚗 Car_odometer_numberfield"]
@@ -140,7 +168,9 @@ final class rTrackerUITests: XCTestCase {
             if i<4 && i>1 {
                 tbtv.typeText("extra\n")
             }
-            
+            if i<3 {
+                tbtv.typeText("overlap\n")
+            }
             // save and leave textbox editor
             app.buttons["tbox-save"].tap()
             app.buttons["🚗 Car"].tap()
@@ -154,13 +184,15 @@ final class rTrackerUITests: XCTestCase {
     }
     
     func testSearch() throws {
-        let carCell = app.tables.cells["trkr_🚗 Car{\n}"]
+        let carCell = app.tables.cells["trkr_🚗 Car"]
         carCell.tap()
         
         let odFld = app.textFields["🚗 Car_odometer_numberfield"]
+        /*
         let fuFld = app.textFields["🚗 Car_fuel_numberfield"]
         let tcFld = app.textFields["🚗 Car_total cost_numberfield"]
         let tfSw = app.switches["🚗 Car_tank full_switch"]
+         */
         let tbBtn = app.buttons["🚗 Car_notes_tbButton"]
         let tbtv = app.textViews["tbox-textview"]
         
@@ -178,11 +210,11 @@ final class rTrackerUITests: XCTestCase {
         let srchBtn = app.buttons["trkrSearch"]
         XCTAssert(srchBtn.exists, "no mag glass button")
         srchBtn.tap()
-        let srchAlert = app.alerts["Search results"]
+        var srchAlert = app.alerts["Search results"]
         XCTAssert(srchAlert.exists, "no search results alert")
-        let alertBodyText = srchAlert.staticTexts.element(boundBy: 1).label
-        let firstThreeWords = alertBodyText.split(separator: " ").prefix(3).joined(separator: " ")
-        XCTAssertEqual(firstThreeWords, "2 entries highlighted", "alert text wrong")
+        var alertBodyText = srchAlert.staticTexts.element(boundBy: 1).label
+        var firstThreeWords = alertBodyText.split(separator: " ").prefix(3).joined(separator: " ")
+        XCTAssertEqual(firstThreeWords, "2 entries highlighted", "alert text wrong 1")
         srchAlert.buttons["OK"].tap()
         app.swipeRight()
         XCTAssertEqual(odFld.value as! String, "321", "odometer field not first result 321")
@@ -193,7 +225,71 @@ final class rTrackerUITests: XCTestCase {
         XCTAssert(ffBtn.exists, "no skip forward button")
         ffBtn.tap()
         
-        // rtmx still more to do here
+        tbBtn.tap()
+        tbtv.tap()
+        tbtv.typeText("extra\n")
+        tbtv.typeText("overlap\n")
+        srchSeg.buttons["tbox-mode-srch"].tap()
+        app.buttons["tbox-save"].tap()
+        app.buttons["🚗 Car"].tap()
+        sleep(1)
+        srchBtn.tap()
+        srchAlert = app.alerts["Search results"]
+        alertBodyText = srchAlert.staticTexts.element(boundBy: 1).label
+        firstThreeWords = alertBodyText.split(separator: " ").prefix(3).joined(separator: " ")
+        XCTAssertEqual(firstThreeWords, "3 entries highlighted", "alert text wrong 2")
+        srchAlert.buttons["OK"].tap()
+        app.swipeRight()
+        XCTAssertEqual(odFld.value as! String, "321", "odometer field not first result 321")
+        app.swipeRight()
+        XCTAssertEqual(odFld.value as! String, "21", "odometer field not second result 21")
+        app.swipeRight()
+        XCTAssertEqual(odFld.value as! String, "1", "odometer field not third result 1")
+        ffBtn.tap()
+        
+        tbBtn.tap()
+        tbtv.tap()
+        tbtv.typeText("extra\n")
+        tbtv.typeText("overlap\n")
+        srchSeg.buttons["tbox-mode-srch"].tap()
+        let srchMode = app.segmentedControls["tbox-seg-search-mode"]
+        srchMode.buttons["tbox-srch-and"].tap()
+        app.buttons["tbox-save"].tap()
+        app.buttons["🚗 Car"].tap()
+        sleep(1)
+        srchBtn.tap()
+        srchAlert = app.alerts["Search results"]
+        alertBodyText = srchAlert.staticTexts.element(boundBy: 1).label
+        firstThreeWords = alertBodyText.split(separator: " ").prefix(3).joined(separator: " ")
+        XCTAssertEqual(firstThreeWords, "1 entries highlighted", "alert text wrong 2")
+        srchAlert.buttons["OK"].tap()
+        app.swipeRight()
+        XCTAssertEqual(odFld.value as! String, "21", "odometer field not second result 21")
+        app.swipeRight()
+        XCTAssertEqual(odFld.value as! String, "21", "went past result 1")
+        ffBtn.tap()
+        
+        tbBtn.tap()
+        tbtv.tap()
+        tbtv.typeText("target 5\n")
+        tbtv.typeText("overlap\n")
+        srchSeg.buttons["tbox-mode-srch"].tap()
+        app.buttons["tbox-save"].tap()
+        app.buttons["🚗 Car"].tap()
+        sleep(1)
+        srchBtn.tap()
+        srchAlert = app.alerts["Search results"]
+        alertBodyText = srchAlert.staticTexts.element(boundBy: 1).label
+        firstThreeWords = alertBodyText.split(separator: " ").prefix(3).joined(separator: " ")
+        XCTAssertEqual(firstThreeWords, "3 entries highlighted", "alert text wrong 2")
+        srchAlert.buttons["OK"].tap()
+        app.swipeRight()
+        XCTAssertEqual(odFld.value as! String, "54321", "odometer field not first result 321")
+        app.swipeRight()
+        XCTAssertEqual(odFld.value as! String, "21", "odometer field not second result 21")
+        app.swipeRight()
+        XCTAssertEqual(odFld.value as! String, "1", "odometer field not third result 1")
+        ffBtn.tap()
     }
     
     func testSearchClear() throws {
@@ -216,7 +312,7 @@ final class rTrackerUITests: XCTestCase {
     }
     
     func testTrackerDemoUse() throws {
-        let rTdemoCell = app.tables.cells["trkr_👣rTracker demo{\n}"]
+        let rTdemoCell = app.tables.cells["trkr_👣rTracker demo"]
 
         // enter demo tracker, if old data then discard, exit and re-enter
         rTdemoCell.tap()
@@ -346,9 +442,6 @@ Kate Bell
         
         // confirm textBox value
         tbButton.tap()
-        let foo = tbtv.value as! String
-        print(">\(foo)<")
-        print(">\(expectedTbContent)<")
         XCTAssertEqual((tbtv.value as! String), expectedTbContent, "The textbox content is incorrect")
         
         // return out and confirm
@@ -358,7 +451,7 @@ Kate Bell
     }
     
     func testTrackerDemoClear() throws {
-        let rTdemoCell = app.tables.cells["trkr_👣rTracker demo{\n}"]
+        let rTdemoCell = app.tables.cells["trkr_👣rTracker demo"]
 
         // enter demo tracker, if old data then discard, exit and re-enter
         rTdemoCell.tap()
@@ -375,6 +468,256 @@ Kate Bell
         app.buttons["Delete"].tap()
         app.alerts["Delete entry"].buttons["Yes, delete"].tap()
         exitTrkrBtn.tap()
+    }
+    
+    func testDeleteNewTracker() throws {
+        app.buttons["Edit"].tap()
+        app.segmentedControls["configTlistMode"].buttons["tlistMoveDel"].tap()
+        let targCell = app.tables.cells["configt_testTracker"]
+        targCell.tap()
+        sleep(1)
+        targCell.buttons["Delete"].tap()
+        let delAlert = app.alerts["Delete tracker testTracker"]
+        let delTrkrBtn = delAlert.buttons["Delete tracker"]
+        delTrkrBtn.tap()
+        app.buttons["rTracker"].tap()
+    }
+    
+    func testClearNewTracker() throws {
+        app.buttons["Edit"].tap()
+        app.segmentedControls["configTlistMode"].buttons["tlistMoveDel"].tap()
+        let targCell = app.tables.cells["configt_testTracker"]
+        targCell.tap()
+        sleep(1)
+        targCell.buttons["Delete"].tap()
+        let delAlert = app.alerts["Delete tracker testTracker"]
+        let delRecBtn = delAlert.buttons["Remove records only"]
+        if delRecBtn.exists {
+            delRecBtn.tap()
+        } else {
+            delAlert.buttons["Cancel"].tap()
+        }
+        app.buttons["rTracker"].tap()
+    }
+    
+    func testCreateNewTracker() throws {
+        func addVal(_ targStr: String, noSave: Bool = false) {
+            vname.tap()
+            vname.typeText("v\(targStr)\n")
+            //app.buttons["Done"].tap()
+            while vpicker.value as! String != targStr {
+                //vpicker.swipeUp()  // or .swipeDown() depending on the direction needed
+                vpicker.adjust(toPickerWheelValue: targStr)
+            }
+            if noSave {
+                return
+            }
+            saveBtn.tap()
+            sleep(1)
+            
+            addValBtn.tap()
+        }
+        app.buttons["add"].tap()
+        
+        let addValBtn = app.tables.cells["trkrAddValue"]
+        addValBtn.tap()
+        
+        let saveBtn = app.buttons["avoSave"]
+        let avoCancel = app.buttons["avoCancel"]
+        saveBtn.tap()
+        
+        var alert = app.alerts["Save Item"]
+        XCTAssert(alert.exists, "no value set name alert")
+        alert.buttons["OK"].tap()
+        
+        let vname = app.textFields["valueName"]
+        let vpicker = app.pickerWheels.element(boundBy: 0)
+        let avoConfig = app.buttons["avoConfig"]
+        
+        addVal("function", noSave:true)
+        avoConfig.tap()
+        alert = app.alerts["No variables for function"]
+        XCTAssert(alert.exists, "no function need variables alert")
+        alert.buttons["OK"].tap()
+        app.buttons["avoCancel"].tap()
+        addValBtn.tap()
+        
+        addVal("number")
+        addVal("text")
+        
+        addVal("textbox", noSave:true)
+        avoConfig.tap()
+        app.buttons["tnull_vtextbox_tbnlBtn"].tap()
+        app.buttons["configtvo_done"].tap()
+        saveBtn.tap()
+        addValBtn.tap()
+        
+        addVal("slider")
+        
+        for i in 1...2 {
+            addVal("choice", noSave:true)
+            if i==1 {
+                saveBtn.tap()
+                alert = app.alerts["Save Choice"]
+                XCTAssert(alert.exists, "no set choice alert")
+                alert.buttons["OK"].tap()
+            }
+            
+            vname.tap()
+            vname.tap() // de-select exiting text
+            vname.typeText("\(i)\n")
+            //app.buttons["Done"].tap()
+            //sleep(1)
+            avoConfig.tap()
+            for j in 1...(i*4) {
+                    let tf = app.textFields["tnull_vchoice\(i)_\(j-1)tf"]
+                    tf.tap()
+                    tf.typeText("c\(j)\n")
+                if i>1 {
+                    let vtf = app.textFields["tnull_vchoice2_\(j-1)tfv"]
+                    vtf.tap()
+                    vtf.typeText("\(8-j)\n")
+                }
+            }
+            app.buttons["configtvo_done"].tap()
+            saveBtn.tap()
+            addValBtn.tap()
+        }
+        
+
+        addVal("yes/no")
+        addVal("function")
+        addVal("info", noSave:true)
+        avoConfig.tap()
+        let ival = app.textFields["tnull_vinfo_ivalTF"]
+        ival.tap()
+        ival.typeText("2.3\n")
+        app.buttons["configtvo_done"].tap()
+        saveBtn.tap()
+        addValBtn.tap()
+        
+        avoCancel.tap()  // exit last addValObj
+        
+        let trkrSave = app.buttons["addTrkrSave"]
+        trkrSave.tap()
+        alert = app.alerts["Save Tracker"]
+        XCTAssert(alert.exists, "no tracker set name alert")
+        alert.buttons["OK"].tap()
+        
+        let tname = app.textFields["addTrkrName"]
+        tname.tap()
+        tname.typeText("testTracker")
+        trkrSave.tap()
+        
+        //sleep(3)
+        XCTAssert(app.tables.cells["trkr_testTracker"].exists, "new tracker not found")
+    }
+    
+    func testModifyNewTracker() throws {
+        app.buttons["edit"].tap()
+        app.tables.cells["configt_testTracker"].tap()
+        
+        app.buttons["modTrkrConfig"].tap()
+        app.buttons["testTracker_srBtn"].tap()
+        app.buttons["configtvo_done"].tap()
+        
+        let targCell = app.tables.cells["testTracker_vfunction"]
+        let coordinate = targCell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)) // center of the cell
+        coordinate.tap()
+        //app.tables.cells["testTracker_vfunction"].tap()
+        app.buttons["avoConfig"].tap()
+        let fnSeg = app.segmentedControls["fnConfigSeg"]
+        fnSeg.buttons["fnRange"].tap()
+        
+        var visiblePickers = app.pickerWheels.allElementsBoundByIndex.filter { $0.isHittable }
+        if let currentPicker = visiblePickers.first {
+            // Interact with the currentPicker
+            currentPicker.adjust(toPickerWheelValue: "days")
+        }
+
+        //app.pickerWheels[testTracker_vfunction_frPkr].adjust(toPickerWheelValue: "days")
+        
+        app.textFields["testTracker_vfunction_fr0TF"].tap()
+        app.textFields["testTracker_vfunction_fr0TF"].typeText("1\n")
+        
+        fnSeg.buttons["fnDefinition"].tap()
+        //let pkr = app.pickerWheels.element(boundBy: 0)
+        let add = app.buttons["configtv_fdaBtn"]
+        visiblePickers = app.pickerWheels.allElementsBoundByIndex.filter { $0.isHittable }
+        if let pkr = visiblePickers.first {
+            
+            pkr.adjust(toPickerWheelValue: "sum")
+            add.tap()
+            pkr.adjust(toPickerWheelValue: "vnumber")
+            add.tap()
+            pkr.adjust(toPickerWheelValue: "+")
+            add.tap()
+            pkr.adjust(toPickerWheelValue: "change_in")
+            add.tap()
+            pkr.adjust(toPickerWheelValue: "vchoice1")
+            add.tap()
+            //delete test
+            app.buttons["configtv_fddBtn"].tap()
+            pkr.adjust(toPickerWheelValue: "vchoice1")
+            add.tap()
+            pkr.adjust(toPickerWheelValue: "-")
+            add.tap()
+            pkr.adjust(toPickerWheelValue: "(")
+            add.tap()
+            pkr.adjust(toPickerWheelValue: "vyes/no")
+            add.tap()
+            pkr.adjust(toPickerWheelValue: "*")
+            add.tap()
+            pkr.adjust(toPickerWheelValue: "vchoice2")
+            add.tap()
+            pkr.adjust(toPickerWheelValue: ")")
+            add.tap()
+            pkr.adjust(toPickerWheelValue: "+")
+            add.tap()
+            pkr.adjust(toPickerWheelValue: "vtext")
+            add.tap()
+            pkr.adjust(toPickerWheelValue: "+")
+            add.tap()
+            pkr.adjust(toPickerWheelValue: "vtextbox")
+            add.tap()
+            pkr.adjust(toPickerWheelValue: "+")
+            add.tap()
+            pkr.adjust(toPickerWheelValue: "vslider")
+            add.tap()
+            pkr.adjust(toPickerWheelValue: "+")
+            add.tap()
+            pkr.adjust(toPickerWheelValue: "vchoice2")
+            add.tap()
+            pkr.adjust(toPickerWheelValue: "+")
+            add.tap()
+            pkr.adjust(toPickerWheelValue: "vinfo")
+            add.tap()
+            pkr.adjust(toPickerWheelValue: "/")
+            add.tap()
+            pkr.adjust(toPickerWheelValue: "constant")
+            add.tap()
+        }
+
+        let alert = app.alerts["Need Value"]
+        XCTAssert(alert.exists, "no need value alert")
+        alert.buttons["OK"].tap()
+        app.textFields["testTracker_vfunction_fdcTF"].tap()
+        app.textFields["testTracker_vfunction_fdcTF"].typeText("2\n")
+        add.tap()
+        
+        fnSeg.buttons["Overview"].tap()
+        let expectedRangeContent = "-1 days to current entry"
+        let expectedDefnContent = "sum[vnumber] + change_in[vchoice1] - ( vyes/no * vchoice2 ) + vtext + vtextbox + vslider + vchoice2 + vinfo /  2  "
+        let rangeTV = app.textViews["configtv_frangeTV"]
+        let defnTV = app.textViews["configtv_fdefnTV"]
+        
+        XCTAssertEqual(expectedRangeContent, rangeTV.value as? String)
+        XCTAssertEqual(expectedDefnContent, defnTV.value as? String)
+        
+        app.buttons["configtvo_done"].tap()
+        app.buttons["avoSave"].tap()
+        app.buttons["addTrkrSave"].tap()
+        app.buttons["rTracker"].tap()
     }
     
     func testLaunchPerformance() throws {

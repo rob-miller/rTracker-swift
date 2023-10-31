@@ -1719,8 +1719,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         cellLabel.append(NSAttributedString(string: (tlist.topLayoutNames)?[row] as? String ?? ""))
 
         cell?.textLabel?.attributedText = cellLabel
-        cell?.accessibilityIdentifier = "trkr_\(cellLabel)"
-
+        cell?.accessibilityIdentifier = "trkr_\(cellLabel.string)"
         return cell!
     }
 

@@ -1186,21 +1186,23 @@ class trackerObj: tObjBase {
                 nsfh?.write(data)
             }
             if haveChoice {
-                for i in 0...CHOICES {
+                for i in 0..<CHOICES {
                     outString = "\"\""
                     for vo in valObjTable {
                         //DBGLog(@"vname= %@",vo.valueName);
                         if VOT_INFO != vo.vtype || ("1" == vo.optDict["infosave"]) {
                             var voStr = ""
                             if vo.vtype == VOT_CHOICE {
-                                voStr = ((vo.optDict)["c\(i)"])!
+                                voStr = ((vo.optDict)["c\(i)"]) ?? ""
                                 /*
                                  if nil == voStr {
                                     voStr = ""
                                 }
                                 */
                             }
-                            outString = outString + ",\(csvSafe(voStr) ?? "")"
+                            if voStr != "" {
+                                outString = outString + ",\(csvSafe(voStr) ?? "")"
+                            }
                         }
                     }
                     outString = outString + "\n"
@@ -1230,7 +1232,9 @@ class trackerObj: tObjBase {
                     if VOT_INFO != vo.vtype || ("1" == vo.optDict["infosave"]) {
                         outString = outString + ","
                         //if (VOT_CHOICE == vo.vtype) {
-                        outString = outString + (csvSafe(vo.csvValue()) ?? "")
+                        if let val = vo.csvValue() {
+                            outString = outString + (csvSafe(val) ?? "")
+                        }
                         //} else {
                         //outString = [outString stringByAppendingString:[self csvSafe:vo.value]];
                         //}

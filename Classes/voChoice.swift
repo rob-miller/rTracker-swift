@@ -508,7 +508,7 @@ class voChoice: voState {
     /* rtm here : export value option 
      */
 
-    override func mapValue2Csv() -> String {
+    override func mapValue2Csv() -> String? {
         #if DEBUGLOG
         DBGLog(
             String("val= \(vo.value) indexForval= \(getSegmentIndexForValue()) obj= \(vo.optDict["c\(getSegmentIndexForValue())"])"))
@@ -516,7 +516,7 @@ class voChoice: voState {
         if vo.optDict["exportvalb"] == "1" {
             return vo.value
         } else {
-            return (vo.optDict["c\(getSegmentIndexForValue())"])!
+            return (vo.optDict["c\(getSegmentIndexForValue())"])
         }
     }
 

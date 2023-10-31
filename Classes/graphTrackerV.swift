@@ -106,11 +106,11 @@ class graphTrackerV: UIScrollView {
         //DBGLog("vtChoiceSetColor input val \(inval) transformed val \(val)");
         let choice = vogd!.vo.getChoiceIndex(forValue: "\(val)")
         let cc = "cc\(choice)"
-        let col = Int(vogd!.vo.optDict[cc]!)
-        let colorSet = rTracker_resource.colorSet()[col!].cgColor
+        let col = Int(vogd!.vo.optDict[cc] ?? "") ?? 0 // rtmx cc=cc8
+        let colorSet = rTracker_resource.colorSet()[col].cgColor
         context.setFillColor(colorSet)
         
-        let cSet = rTracker_resource.colorSet()[col!].cgColor
+        let cSet = rTracker_resource.colorSet()[col].cgColor
         context.setStrokeColor(cSet)
         
     }

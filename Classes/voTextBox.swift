@@ -114,6 +114,7 @@ class CustomAccessoryView: UIView {
             .font: UIFont.systemFont(ofSize: fsize)
         ], for: .normal)
         
+        orAndSeg.accessibilityIdentifier = "tbox-seg-search-mode"
         orAndSeg.subviews[0].accessibilityLabel = "And"
         orAndSeg.subviews[0].accessibilityHint = "search for entries with all lines"
         orAndSeg.subviews[0].accessibilityIdentifier = "tbox-srch-and"
@@ -1033,7 +1034,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         }
     }
 
-    override func mapValue2Csv() -> String {
+    override func mapValue2Csv() -> String? {
         // add from history or contacts adds trailing \n, trim it here
         return vo.value.trimmingCharacters(in: .whitespacesAndNewlines)
     }

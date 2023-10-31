@@ -347,6 +347,23 @@ class rTracker_resource: NSObject {
 
     }
 
+    class func topViewController(_ base: UIViewController? = UIApplication.shared.connectedScenes.filter({$0.activationState == .foregroundActive}).map({$0 as? UIWindowScene}).compactMap({$0}).first?.windows.filter({$0.isKeyWindow}).first?.rootViewController) -> UIViewController? {
+        if let nav = base as? UINavigationController {
+            return topViewController(nav.visibleViewController)
+        }
+        if let tab = base as? UITabBarController {
+            if let selected = tab.selectedViewController {
+                return topViewController(selected)
+            }
+        }
+        if let presented = base?.presentedViewController {
+            return topViewController(presented)
+        }
+        return base
+    }
+
+
+
     class func alert(_ title: String?, msg: String?, vc: UIViewController?) {
         var alert: UIAlertController?
         var vcCpy = vc
@@ -373,10 +390,12 @@ class rTracker_resource: NSObject {
                 w.windowLevel = UIWindow.Level(UIWindow.Level.alert.rawValue + 1)
                 w.makeKeyAndVisible()
                  */
+                /*
                 let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
                 let window = windowScene!.windows.first
                 let rootViewController = window!.rootViewController
-                vcCpy = rootViewController
+                 */
+                vcCpy = topViewController()  // rootViewController
             }
             //dispatch_async(dispatch_get_main_queue(), ^(void){
             DispatchQueue.main.async {
