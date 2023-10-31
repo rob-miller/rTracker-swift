@@ -720,6 +720,44 @@ Kate Bell
         app.buttons["rTracker"].tap()
     }
     
+    func testUseNewTracker() throws {
+        let strs = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight"]
+        let choices = ["c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8", ]
+        app.tables.cells["trkr_testTracker"].tap()
+        for i in 1...8 {
+            app.textFields["testTracker_vnumber_numberfield"].tap()
+            app.textFields["testTracker_vnumber_numberfield"].typeText("\(2*i)\n")
+            app.textFields["testTracker_vtext_textfield"].tap()
+            
+            app.textFields["testTracker_vtext_textfield"].typeText("\(strs[i])\n")
+            app.buttons["testTracker_vtextbox_tbButton"].tap()
+            let tbtv = app.textViews["tbox-textview"]
+            tbtv.tap()
+            for j in 0...i {
+                tbtv.typeText("\(strs[j])\n")
+            }
+            app.buttons["tbox-save"].tap()
+            app.buttons["testTracker"].tap()
+            
+            let slider = app.sliders["testTracker_vslider_slider"]
+            slider.adjust(toNormalizedSliderPosition: (CGFloat(i) * 0.1))
+            
+            let choice1Seg = app.segmentedControls["testTracker_vchoice1_choices"]
+            if i<5 {
+                choice1Seg.buttons[choices[i-1]].tap()
+            }
+            let choice2Seg = app.segmentedControls["testTracker_vchoice2_choices"]
+            choice2Seg.buttons[choices[8 - i]].tap()
+            
+            if i % 2 == 0 {
+                app.switches["testTracker_vyes/no_switch"].tap()
+            }
+            
+            app.buttons["trkrSave"].tap()
+        }
+        app.buttons["< rTracker"].tap()
+    }
+    
     func testLaunchPerformance() throws {
         if #available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 7.0, *) {
             // This measures how long it takes to launch your application.
