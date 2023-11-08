@@ -76,6 +76,13 @@ class voText: voState, UITextFieldDelegate {
         return 32
     }
 
+    override func getNumVal() -> Double {
+        if vo.value == "" {
+            return 0.0
+        }
+        return 1.0
+    }
+    
     func textFieldDidBeginEditing(_ textField: UITextField) {
         //DBGLog(@"tf begin editing");
         startStr = textField.text

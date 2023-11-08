@@ -812,7 +812,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
     }
 
     // supplied with previous endpoint (endpoint 0), calculate function to current tracker
-    func calcFunctionValue(withCurrent epd0: Int) -> NSNumber? {
+    func calcFunctionValue(withCurrent epd0: Int, fn2op: Bool = false) -> NSNumber? {
 
         let maxc = fnArray.count
         var vid = 0
@@ -830,9 +830,8 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             outstr = outstr + " \(object)"
             
         }
-        DBGLog(String("\(vo.valueName ?? "") calcFnValueWithCurrent fnArray= \(outstr)"))
+        DBGLog(String("fndbg \(vo.valueName ?? "") calcFnValueWithCurrent fnArray= \(outstr)"))
         #endif
-
         var epd1: Int
         if to.trackerDate == nil {
             // current tracker entry no date set so epd1=now
@@ -847,6 +846,16 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         while currFnNdx < maxc {
             // recursive function, self.currFnNdx holds our current processing position
             let currTok = fnArray[currFnNdx].intValue
+            #if FUNCTIONDBG
+            DBGLog(String("fndbg currFnNdx= \(currFnNdx) currTok= \(currTok) result = \(result) fn2op = \(fn2op)"))
+            DBGLog(String("fndbg : \(voFnDefnStr(false, cfndx: currFnNdx)!)"))
+            #endif
+            if fn2op && (currTok == FN2ARGPLUS || currTok == FN2ARGMINUS || currTok == FNPARENCLOSE) {
+                #if FUNCTIONDBG
+                DBGLog("fndbg +-) return result= \(result)")
+                #endif
+                return NSNumber(value: result)  // return from recursion leaving currFnNdx=>currTok
+            }
             currFnNdx += 1
             if isFn1Arg(currTok) {
                 // currTok is function taking 1 argument, so get it
@@ -1043,7 +1052,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                 }
             } else if isFn2ArgOp(currTok) {
                 // we are processing some combo of previous result and next value, currFnNdx was ++ already so get that result:
-                let nrnum = calcFunctionValue(withCurrent: epd0) // currFnNdx now at next place already
+                let nrnum = calcFunctionValue(withCurrent: epd0, fn2op: true) // currFnNdx now at next place already
                 if nil == nrnum {
                     return nil
                 }
@@ -1053,23 +1062,23 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                 case FN2ARGPLUS:
                     result += nextResult
                     #if FUNCTIONDBG
-                    DBGLog(String("plus: result= \(result)"))
+                    DBGLog(String("fndbg plus [\(nextResult)]: result= \(result)"))
                     #endif
                 case FN2ARGMINUS:
                     result -= nextResult
                     #if FUNCTIONDBG
-                    DBGLog(String("minus: result= \(result)"))
+                    DBGLog(String("fndbg minus [\(nextResult)]: result= \(result)"))
                     #endif
                 case FN2ARGTIMES:
                     result *= nextResult
                     #if FUNCTIONDBG
-                    DBGLog(String("times: result= \(result)"))
+                    DBGLog(String("fndbg times [\(nextResult)]: result= \(result)"))
                     #endif
                 case FN2ARGDIVIDE:
                     if nrnum != nil && nextResult != 0.0 {
                         result /= nextResult
                         #if FUNCTIONDBG
-                        DBGLog(String("divide: result= \(result)"))
+                        DBGLog(String("fndbg divide [\(nextResult)]: result= \(result)"))
                         #endif
                     } else {
                         //result = nil;
@@ -1089,12 +1098,12 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                 }
                 result = nrnum?.doubleValue ?? 0.0
                 #if FUNCTIONDBG
-                DBGLog(String("paren open: result= \(result)"))
+                DBGLog(String("fndbg paren open: result= \(result)"))
                 #endif
             } else if currTok == FNPARENCLOSE {
                 // close paren means we are there, return what we have
                 #if FUNCTIONDBG
-                DBGLog(String("paren close: result= \(result)"))
+                DBGLog(String("fndbg paren close return with result= \(result)"))
                 #endif
                 return NSNumber(value: result)
             } else if FNCONSTANT == currTok {
@@ -1161,7 +1170,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             } else {
                 // remaining option is we have some vid as currTok, return its value up the chain
                 let lvo = to.getValObj(currTok)!
-                result = Double(lvo.value) ?? 0
+                result = lvo.vos!.getNumVal()  // Double(lvo.value) ?? 0
                 #if FUNCTIONDBG
                 DBGLog(String("vid \(lvo.vid): result= \(result)"))
                 #endif
@@ -1172,7 +1181,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         // swiftify oops?  currFnNdx += 1
 
         #if FUNCTIONDBG
-        DBGLog(String("\(vo.valueName ?? "") calcFnValueWithCurrent rtn: \(NSNumber(value: result))"))
+        DBGLog(String("fndbg \(vo.valueName ?? "") calcFnValueWithCurrent rtn: \(NSNumber(value: result))"))
         #endif
         return NSNumber(value: result)
 
@@ -1235,7 +1244,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
 
         let val = calcFunctionValue(withCurrent: ep0date)
         #if FUNCTIONDBG
-        DBGLog(String("fn update val= \(val)"))
+        DBGLog(String("fndbg fn update val= \(val)"))
         #endif
         if let val {
             let nddp = vo.optDict["fnddp"]
@@ -1243,7 +1252,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             return String(format: String(format: "%%0.%df", ddp!), val.floatValue)
         }
         #if FUNCTIONDBG
-        DBGLog(String("fn update returning: \(instr)"))
+        DBGLog(String("fndbg fn update returning: \(instr)"))
         #endif
         return instr
     }
@@ -1522,16 +1531,21 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         }
     }
 
-    func voFnDefnStr(_ dbg: Bool) -> String? {
+    func voFnDefnStr(_ dbg: Bool = false, cfndx: Int? = nil) -> String? {
         var fstr = ""
         var closePending = false //square brackets around target of Fn1Arg
         var constantPending = false // next item is a number not tok or vid
         var constantClosePending = false // constant bounded on both sides by constant token
         var arg2Pending = false // looking for second argument
         var openParenCount = 0
-
-        for n in fnArray {
+        
+        for (ndx, n) in fnArray.enumerated() {
             let i = n.intValue
+            if let cfn = cfndx {
+                if cfn == ndx {
+                    fstr += ">"
+                }
+            }
             //DBGLog(@"loop start: closePend=%d constantPend=%d constantClosePend=%d arg2Pend=%d openParen=%d fstr=%@",closePending,constantPending,constantClosePending,arg2Pending, openParenCount, fstr);
             if constantPending {
                 fstr += n.stringValue
@@ -1597,7 +1611,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
 
     func updateFnTV() {
         let ftv = (ctvovcp?.wDict)?["fdefnTV2"] as? UITextView
-        ftv?.text = voFnDefnStr(false)
+        ftv?.text = voFnDefnStr()
     }
 
     @objc func btnAdd(_ sender: Any?) {
@@ -1675,7 +1689,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                 frame.size.height = 8 * (ctvovcp?.lfHeight ?? 0.0)
             }
         }
-        _ = ctvovcp?.configTextView(frame, key: "fdefnTV2", text: voFnDefnStr(false))
+        _ = ctvovcp?.configTextView(frame, key: "fdefnTV2", text: voFnDefnStr())
 
         frame.origin.x = 0.0
         frame.origin.y += frame.size.height + MARGIN
@@ -1815,7 +1829,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             }
         }
 
-        _ = ctvovcp?.configTextView(frame, key: "fdefnTV", text: voFnDefnStr(false))
+        _ = ctvovcp?.configTextView(frame, key: "fdefnTV", text: voFnDefnStr())
 
         frame.origin.y += frame.size.height + MARGIN
 

@@ -45,7 +45,11 @@ class voState: NSObject, voProtocol {
         // NSMutableString size for value
         return 10
     }
-
+    
+    func getNumVal() -> Double {
+        return Double(vo.value) ?? 0
+    }
+    
     func update(_ instr: String) -> String {
         // place holder so fn can update on access; also confirm textfield updated
         // added return "" if disabled 30.vii.13

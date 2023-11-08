@@ -334,6 +334,16 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         return 96
     }
 
+    override func getNumVal() -> Double {
+        if vo.value == "" {
+            return 0.0
+        }
+        if vo.optDict["tbnl"] == "1" {
+            return Double(vo.value.components(separatedBy: .newlines).count)
+        }
+        return 1.0
+    }
+    
     override init(vo valo: valueObj) {
         //DBGLog(@"voTextBox init for %@",valo.valueName);
         super.init(vo: valo)

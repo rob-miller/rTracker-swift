@@ -111,6 +111,7 @@ let NUMDDPDFLT = -1
 
 protocol voProtocol: AnyObject {
     func getValCap() -> Int
+    func getNumVal() -> Double
     func update(_ instr: String) -> String
     func voDisplay(_ bounds: CGRect) -> UIView
     func voTVCell(_ tableView: UITableView) -> UITableViewCell

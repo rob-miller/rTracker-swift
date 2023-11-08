@@ -36,7 +36,7 @@ final class rTrackerUITests: XCTestCase {
         
         // clear alerts if first run
         sleep(1)
-        
+        //print(String("docs dir= \(rTracker_resource.ioFilePath(nil, access: true))"))
         let apacheAlert = app.alerts["rTracker is free software."]
         if apacheAlert.exists {
             apacheAlert.buttons["Accept"].tap()
@@ -471,16 +471,19 @@ Kate Bell
     }
     
     func testDeleteNewTracker() throws {
-        app.buttons["Edit"].tap()
-        app.segmentedControls["configTlistMode"].buttons["tlistMoveDel"].tap()
-        let targCell = app.tables.cells["configt_testTracker"]
-        targCell.tap()
-        sleep(1)
-        targCell.buttons["Delete"].tap()
-        let delAlert = app.alerts["Delete tracker testTracker"]
-        let delTrkrBtn = delAlert.buttons["Delete tracker"]
-        delTrkrBtn.tap()
-        app.buttons["rTracker"].tap()
+        let ttt = app.tables.cells["trkr_testTracker"]
+        if ttt.exists {
+            app.buttons["Edit"].tap()
+            app.segmentedControls["configTlistMode"].buttons["tlistMoveDel"].tap()
+            let targCell = app.tables.cells["configt_testTracker"]
+            targCell.tap()
+            sleep(1)
+            targCell.buttons["Delete"].tap()
+            let delAlert = app.alerts["Delete tracker testTracker"]
+            let delTrkrBtn = delAlert.buttons["Delete tracker"]
+            delTrkrBtn.tap()
+            app.buttons["rTracker"].tap()
+        }
     }
     
     func testClearNewTracker() throws {
@@ -587,6 +590,7 @@ Kate Bell
 
         addVal("yes/no")
         addVal("function")
+        
         addVal("info", noSave:true)
         avoConfig.tap()
         let ival = app.textFields["tnull_vinfo_ivalTF"]
@@ -595,6 +599,62 @@ Kate Bell
         app.buttons["configtvo_done"].tap()
         saveBtn.tap()
         addValBtn.tap()
+        
+        
+        addVal("function", noSave:true)
+        vname.tap()
+        vname.typeText("sumvnum")
+        saveBtn.tap()
+        addValBtn.tap()
+        
+        addVal("function", noSave:true)
+        vname.tap()
+        vname.typeText("civnum")
+        saveBtn.tap()
+        addValBtn.tap()
+        
+        addVal("function", noSave:true)
+        vname.tap()
+        vname.typeText("vc1")
+        saveBtn.tap()
+        addValBtn.tap()
+        
+        addVal("function", noSave:true)
+        vname.tap()
+        vname.typeText("ynvc2")
+        saveBtn.tap()
+        addValBtn.tap()
+        
+        addVal("function", noSave:true)
+        vname.tap()
+        vname.typeText("vtxt")
+        saveBtn.tap()
+        addValBtn.tap()
+        
+        addVal("function", noSave:true)
+        vname.tap()
+        vname.typeText("vtb")
+        saveBtn.tap()
+        addValBtn.tap()
+        
+        addVal("function", noSave:true)
+        vname.tap()
+        vname.typeText("sliderVal")
+        saveBtn.tap()
+        addValBtn.tap()
+        
+        addVal("function", noSave:true)
+        vname.tap()
+        vname.typeText("vc2")
+        saveBtn.tap()
+        addValBtn.tap()
+        
+        addVal("function", noSave:true)
+        vname.tap()
+        vname.typeText("vnfo")
+        saveBtn.tap()
+        addValBtn.tap()
+        
         
         avoCancel.tap()  // exit last addValObj
         
@@ -621,8 +681,8 @@ Kate Bell
         app.buttons["testTracker_srBtn"].tap()
         app.buttons["configtvo_done"].tap()
         
-        let targCell = app.tables.cells["testTracker_vfunction"]
-        let coordinate = targCell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)) // center of the cell
+        var targCell = app.tables.cells["testTracker_vfunction"]
+        var coordinate = targCell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)) // center of the cell
         coordinate.tap()
         //app.tables.cells["testTracker_vfunction"].tap()
         app.buttons["avoConfig"].tap()
@@ -644,8 +704,9 @@ Kate Bell
         //let pkr = app.pickerWheels.element(boundBy: 0)
         let add = app.buttons["configtv_fdaBtn"]
         visiblePickers = app.pickerWheels.allElementsBoundByIndex.filter { $0.isHittable }
-        if let pkr = visiblePickers.first {
-            
+        var pkr = visiblePickers.first!
+        
+        if pkr.exists {
             pkr.adjust(toPickerWheelValue: "sum")
             add.tap()
             pkr.adjust(toPickerWheelValue: "vnumber")
@@ -658,6 +719,10 @@ Kate Bell
             add.tap()
             //delete test
             app.buttons["configtv_fddBtn"].tap()
+            pkr.adjust(toPickerWheelValue: "vnumber")
+            add.tap()
+            pkr.adjust(toPickerWheelValue: "+")
+            add.tap()
             pkr.adjust(toPickerWheelValue: "vchoice1")
             add.tap()
             pkr.adjust(toPickerWheelValue: "-")
@@ -707,7 +772,7 @@ Kate Bell
         
         fnSeg.buttons["Overview"].tap()
         let expectedRangeContent = "-1 days to current entry"
-        let expectedDefnContent = "sum[vnumber] + change_in[vchoice1] - ( vyes/no * vchoice2 ) + vtext + vtextbox + vslider + vchoice2 + vinfo /  2  "
+        let expectedDefnContent = "sum[vnumber] + change_in[vnumber] + vchoice1 - ( vyes/no * vchoice2 + vchoice1 ) + vtext + vtextbox + vslider + vchoice2 + vinfo /  2  "
         let rangeTV = app.textViews["configtv_frangeTV"]
         let defnTV = app.textViews["configtv_fdefnTV"]
         
@@ -716,11 +781,170 @@ Kate Bell
         
         app.buttons["configtvo_done"].tap()
         app.buttons["avoSave"].tap()
+        //app.buttons["addTrkrSave"].tap()
+        
+        //--
+        targCell = app.tables.cells["testTracker_sumvnum"]
+        coordinate = targCell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)) // center of the cell
+        coordinate.tap()
+        //app.tables.cells["testTracker_vfunction"].tap()
+        app.buttons["avoConfig"].tap()
+        fnSeg.buttons["fnRange"].tap()
+        visiblePickers = app.pickerWheels.allElementsBoundByIndex.filter { $0.isHittable }
+        if let currentPicker = visiblePickers.first {
+            // Interact with the currentPicker
+            currentPicker.adjust(toPickerWheelValue: "days")
+        }
+        
+        app.textFields["testTracker_sumvnum_fr0TF"].tap()
+        app.textFields["testTracker_sumvnum_fr0TF"].typeText("1\n")
+        
+        fnSeg.buttons["fnDefinition"].tap()
+        visiblePickers = app.pickerWheels.allElementsBoundByIndex.filter { $0.isHittable }
+        pkr = visiblePickers.first!
+        pkr.adjust(toPickerWheelValue: "sum")
+        add.tap()
+        pkr.adjust(toPickerWheelValue: "vnumber")
+        add.tap()
+        app.buttons["configtvo_done"].tap()
+        app.buttons["avoSave"].tap()
+        
+        //--
+        targCell = app.tables.cells["testTracker_civnum"]
+        coordinate = targCell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)) // center of the cell
+        coordinate.tap()
+        //app.tables.cells["testTracker_vfunction"].tap()
+        app.buttons["avoConfig"].tap()
+        fnSeg.buttons["fnRange"].tap()
+        visiblePickers = app.pickerWheels.allElementsBoundByIndex.filter { $0.isHittable }
+        if let currentPicker = visiblePickers.first {
+            // Interact with the currentPicker
+            currentPicker.adjust(toPickerWheelValue: "days")
+        }
+        
+        app.textFields["testTracker_civnum_fr0TF"].tap()
+        app.textFields["testTracker_civnum_fr0TF"].typeText("1\n")
+        
+        fnSeg.buttons["fnDefinition"].tap()
+        visiblePickers = app.pickerWheels.allElementsBoundByIndex.filter { $0.isHittable }
+        pkr = visiblePickers.first!
+        pkr.adjust(toPickerWheelValue: "change_in")
+        add.tap()
+        pkr.adjust(toPickerWheelValue: "vnumber")
+        add.tap()
+        app.buttons["configtvo_done"].tap()
+        app.buttons["avoSave"].tap()
+        
+        //-
+        targCell = app.tables.cells["testTracker_vc1"]
+        coordinate = targCell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)) // center of the cell
+        coordinate.tap()
+        //app.tables.cells["testTracker_vfunction"].tap()
+        app.buttons["avoConfig"].tap()
+        fnSeg.buttons["fnDefinition"].tap()
+        visiblePickers = app.pickerWheels.allElementsBoundByIndex.filter { $0.isHittable }
+        pkr = visiblePickers.first!
+        pkr.adjust(toPickerWheelValue: "vchoice1")
+        add.tap()
+        app.buttons["configtvo_done"].tap()
+        app.buttons["avoSave"].tap()
+        //--
+        targCell = app.tables.cells["testTracker_ynvc2"]
+        coordinate = targCell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)) // center of the cell
+        coordinate.tap()
+        //app.tables.cells["testTracker_vfunction"].tap()
+        app.buttons["avoConfig"].tap()
+        fnSeg.buttons["fnDefinition"].tap()
+        visiblePickers = app.pickerWheels.allElementsBoundByIndex.filter { $0.isHittable }
+        pkr = visiblePickers.first!
+        pkr.adjust(toPickerWheelValue: "(")
+        add.tap()
+        pkr.adjust(toPickerWheelValue: "vyes/no")
+        add.tap()
+        pkr.adjust(toPickerWheelValue: "*")
+        add.tap()
+        pkr.adjust(toPickerWheelValue: "vchoice2")
+        add.tap()
+        pkr.adjust(toPickerWheelValue: "+")
+        add.tap()
+        pkr.adjust(toPickerWheelValue: "vchoice1")
+        add.tap()
+        pkr.adjust(toPickerWheelValue: ")")
+        add.tap()
+        app.buttons["configtvo_done"].tap()
+        app.buttons["avoSave"].tap()
+        //--
+        targCell = app.tables.cells["testTracker_vtxt"]
+        coordinate = targCell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)) // center of the cell
+        coordinate.tap()
+        //app.tables.cells["testTracker_vfunction"].tap()
+        app.buttons["avoConfig"].tap()
+        fnSeg.buttons["fnDefinition"].tap()
+        visiblePickers = app.pickerWheels.allElementsBoundByIndex.filter { $0.isHittable }
+        pkr = visiblePickers.first!
+        pkr.adjust(toPickerWheelValue: "vtext")
+        add.tap()
+        app.buttons["configtvo_done"].tap()
+        app.buttons["avoSave"].tap()
+        //--
+        app.swipeUp()
+        //--
+        targCell = app.tables.cells["testTracker_vtb"]
+        coordinate = targCell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)) // center of the cell
+        coordinate.tap()
+        //app.tables.cells["testTracker_vfunction"].tap()
+        app.buttons["avoConfig"].tap()
+        fnSeg.buttons["fnDefinition"].tap()
+        visiblePickers = app.pickerWheels.allElementsBoundByIndex.filter { $0.isHittable }
+        pkr = visiblePickers.first!
+        pkr.adjust(toPickerWheelValue: "vtextbox")
+        add.tap()
+        app.buttons["configtvo_done"].tap()
+        app.buttons["avoSave"].tap()
+        //--
+        targCell = app.tables.cells["testTracker_sliderVal"]
+        coordinate = targCell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)) // center of the cell
+        coordinate.tap()
+        app.buttons["avoConfig"].tap()
+        fnSeg.buttons["fnDefinition"].tap()
+        pkr.adjust(toPickerWheelValue: "vslider")
+        add.tap()
+        app.buttons["configtvo_done"].tap()
+        app.buttons["avoSave"].tap()
+        //--
+        targCell = app.tables.cells["testTracker_vc2"]
+        coordinate = targCell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)) // center of the cell
+        coordinate.tap()
+        //app.tables.cells["testTracker_vfunction"].tap()
+        app.buttons["avoConfig"].tap()
+        fnSeg.buttons["fnDefinition"].tap()
+        visiblePickers = app.pickerWheels.allElementsBoundByIndex.filter { $0.isHittable }
+        pkr = visiblePickers.first!
+        pkr.adjust(toPickerWheelValue: "vchoice2")
+        add.tap()
+        app.buttons["configtvo_done"].tap()
+        app.buttons["avoSave"].tap()
+        //--
+        targCell = app.tables.cells["testTracker_vnfo"]
+        coordinate = targCell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)) // center of the cell
+        coordinate.tap()
+        //app.tables.cells["testTracker_vfunction"].tap()
+        app.buttons["avoConfig"].tap()
+        fnSeg.buttons["fnDefinition"].tap()
+        visiblePickers = app.pickerWheels.allElementsBoundByIndex.filter { $0.isHittable }
+        pkr = visiblePickers.first!
+        pkr.adjust(toPickerWheelValue: "vinfo")
+        add.tap()
+        app.buttons["configtvo_done"].tap()
+        app.buttons["avoSave"].tap()
+        //--
+        
         app.buttons["addTrkrSave"].tap()
+        
         app.buttons["rTracker"].tap()
     }
     
-    func testUseNewTracker() throws {
+    func testPopulateNewTracker() throws {
         let strs = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight"]
         let choices = ["c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8", ]
         app.tables.cells["trkr_testTracker"].tap()
@@ -741,7 +965,9 @@ Kate Bell
             
             let slider = app.sliders["testTracker_vslider_slider"]
             slider.adjust(toNormalizedSliderPosition: (CGFloat(i) * 0.1))
-            
+            if let sliderValue = slider.value as? String {
+                print("slider val: \(sliderValue)")
+            }
             let choice1Seg = app.segmentedControls["testTracker_vchoice1_choices"]
             if i<5 {
                 choice1Seg.buttons[choices[i-1]].tap()
@@ -758,6 +984,31 @@ Kate Bell
         app.buttons["< rTracker"].tap()
     }
     
+    func testNewTrackerGo() throws {
+        do {
+            try testDeleteNewTracker()
+            try testCreateNewTracker()
+            try testModifyNewTracker()
+            try testPopulateNewTracker()
+        } catch {
+            XCTFail("error: \(error)")
+        }
+        print("new tracker test done.")
+        
+    }
+    
+    func testLaunch() throws {
+        app.tables.cells["trkr_testTracker"].tap()
+        app.swipeRight()
+        app.swipeRight()
+        app.swipeRight()
+        app.swipeRight()
+        app.swipeRight()
+        app.swipeRight()
+        app.swipeRight()
+        app.swipeRight()
+        print("launched.")
+    }
     func testLaunchPerformance() throws {
         if #available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 7.0, *) {
             // This measures how long it takes to launch your application.
