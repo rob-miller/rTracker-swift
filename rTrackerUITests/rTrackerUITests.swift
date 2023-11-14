@@ -999,14 +999,23 @@ Kate Bell
     
     func testLaunch() throws {
         app.tables.cells["trkr_testTracker"].tap()
+        let vfuncLabel = app.staticTexts["fnVal_vfunction"]
         app.swipeRight()
+        XCTAssertEqual(vfuncLabel.label, "170.03")
         app.swipeRight()
+        XCTAssertEqual(vfuncLabel.label, "142.72")
         app.swipeRight()
+        XCTAssertEqual(vfuncLabel.label, "115.41")
         app.swipeRight()
+        XCTAssertEqual(vfuncLabel.label, "92.20")
         app.swipeRight()
+        XCTAssertEqual(vfuncLabel.label, "72.89")
         app.swipeRight()
+        XCTAssertEqual(vfuncLabel.label, "52.58")
         app.swipeRight()
+        XCTAssertEqual(vfuncLabel.label, "32.27")
         app.swipeRight()
+        XCTAssertEqual(vfuncLabel.label, "15.97")
         print("launched.")
     }
     func testLaunchPerformance() throws {
