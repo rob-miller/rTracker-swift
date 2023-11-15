@@ -467,7 +467,7 @@ class privacyV: UIView {
         // like this but need to re-calc button positions too :-( CGRect frame = CGRectMake(pv.frame.size.width-320.0, pv.frame.size.height,320.0,171.0);
         
         tbh = pv.navigationController!.toolbar.frame.height
-        let frame = CGRect(x: 0.0, y: pv.view.frame.size.height - tbh + 15, width: 320.0, height: 171.0)  // rtmx what is +15?
+        let frame = CGRect(x: 0.0, y: pv.view.frame.size.height, width: 320.0, height: 171.0)
         DBGLog(String("privacyV: x=\(frame.origin.x) y=\(frame.origin.y) w=\(frame.size.width) h=\(frame.size.height)"))
         super.init(frame: frame)
         

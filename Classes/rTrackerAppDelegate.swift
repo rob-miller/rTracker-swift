@@ -29,6 +29,7 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
     @IBOutlet var window: UIWindow?
     @IBOutlet var navigationController: UINavigationController!
     var pendingTid: NSNumber?
+    var regNotifs: Bool = false
 
     // MARK: -
     // MARK: Application lifecycle
@@ -41,13 +42,14 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
     func registerForNotifications() {
         let center = UNUserNotificationCenter.current()
         let options: UNAuthorizationOptions = [.alert, .badge, .sound]
-
+        regNotifs = true
         center.requestAuthorization(
             options: options) { granted, error in
                 // don't care if not granted
                 //if (!granted) {
                 //    DBGLog(@"notification authorization not granted");
                 //}
+                self.regNotifs = false  // avoid spurious applicationWillTerminate
             }
     }
 
@@ -195,40 +197,42 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
 
         //if (![rTracker_resource getAcceptLicense]) {
 
-        if !sud.bool(forKey: "acceptLicense") {
-            // race relying on rvc having set
-            let freeMsg = "Copyright 2010-2023 Robert T. Miller\n\nrTracker is free and open source software, distributed under the Apache License, Version 2.0.\n\nrTracker is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n\nrTracker source code is available at https://github.com/rob-miller/rTracker\n\nThe full Apache License is available at http://www.apache.org/licenses/LICENSE-2.0"
-
-            let alert = UIAlertController(
-                title: "rTracker is free software.",
-                message: freeMsg,
-                preferredStyle: .alert)
-
-            let defaultAction = UIAlertAction(
-                title: "Accept",
-                style: .default,
-                handler: { [self] action in
-                    rTracker_resource.setAcceptLicense(true)
-                    UserDefaults.standard.set(true, forKey: "acceptLicense")
-                    UserDefaults.standard.synchronize()
-
-                    pleaseRegister(forNotifications: rootViewController)
-                })
-
-            let recoverAction = UIAlertAction(
-                title: "Reject",
-                style: .default,
-                handler: { action in
-                    exit(0)
-                })
-
-            alert.addAction(defaultAction)
-            alert.addAction(recoverAction)
-
-            //rootController?.navigationController?.present(alert, animated: true)
-            rootViewController.present(alert, animated: true)
-        } else {
-            //newMaintainer()
+        DispatchQueue.main.async{
+            if !sud.bool(forKey: "acceptLicense") {
+                // race relying on rvc having set
+                let freeMsg = "Copyright 2010-2023 Robert T. Miller\n\nrTracker is free and open source software, distributed under the Apache License, Version 2.0.\n\nrTracker is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n\nrTracker source code is available at https://github.com/rob-miller/rTracker\n\nThe full Apache License is available at http://www.apache.org/licenses/LICENSE-2.0"
+                
+                let alert = UIAlertController(
+                    title: "rTracker is free software.",
+                    message: freeMsg,
+                    preferredStyle: .alert)
+                
+                let defaultAction = UIAlertAction(
+                    title: "Accept",
+                    style: .default,
+                    handler: { [self] action in
+                        rTracker_resource.setAcceptLicense(true)
+                        UserDefaults.standard.set(true, forKey: "acceptLicense")
+                        UserDefaults.standard.synchronize()
+                        
+                        pleaseRegister(forNotifications: rootViewController)
+                    })
+                
+                let recoverAction = UIAlertAction(
+                    title: "Reject",
+                    style: .default,
+                    handler: { action in
+                        exit(0)
+                    })
+                
+                alert.addAction(defaultAction)
+                alert.addAction(recoverAction)
+                
+                //rootController?.navigationController?.present(alert, animated: true)
+                rootViewController.present(alert, animated: true)
+            } else {
+                //newMaintainer()
+            }
         }
 
         /*
@@ -448,6 +452,9 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
     */
 
     func applicationWillResignActive(_ application: UIApplication) {
+        if regNotifs {
+            return  // spurious event when registering for notifications
+        }
         resigningActive = true
         // Save data if appropriate
         //DBGLog(@"rt app delegate: app will resign active");
