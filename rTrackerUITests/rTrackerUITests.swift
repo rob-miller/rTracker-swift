@@ -1018,6 +1018,21 @@ Kate Bell
         XCTAssertEqual(vfuncLabel.label, "15.97")
         print("launched.")
     }
+    
+    func testPrivacy() throws {
+        app.buttons["privacy"].tap()
+        var privAlert = app.alerts["Privacy"]
+        if privAlert.exists {
+            privAlert.buttons["Let's Go"].tap()
+            sleep(1)
+            let ppwtf = app.textFields["ppwtf"]
+            ppwtf.tap()
+            ppwtf.typeText("foo\n")
+            
+        }
+
+    }
+    
     func testLaunchPerformance() throws {
         if #available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 7.0, *) {
             // This measures how long it takes to launch your application.

@@ -50,15 +50,7 @@ import UIKit
     var theKey: UInt = 0
 
 class tictacV: UIView {
-    /*
-     {
-    	tObjBase *tob;
-    	unsigned int key;
-    	int currX;
-    	int currY;
-    	CGRect currRect;
-    //	BOOL flag;
-    }*/
+
     var tob: tObjBase?
 
     var key: UInt {
@@ -71,6 +63,7 @@ class tictacV: UIView {
         }
     }
     var currRect = CGRect.zero
+    var currRegion: UIAccessibilityElement? = nil
     var currX = 0
     var currY = 0
     // region definitions
@@ -83,7 +76,23 @@ class tictacV: UIView {
     // UI element properties 
     var context: CGContext?
     var myFont: UIFont?
+    
+    var _accessibilityElements: [UIAccessibilityElement] = []
+    override var accessibilityElements: [Any]? {
+        get {
+            // Return your custom accessibility elements here.
+            // UIKit will manage the count automatically.
+            return _accessibilityElements
+        }
+        set {
+            // Set the new value here if needed, typically not required.
+            DBGLog("why is set called?")
+        }
+    }
+    
+    let labels = ["left", "middle", "right"]
 
+    
     // MARK: core object
 
     //- (id)initWithFrame:(CGRect)frame {
@@ -103,6 +112,40 @@ class tictacV: UIView {
         super.init(frame: ttf)
         backgroundColor = .secondarySystemBackground //.white
         layer.cornerRadius = 8 // doesn't work, probably overwriting rectangle elsewhere
+        
+        drawTicTac()
+        setupAccessibility()
+    }
+
+    func setupAccessibility() {
+        //isAccessibilityElement = true
+        //accessibilityIdentifier = "ttv"
+        accessibilityCustomActions = [
+            UIAccessibilityCustomAction(name:"toggle cell", target: self, selector: #selector(press))
+        ]
+
+        for i in 0..<3 {
+            for j in 0..<3 {
+                setCurrPt(i, y: j)
+                
+                let region = UIAccessibilityElement(accessibilityContainer: self)
+                region.accessibilityIdentifier = "\(labels[i])-\(labels[j])"
+                region.accessibilityLabel = "\(labels[i]) \(labels[j])"
+                region.accessibilityTraits = .button
+                region.isAccessibilityElement = true
+                //let frame = CGRect(x: /* x position */, y: /* y position */, width: /* width */, height: /* height */)
+                region.accessibilityFrameInContainerSpace = currRect
+                _accessibilityElements.append(region)
+            }
+        }
+    }
+    
+    override func accessibilityElement(at index: Int) -> Any? {
+        return _accessibilityElements[index]
+    }
+    
+    override func index(ofAccessibilityElement element: Any) -> Int {
+        return _accessibilityElements.firstIndex(of: element as! UIAccessibilityElement) ?? NSNotFound
     }
 
     // MARK: -
@@ -187,9 +230,6 @@ class tictacV: UIView {
 
     func sDraw(_ str: String?) {
 
-        //[str drawAtPoint:self.currRect.origin withFont:myFont];
-        //[str drawInRect:self.currRect withFont:self.myFont lineBreakMode:NSLineBreakByClipping alignment:NSTextAlignmentCenter];
-        //let context = UIGraphicsGetCurrentContext()
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .center
         let attributes: [NSAttributedString.Key: Any] = [
@@ -199,39 +239,12 @@ class tictacV: UIView {
         ]
 
         context?.saveGState()
-
-        // flip the context coordinates
-        /*
-        context?.textMatrix = CGAffineTransform.identity
-        context?.translateBy(x: 0, y: currRect.height)
-        context?.scaleBy(x: 1.0, y: -1.0)
-         */
         
         // draw the text
         UIGraphicsPushContext(context!)
         str!.draw(in: currRect, withAttributes: attributes)
         UIGraphicsPopContext()
-        /*
-        // pop the context to restore the previous state
-        context?.restoreGState()
-        context!.setFillColor(UIColor.blue.cgColor)
-        //context?.setFont(myFont! as! CGFont)  // (UIFont(name: "Helvetica", size: 24)!)
-        //context?.drawText(in: currRect, string: str)  // CGRect(origin: point, size: CGSize(width: bounds.width, height: bounds.height)), string: str)
-         
-        let paragraphStyle = NSMutableParagraphStyle.default as? NSMutableParagraphStyle
-        paragraphStyle?.lineBreakMode = .byClipping
-        paragraphStyle?.alignment = .center
 
-        if let myFont, let paragraphStyle {
-            str?.draw(in: currRect, withAttributes: [
-                NSAttributedString.Key.font: myFont,
-                NSAttributedString.Key.paragraphStyle: paragraphStyle,
-                .foregroundColor: UIColor.red, // Set the foreground color to red
-                .backgroundColor: UIColor.yellow
-            ])
-        }
-        // ineffective Stroke(context!)
-         */
     }
 
     func setCurrPt(_ x: Int, y: Int) {
@@ -243,6 +256,10 @@ class tictacV: UIView {
         rect.size.height = vstep
         currRect = rect
         //DBGLog(@"currPt: %d %d",x,y);
+        let ndx = (x*3) + y
+        if _accessibilityElements.indices.contains(ndx) {
+            currRegion = _accessibilityElements[(x*3) + y]
+        }
     }
 
     func setNoCurrPt() {
@@ -261,15 +278,19 @@ class tictacV: UIView {
         switch REGIONVAL(key, currX, currY) {
         case 0x00:
             //DBGLog(@"00");
+            currRegion?.accessibilityLabel = "\(labels[currX]) \(labels[currY]) blank"
             break
         case 0x01:
             //DBGLog(@"01");
+            currRegion?.accessibilityLabel = "\(labels[currX]) \(labels[currY]) X"
             sDraw("X")
         case 0x02:
             //DBGLog(@"10");
+            currRegion?.accessibilityLabel = "\(labels[currX]) \(labels[currY]) O"
             sDraw("O")
         case 0x03:
             //DBGLog(@"11");
+            currRegion?.accessibilityLabel = "\(labels[currX]) \(labels[currY]) +"
             sDraw("+")
         default:
             dbgNSAssert(false, "drawCell bad region val")
@@ -277,26 +298,20 @@ class tictacV: UIView {
     }
 
     func updateTT() {
-        //	if ([self currPt]) {
-        //		DBGLog(@"updateTT: draw cell %d %d",self.currX,self.currY);
-        //		[self drawCell];
-        //	} else {  
-        //var i: Int
-        //var j: Int
-        //DBGLog(@"updateTT: draw all cells");
+
         for i in 0..<3 {
             for j in 0..<3 {
                 setCurrPt(i, y: j)
                 drawCell()
             }
         }
-        //	}
+
         setNoCurrPt()
     }
 
     // MARK: handle region press
 
-    func press(_ x: Int, y: Int) {
+    @objc func press(_ x: Int, y: Int) {
         setCurrPt(x, y: y)
         DBGLog(String("press: \(x),\(y) => \(currRect.origin.x) \(currRect.origin.y) \(currRect.size.width) \(currRect.size.height)"))
 

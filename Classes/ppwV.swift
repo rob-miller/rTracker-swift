@@ -114,6 +114,7 @@ class ppwV: UIView, UITextFieldDelegate {
             _topTF?.delegate = self
             _topTF?.layer.cornerRadius = 4
             _topTF?.borderStyle = .line
+            _topTF?.accessibilityIdentifier = "ppwtf"
 
             if let _topTF {
                 addSubview(_topTF)
