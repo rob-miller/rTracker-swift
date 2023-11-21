@@ -467,7 +467,7 @@ class privacyV: UIView {
         // like this but need to re-calc button positions too :-( CGRect frame = CGRectMake(pv.frame.size.width-320.0, pv.frame.size.height,320.0,171.0);
         
         tbh = pv.navigationController!.toolbar.frame.height
-        let frame = CGRect(x: 0.0, y: pv.view.frame.size.height, width: 320.0, height: 171.0)
+        let frame = CGRect(x: 0.0, y: pv.view.frame.size.height, width: 320.0, height: 171.0)  // rtmx location issues placing priv view and ppw view here
         DBGLog(String("privacyV: x=\(frame.origin.x) y=\(frame.origin.y) w=\(frame.size.width) h=\(frame.size.height)"))
         super.init(frame: frame)
         
@@ -612,7 +612,7 @@ class privacyV: UIView {
             configBtn?.setTitle(CFGBTNCONFIG, for: .normal)
             //self.transform = CGAffineTransformMakeTranslation(0, -(self.parentView.frame.size.height * PVH));
             //self.transform = CGAffineTransformMakeTranslation(0, -(self.parentView.frame.size.height * PVH));
-            transform = CGAffineTransform(translationX: 0, y: -(frame.size.height + tbh))
+            transform = CGAffineTransform(translationX: 0, y: -(frame.size.height + 2*tbh))
             //self.parentView.userInteractionEnabled=NO;  // sadly kills interaction for child view as well
         } else {
             // hide
@@ -626,7 +626,7 @@ class privacyV: UIView {
 
             //self.transform = CGAffineTransformMakeTranslation(0, (self.parentView.frame.size.height * PVH));
             //self.transform = CGAffineTransformMakeTranslation(0, (self.parentView.frame.size.height * PVH));
-            transform = CGAffineTransform(translationX: 0, y: (frame.size.height + tbh))
+            transform = CGAffineTransform(translationX: 0, y: (frame.size.height + 2*tbh))
             //self.parentView.userInteractionEnabled=YES;
         }
     }

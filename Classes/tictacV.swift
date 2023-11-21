@@ -131,6 +131,7 @@ class tictacV: UIView {
                 let region = UIAccessibilityElement(accessibilityContainer: self)
                 region.accessibilityIdentifier = "\(labels[i])-\(labels[j])"
                 region.accessibilityLabel = "\(labels[i]) \(labels[j])"
+                region.accessibilityHint = "tap to change"
                 region.accessibilityTraits = .button
                 region.isAccessibilityElement = true
                 //let frame = CGRect(x: /* x position */, y: /* y position */, width: /* width */, height: /* height */)
@@ -278,19 +279,19 @@ class tictacV: UIView {
         switch REGIONVAL(key, currX, currY) {
         case 0x00:
             //DBGLog(@"00");
-            currRegion?.accessibilityLabel = "\(labels[currX]) \(labels[currY]) blank"
+            currRegion?.accessibilityLabel = "blank \(labels[currX]) \(labels[currY])"
             break
         case 0x01:
             //DBGLog(@"01");
-            currRegion?.accessibilityLabel = "\(labels[currX]) \(labels[currY]) X"
+            currRegion?.accessibilityLabel = "X \(labels[currX]) \(labels[currY])"
             sDraw("X")
         case 0x02:
             //DBGLog(@"10");
-            currRegion?.accessibilityLabel = "\(labels[currX]) \(labels[currY]) O"
+            currRegion?.accessibilityLabel = "O \(labels[currX]) \(labels[currY])"
             sDraw("O")
         case 0x03:
             //DBGLog(@"11");
-            currRegion?.accessibilityLabel = "\(labels[currX]) \(labels[currY]) +"
+            currRegion?.accessibilityLabel = "+ \(labels[currX]) \(labels[currY])"
             sDraw("+")
         default:
             dbgNSAssert(false, "drawCell bad region val")

@@ -972,11 +972,17 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
     func refreshToolBar(_ animated: Bool) {
         //DBGLog(@"refresh tool bar, noshow= %d",(PVNOSHOW == self.privacyObj.showing));
+#if TESTING
+        setToolbarItems(
+            [out2inBtn, xprivBtn, flexibleSpaceButtonItem, helpBtn, privateBtn].compactMap { $0 },
+            animated: animated)
+#else
         setToolbarItems(
             [flexibleSpaceButtonItem, helpBtn, privateBtn].compactMap { $0 },
             animated: animated)
+#endif
     }
-
+    
     func initTitle() {
 
         // set up the window title, try to get owner's name
@@ -1545,6 +1551,39 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         return _flexibleSpaceButtonItem!
     }
 
+    #if TESTING
+    var _out2inBtn: UIBarButtonItem?
+    var out2inBtn: UIBarButtonItem {
+        if _out2inBtn == nil {
+            _out2inBtn = UIBarButtonItem(
+                title: "out2in",
+                style: .plain,
+                target: self,
+                action: #selector(btnOut2in))
+            
+            _out2inBtn!.accessibilityLabel = "out2in"
+            //_out2inBtn!.accessibilityIdentifier = "out2in"
+        }
+        return _out2inBtn!
+    }
+
+    
+    var _xprivBtn: UIBarButtonItem?
+    var xprivBtn: UIBarButtonItem {
+        if _xprivBtn == nil {
+            _xprivBtn = UIBarButtonItem(
+                title: "xpriv",
+                style: .plain,
+                target: self,
+                action: #selector(btnXpriv))
+            
+            _xprivBtn!.accessibilityLabel = "xpriv"
+            //_xprivBtn!.accessibilityIdentifier = "xpriv"
+        }
+        return _xprivBtn!
+    }
+    #endif
+    
     /*
      - (UIBarButtonItem *) multiGraphBtn {
     	if (multiGraphBtn == nil) {
@@ -1639,11 +1678,42 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         }
     }
 
+    #if TESTING
+    @objc func btnOut2in() {
+        DBGLog("out2in pressed")
+        
+        let fileManager = FileManager.default
+        do {
+            let documentsDirectory = try fileManager.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
+            let directoryContents = try fileManager.contentsOfDirectory(at: documentsDirectory, includingPropertiesForKeys: nil, options: [])
+
+            for url in directoryContents {
+                let fileName = url.deletingPathExtension().lastPathComponent
+                let fileExtension = url.pathExtension
+                
+                if fileName.hasSuffix("_out"), let range = fileName.range(of: "_out") {
+                    let newName = fileName[..<range.lowerBound] + "_in"
+                    let newURL = url.deletingLastPathComponent().appendingPathComponent(String(newName)).appendingPathExtension(fileExtension)
+                    
+                    try fileManager.moveItem(at: url, to: newURL)
+                    print("Renamed \(url.lastPathComponent) to \(newURL.lastPathComponent)")
+                }
+            }
+        } catch {
+            print("out2in - An error occurred: \(error)")
+        }
+    }
+    @objc func btnXpriv() {
+        DBGLog("xpriv pressed")
+        privacyObj.resetPw()
+    }
+    #endif
+    /*
     func btnPay() {
         DBGLog("btnPay was pressed!")
 
     }
-
+     */
     // MARK: -
     // MARK: Table view methods
     
