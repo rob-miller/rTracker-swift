@@ -339,7 +339,8 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
             return 0.0
         }
         if vo.optDict["tbnl"] == "1" {
-            return Double(vo.value.components(separatedBy: .newlines).count)
+            let tt = vo.value.trimmingCharacters(in: .whitespacesAndNewlines)
+            return Double(tt.components(separatedBy: .newlines).count)
         }
         return 1.0
     }
@@ -607,8 +608,9 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         DBGLog(String("tb save: vo.val= .\(vo.value)  tv.txt= \(textView!.text)"))
 
         if 0 == cav.searchSeg.selectedSegmentIndex {
-            if vo.value != textView?.text {
-                vo.value = textView?.text ?? ""
+            let tt = textView?.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            if vo.value != tt {
+                vo.value = tt ?? ""
 
                 vo.display = nil // so will redraw this cell only
                 NotificationCenter.default.post(name: NSNotification.Name(rtValueUpdatedNotification), object: self)
