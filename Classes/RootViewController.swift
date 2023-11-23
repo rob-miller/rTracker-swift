@@ -1706,6 +1706,8 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     @objc func btnXpriv() {
         DBGLog("xpriv pressed")
         privacyObj.resetPw()
+        privacyObj.dbClrKeys()
+        privBtnSetImg(_privateBtn!.customView as? UIButton, noshow: true)
     }
     #endif
     /*

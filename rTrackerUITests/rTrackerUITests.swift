@@ -9,26 +9,26 @@
 import XCTest
 
 final class rTrackerUITests: XCTestCase {
-
+    
     let app = XCUIApplication()
-
+    
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.
         
         super.setUp()
-
+        
         // In UI tests it is usually best to stop immediately when a failure occurs.
         continueAfterFailure = false
         /*
          // can't do anything about access contacts alert
          
-        addUIInterruptionMonitor(withDescription: "Contacts Permission") { (alert) -> Bool in
-            if alert.buttons["OK"].exists {
-                alert.buttons["OK"].tap()
-                return true
-            }
-            return false
-        }
+         addUIInterruptionMonitor(withDescription: "Contacts Permission") { (alert) -> Bool in
+         if alert.buttons["OK"].exists {
+         alert.buttons["OK"].tap()
+         return true
+         }
+         return false
+         }
          */
         
         app.launch()
@@ -48,33 +48,53 @@ final class rTrackerUITests: XCTestCase {
             sleep(1)
         }
     }
-
+    
     override func tearDownWithError() throws {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
+    
+    func test_rTracker() throws {
+        do {
+            try testTrackerDemoInstall()
+            try testEditTrackerRank()
+            try testSearchClear()
+            try testSearchSetup()
+            try testSearch()
+            try testSearchClear()
+            try testTrackerDemoUse()
 
+            try testNewTrackerGo()
+            
+            try testPrivacyGo()
+            
+        } catch {
+            XCTFail("error: \(error)")
+        }
+    }
+    
     func testTrackerDemoInstall() throws {
         app.tables.cells["trkr_👣rTracker demo"].tap()
-
+        
         app.swipeRight()
         sleep(1)
-
+        
         let fnTotalLabel = app.staticTexts["fnVal_total"]
         XCTAssertEqual(fnTotalLabel.label, "22.00")
         
         app.buttons["< rTracker"].tap()
     }
-
+    
     func testEditTrackerRank() throws {
         
         let table = app.tables["trackerList"]
-
-         // Get initial order of cell titles
-         var initialTitles: [String] = []
-         for i in 0..<table.cells.count {
-             let cell = table.cells.element(boundBy: i)
-             initialTitles.append(cell.staticTexts.firstMatch.label)
-         }
+        
+        // Get initial order of cell titles
+        var initialTitles: [String] = []
+        for i in 0..<table.cells.count {
+            let cell = table.cells.element(boundBy: i)
+            initialTitles.append(cell.staticTexts.firstMatch.label)
+        }
+        let itCopy = initialTitles  // Array(initialTitles)
         
         app.buttons["edit"].tap()
         app.tables.cells["configt_👣rTracker demo"].tap()
@@ -95,9 +115,9 @@ final class rTrackerUITests: XCTestCase {
             let cell = table.cells.element(boundBy: i)
             newTitles.append(cell.staticTexts.firstMatch.label)
         }
-
+        
         XCTAssertEqual(initialTitles, newTitles, "The order of cell titles has changed!")
-
+        
         // restore original config
         app.buttons["edit"].tap()
         app.tables.cells["configt_👣rTracker demo"].tap()
@@ -140,6 +160,13 @@ final class rTrackerUITests: XCTestCase {
         
         moveBtn = moveToCell.buttons["Reorder ☕️🍷 Drinks"]
         moveBtn.press(forDuration: 0.5, thenDragTo: targCell)
+        app.buttons["rTracker"].tap()
+        newTitles = []
+        for i in 0..<table.cells.count {
+            let cell = table.cells.element(boundBy: i)
+            newTitles.append(cell.staticTexts.firstMatch.label)
+        }
+        XCTAssertEqual(itCopy, newTitles, "The order of cell titles is not restored!")
     }
     
     func testSearchSetup() throws {
@@ -152,7 +179,7 @@ final class rTrackerUITests: XCTestCase {
         let tfSw = app.switches["🚗 Car_tank full_switch"]
         let tbBtn = app.buttons["🚗 Car_notes_tbButton"]
         let tbtv = app.textViews["tbox-textview"]
-
+        
         for i in 1...5 {
             odFld.tap()
             odFld.typeText("\(i)")
@@ -189,9 +216,9 @@ final class rTrackerUITests: XCTestCase {
         
         let odFld = app.textFields["🚗 Car_odometer_numberfield"]
         /*
-        let fuFld = app.textFields["🚗 Car_fuel_numberfield"]
-        let tcFld = app.textFields["🚗 Car_total cost_numberfield"]
-        let tfSw = app.switches["🚗 Car_tank full_switch"]
+         let fuFld = app.textFields["🚗 Car_fuel_numberfield"]
+         let tcFld = app.textFields["🚗 Car_total cost_numberfield"]
+         let tfSw = app.switches["🚗 Car_tank full_switch"]
          */
         let tbBtn = app.buttons["🚗 Car_notes_tbButton"]
         let tbtv = app.textViews["tbox-textview"]
@@ -290,6 +317,8 @@ final class rTrackerUITests: XCTestCase {
         app.swipeRight()
         XCTAssertEqual(odFld.value as! String, "1", "odometer field not third result 1")
         ffBtn.tap()
+        
+        app.buttons["< rTracker"].tap()
     }
     
     func testSearchClear() throws {
@@ -306,14 +335,14 @@ final class rTrackerUITests: XCTestCase {
         } else {
             delAlert.buttons["Cancel"].tap()
         }
-
+        
         app.buttons["rTracker"].tap()
         //app.tables.cells["configt_👣rTracker demo"].tap()
     }
     
     func testTrackerDemoUse() throws {
         let rTdemoCell = app.tables.cells["trkr_👣rTracker demo"]
-
+        
         // enter demo tracker, if old data then discard, exit and re-enter
         rTdemoCell.tap()
         let exitTrkrBtn = app.buttons["< rTracker"]
@@ -335,7 +364,7 @@ final class rTrackerUITests: XCTestCase {
         let ySwitch = app.switches["👣rTracker demo_Yes!_switch"]
         ySwitch.tap()
         XCTAssertEqual(ySwitch.value as! String, "1", "The Yes! switch should be On")
-
+        
         // confirm function total captures Yes! switch
         let fnTotalLabel = app.staticTexts["fnVal_total"]
         XCTAssertEqual(fnTotalLabel.label, "1.00")
@@ -382,21 +411,29 @@ final class rTrackerUITests: XCTestCase {
         while histWheel.value as! String != "Use the search 🔍 to find them" {
             histWheel.swipeUp()  // or .swipeDown() depending on the direction needed
         }
-
+        
         let tbAdd = app.buttons["tbox-add-sel-line"]
         tbAdd.tap()
         
+        _ = addUIInterruptionMonitor(withDescription: "Contact Access Alert") { (alert) -> Bool in
+            if alert.buttons["OK"].exists {
+                alert.buttons["OK"].tap()
+                return true
+            }
+            return false
+        }
+        
         // add first contact
         tbseg.buttons["tbox-seg-contacts"].tap()
-
+        
         /*
          // unable to dismiss contacts alert
-        sleep(1)
-        let contactsAlert = app.alerts["“rTracker” Would Like to Access Your Contacts"]
-        if contactsAlert.exists {
-            contactsAlert.buttons["OK"].tap()
-            sleep(1)
-        }
+         sleep(1)
+         let contactsAlert = app.alerts["“rTracker” Would Like to Access Your Contacts"]
+         if contactsAlert.exists {
+         contactsAlert.buttons["OK"].tap()
+         sleep(1)
+         }
          */
         tbAdd.tap()
         
@@ -423,7 +460,7 @@ Kate Bell
         
         XCTAssert(modAlert.exists, "tracker modified alert should be shown - to tracker list")
         modAlert.buttons["Save"].tap()
-
+        
         // enter demo tracker again, trigger 'Yes!' and confirm swipeRight triggers alert; discard
         rTdemoCell.tap()
         ySwitch.tap()
@@ -447,12 +484,22 @@ Kate Bell
         // return out and confirm
         app.buttons["👣rTracker demo"].tap()
         exitTrkrBtn.tap()
-        XCTAssert(rTdemoCell.exists, "did not retrun to tracker list")
+        XCTAssert(rTdemoCell.exists, "did not return to tracker list")
+        
+        rTdemoCell.tap()
+        while fnTotalLabel.label != "22.00" {
+            app.swipeRight()
+        }
+        app.buttons["trkrMenu"].tap()
+        app.buttons["duplicate entry to now"].tap()  // make testTrackerDemoInstall() pass
+        
+        app.buttons["< rTracker"].tap()
+        modAlert.buttons["Save"].tap()
     }
     
     func testTrackerDemoClear() throws {
         let rTdemoCell = app.tables.cells["trkr_👣rTracker demo"]
-
+        
         // enter demo tracker, if old data then discard, exit and re-enter
         rTdemoCell.tap()
         let exitTrkrBtn = app.buttons["< rTracker"]
@@ -503,22 +550,33 @@ Kate Bell
         app.buttons["rTracker"].tap()
     }
     
+    func addVal(_ targStr: String, noSave: Bool = false) {
+        let vname = app.textFields["valueName"]
+        let saveBtn = app.buttons["avoSave"]
+        let vpicker = app.pickerWheels.element(boundBy: 0)
+        let addValBtn = app.tables.cells["trkrAddValue"]
+        
+        vname.tap()
+        vname.typeText("v\(targStr)\n")
+        //app.buttons["Done"].tap()
+        while vpicker.value as! String != targStr {
+            //vpicker.swipeUp()  // or .swipeDown() depending on the direction needed
+            vpicker.adjust(toPickerWheelValue: targStr)
+        }
+        if noSave {
+            return
+        }
+        saveBtn.tap()
+        sleep(1)
+        
+        addValBtn.tap()
+    }
+    
+    
     func testCreateNewTracker() throws {
-        func addVal(_ targStr: String, noSave: Bool = false) {
-            vname.tap()
-            vname.typeText("v\(targStr)\n")
-            //app.buttons["Done"].tap()
-            while vpicker.value as! String != targStr {
-                //vpicker.swipeUp()  // or .swipeDown() depending on the direction needed
-                vpicker.adjust(toPickerWheelValue: targStr)
-            }
-            if noSave {
-                return
-            }
-            saveBtn.tap()
-            sleep(1)
-            
-            addValBtn.tap()
+        
+        if app.tables.cells["testTracker"].exists {
+            return
         }
         app.buttons["add"].tap()
         
@@ -534,7 +592,7 @@ Kate Bell
         alert.buttons["OK"].tap()
         
         let vname = app.textFields["valueName"]
-        let vpicker = app.pickerWheels.element(boundBy: 0)
+        
         let avoConfig = app.buttons["avoConfig"]
         
         addVal("function", noSave:true)
@@ -573,9 +631,9 @@ Kate Bell
             //sleep(1)
             avoConfig.tap()
             for j in 1...(i*4) {
-                    let tf = app.textFields["tnull_vchoice\(i)_\(j-1)tf"]
-                    tf.tap()
-                    tf.typeText("c\(j)\n")
+                let tf = app.textFields["tnull_vchoice\(i)_\(j-1)tf"]
+                tf.tap()
+                tf.typeText("c\(j)\n")
                 if i>1 {
                     let vtf = app.textFields["tnull_vchoice2_\(j-1)tfv"]
                     vtf.tap()
@@ -587,7 +645,7 @@ Kate Bell
             addValBtn.tap()
         }
         
-
+        
         addVal("yes/no")
         addVal("function")
         
@@ -694,7 +752,7 @@ Kate Bell
             // Interact with the currentPicker
             currentPicker.adjust(toPickerWheelValue: "days")
         }
-
+        
         //app.pickerWheels[testTracker_vfunction_frPkr].adjust(toPickerWheelValue: "days")
         
         app.textFields["testTracker_vfunction_fr0TF"].tap()
@@ -762,7 +820,7 @@ Kate Bell
             pkr.adjust(toPickerWheelValue: "constant")
             add.tap()
         }
-
+        
         let alert = app.alerts["Need Value"]
         XCTAssert(alert.exists, "no need value alert")
         alert.buttons["OK"].tap()
@@ -772,7 +830,7 @@ Kate Bell
         
         fnSeg.buttons["Overview"].tap()
         let expectedRangeContent = "-1 days to current entry"
-        let expectedDefnContent = "sum[vnumber] + change_in[vnumber] + vchoice1 - ( vyes/no * vchoice2 + vchoice1 ) + vtext + vtextbox + vslider + vchoice2 + vinfo /  2  "
+        let expectedDefnContent = "sum[vnumber] + change_in[vnumber] + vchoice1 - ( vyes/no * vchoice2 ) + vtext + vtextbox + vslider + vchoice2 + vinfo /  2  "
         let rangeTV = app.textViews["configtv_frangeTV"]
         let defnTV = app.textViews["configtv_fdefnTV"]
         
@@ -990,6 +1048,7 @@ Kate Bell
             try testCreateNewTracker()
             try testModifyNewTracker()
             try testPopulateNewTracker()
+            try testNewTracker()
         } catch {
             XCTFail("error: \(error)")
         }
@@ -997,40 +1056,368 @@ Kate Bell
         
     }
     
-    func testLaunch() throws {
+    func testNewTracker() throws {
         app.tables.cells["trkr_testTracker"].tap()
         let vfuncLabel = app.staticTexts["fnVal_vfunction"]
         app.swipeRight()
-        XCTAssertEqual(vfuncLabel.label, "170.03")
+        XCTAssertEqual(vfuncLabel.label, "179.03")
         app.swipeRight()
-        XCTAssertEqual(vfuncLabel.label, "142.72")
+        XCTAssertEqual(vfuncLabel.label, "155.72")
         app.swipeRight()
-        XCTAssertEqual(vfuncLabel.label, "115.41")
+        XCTAssertEqual(vfuncLabel.label, "122.41")
         app.swipeRight()
-        XCTAssertEqual(vfuncLabel.label, "92.20")
+        XCTAssertEqual(vfuncLabel.label, "101.20")
         app.swipeRight()
-        XCTAssertEqual(vfuncLabel.label, "72.89")
+        XCTAssertEqual(vfuncLabel.label, "77.89")
         app.swipeRight()
-        XCTAssertEqual(vfuncLabel.label, "52.58")
+        XCTAssertEqual(vfuncLabel.label, "57.58")
         app.swipeRight()
-        XCTAssertEqual(vfuncLabel.label, "32.27")
+        XCTAssertEqual(vfuncLabel.label, "35.27")
         app.swipeRight()
-        XCTAssertEqual(vfuncLabel.label, "15.97")
-        print("launched.")
+        XCTAssertEqual(vfuncLabel.label, "16.97")
+
     }
     
-    func testPrivacy() throws {
+    
+    func testPrivacySetup() throws {
+        app.buttons["xpriv"].tap()
+        
         app.buttons["privacy"].tap()
-        var privAlert = app.alerts["Privacy"]
-        if privAlert.exists {
-            privAlert.buttons["Let's Go"].tap()
-            sleep(1)
-            let ppwtf = app.textFields["ppwtf"]
-            ppwtf.tap()
-            ppwtf.typeText("foo\n")
-            
-        }
+        
+        let privAlert = app.alerts["Privacy"]
+        XCTAssert(privAlert.exists)
+        privAlert.buttons["Let's go"].tap()
+        sleep(1)
+        
+        let ppwtf = app.textFields["ppwtf"]
+        ppwtf.tap()
+        ppwtf.typeText("foo\n")
+        
+        let sav = app.buttons["save"]
+        sav.tap()
+        let spAlert = app.alerts["Set a pattern to save"]
+        XCTAssert(spAlert.exists)
+        spAlert.buttons["OK"].tap()
+        
+        let plvlLab = app.staticTexts["plvl"]
+        XCTAssertEqual(plvlLab.label, "2")
+        
+        let slider = app.sliders["privlevel"]
+        slider.adjust(toNormalizedSliderPosition: 0.25)
+        XCTAssertEqual(plvlLab.label, "28")
+        
+        let ctr = app.buttons["middle-middle"]
+        ctr.tap()
+        XCTAssertEqual(ctr.label, "X middle middle")
+        sav.tap()
+        
+        slider.adjust(toNormalizedSliderPosition: 0.60)
+        XCTAssertEqual(plvlLab.label, "63")
+        ctr.tap()
+        XCTAssertEqual(ctr.label, "O middle middle")
+        sav.tap()
+        
+        slider.adjust(toNormalizedSliderPosition: 0.80)
+        XCTAssertEqual(plvlLab.label, "81")
+        ctr.tap()
+        XCTAssertEqual(ctr.label, "+ middle middle")
+        sav.tap()
+        
+        let prv = app.buttons["prev"]
+        let nxt = app.buttons["next"]
+        
+        prv.tap()
+        prv.tap()
+        prv.tap()
+        XCTAssertEqual(plvlLab.label, "28")
+        nxt.tap()
+        XCTAssertEqual(plvlLab.label, "63")
+        let clr = app.buttons["clear"]
+        clr.tap()
+        sav.tap()
+        prv.tap()
+        XCTAssertEqual(plvlLab.label, "28")
+        nxt.tap()
+        XCTAssertEqual(plvlLab.label, "81")
+        clr.tap()
+        
+        app.buttons["privacy"].tap()
+    }
+    
+    func tapRightEdge(of textField: XCUIElement) {
+        // First ensure the text field is hittable
+        guard textField.isHittable else { return }
 
+        // Fetch the frame of the text field to calculate the coordinate
+        //let textFieldFrame = textField.frame
+        
+        // Define the offset for the rightmost coordinate
+        // X is set to almost 1, which is the far right
+        // Y is set to 0.5, which is the vertical middle
+        let rightmostCoordinate = textField.coordinate(withNormalizedOffset: CGVector(dx: 0.99, dy: 0.5))
+        
+        // Tap the coordinate
+        rightmostCoordinate.tap()
+    }
+
+    func clearTextField(_ textField: XCUIElement) {
+        tapRightEdge(of: textField)
+
+        guard let stringValue = textField.value as? String else {
+            return
+        }
+        
+        let deleteString = String(repeating: XCUIKeyboardKey.delete.rawValue, count: stringValue.count)
+        textField.typeText(deleteString)
+    }
+    
+    func testPrivacySetupTrackers() throws {
+        let priv = app.buttons["privacy"]
+        priv.tap()
+        app.buttons["clear"].tap()
+        let ctr = app.buttons["middle-middle"]
+        ctr.tap()
+        ctr.tap()
+        ctr.tap()
+        priv.tap()
+        
+        let editBtn = app.buttons["edit"]
+        editBtn.tap()
+        app.segmentedControls["configTlistMode"].buttons["tlistMoveDel"].tap()
+        let secretCell = app.tables.cells["configt_secret"]
+        if secretCell.exists {
+            secretCell.tap()
+            sleep(1)
+            secretCell.buttons["Delete"].tap()
+            let delAlert = app.alerts["Delete tracker secret"]
+            delAlert.buttons["Delete tracker"].tap()
+        }
+        app.buttons["rTracker"].tap()
+        
+        priv.tap()
+        app.buttons["clear"].tap()
+        priv.tap()
+        
+        app.buttons["add"].tap()
+        
+        let trkrSave = app.buttons["addTrkrSave"]
+        let tname = app.textFields["addTrkrName"]
+        tname.tap()
+        tname.typeText("secret")
+        let addValBtn = app.tables.cells["trkrAddValue"]
+        addValBtn.tap()
+        addVal("number")
+        addVal("number", noSave: true)
+        let vname = app.textFields["valueName"]
+        let saveBtn = app.buttons["avoSave"]
+        vname.tap()
+        vname.tap() // de-select exiting text
+        vname.typeText(" secret\n")
+        let avoConfig = app.buttons["avoConfig"]
+        avoConfig.tap()
+        var gptf = app.textFields["secret_vnumber secret_gpTF"]
+        gptf.tap()
+        gptf.typeText("40\n")
+        let phcAlert = app.alerts["Privacy higher than current"]
+        XCTAssert(phcAlert.exists)
+        phcAlert.buttons["OK"].tap()
+        app.buttons["configtvo_done"].tap()
+
+        saveBtn.tap()
+        trkrSave.tap()
+        
+        editBtn.tap()
+        app.tables.cells["configt_secret"].tap()
+        
+        app.buttons["modTrkrConfig"].tap()
+        gptf = app.textFields["secret_gpTF"]
+        gptf.tap()
+        gptf.typeText("40\n")
+
+        XCTAssert(phcAlert.exists)
+        phcAlert.buttons["OK"].tap()
+        
+        app.buttons["configtvo_done"].tap()
+        trkrSave.tap()
+        app.buttons["rTracker"].tap()
+        
+        priv.tap()
+        ctr.tap()
+        ctr.tap()
+        ctr.tap()
+        priv.tap()
+        
+        editBtn.tap()
+        app.tables.cells["configt_secret"].tap()
+        
+        app.buttons["modTrkrConfig"].tap()
+        gptf = app.textFields["secret_gpTF"]
+        clearTextField(gptf)
+        gptf.typeText("20\n")
+        app.buttons["configtvo_done"].tap()
+        
+        let targCell = app.tables.cells["secret_vnumber secret"]
+        let coordinate = targCell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)) // center of the cell
+        coordinate.tap()
+
+        app.buttons["avoConfig"].tap()
+        gptf = app.textFields["secret_vnumber secret_gpTF"]
+        clearTextField(gptf)
+        gptf.typeText("40\n")
+        
+        app.buttons["configtvo_done"].tap()
+
+        saveBtn.tap()
+        trkrSave.tap()
+        app.buttons["rTracker"].tap()
+        
+        priv.tap()
+        app.buttons["clear"].tap()
+        priv.tap()
+        
+    }
+    
+    func testPrivacyTrackers() throws {
+        let priv = app.buttons["privacy"]
+        priv.tap()
+        app.buttons["clear"].tap()
+        let ctr = app.buttons["middle-middle"]
+        let back = app.buttons["< rTracker"]
+        priv.tap()
+        
+        let secTrkr = app.tables.cells["trkr_secret"]
+        
+        XCTAssertFalse(secTrkr.exists)
+        priv.tap()
+        ctr.tap()
+        priv.tap()
+        
+        XCTAssert(secTrkr.exists)
+        
+        secTrkr.tap()
+        let secNum = app.tables.cells["useT_secret_vnumber secret"]
+        XCTAssertFalse(secNum.exists)
+        back.tap()
+        priv.tap()
+        ctr.tap()
+        ctr.tap()
+        priv.tap()
+        secTrkr.tap()
+        XCTAssert(secNum.exists)
+        back.tap()
+
+    }
+    
+    func testPrivacyGo() throws {
+        do {
+            try testPrivacySetup()
+            try testPrivacySetupTrackers()
+            try testPrivacyTrackers()
+        } catch {
+            XCTFail("error: \(error)")
+        }
+        print("new tracker test done.")
+        
+    }
+    
+    func testSavePrivateSetup() throws {
+        let priv = app.buttons["privacy"]
+        priv.tap()
+        app.buttons["clear"].tap()
+        let ctr = app.buttons["middle-middle"]
+
+        ctr.tap()
+        priv.tap()
+        
+        let editBtn = app.buttons["edit"]
+        editBtn.tap()
+        app.tables.cells["configt_testTracker"].tap()
+        app.swipeUp()
+        sleep(1)
+        let ttsec = app.tables.cells["testTracker_secret"]
+        if ttsec.exists {
+            ttsec.tap()
+            ttsec.buttons["Delete"].tap()
+            let secAlert = app.alerts["secret has data"]
+            if secAlert.exists {
+                secAlert.buttons["Yes, delete"].tap()
+            }
+            //app.buttons["addTrkrSave"].tap()
+        }
+        
+        app.tables.cells["trkrAddValue"].tap()
+        let vname = app.textFields["valueName"]
+        vname.tap()
+        vname.typeText("secret\n")
+        app.buttons["avoConfig"].tap()
+        let gptf = app.textFields["testTracker_secret_gpTF"]
+        clearTextField(gptf)
+        gptf.tap()
+        gptf.typeText("20\n")
+        app.buttons["configtvo_done"].tap()
+        
+        app.buttons["avoSave"].tap()
+        app.buttons["addTrkrSave"].tap()
+        app.buttons["rTracker"].tap()
+        
+        app.tables.cells["trkr_testTracker"].tap()
+        app.swipeRight()
+        app.swipeUp()
+        
+        let secFld = app.textFields["testTracker_secret_numberfield"]
+        secFld.tap()
+        secFld.typeText("99\n")
+        app.buttons["trkrSave"].tap()
+        app.buttons["< rTracker"].tap()
+    }
+    
+    func testSavePrivate() throws {
+        let priv = app.buttons["privacy"]
+        let ctr = app.buttons["middle-middle"]
+        priv.tap()
+        app.buttons["clear"].tap()
+        priv.tap()
+        
+        let ttrkr = app.tables.cells["trkr_testTracker"]
+        ttrkr.tap()
+        app.buttons["trkrMenu"].tap()
+        app.buttons["save for PC (iTunes)"].tap()
+        sleep(1)
+        let savAlert = app.alerts["Tracker saved"]
+        savAlert.buttons["OK"].tap()
+        
+        app.buttons["< rTracker"].tap()
+        
+        let edit = app.buttons["Edit"]
+        edit.tap()
+        app.segmentedControls["configTlistMode"].buttons["tlistMoveDel"].tap()
+        let cttrkr = app.tables.cells["configt_testTracker"]
+        cttrkr.tap()
+        sleep(1)
+        cttrkr.buttons["Delete"].tap()
+        let delAlert = app.alerts["Delete tracker testTracker"]
+        delAlert.buttons["Delete tracker"].tap()
+        app.buttons["rTracker"].tap()
+        
+        XCTAssertFalse(ttrkr.exists)
+        app.buttons["out2in"].tap()
+        edit.tap()
+        app.buttons["rTracker"].tap()
+        sleep(1)
+        XCTAssert(ttrkr.exists)
+        do  {
+            try testNewTracker()
+        } catch {
+            XCTFail("error: \(error)")
+        }
+        priv.tap()
+        ctr.tap()
+        priv.tap()
+        ttrkr.tap()
+        app.swipeUp()
+        app.swipeRight()
+        let secFld = app.textFields["testTracker_secret_numberfield"]
+        XCTAssertEqual(secFld.label, "99")
     }
     
     func testLaunchPerformance() throws {

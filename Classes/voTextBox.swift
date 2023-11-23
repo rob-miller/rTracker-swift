@@ -359,7 +359,6 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         devc = nil
 
         //self.alphaArray = nil;
-
     }
 
     @objc func tbBtnAction(_ sender: Any?) {
@@ -373,8 +372,6 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
 
         MyTracker.vc?.navigationController?.pushViewController(vde, animated: true)
         //[MyTracker.vc.navigationController push :vde animated:YES];
-
-
     }
 
     override func dataEditVDidLoad(_ vc: UIViewController) {

@@ -341,6 +341,8 @@ class privacyV: UIView {
             _clearBtn?.addTarget(self, action: #selector(doClear(_:)), for: .touchUpInside)
             _clearBtn?.layer.cornerRadius = CGFloat(BTNRADIUS)
             //clearBtn.backgroundColor = [UIColor systemBackgroundColor];
+            
+            _clearBtn?.accessibilityIdentifier = "clear"
         }
         return _clearBtn
     }
@@ -363,6 +365,8 @@ class privacyV: UIView {
             _configBtn?.addTarget(self, action: #selector(showConfig(_:)), for: .touchUpInside)
             _configBtn?.layer.cornerRadius = CGFloat(BTNRADIUS)
             //configBtn.backgroundColor = [UIColor whiteColor];
+            
+            _configBtn?.accessibilityIdentifier = "setup"
         }
         return _configBtn
     }
@@ -377,6 +381,7 @@ class privacyV: UIView {
             _saveBtn?.addTarget(self, action: #selector(saveConfig(_:)), for: .touchUpInside)
             _saveBtn?.layer.cornerRadius = CGFloat(BTNRADIUS)
             _saveBtn?.isHidden = true
+            _saveBtn?.accessibilityIdentifier = "save"
         }
         return _saveBtn
     }
@@ -396,10 +401,22 @@ class privacyV: UIView {
             //showSlider.continuous = FALSE;
             _showSlider?.addTarget(self, action: #selector(ssAction(_:)), for: .valueChanged)
             _showSlider?.isHidden = true
+            
+            _showSlider?.accessibilityLabel = "privacy level"
+            _showSlider?.accessibilityIdentifier = "privlevel"
+            _showSlider?.accessibilityHint = "higher is stronger, set pattern and save"
         }
         return _showSlider
     }
 
+    func sliderVal() -> Int {
+        return Int((showSlider?.value ?? 0.0) + 0.5)
+    }
+    
+    func resetSlider() {
+        _showSlider?.value = Float(MINPRIV + 1)
+    }
+    
     private var _ssValLab: UILabel?
     var ssValLab: UILabel? {
         let lfx = frame.origin.x + (frame.size.width * (TICTACHRZFRAC / 2.0))            // x= same as clearBtn
@@ -413,6 +430,9 @@ class privacyV: UIView {
             _ssValLab?.text = "2" // MINPRIV +1
             _ssValLab?.layer.cornerRadius = CGFloat(LBLRADIUS)
             _ssValLab?.isHidden = true
+            
+            _ssValLab?.accessibilityHint = "current privacy level setting"
+            _ssValLab?.accessibilityIdentifier = "plvl"
         }
         return _ssValLab
     }
@@ -427,6 +447,8 @@ class privacyV: UIView {
             _nextBtn?.addTarget(self, action: #selector(adjustTTV(_:)), for: .touchUpInside)
             _nextBtn?.layer.cornerRadius = CGFloat(BTNRADIUS)
             _nextBtn?.isHidden = true
+            
+            _nextBtn?.accessibilityIdentifier = "next"
         }
         return _nextBtn
     }
@@ -441,6 +463,8 @@ class privacyV: UIView {
             _prevBtn?.addTarget(self, action: #selector(adjustTTV(_:)), for: .touchUpInside)
             _prevBtn?.layer.cornerRadius = CGFloat(BTNRADIUS)
             _prevBtn?.isHidden = true
+            
+            _prevBtn?.accessibilityIdentifier = "prev"
         }
         return _prevBtn
     }
@@ -537,6 +561,11 @@ class privacyV: UIView {
         return tob!.toQry2Int(sql:sql)!
     }
 
+    func dbTestLvl(_ `try`: Int) -> Bool {
+        let sql = "select count(*) from priv1 where lvl=\(`try`);"
+        return tob!.toQry2Int(sql:sql)! != 0
+    }
+    
     func dbSetKey(_ key: Int, level lvl: Int) {
         var sql: String?
 
@@ -549,6 +578,12 @@ class privacyV: UIView {
 
     }
 
+    #if TESTING
+    func dbClrKeys() {
+        tob!.toExecSql(sql:"delete from priv1;")
+    }
+    #endif
+    
     func dbGetKey(_ lvl: Int) -> UInt {
         let sql = "select key from priv1 where lvl=\(lvl);"
         return UInt(tob!.toQry2Int(sql: sql)!)
@@ -594,6 +629,8 @@ class privacyV: UIView {
         _pwState = PWNEEDPRIVOK
         showing = PVNOSHOW
         privacyValue = MINPRIV
+        ttv?.showKey(0)
+        resetSlider()
     }
 
     @objc func ppwvResponse() {
@@ -633,7 +670,7 @@ class privacyV: UIView {
 
     // make ttv match slider
     func setTTV() {
-        let lvl = Int((showSlider?.value ?? 0.0) + 0.5)
+        let lvl = sliderVal()
         var k: UInt
         k = dbGetKey(lvl)
         if lvl > 0 {
@@ -647,7 +684,7 @@ class privacyV: UIView {
     // MARK: UI element target actions
 
     @objc func ssAction(_ sender: Any?) {
-        ssValLab?.text = "\(Int((showSlider?.value ?? 0.0) + 0.5))"
+        ssValLab?.text = "\(sliderVal())"
     }
 
     @objc func showConfig(_ btn: UIButton?) {
@@ -665,15 +702,30 @@ class privacyV: UIView {
 
     @objc func saveConfig(_ btn: UIButton?) {
         let ttvkey: UInt = ttv!.key
+        
+        if ttvkey != 0 || dbTestLvl(sliderVal()) {
+            // don't allow saving blank tt for a privacy level unless clearing that level
+            dbSetKey(Int(ttvkey), level: sliderVal())
+        } else {
+            let alert = UIAlertController(
+                title: "Set a pattern to save",
+                message: "Set a pattern that will activate privacy level \(sliderVal()), then tap Save.",
+                preferredStyle: .alert)
 
-        if ttvkey != 0 {
-            // don't allow saving blank tt for a privacy level
-            dbSetKey(Int(ttvkey), level: Int((showSlider?.value ?? 0.0) + 0.5))
-        }
+            let defaultAction = UIAlertAction(
+                title: "OK",
+                style: .default,
+                handler: nil
+            )
+            alert.addAction(defaultAction)
+            let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+            let window = windowScene!.windows.first
+            let vc = window!.rootViewController
+            vc?.present(alert, animated: true)        }
     }
 
     @objc func adjustTTV(_ btn: UIButton?) {
-        var lvl = Int((showSlider?.value ?? 0.0) + 0.5)
+        var lvl = sliderVal()
         ///*
         var k: Int
         var dir: Bool
@@ -691,7 +743,7 @@ class privacyV: UIView {
 
         if k == 0 {
             // if getAdjacent failed = no next/prev key for curr slider value
-            lvl = Int((showSlider?.value ?? 0.0) + 0.5) // got wiped so reload
+            lvl = sliderVal() // got wiped so reload
             if 0 == dbGetKey(lvl) {
                 // and no existing key for curr slider
                 //k = 
