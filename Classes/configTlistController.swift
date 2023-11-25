@@ -88,7 +88,7 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
 
         DBGLog("export all")
         let navframe = navigationController?.navigationBar.frame
-        rTracker_resource.alert("exporting trackers", msg: "_out.csv and _out.plist files are being saved to the rTracker Documents directory on this device.  Access them through iTunes/Finder on your PC/Mac, or with a program like iExplorer from Macroplant.com.  Import by changing the names to _in.csv and _in.plist, and read about .rtcsv file import capabilities in the help pages.", vc: self)
+        rTracker_resource.alert("exporting trackers", msg: "_out.csv and _out.plist files are being saved to the rTracker Documents directory on this device.  Access them through iTunes/Finder on your PC/Mac, or with a program like iExplorer from Macroplant.com.  Import by changing the names to _in.csv and _in.plist, and read about .rtcsv file import capabilities in the help pages.\n\nNote: All private (hidden) data has been saved to output files.", vc: self)
         rTracker_resource.startProgressBar(view, navItem: navigationItem, disable: true, yloc: (navframe?.size.height ?? 0.0) + (navframe?.origin.y ?? 0.0))
 
         Thread.detachNewThreadSelector(#selector(startExport), toTarget: self, with: nil)
