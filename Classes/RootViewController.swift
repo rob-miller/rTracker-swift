@@ -1214,6 +1214,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         //[rTracker_resource setSCICount:(NSUInteger)[sud integerForKey:@"shortcut_count_pref"]];
 
         rTracker_resource.setToldAboutSwipe(sud.bool(forKey: "toldAboutSwipe"))
+        rTracker_resource.setToldAboutSwipe2(sud.bool(forKey: "toldAboutSwipe2"))
         rTracker_resource.setToldAboutNotifications(sud.bool(forKey: "toldAboutNotifications"))
         rTracker_resource.setAcceptLicense(sud.bool(forKey: "acceptLicense"))
 

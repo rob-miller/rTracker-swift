@@ -99,7 +99,8 @@ var acceptLicense = ACCEPTLICENSEDFLT
     	DBGLog(@"updateHideRTimes:%d",hideRTimes);
     }
     */
-    var toldAboutSwipe = false
+var toldAboutSwipe = false
+var toldAboutSwipe2 = false
 var toldAboutNotifications = false
 var notificationsEnabled = false
 var maintainerRqst = false
@@ -726,9 +727,18 @@ class rTracker_resource: NSObject {
         return toldAboutSwipe
     }
 
+    class func getToldAboutSwipe2() -> Bool {
+        return toldAboutSwipe2
+    }
+    
     class func setToldAboutSwipe(_ toldSwipe: Bool) {
         toldAboutSwipe = toldSwipe
         DBGLog(String("updateToldAboutSwipe:\(toldAboutSwipe)"))
+    }
+
+    class func setToldAboutSwipe2(_ toldSwipe2: Bool) {
+        toldAboutSwipe2 = toldSwipe2
+        DBGLog(String("updateToldAboutSwipe2:\(toldAboutSwipe2)"))
     }
 
     class func getToldAboutNotifications() -> Bool {

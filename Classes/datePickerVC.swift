@@ -171,9 +171,13 @@ class datePickerVC: UIViewController {
         //[self dismissModalViewControllerAnimated:YES];
         dismiss(animated: true)
 
+        /*
         if SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO("13.0") {
             (presentationController?.delegate as? UIViewController)?.viewWillAppear(false)
         }
+         */
+        (presentationController?.delegate as? UIViewController)?.beginAppearanceTransition(true, animated: true)
+        (presentationController?.delegate as? UIViewController)?.endAppearanceTransition()
     }
 
     //- (IBAction) entryCopyBtnAction;
@@ -182,9 +186,13 @@ class datePickerVC: UIViewController {
         dpr?.action = DPA_SET
         //[self dismissModalViewControllerAnimated:YES];
         dismiss(animated: true)
+        /*
         if SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO("13.0") {
             (presentationController?.delegate as? UIViewController)?.viewWillAppear(false)
         }
+         */
+        (presentationController?.delegate as? UIViewController)?.beginAppearanceTransition(true, animated: true)
+        (presentationController?.delegate as? UIViewController)?.endAppearanceTransition()
     }
 
 
@@ -194,9 +202,13 @@ class datePickerVC: UIViewController {
         dpr?.action = DPA_GOTO
         //[self dismissModalViewControllerAnimated:YES];
         dismiss(animated: true)
+        /*
         if SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO("13.0") {
             (presentationController?.delegate as? UIViewController)?.viewWillAppear(false)
         }
+         */
+        (presentationController?.delegate as? UIViewController)?.beginAppearanceTransition(true, animated: true)
+        (presentationController?.delegate as? UIViewController)?.endAppearanceTransition()
     }
     /*
     - (IBAction) dateModeChoice:(id)sender

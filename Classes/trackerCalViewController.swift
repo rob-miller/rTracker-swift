@@ -217,6 +217,14 @@ class trackerCalViewController: UIViewController, TSQCalendarViewDelegate {
 
         // Uncomment this to test scrolling performance of your custom drawing
         //    self.timer = [NSTimer scheduledTimerWithTimeInterval:.1 target:self selector:@selector(scroll) userInfo:nil repeats:YES];
+        
+        if !rTracker_resource.getToldAboutSwipe2() {
+            // if not yet told
+                rTracker_resource.alert("Swipe to exit", msg: "Swipe left or right to exit without picking a date.", vc: self)
+                rTracker_resource.setToldAboutSwipe2(true)
+                UserDefaults.standard.set(true, forKey: "toldAboutSwipe2")
+                UserDefaults.standard.synchronize()
+        }
     }
 
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
@@ -248,9 +256,13 @@ class trackerCalViewController: UIViewController, TSQCalendarViewDelegate {
         dpr?.action = DPA_GOTO_POST
         //[self dismissModalViewControllerAnimated:YES];
         dismiss(animated: true)
+        /*
         if SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO("13.0") {
             (presentationController?.delegate as? UIViewController)?.viewWillAppear(false)
         }
+         */
+        (presentationController?.delegate as? UIViewController)?.beginAppearanceTransition(true, animated: true)
+        (presentationController?.delegate as? UIViewController)?.endAppearanceTransition()
     }
 
     @objc func calendarView(_ calendarView: TSQCalendarView?, shouldSelect date: Date?) -> Bool {
