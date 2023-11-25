@@ -26,6 +26,11 @@ import Contacts
 import Foundation
 import UIKit
 
+extension Notification.Name {
+    static let addressBookAccessChanged = Notification.Name("addressBookAccessChanged")
+}
+
+
 class CustomAccessoryView: UIView {
 
     @IBOutlet weak var addButton: UIButton!
@@ -45,6 +50,7 @@ class CustomAccessoryView: UIView {
         super.init(frame: frame)
         
         // Initialize your view
+
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -53,6 +59,8 @@ class CustomAccessoryView: UIView {
         // Initialize your view
 
     }
+
+    
     @IBAction func addButtonPressed(_ sender: Any) {
         //print("addButton pressed")
         votb.addPickerData()
@@ -156,6 +164,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
 
     }*/
 
+    
     private var _tbButton: UIButton?
     var tbButton: UIButton? {
         if nil == _tbButton {
@@ -320,7 +329,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
     @IBOutlet weak var setSearchSeg: UISegmentedControl!
     @IBOutlet weak var orAndSeg: UISegmentedControl!
      */
-
+    var contactStore = CNContactStore()
  
     /*
     init() {
@@ -348,6 +357,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
     override init(vo valo: valueObj) {
         //DBGLog(@"voTextBox init for %@",valo.valueName);
         super.init(vo: valo)
+
     }
 
     deinit {
@@ -375,6 +385,47 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         //[MyTracker.vc.navigationController push :vde animated:YES];
     }
 
+    func presentSaveAlert() {
+        let alertController = UIAlertController(title: "Save Changes", message: "Would you like to save your changes?", preferredStyle: .alert)
+        
+        let saveAction = UIAlertAction(title: "Save", style: .default) { [weak self] _ in
+            // Code to save the changes
+            self?.saveAction(nil)
+            self?.devc?.navigationController?.popViewController(animated: true)
+            //self?.textView.resignFirstResponder()
+        }
+        let dontSaveAction = UIAlertAction(title: "Don't Save", style: .cancel) { [weak self] _ in
+            // Code to discard the changes
+            self?.devc?.navigationController?.popViewController(animated: true)
+            //self?.textView.resignFirstResponder()
+        }
+        
+        alertController.addAction(saveAction)
+        alertController.addAction(dontSaveAction)
+        
+        self.devc?.present(alertController, animated: true)
+    }
+
+    @objc func backButtonTapped() {
+        // Perform the 'done' action, like saving data or updating UI
+        // ...
+        /*
+         // disable because don't think needed
+        if 0 == cav.searchSeg.selectedSegmentIndex {
+            let tt = textView?.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            if vo.value != tt {
+                presentSaveAlert()
+                return
+            }
+        }
+         */
+        
+        // Then pop the view controller if needed
+        vo.value = vo.value.trimmingCharacters(in: .whitespacesAndNewlines)  // redundant if saveAction was called
+        devc?.navigationController?.popViewController(animated: true)
+        
+    }
+    
     override func dataEditVDidLoad(_ vc: UIViewController) {
         //self.devc = vc;
         //CGRect visFrame = vc.view.frame;
@@ -416,6 +467,8 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
             textView?.becomeFirstResponder()
         }
         
+        devc?.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "<", style: .plain, target: self, action: #selector(backButtonTapped))
+
     }
 
     override func dataEditVWAppear(_ vc: UIViewController?) {
@@ -529,14 +582,32 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         textView?.text = (textView?.text ?? "") + str
     }
      
+    func finishSegChanged1(_ ndx:Int) {
+        cav.addButton.isHidden = false
+        if ((SEGPEOPLE == ndx) && (vo.optDict["tbni"] == "1") && accessAddressBook)
+            || ((SEGHISTORY == ndx) && (vo.optDict["tbhi"] == "1")) {
+            showNdx = true
+        } else {
+            showNdx = false
+        }
 
+        textView?.inputView = pv
+    }
+    
+    func finishSegChanged2() {
+        textView?.resignFirstResponder()
+        textView?.becomeFirstResponder()
+        
+        if let selectedRange = textView?.selectedRange {
+            textView?.scrollRangeToVisible(selectedRange)
+        }
+    }
+    
     //@IBAction func segmentChanged(_ sender: UISegmentedControl) {
     func segmentChanged(_ ndx:Int) {
         //let ndx = sender.selectedSegmentIndex
         //DBGLog(@"segment changed: %ld",(long)ndx);
 
-
-        
         if textView?.inputView != nil {
             // if was showing pickerview
             pv?.removeFromSuperview() // remove leftover constraints if showed before
@@ -549,24 +620,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         } else {
             if SEGPEOPLE == ndx {
                 checkContactsAccess()
-                if !accessAddressBook {
-                    cav.segControl.selectedSegmentIndex = SEGKEYBOARD
-                    segmentChanged(SEGKEYBOARD)
-                    return
-                }
-                if !ABloaded {
-                    accessABcondition.lock()
-                    while !ABloaded {
-                        accessABcondition.wait()
-                    }
-                    accessABcondition.unlock()
-                }
-                if 0 == namesArray.count {
-                    rTracker_resource.alert("No Contacts", msg: "Add some names to your Address Book, then find them here", vc: nil)
-                    cav.segControl.selectedSegmentIndex = SEGKEYBOARD
-                    segmentChanged(SEGKEYBOARD)
-                    return
-                }
+                return
             } else {  // SEGHISTORY
                 if 0 == historyArray.count {
                     rTracker_resource.alert("No history", msg: "Use the keyboard to create some entries, save, and then find them in the history", vc: nil)
@@ -575,23 +629,11 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
                     return
                 }
             }
-            cav.addButton.isHidden = false
-            if ((SEGPEOPLE == ndx) && (vo.optDict["tbni"] == "1") && accessAddressBook)
-                || ((SEGHISTORY == ndx) && (vo.optDict["tbhi"] == "1")) {
-                showNdx = true
-            } else {
-                showNdx = false
-            }
 
-            textView?.inputView = pv
+            finishSegChanged1(SEGHISTORY)
         }
 
-        textView?.resignFirstResponder()
-        textView?.becomeFirstResponder()
-        
-        if let selectedRange = textView?.selectedRange {
-            textView?.scrollRangeToVisible(selectedRange)
-        }
+        finishSegChanged2()
     }
      
     
@@ -600,15 +642,18 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         //
         textView?.resignFirstResponder()
         devc?.navigationItem.rightBarButtonItem = nil // this will remove the "save" button
+        /// *
         textView?.text = textView?.text.trimmingCharacters(in: .whitespacesAndNewlines)
         if "" != textView?.text {
             textView?.text = (textView?.text ?? "") + "\n"
         }
-
+    //*/
+        
         DBGLog(String("tb save: vo.val= .\(vo.value)  tv.txt= \(textView!.text)"))
 
         if 0 == cav.searchSeg.selectedSegmentIndex {
             let tt = textView?.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            vo.value = vo.value.trimmingCharacters(in: .whitespacesAndNewlines)
             if vo.value != tt {
                 vo.value = tt ?? ""
 
@@ -653,6 +698,8 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
                 parentUTC?.searchSet = nil
             }
         }
+        
+        self.devc?.navigationController?.popViewController(animated: true)
     }
 
     func textViewDidBeginEditing(_ textView: UITextView) {
@@ -667,6 +714,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         saveItem.accessibilityIdentifier = "tbox-save"
         
         devc?.navigationItem.rightBarButtonItem = saveItem
+        
     }
 
     /*
@@ -680,7 +728,13 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
     }
     */
     func textViewShouldEndEditing(_ aTextView: UITextView) -> Bool {
-        aTextView.resignFirstResponder()
+        //aTextView.resignFirstResponder()
+        if 0 == cav.searchSeg.selectedSegmentIndex {
+            let tt = textView?.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            if vo.value != tt {
+                
+            }
+        }
         return true
     }
 
@@ -693,37 +747,78 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
     let accessABcondition = NSCondition()
     var accessABknown: Bool = false
     var ABloaded: Bool = false
+
+    func getContactsAccess() {
+        let entityType: CNEntityType = .contacts
+        //let contactStore = CNContactStore()
+        contactStore.requestAccess(for: entityType) { [weak self] granted, error in
+            DispatchQueue.main.async {
+                //accessABcondition.lock()
+                if granted {
+                    self?.accessAddressBook = true
+                    DispatchQueue.global().async { [weak self] in
+                        self?.getNames()
+                        NotificationCenter.default.post(name: .addressBookAccessChanged, object: nil)
+                    }
+                } else {
+                    self?.accessAddressBook = false
+                }
+                self?.accessABknown = true
+                
+                //.accessABcondition.signal()
+                //accessABcondition.unlock()
+                //NotificationCenter.default.post(name: .addressBookAccessChanged, object: nil)
+            }
+        }
+        /*
+        accessABcondition.lock()
+        while !accessABknown {
+            accessABcondition.wait()
+        }
+        accessABcondition.unlock()
+         */
+    }
+    
+    func finishAddressBook() {
+        DispatchQueue.main.async { [weak self] in
+            self?.finishSegChanged1(SEGPEOPLE)
+            self?.finishSegChanged2()
+            self?.handleContacts()
+        }
+    }
+    @objc func addressBookAccessChanged(notification: NSNotification) {
+        DBGLog("abac.")
+        finishAddressBook()
+        NotificationCenter.default.removeObserver(self, name: .addressBookAccessChanged, object: nil)
+    }
+    
     func checkContactsAccess() {
         let entityType: CNEntityType = .contacts
         let stat = CNContactStore.authorizationStatus(for: entityType)
 
         if .authorized == stat {
             accessAddressBook = true
-        } else if .notDetermined == stat {
-            let contactStore = CNContactStore()
-            contactStore.requestAccess(for: entityType) { [self] granted, error in
-                accessABcondition.lock()
-                if granted {
-                    accessAddressBook = true
-                } else {
-                    accessAddressBook = false
+            if namesArray == [] {
+                NotificationCenter.default.addObserver(self, selector: #selector(addressBookAccessChanged), name: .addressBookAccessChanged, object: nil)
+                DispatchQueue.global().async { [weak self] in
+                    self?.getNames()
+                    NotificationCenter.default.post(name: .addressBookAccessChanged, object: nil)
                 }
-                accessABknown = true
-                accessABcondition.signal()
-                accessABcondition.unlock()
+            } else {
+                finishAddressBook()
             }
-            
-            accessABcondition.lock()
-            while !accessABknown {
-                accessABcondition.wait()
-            }
-            accessABcondition.unlock()
+            //self.getNames()
+            //handleContacts()
+        } else if .notDetermined == stat {
+            NotificationCenter.default.addObserver(self, selector: #selector(addressBookAccessChanged), name: .addressBookAccessChanged, object: nil)
+            getContactsAccess()
         } else {
             accessAddressBook = false
             rTracker_resource.alert("Need Contacts access", msg: "Please go to System Settings -> Privacy -> Contacts and enable access for rTracker to use this feature.",
                                     vc:nil)
+            handleContacts()
         }
-        
+        /*
         if accessAddressBook {
             DispatchQueue.global().async { [weak self] in
                 self?.accessABcondition.lock()
@@ -733,21 +828,21 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
                 self?.accessABcondition.unlock()
             }
         }
-        
+        */
     }
 
     func getNames() {
         if namesArray != [] {
             return
         }
-        checkContactsAccess()
+        //checkContactsAccess()
         if !accessAddressBook {
             return
         }
 
         // https://stackoverflow.com/questions/36859991/cncontact-display-name-objective-c-swift
         var contacts: [CNContact] = []
-        let contactStore = CNContactStore()
+        //let contactStore = CNContactStore()
 
         let fnameKey = CNContactFormatter.descriptorForRequiredKeys(for: .fullName)
         let keysToFetch = [CNContactIdentifierKey, fnameKey] as! [CNKeyDescriptor]
@@ -772,14 +867,41 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         }
 
     }
-
+    
+    func handleContacts() {
+        if !accessAddressBook {
+            cav.segControl.selectedSegmentIndex = SEGKEYBOARD
+            segmentChanged(SEGKEYBOARD)
+            return
+        }
+        /*
+        if !ABloaded {
+            accessABcondition.lock()
+            while !ABloaded {
+                accessABcondition.wait()
+            }
+            accessABcondition.unlock()
+        }
+         */
+        if 0 == namesArray.count {
+            rTracker_resource.alert("No Contacts", msg: "Add some names to your Address Book, then find them here", vc: nil)
+            cav.segControl.selectedSegmentIndex = SEGKEYBOARD
+            segmentChanged(SEGKEYBOARD)
+            return
+        }
+    }
+    
+    // MARK: -
+    
     override func voDisplay(_ bounds: CGRect) -> UIView {
         vosFrame = bounds
 
         if vo.value == "" {
             tbButton?.setTitle("<add text>", for: .normal)
         } else {
-            tbButton?.setTitle(vo.value, for: .normal)
+            tbButton?.setTitle(vo.value.trimmingCharacters(in: .whitespacesAndNewlines), for: .normal)
+            vo.value += "\n"  // because remove on close
+            //textView?.text += "\n"
         }
         // does not help ! [[self.tbButton superview] setNeedsDisplay];
         // does not help ! [self.tbButton setNeedsDisplay];

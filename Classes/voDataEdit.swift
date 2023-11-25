@@ -60,6 +60,7 @@ class voDataEdit: UIViewController, UITextViewDelegate {
     var saveSelector: Selector?
     var text: String?
 
+
     override func viewDidLoad() {
 
         super.viewDidLoad()
@@ -74,6 +75,8 @@ class voDataEdit: UIViewController, UITextViewDelegate {
             title = vo.valueName
             vo.vos?.dataEditVDidLoad(self)
             textView = (vo.vos as? voTextBox)?.textView
+
+
         } else {
             // generic text editor
             textView = UITextView(frame: view.frame)
@@ -107,6 +110,7 @@ class voDataEdit: UIViewController, UITextViewDelegate {
         }
 
     }
+    
 
     override func viewWillAppear(_ animated: Bool) {
         if let vo {
