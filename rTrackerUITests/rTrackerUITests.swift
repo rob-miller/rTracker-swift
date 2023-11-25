@@ -19,20 +19,25 @@ final class rTrackerUITests: XCTestCase {
         
         // In UI tests it is usually best to stop immediately when a failure occurs.
         continueAfterFailure = false
-        /*
-         // can't do anything about access contacts alert
-         
-         addUIInterruptionMonitor(withDescription: "Contacts Permission") { (alert) -> Bool in
-         if alert.buttons["OK"].exists {
-         alert.buttons["OK"].tap()
-         return true
-         }
-         return false
-         }
-         */
         
         app.launch()
         // In UI tests it’s important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
+        
+        // *  rtmx need back just working on contacts
+        let notifMonitor = addUIInterruptionMonitor(withDescription: "") { (alert) -> Bool in  // Allow Notifications
+            let allowButton = alert.buttons["Allow"]
+            let okButton = alert.buttons["OK"]
+            if allowButton.exists {
+                allowButton.tap()
+                return true
+            }
+            if okButton.exists {
+                okButton.tap()
+                return true
+            }
+            return false
+        }
+        // * /
         
         // clear alerts if first run
         sleep(1)
@@ -45,8 +50,10 @@ final class rTrackerUITests: XCTestCase {
         let authAlert = app.alerts["Authorise notifications"]
         if authAlert.exists {
             authAlert.buttons["OK"].tap()
-            sleep(1)
+            sleep(3)
         }
+        
+        removeUIInterruptionMonitor(notifMonitor)
     }
     
     override func tearDownWithError() throws {
@@ -57,15 +64,13 @@ final class rTrackerUITests: XCTestCase {
         do {
             try testTrackerDemoInstall()
             try testEditTrackerRank()
-            try testSearchClear()
-            try testSearchSetup()
-            try testSearch()
-            try testSearchClear()
+            try testSearchGo()
             try testTrackerDemoUse()
 
             try testNewTrackerGo()
             
             try testPrivacyGo()
+            try testSavePrivateGo()
             
         } catch {
             XCTFail("error: \(error)")
@@ -74,7 +79,12 @@ final class rTrackerUITests: XCTestCase {
     
     func testTrackerDemoInstall() throws {
         app.tables.cells["trkr_👣rTracker demo"].tap()
-        
+        sleep(1)
+        let swipeAlert = app.alerts["Swipe control"]
+        if swipeAlert.exists {
+            swipeAlert.buttons["OK"].tap()
+            sleep(1)
+        }
         app.swipeRight()
         sleep(1)
         
@@ -169,6 +179,17 @@ final class rTrackerUITests: XCTestCase {
         XCTAssertEqual(itCopy, newTitles, "The order of cell titles is not restored!")
     }
     
+    func testSearchGo() throws {
+        do {
+            try testSearchClear()
+            try testSearchSetup()
+            try testSearch()
+            try testSearchClear()
+        } catch {
+            XCTFail("error: \(error)")
+        }
+    }
+    
     func testSearchSetup() throws {
         let carCell = app.tables.cells["trkr_🚗 Car"]
         carCell.tap()
@@ -200,7 +221,7 @@ final class rTrackerUITests: XCTestCase {
             }
             // save and leave textbox editor
             app.buttons["tbox-save"].tap()
-            app.buttons["🚗 Car"].tap()
+            //app.buttons["🚗 Car"].tap()
             // save and return to car tracker
             app.buttons["trkrSave"].tap()
             if i != 5 {
@@ -232,7 +253,7 @@ final class rTrackerUITests: XCTestCase {
         let srchSeg = app.segmentedControls["tbox-seg-search"]
         srchSeg.buttons["tbox-mode-srch"].tap()
         app.buttons["tbox-save"].tap()
-        app.buttons["🚗 Car"].tap()
+        //app.buttons["🚗 Car"].tap()
         sleep(1)
         let srchBtn = app.buttons["trkrSearch"]
         XCTAssert(srchBtn.exists, "no mag glass button")
@@ -258,7 +279,7 @@ final class rTrackerUITests: XCTestCase {
         tbtv.typeText("overlap\n")
         srchSeg.buttons["tbox-mode-srch"].tap()
         app.buttons["tbox-save"].tap()
-        app.buttons["🚗 Car"].tap()
+        //app.buttons["🚗 Car"].tap()
         sleep(1)
         srchBtn.tap()
         srchAlert = app.alerts["Search results"]
@@ -282,7 +303,7 @@ final class rTrackerUITests: XCTestCase {
         let srchMode = app.segmentedControls["tbox-seg-search-mode"]
         srchMode.buttons["tbox-srch-and"].tap()
         app.buttons["tbox-save"].tap()
-        app.buttons["🚗 Car"].tap()
+        //app.buttons["🚗 Car"].tap()
         sleep(1)
         srchBtn.tap()
         srchAlert = app.alerts["Search results"]
@@ -302,7 +323,7 @@ final class rTrackerUITests: XCTestCase {
         tbtv.typeText("overlap\n")
         srchSeg.buttons["tbox-mode-srch"].tap()
         app.buttons["tbox-save"].tap()
-        app.buttons["🚗 Car"].tap()
+        //app.buttons["🚗 Car"].tap()
         sleep(1)
         srchBtn.tap()
         srchAlert = app.alerts["Search results"]
@@ -415,39 +436,48 @@ final class rTrackerUITests: XCTestCase {
         let tbAdd = app.buttons["tbox-add-sel-line"]
         tbAdd.tap()
         
-        _ = addUIInterruptionMonitor(withDescription: "Contact Access Alert") { (alert) -> Bool in
-            if alert.buttons["OK"].exists {
+        // add first contact
+        /*
+        _ = addUIInterruptionMonitor(withDescription: "foo") { (alert) -> Bool in  // Access Contacts Alert
+            if alert.buttons["OK"].waitForExistence(timeout: 10) {  // exists
                 alert.buttons["OK"].tap()
                 return true
             }
             return false
         }
-        
-        // add first contact
-        tbseg.buttons["tbox-seg-contacts"].tap()
-        
-        /*
-         // unable to dismiss contacts alert
-         sleep(1)
-         let contactsAlert = app.alerts["“rTracker” Would Like to Access Your Contacts"]
-         if contactsAlert.exists {
-         contactsAlert.buttons["OK"].tap()
-         sleep(1)
-         }
          */
+        
+        //tbseg.buttons["tbox-seg-contacts"].tap()
+        
+        let contactMonitor = addUIInterruptionMonitor(withDescription: "") { (alert) -> Bool in  // Allow Notifications
+            let okButton = alert.buttons["OK"]
+
+            if okButton.exists {
+                okButton.tap()
+                return true
+            }
+            return false
+        }
+
+        tbseg.buttons["tbox-seg-contacts"].tap()
+        app.tap()
+        sleep(1)
         tbAdd.tap()
+        
+        removeUIInterruptionMonitor(contactMonitor)
         
         let expectedTbContent = """
 rTracker
 Use the search 🔍 to find them
 Kate Bell
-
 """
         // save and leave textbox editor
         app.buttons["tbox-save"].tap()
-        app.buttons["👣rTracker demo"].tap()
+        //app.buttons["👣rTracker demo"].tap()
         
         // confirm textbox button shows first line
+        print(">\(tbButton.label)<")
+        print(">\(expectedTbContent.replacingOccurrences(of: "\n", with: " "))<")
         XCTAssertEqual(tbButton.label, expectedTbContent.replacingOccurrences(of: "\n", with: " "), "textBox button label not as expected")
         
         // set text string
@@ -475,14 +505,16 @@ Kate Bell
         XCTAssertEqual(fnActiveVals.label, "6", "active values incorrect")
         
         XCTAssertEqual(olField.value as! String, "rules!", "The one liner field's value is incorrect")
+        print(">\(tbButton.label)<")
+        print(">\(expectedTbContent.replacingOccurrences(of: "\n", with: " "))<")
         XCTAssertEqual(tbButton.label, expectedTbContent.replacingOccurrences(of: "\n", with: " "), "textBox button label not 'rTracker'")
         
         // confirm textBox value
         tbButton.tap()
-        XCTAssertEqual((tbtv.value as! String), expectedTbContent, "The textbox content is incorrect")
+        XCTAssertEqual((tbtv.value as! String).trimmingCharacters(in: .whitespacesAndNewlines), expectedTbContent, "The textbox content is incorrect")
         
         // return out and confirm
-        app.buttons["👣rTracker demo"].tap()
+        app.buttons["<"].tap()
         exitTrkrBtn.tap()
         XCTAssert(rTdemoCell.exists, "did not return to tracker list")
         
@@ -1019,7 +1051,7 @@ Kate Bell
                 tbtv.typeText("\(strs[j])\n")
             }
             app.buttons["tbox-save"].tap()
-            app.buttons["testTracker"].tap()
+            //app.buttons["testTracker"].tap()
             
             let slider = app.sliders["testTracker_vslider_slider"]
             slider.adjust(toNormalizedSliderPosition: (CGFloat(i) * 0.1))
@@ -1075,7 +1107,7 @@ Kate Bell
         XCTAssertEqual(vfuncLabel.label, "34.27")
         app.swipeRight()
         XCTAssertEqual(vfuncLabel.label, "15.97")
-
+        app.buttons["< rTracker"].tap()
     }
     
     
@@ -1316,8 +1348,15 @@ Kate Bell
         } catch {
             XCTFail("error: \(error)")
         }
-        print("new tracker test done.")
-        
+    }
+    
+    func testSavePrivateGo() throws {
+        do {
+            try testSavePrivateSetup()
+            try testSavePrivate()
+        } catch {
+            XCTFail("error: \(error)")
+        }
     }
     
     func testSavePrivateSetup() throws {
@@ -1374,8 +1413,10 @@ Kate Bell
     func testSavePrivate() throws {
         let priv = app.buttons["privacy"]
         let ctr = app.buttons["middle-middle"]
+        let clr = app.buttons["clear"]
         priv.tap()
-        app.buttons["clear"].tap()
+        clr.tap()
+        ctr.tap()
         priv.tap()
         
         let ttrkr = app.tables.cells["trkr_testTracker"]
@@ -1387,6 +1428,10 @@ Kate Bell
         savAlert.buttons["OK"].tap()
         
         app.buttons["< rTracker"].tap()
+        
+        priv.tap()
+        clr.tap()
+        priv.tap()
         
         let edit = app.buttons["Edit"]
         edit.tap()
@@ -1416,8 +1461,11 @@ Kate Bell
         ttrkr.tap()
         app.swipeUp()
         app.swipeRight()
+        sleep(1)
         let secFld = app.textFields["testTracker_secret_numberfield"]
-        XCTAssertEqual(secFld.label, "99")
+        XCTAssertEqual(secFld.value as? String , "99")
+        
+        app.buttons["< rTracker"].tap()
     }
     
     func testLaunchPerformance() throws {
