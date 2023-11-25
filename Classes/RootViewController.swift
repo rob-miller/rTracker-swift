@@ -106,16 +106,17 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     var _tlist: trackerList?
     var tlist: trackerList {
         if _tlist == nil {
-            let tmptlist = trackerList()
-            _tlist = tmptlist
+            _tlist = trackerList()  // Create the trackerList instance
             
-            if self.tlist.recoverOrphans() {
+            // Use the newly created _tlist to recover orphans and load the layout
+            if _tlist!.recoverOrphans() {
                 rTracker_resource.alert("Recovered files", msg: "One or more tracker files were recovered, please delete if not needed.", vc: self)
             }
-            self.tlist.loadTopLayoutTable()
+            _tlist!.loadTopLayoutTable()
         }
         return _tlist!
     }
+
 
     //
     // original code:
@@ -267,110 +268,6 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         }
     }
 
-    func rtm_xloadTrackerCsvFiles() {
-        //DBGLog(@"loadTrackerCsvFiles");
-        let docsDir = rTracker_resource.ioFilePath(nil, access: true)
-        let localFileManager = FileManager.default
-        let dirEnum = localFileManager.enumerator(atPath: docsDir)
-        var newRtcsvTracker = false
-        var rtcsv = false
-
-        // var file: String?
-
-        jumpMaxPriv()
-        while let file = dirEnum?.nextObject() as? URL {
-            var to: trackerObj? = nil
-            let fname = file.lastPathComponent
-            var tname: String? = nil
-            var inmatch: NSRange?
-            var validMatch = false
-            var loadObj: String?
-
-            if file.pathExtension == "csv" {
-                #if DEBUGLOG
-                loadObj = "csv"
-                #endif
-                let range = (fname as NSString?)!.range(of: "_in.csv", options: [.backwards, .anchored])
-                inmatch = range
-                
-                //DBGLog(@"consider input: %@",fname);
-
-                if (inmatch!.location != NSNotFound) && (inmatch!.length == 7) {
-                    // matched all 7 chars of _in.csv at end of file name  (must test not _out.csv)
-                    validMatch = true
-                }
-            } else if file.pathExtension == "rtcsv" {
-                rtcsv = true
-                loadObj = "rtcsv"
-                let range = (fname as NSString?)?.range(of: ".rtcsv", options: [.backwards, .anchored])
-                inmatch = range!
-                
-                //DBGLog(@"consider input: %@",fname);
-
-                if (inmatch!.location != NSNotFound) && (inmatch!.length == 6) {
-                    // matched all 6 chars of .rtcsv at end of file name  (unlikely to fail but need inmatch to get tname)
-                    validMatch = true
-                }
-            }
-
-            if validMatch {
-                tname = (fname as NSString?)?.substring(to: inmatch!.location)
-                DBGLog(String("\(loadObj) load input: \(fname) as \(tname)"))
-                //[rTracker_resource startActivityIndicator:self.view navItem:nil disable:NO str:@"loading data..."];
-                //safeDispatchSync(^{
-                //    [rTracker_resource startActivityIndicator:self.view navItem:nil disable:NO str:[NSString stringWithFormat:@"loading %@...", tname]];
-                //});
-
-                let tid = tlist.getTIDfromName(tname)
-                if tid != 0 {
-                    to = trackerObj(tid)
-                    DBGLog(String(" found existing tracker tid \(tid) with matching name"))
-                } else if rtcsv {
-                    to = trackerObj()
-                    to?.trackerName = tname
-                    to?.toid = tlist.getUnique()
-                    to?.saveConfig()
-                    tlist.add(toTopLayoutTable: to!)
-                    newRtcsvTracker = true
-                    DBGLog(String("created new tracker for rtcsv, id= \(to?.toid)"))
-                }
-
-                if nil != to {
-                    safeDispatchSync({ [self] in
-                        rTracker_resource.startActivityIndicator(view, navItem: nil, disable: false, str: "loading \(tname ?? "")...")
-                    })
-
-                    let target = file // URL(fileURLWithPath: docsDir ?? "").appendingPathComponent(file ?? "").path
-                    var csvString: String? = nil
-                    do {
-                        csvString = try String(contentsOfFile: target.absoluteString, encoding: .utf8)
-
-                        safeDispatchSync({ [self] in
-                            UIApplication.shared.isIdleTimerDisabled = true
-                            doCSVLoad(csvString, to: to, fname: fname)
-                            UIApplication.shared.isIdleTimerDisabled = false
-                        })
-                        _ = rTracker_resource.deleteFile(atPath: target.absoluteString)
-                    } catch let e {
-                        DBGErr(String("Error on delete \(target): \(e)"))
-                    }
-
-                    //[rTracker_resource stashProgressBarMax:(int)[rTracker_resource countLines:csvString]];
-
-
-                    safeDispatchSync({ [self] in
-                        rTracker_resource.finishActivityIndicator(view, navItem: nil, disable: false)
-                    })
-                }
-            }
-        }
-
-        restorePriv()
-
-        if newRtcsvTracker {
-            refreshViewPart2()
-        }
-    }
 
     // load a tracker from NSDictionary generated by trackerObj:dictFromTO()
     //    [consists of tid, optDict and valObjTable]
@@ -586,88 +483,6 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
             readingFile = false
             rTracker_resource.setProgressVal(Float(plistReadCount) / Float(plistLoadCount))
-            plistReadCount += 1
-        }
-
-        return (rtrkTid != 0)
-    }
-
-    func rtmx_loadTrackerPlistFiles() -> Bool {
-        // called on refresh, loads any _in.plist files as trackers
-        // also called if any .rtrk files exist
-        DBGLog("loadTrackerPlistFiles")
-        var rtrkTid = 0
-
-        let docsDir = rTracker_resource.ioFilePath(nil, access: true)
-        let localFileManager = FileManager.default
-        let dirEnum = localFileManager.enumerator(atPath: docsDir)
-
-        var filesToProcess: [AnyHashable] = []
-        while let file = dirEnum?.nextObject() as? URL {
-            let fname = file.lastPathComponent
-            if file.pathExtension == "plist" {
-                let inmatch = (fname as NSString?)?.range(of: "_in.plist", options: [.backwards, .anchored])
-                //DBGLog(@"consider input: %@",fname);
-                if (inmatch?.location != NSNotFound) && ((inmatch?.length ?? 0) == 9) {
-                    // matched all 9 chars of _in.plist at end of file name
-                    filesToProcess.append(file)
-                }
-            } else if file.pathExtension == "rtrk" {
-                filesToProcess.append(file)
-            }
-        }
-
-        for file in filesToProcess {
-            guard let file = file as? URL else {
-                continue
-            }
-            //var target: String?
-            var newTarget: String?
-            var plistFile = false
-
-            let fname = file.lastPathComponent
-            DBGLog(String("process input: \(fname)"))
-
-            //target = file // URL(fileURLWithPath: docsDir ?? "").appendingPathComponent(file ?? "").path
-
-            newTarget = file.path + "_reading".replacingOccurrences(of: "Documents/Inbox/", with: "Documents/")
-
-            var err: Error?
-            do {
-                try localFileManager.moveItem(atPath: file.path, toPath: newTarget ?? "")
-            } catch let e {
-                err = e
-                DBGErr(String("Error on move \(file) to \(newTarget): \(err)"))
-            }
-
-            readingFile = true
-
-            let inmatch = (fname as NSString?)?.range(of: "_in.plist", options: [.backwards, .anchored])
-
-            safeDispatchSync({ [self] in
-                UIApplication.shared.isIdleTimerDisabled = true
-
-                if (inmatch?.location != NSNotFound) && ((inmatch?.length ?? 0) == 9) {
-                    // matched all 9 chars of _in.plist at end of file name
-                    rtrkTid = handleOpenFileURL(URL(fileURLWithPath: newTarget ?? ""), tname: (fname as NSString?)?.substring(to: inmatch?.location ?? 0))
-                    plistFile = true
-                } else {
-                    // .rtrk file
-                    rtrkTid = handleOpenFileURL(URL(fileURLWithPath: newTarget ?? ""), tname: nil)
-                }
-
-                UIApplication.shared.isIdleTimerDisabled = false
-            })
-
-            if plistFile {
-                rTracker_resource.rmStashedTracker(0) // 0 means rm last stashed tracker, in this case the one stashed by handleOpenFileURL
-            } else {
-                stashedTIDs.append(NSNumber(value: rtrkTid))
-            }
-
-            readingFile = false
-
-            rTracker_resource.setProgressVal((Float(plistReadCount)) / (Float(plistLoadCount)))
             plistReadCount += 1
         }
 
@@ -1108,7 +923,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         
         navigationItem.rightBarButtonItem = addBtn
         navigationItem.leftBarButtonItem = editBtn
-
+        
         // toolbar setup
         refreshToolBar(false)
 
