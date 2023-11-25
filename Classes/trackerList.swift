@@ -182,8 +182,8 @@ class trackerList: tObjBase {
         //DBGLog(@"%@ toid %d",tObj.trackerName, tObj.toid);
         //DBGTLIST(self);
         var sql = "select rank, name, priv, remindercount from toplevel where id = \(tObj.toid)"
-        let rslt = tObj.toQry2AryISII(sql:sql).first!
-        let (torank, toname, topriv, toremindercount) = rslt
+        let rslt = toQry2AryISII(sql:sql).first
+        let (torank, toname, topriv, toremindercount) = rslt ?? (0, "", 0, 0)
         var rank = (nrank != nil ? nrank! : torank)
 
         //var sql = String(format: "select rank from toplevel where id=%ld;", Int(tObj.toid))
