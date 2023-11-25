@@ -285,7 +285,12 @@ class tObjBase: NSObject {
     // MARK: sql db errors
 
     func tobPrepError(_ sql: String?) {
-        DBGErr(String("tob error preparing -> \(sql) <- : \(sqlite3_errmsg(tDb)!) toid \(toid) dbName \(dbName!)"))
+        var err = "no error message"
+        if let errorPointer = sqlite3_errmsg(tDb) {
+            let errorMessage = String(cString: errorPointer)
+            err = errorMessage
+        }
+        DBGErr(String("tob error preparing -> \(sql) <- : \(err) toid \(toid) dbName \(dbName!)"))
     }
 
     func tobDoneCheck(_ rslt: Int, sql: String?) {
@@ -295,14 +300,13 @@ class tObjBase: NSObject {
     }
 
     func tobExecError(_ sql: String?) {
+        var err = "no error message"
         if let errorPointer = sqlite3_errmsg(tDb) {
             let errorMessage = String(cString: errorPointer)
-            DBGWarn("SQLite error: \(errorMessage)")
-        } else {
-            DBGWarn("No error message provided")
+            err = errorMessage
         }
 
-        DBGErr(String("tob error executing -> \(sql) <- : \(sqlite3_errmsg(tDb)!) toid \(toid) dbName \(dbName!)"))
+        DBGErr(String("tob error executing -> \(sql) <- : \(err) toid \(toid) dbName \(dbName!)"))
     }
 
     // MARK: -
