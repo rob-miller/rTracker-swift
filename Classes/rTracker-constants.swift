@@ -82,10 +82,11 @@ func d(_ x: Any) -> Double {
 
 let SAMPLES_VERSION = 1
 
-let DEMOS_VERSION = 4
+let DEMOS_VERSION = 5
 // demos_version 2 improve colours for one graph, wording improvements, link to getTrackers.pl, iOS settings to change text size
 // demos version 3 fix link for 'tap to drop me a note'; add endpoint <none> example;
 // demos version 4 change links to GitHub, remove rTrackerA URL scheme entry
+// demos version 5 change github link to rTracker-swift
 
 let RTDB_VERSION = 2
 // rtdb_version 2 info table added unique constraint on names column

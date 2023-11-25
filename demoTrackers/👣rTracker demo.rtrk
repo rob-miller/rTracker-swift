@@ -701,7 +701,7 @@
 					<key>infosave</key>
 					<string>0</string>
 					<key>infourl</key>
-					<string>https://github.com/rob-miller/rTracker</string>
+					<string>https://github.com/rob-miller/rTracker-swift</string>
 					<key>infoval</key>
 					<string>1.0</string>
 					<key>longTitle</key>

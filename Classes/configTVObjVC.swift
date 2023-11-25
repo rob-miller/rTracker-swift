@@ -979,13 +979,6 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
             titleStr = (titleStr ?? "") + "\n\(DateFormatter.localizedString(from: date, dateStyle: .full, timeStyle: .short))"
         }
 
-        /*
-                __block UIUserNotificationSettings* uns;
-                safeDispatchSync(^{
-                    uns = [[UIApplication sharedApplication] currentUserNotificationSettings];
-                });
-                if (! ([uns types] & (UIUserNotificationTypeSound | UIUserNotificationTypeAlert | UIUserNotificationTypeBadge))) {
-                */
         if !rTracker_resource.getNotificationsEnabled() {
             titleStr = (titleStr ?? "") + "\n\n- Notifications Disabled -\nEnable in System Preferences."
         }
@@ -993,10 +986,9 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         let infoDict = Bundle.main.infoDictionary
 
         if let anInfoDict = infoDict?["CFBundleDisplayName"], let aAnInfoDict = infoDict?["CFBundleShortVersionString"], let aAAnInfoDict = infoDict?["CFBundleVersion"] {
-            titleStr = (titleStr ?? "") + "\n\n\(anInfoDict) \(aAnInfoDict) [\(aAAnInfoDict)]"
+            titleStr = (titleStr ?? "") + "\n\n\(anInfoDict) \(aAnInfoDict) [\(aAAnInfoDict)]\nhttps://github.com/rob-miller/rTracker-swift"
         }
 
-        //#endif
         safeDispatchSync({ [self] in
             if 0 < orphanDatapoints {
                 let alert = UIAlertController(
