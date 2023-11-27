@@ -1766,10 +1766,10 @@ class trackerObj: tObjBase {
         var eventIsToday = weekMonthDaysIsToday(nr, todayComponents: todayComponents) // not today if does not meet weekday mask
 
         DBGLog(String("now= \(today)"))
-        DBGLog(String("\(nr)"))
+        DBGLog(String("\(nr!.description)"))
 
         DBGLog(
-            String("today: yr \(todayComponents.year) mo \(todayComponents.month) dy \(todayComponents.day) hr \(todayComponents.hour) mn \(todayComponents.minute) sc \(todayComponents.second) wkdy \(todayComponents.weekday)")
+            String("today: yr \(todayComponents.year!) mo \(todayComponents.month!) dy \(todayComponents.day!) hr \(todayComponents.hour!) mn \(todayComponents.minute!) sc \(todayComponents.second!) wkdy \(todayComponents.weekday!)")
         )
         DBGLog(String("startInt = \(nr?.timeStr(startInt) ?? ""), finInt= \(nr?.timeStr(finInt) ?? "")"))
         DBGLog(String("nowInt= \(nr?.timeStr(nowInt) ?? "")"))
@@ -1777,12 +1777,13 @@ class trackerObj: tObjBase {
         // default state here: start and finish as set on sliders, happening today
 
         // (1) if 'every' mode, adjust start time of day (else nr.start is already correct), for day set offsetComponents if is days/months/weeks
-
-        if nr?.everyVal != nil {
+        // 'every' refers to 'every Saturday' as opposed to specific calendar days
+        
+        if nr?.everyVal != 0 {
             // if every, get start components from date of last save and adjust startInt
             //int lastEventStart=0;
             if nr?.fromLast ?? false {
-                if nr?.vid != nil {
+                if nr?.vid != 0 {
                     sql = String(format: "select date from voData where id=%ld order by date desc limit 1", Int(nr?.vid ?? 0))
                 } else {
                     sql = "select date from voData order by date desc limit 1"
@@ -1832,7 +1833,7 @@ class trackerObj: tObjBase {
             } else {
                 //EV_MINUTES or EV_HOURS => eventIsToday  // unless wraparound!  // or not selected weekdays!
                 let minutes = Int((today.timeIntervalSince(lastEntryDate)) / 60) //[self unitsWithinEraFromDate:lastEntryDate toDate:today calUnit:NSCalendarUnitMinute calendar:gregorian];
-                let blockMinutes = (EV_HOURS == Int(nr?.everyMode ?? 0) ? 60 * (nr?.everyVal ?? 0) : nr?.everyVal) ?? 0
+                let blockMinutes = (EV_HOURS == Int(nr!.everyMode) ? 60 * (nr!.everyVal) : nr!.everyVal)
                 let currFrac = minutes % blockMinutes
                 var targStart: Int
 
@@ -1846,8 +1847,8 @@ class trackerObj: tObjBase {
                     //targStart = startInt; // if have passed delay interval then to early start time
                     //DBGLog(@"past delay interval so targStart = start = %d",targStart);
                 }
-                DBGLog(String(" every- mins/hrs -- add \(currFrac) minutes  mins= \(minutes)  blockMins=\(blockMinutes) times= \(nr!.everyVal) targStart= \(nr!.timeStr(targStart))"))
-                DBGLog(String(" finInt= \(nr?.timeStr(finInt) ?? "") targStart= \(nr!.timeStr(targStart)) startInt= \(nr!.timeStr(startInt)) eventIsToday= \(eventIsToday)"))
+                DBGLog(String(" every- mins/hrs -- add \(currFrac) minutes  mins= \(minutes)  blockMins=\(blockMinutes) times= \(nr!.everyVal) targStart= \(nr!.timeStr(targStart)!)"))
+                DBGLog(String(" finInt= \(nr?.timeStr(finInt) ?? "") targStart= \(nr!.timeStr(targStart)!) startInt= \(nr!.timeStr(startInt)!) eventIsToday= \(eventIsToday)"))
 
                 //offsetComponents day = 0 at this point unless added code above
                 dbgNSAssert(0 == offsetComponents.day, "offsetComponents day not 0")
@@ -1917,7 +1918,7 @@ class trackerObj: tObjBase {
         // if not today, don't know next day but may have set some offset days or weeks
         // lastEntryDate set
 
-        DBGLog(String("past every: eventIsToday= \(eventIsToday)  startInt= \(nr!.timeStr(startInt))  finInt= \(nr!.timeStr(finInt))"))
+        DBGLog(String("past every: eventIsToday= \(eventIsToday)  startInt= \(nr!.timeStr(startInt)!)  finInt= \(nr!.timeStr(finInt)!)"))
 
 
         // (2) if time is range (from/to) adjust start time to next position within range, or determine if single time is still coming today or mark for later day
@@ -1928,7 +1929,8 @@ class trackerObj: tObjBase {
                 nr?.times = nr?.timesRandom ?? false ? 1 : 2 // safety: if 'until', must be at least 2 for interval (begin,end) or 1 for random
             }
 
-            let intervalStep = Int(Double(Int(d(finInt - (nr?.start ?? 0)) / d((nr?.times ?? 0) - (nr?.timesRandom ?? false ? 0 : 1)))) + 0.5) // if interval then 1x less 'times' for start
+            let intervalStep = Int(Double(Int(d(finInt - nr!.start) / d(nr!.times - (nr!.timesRandom ? 0 : 1)))) + 0.5) // if interval then 1x less 'times' for start
+            //let intervalStep = Double(Int(d(finInt - nr!.start) / d(nr!.times - (nr!.timesRandom ? 0 : 1))))  // if interval then 1x less 'times' for start
             DBGLog(String("times= \(nr!.times) intervalStep= \(intervalStep)  startInt= \(nr!.start)  finInt= \(finInt)"))
 
             // startInt<finInt here because either startInt=nr.start or caught above in everyMode
@@ -1941,7 +1943,7 @@ class trackerObj: tObjBase {
                 } else {
                     var tcount = nr?.times ?? 0
                     var tstart = nr?.start ?? 0
-                    while 0 < tcount && (tstart < nowInt || tstart < startInt) {
+                    while 0 < tcount && (tstart <= nowInt || tstart < startInt) {
                         tstart += intervalStep
                         tcount -= 1
                     }
@@ -1973,16 +1975,17 @@ class trackerObj: tObjBase {
 
 
             if nr?.timesRandom ?? false {
-                let delta = Int((DBLRANDOM * d(intervalStep)) - d(intervalStep) / 2.0) // startInt += rand * (+/- (0.5 * step))
+                let rnd = DBLRANDOM
+                let delta = Int((rnd * d(intervalStep)) - (d(intervalStep) / 2.0)) // startInt += rand * (+/- (0.5 * step))
 
                 if (eventIsToday && (nowInt < (startInt + delta))) || !eventIsToday {
                     // randomise startInt unless that pushes it into past
                     startInt += delta
                     //DBGLog(@"r: startInt %d nr.start %d finInt %d delta %d",startInt,nr.start,finInt,delta);
-                    if startInt <= (nr?.start ?? 0) {
-                        startInt = (nr?.start ?? 0) + abs(delta / 2)
+                    if startInt <= (nr!.start) {
+                        startInt = (nr!.start) + abs(delta / 2)
                     } else if startInt > finInt {
-                        startInt = (nr?.start ?? 0) + abs(delta / 2)
+                        startInt = (nr!.start) + abs(delta / 2)
                         eventIsToday = false
                         offsetComponents.day = 1
                     }
@@ -2014,7 +2017,7 @@ class trackerObj: tObjBase {
         if !eventIsToday {
             var days = 0
 
-            if nr?.monthDays != nil {
+            if nr?.monthDays != 0 {
                 // not everyMode so offsetComponents not set above
                 let itoday = todayComponents.day! - 1
                 var ifirst = -1
@@ -2074,7 +2077,7 @@ class trackerObj: tObjBase {
                                 DBGLog(@"not today- every: months so + months");
                             }
                             */
-            } else if nr?.weekDays != nil {
+            } else if nr?.weekDays != 0 {
                 // weekdays -- have for weekdays mode and for every mode, so offsetComponents may already be set
 
                 // establish current targDate
@@ -2125,9 +2128,9 @@ class trackerObj: tObjBase {
 
         DBGLog(String("finish setReminder offsetComponents= \(offsetComponents)"))
 
-        var targDate: Date? = nil
+        let targDate = gregorian.date(byAdding: offsetComponents, to: today)
 
-        targDate = gregorian.date(byAdding: offsetComponents, to: today)
+        //targDate = gregorian.date(byAdding: offsetComponents, to: today)
 
         //DBGLog(@"finish setReminder startInt= %@",[nr timeStr:startInt]);
         if let targDate {
@@ -2139,7 +2142,7 @@ class trackerObj: tObjBase {
 
         nr?.schedule(targDate)
 
-        DBGLog(String("done \(targDate)"))
+        DBGLog(String("done \(targDate!)"))
 
     }
 

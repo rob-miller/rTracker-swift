@@ -60,6 +60,10 @@ import UserNotifications
 
 import Foundation
 
+extension Notification.Name {
+    static let notifyOpenTracker = Notification.Name("notifyOpenTracker")
+}
+
 public class RootViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, UNUserNotificationCenterDelegate {
     var tableView: UITableView?
     
@@ -866,9 +870,9 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         //[self doQuickAlert:notification.request.content.title msg:notification.request.content.body delay:2];
         // Play a sound.
 
-        completionHandler(UNNotificationPresentationOptions.sound)
         tableView!.reloadData() // redundant but waiting for countScheduledReminders to complete
         view.setNeedsDisplay()
+        completionHandler(UNNotificationPresentationOptions.sound)
     }
 
     // handle notification while in background
@@ -882,16 +886,23 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
             // The user dismissed the notification without taking action.
         } else if response.actionIdentifier == UNNotificationDefaultActionIdentifier {
             // The user launched the app.
-
+            
             let userInfo = response.notification.request.content.userInfo
-            let rootController = (navigationController?.viewControllers)?[0] as? RootViewController
-            rootController?.performSelector(onMainThread: #selector(doOpenTracker(_:)), with: (userInfo)["tid"], waitUntilDone: false)
+            NotificationCenter.default.post(name: .notifyOpenTracker, object: nil, userInfo: userInfo)
         }
-
-        // Else handle any custom actions. . .
-
-
+        completionHandler()
     }
+    
+    @objc func handleNotifyOpenTracker(_ notification: Notification) {
+        // Extract userInfo and handle it
+        if let userInfo = notification.userInfo as? [String: Any] {
+            if let tidNumber = userInfo["tid"] as? NSNumber {
+                let tid = tidNumber.intValue
+                doOpenTracker(tid)
+            }
+        }
+    }
+
 
     func setViewMode() {
         rTracker_resource.setViewMode(self)
@@ -910,7 +921,8 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
         super.viewDidLoad()
         UNUserNotificationCenter.current().delegate = self
-
+        NotificationCenter.default.addObserver(self, selector: #selector(handleNotifyOpenTracker(_:)), name: .notifyOpenTracker, object: nil)
+        
         //DBGLog(@"rvc: viewDidLoad privacy= %d",[privacyObj getPrivacyValue]);
 
         //refreshLock = false
@@ -1587,7 +1599,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         if let tid {
             src = scheduledReminderCounts[tid] ?? 0
         }
-        DBGLog(String("src: \(src)  erc:  \(erc) \(tlist.topLayoutNames![row]) (\(tid!))"))
+        DBGLog(String("src: \(src!)  erc:  \(erc) \(tlist.topLayoutNames![row]) (\(tid!))"))
         //NSString *formatString = @"%@";
         //UIColor *bg = [UIColor clearColor];
         if erc != src {
@@ -1669,6 +1681,10 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
         //NSUInteger row = [indexPath row];
         //DBGLog(@"selected row %d : %@", row, [self.tlist.topLayoutNames objectAtIndex:row]);
+        
+        print("Navigation controller: \(String(describing: self.navigationController))")
+        print("Top controller: \(String(describing: self.navigationController?.topViewController))")
+        
         tableView.cellForRow(at: indexPath)?.isSelected = false
         openTracker(tlist.getTIDfromIndex(indexPath.row), rejectable: false)
 

@@ -36,7 +36,7 @@ import UIKit
  bools:
  fromLast
  until
- interval/random
+ interval/random + continuous
 
  message : nsstring
 
@@ -141,6 +141,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
     @IBOutlet var repeatTimesLabel: UILabel!
     @IBOutlet var intervalButton: UIButton!
     @IBOutlet var enableFinishButton: UIButton!
+
     /*
     - (IBAction)finishSliderAction:(id)sender;
     - (IBAction)timesChange:(id)sender;
@@ -236,7 +237,9 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
             //,NSForegroundColorAttributeName: [UIColor greenColor]
             ],
             for: .normal)
-
+        btnHelpOutlet.accessibilityLabel = "Help"
+        btnHelpOutlet.accessibilityIdentifier = "nrvc_help"
+        
         btnDoneOutlet.title = "\u{2611}"
         btnDoneOutlet.accessibilityLabel = "Done"
         btnDoneOutlet.accessibilityIdentifier = "nrvc_done"
@@ -297,7 +300,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
 
     func leaveNR() -> Bool {
         if nullNRguiState() {
-            if nr?.rid != nil {
+            if nr?.rid != 0 {  // nil rtmx
                 tracker?.deleteReminder()
                 return true
             }
@@ -410,7 +413,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         } else {
             //self.tmpReminder=FALSE;
         }
-        DBGLog(String("\(nr)"))
+        DBGLog(String("\(nr!)"))
         enableButton.isSelected = nr!.reminderEnabled
         updateCheckBtn(enableButton)
         msgTF.text = nr?.msg
@@ -427,7 +430,13 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
             enableFinishButton.isSelected = true
             finishSlider.value = Float(nr!.until)
             repeatTimes.text = String(format: "%ld", Int(nr?.times ?? 0))
-            intervalButton.setTitle(nr?.timesRandom ?? false ? "Random" : "Equal Intervals", for: .normal)
+            if nr!.timesRandom {
+                intervalButton.setTitle("Random", for: .normal)
+            } else if nr!.timesContinuous {
+                intervalButton.setTitle("Continuous", for: .normal)
+            } else {
+                intervalButton.setTitle("Equal Intervals", for: .normal)
+            }
             sliderUpdate(Int(finishSlider.value), hrtf: finishHr, mntf: finishMin, ampml: finishTimeAmPm)
         } else {
             enableFinishButton.isSelected = false
@@ -479,7 +488,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
 
             for i in 0..<7 {
                 // added weekdays to every
-                ((weekdayBtns)?[i] as? UIButton)?.isSelected = 0 != (Int(nr?.weekDays ?? 0) & (0x01 << weekdays[i]))
+                ((weekdayBtns)?[i] as? UIButton)?.isSelected = 0 != (Int(nr!.weekDays) & (0x01 << weekdays[i]))
             }
         }
         /*
@@ -541,10 +550,12 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         nr?.start = Int((startSlider.isEnabled ? startSlider.value : -1))
 
         if enableFinishButton.isSelected && !enableFinishButton.isHidden {
-            nr?.until = Int(finishSlider.value)
-            nr?.times = Int(repeatTimes.text ?? "") ?? 0
-            if 1 < (nr?.times ?? 0) {
-                nr?.timesRandom = intervalButton.title(for: .normal) == "Random"
+            nr!.until = Int(finishSlider.value)
+            nr!.times = Int(repeatTimes.text ?? "") ?? 2
+            nr!.timesRandom = intervalButton.title(for: .normal) == "Random"
+            nr!.timesContinuous = intervalButton.title(for: .normal) == "Continuous"
+            if nr!.times < 2 && !nr!.timesRandom && !nr!.timesContinuous {
+                nr!.times = 2
             }
             nr?.untilEnabled = true
         } else {
@@ -1084,9 +1095,23 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         DBGLog(String("intervalBtn \(sender.currentTitle)"))
         DBGLog(String("everyBtn \(intervalButton.title(for: .normal))"))
         if intervalButton.title(for: .normal) == "Random" {
+            /*
+             // not implementing Continuous because can do with equal intervals (just lots)
+            intervalButton.setTitle("Continuous", for: .normal)
+            repeatTimes.isHidden = true
+            repeatTimesLabel.isHidden = true
+        } else if intervalButton.title(for: .normal) == "Continuous" {
+             */
             intervalButton.setTitle("Equal Intervals", for: .normal)
+            if Int(repeatTimes.text ?? "0")! < 2 {
+                repeatTimes.text = "2"
+            }
+            //repeatTimes.isHidden = false
+            //repeatTimesLabel.isHidden = false
         } else {
             intervalButton.setTitle("Random", for: .normal)
+            //repeatTimes.isHidden = false
+            //repeatTimesLabel.isHidden = false
         }
         //((UIButton*)sender).selected = ! ((UIButton*)sender).selected;
     }

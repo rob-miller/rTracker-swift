@@ -23,12 +23,13 @@ import UIKit
 //  Copyright 2011 Robert T. Miller. All rights reserved.
 //
 
+/*
+let RELEASE = 1
 
-let RELEASE = 0
-
-let DEBUGLOG = 1
+let DEBUGLOG = 0
 let DEBUGWARN = 1
 let DEBUGERR = 1
+*/
 
 // enable additional debugging code in these sections
 // *** Doesn't work in Swift need compile defs ***
@@ -37,12 +38,12 @@ let DEBUGERR = 1
 // *** xcode menu Product - scheme - manage schemes - select, edit...
 // *** or top bar, click project (rTracker) -> edit scheme in dropdown
 // ***
-
+/*
 let SQLDEBUG = 0
 let FUNCTIONDBG = 0
 let REMINDERDBG = 0
 let GRAPHDBG = 0
-
+*/
 // ***
 
 // enable Lukas Petr's GSTouchesShowingWindow (https://github.com/LukasCZ/GSTouchesShowingWindow - not included here)

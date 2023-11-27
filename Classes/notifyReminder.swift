@@ -108,6 +108,7 @@ class notifyReminder: NSObject {
     var msg: String?
     var soundFileName: String?
     var timesRandom = false
+    var timesContinuous = false
     var reminderEnabled = false
     var untilEnabled = false
     var fromLast = false
@@ -119,6 +120,7 @@ class notifyReminder: NSObject {
     let TIMESRFLAG = 0x01 << 1
     let ENABLEFLAG = 0x01 << 2
     let FROMLASTFLAG = 0x01 << 3
+    let TIMESCFLAG = 0x1 << 4
     
     override init() {
         
@@ -204,6 +206,10 @@ class notifyReminder: NSObject {
         var flags: UInt = 0
         if timesRandom {
             flags |= UInt(TIMESRFLAG)
+            flags &= ~UInt(TIMESCFLAG)
+        } else if timesContinuous {
+            flags |= UInt(TIMESCFLAG)
+            flags &= ~UInt(TIMESRFLAG)
         }
         if reminderEnabled {
             flags |= UInt(ENABLEFLAG)
@@ -219,6 +225,7 @@ class notifyReminder: NSObject {
     
     func putFlags(_ flags: UInt) {
         timesRandom = Int(flags) & TIMESRFLAG != 0 ? true : false
+        timesContinuous = Int(flags) & TIMESCFLAG != 0 ? true : false
         reminderEnabled = Int(flags) & ENABLEFLAG != 0 ? true : false
         untilEnabled = Int(flags) & UNTILFLAG != 0 ? true : false
         fromLast = Int(flags) & FROMLASTFLAG != 0 ? true : false
@@ -308,6 +315,7 @@ class notifyReminder: NSObject {
         //}
         //self.soundFileName=nil;
         timesRandom = false
+        timesContinuous = false
         reminderEnabled = true
         untilEnabled = false
         fromLast = false
@@ -376,25 +384,23 @@ class notifyReminder: NSObject {
             // if (self.nr.weekDays)  = default if nothing set
             desc = desc + "weekdays: "
             
-            var weekdays = [Int](repeating: 0, count: 7)
-            var firstWeekDay: Int
-            firstWeekDay = Calendar.current.firstWeekday
+            let firstWeekDay = Calendar.current.firstWeekday
             let dateFormatter = DateFormatter()
-            var wdNames: [String]? = nil
-            
-            //var i: Int
+            var weekdays = [Int](repeating: 0, count: 7)
+            var wdNames = [String](repeating: "", count: 7)
+
             for i in 0..<7 {
                 var wd = firstWeekDay + i
                 if wd > 7 {
                     wd -= 7
                 }
-                weekdays[i] = wd - 1 // firstWeekDay is 1-indexed, switch to 0-indexed
-                wdNames?[i] = dateFormatter.shortWeekdaySymbols[weekdays[i]]
+                weekdays[i] = wd - 1  // firstWeekday is 1-indexed, switch to 0-indexed
+                wdNames[i] = dateFormatter.shortWeekdaySymbols[weekdays[i]]
             }
-            
+
             for i in 0..<7 {
-                if 0 != (Int(weekDays) & (0x01 << weekdays[i])) {
-                    desc = desc + "\(wdNames?[i] ?? "") "
+                if (self.weekDays & (0x01 << weekdays[i])) != 0 {
+                    desc += "\(wdNames[i]) "
                 }
             }
         }
@@ -442,7 +448,7 @@ class notifyReminder: NSObject {
             "rid": NSNumber(value: rid)
         ]
         notifContent?.userInfo = infoDict
-        DBGLog("created.")
+        DBGLog("created. \(infoDict)")
     }
     
     func cancelOld() {
