@@ -59,9 +59,14 @@ import UIKit
 import UserNotifications
 
 import Foundation
+import AVFoundation
 
 extension Notification.Name {
     static let notifyOpenTracker = Notification.Name("notifyOpenTracker")
+}
+
+extension Notification.Name {
+    static let notifyOpenTrackerInApp = Notification.Name("notifyOpenTrackerInApp")
 }
 
 public class RootViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, UNUserNotificationCenterDelegate {
@@ -97,6 +102,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     var loadingCsvFiles = false
     var loadingInputFiles = false
     var stashAnimated = false
+    var audioPlayer: AVAudioPlayer?
 
     //openUrlLock, inputURL,
 
@@ -864,15 +870,12 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
-        // Update the app interface directly.
-        countScheduledReminders() // race me
-        // nice to make this work again
-        //[self doQuickAlert:notification.request.content.title msg:notification.request.content.body delay:2];
-        // Play a sound.
+        //countScheduledReminders()
+        //let userInfo = notification.request.content.userInfo
 
-        tableView!.reloadData() // redundant but waiting for countScheduledReminders to complete
-        view.setNeedsDisplay()
-        completionHandler(UNNotificationPresentationOptions.sound)
+        NotificationCenter.default.post(name: .notifyOpenTrackerInApp, object: nil, userInfo: nil)
+        
+        completionHandler([.sound, .list])  // need .list to make the .sound work on its own
     }
 
     // handle notification while in background
@@ -903,6 +906,11 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         }
     }
 
+    @objc func handleNotifyOpenTrackerInApp(_ notification: Notification) {
+        countScheduledReminders()
+        //tableView!.reloadData() // redundant but waiting for countScheduledReminders to complete
+        //view.setNeedsDisplay()
+    }
 
     func setViewMode() {
         rTracker_resource.setViewMode(self)
@@ -922,7 +930,8 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         super.viewDidLoad()
         UNUserNotificationCenter.current().delegate = self
         NotificationCenter.default.addObserver(self, selector: #selector(handleNotifyOpenTracker(_:)), name: .notifyOpenTracker, object: nil)
-        
+        NotificationCenter.default.addObserver(self, selector: #selector(handleNotifyOpenTrackerInApp(_:)), name: .notifyOpenTrackerInApp, object: nil)
+
         //DBGLog(@"rvc: viewDidLoad privacy= %d",[privacyObj getPrivacyValue]);
 
         //refreshLock = false
@@ -1130,7 +1139,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         restorePriv()
 
         navigationController?.setToolbarHidden(false, animated: false)
-        tableView?.reloadData()
+        // tableView?.reloadData() // now in countScheduledReminders
         super.viewWillAppear(animated)
     }
 
@@ -1443,17 +1452,23 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         let center = UNUserNotificationCenter.current()
         center.getPendingNotificationRequests { notifications in
             self.scheduledReminderCounts.removeAll()
-            
+
             for i in 0..<notifications.count {
                 let oneEvent = notifications[i]
-                let userInfoCurrent = oneEvent.content.userInfo as! [String : Int]
+                let userInfoCurrent = oneEvent.content.userInfo
                 DBGLog(String("\(i) uic: \(userInfoCurrent)"))
-                if let tid = userInfoCurrent["tid"] {
+                if let tidNumber = userInfoCurrent["tid"] as? NSNumber {
+                    let tid = tidNumber.intValue
+
                     var c = self.scheduledReminderCounts[tid] ?? 0
                     c += 1
                     self.scheduledReminderCounts[tid] = c
                 }
             }
+
+            DispatchQueue.main.async(execute: { [self] in
+                tableView?.reloadData()
+            })
         }
     }
 

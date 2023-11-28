@@ -182,9 +182,9 @@ class tObjBase: NSObject {
             SQLITE_OPEN_FILEPROTECTION_COMPLETE | SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, nil) != SQLITE_OK {
             if let errorPointer = sqlite3_errmsg(tDb) {
                     let errorMessage = String(cString: errorPointer)
-                    DBGWarn("SQLite error: \(errorMessage)")
+                    DBGErr("SQLite error: \(errorMessage)")
                 } else {
-                    DBGWarn("SQLite error with unknown error message")
+                    DBGErr("SQLite error with unknown error message")
                 }
             sqlite3_close(tDb)
             dbgNSAssert(false, "error opening rTracker database \(dbName!)")

@@ -496,21 +496,8 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
     */
 
     func applicationDidBecomeActive(_ application: UIApplication) {
-        // rootViewController needs to possibly load files
-        // useTrackerController needs to detect if displaying a private tracker
-
-        //DBGLog(@"rt app delegate: app did become active");
-
-        //[(RootViewController *) [self.navigationController.viewControllers objectAtIndex:0] viewDidAppear:YES];
-
-        //[rTracker_resource enableOrientationData];
-
-        //-newMaintainer()
-
-        //navigationController.visibleViewController?.viewDidAppear(true)
-
-        //navigationController.visibleViewController?.beginAppearanceTransition(true, animated: true)
-
+        // update arrows on reminded trackers if needed
+        NotificationCenter.default.post(name: .notifyOpenTrackerInApp, object: nil, userInfo: nil)
     }
     
     func getRootController() -> RootViewController? {
@@ -528,7 +515,6 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
         if let rootController = getRootController() {
             if let tid = shortcutItem.userInfo?["tid"] as? Int {
                 rootController.doOpenTracker(tid)
-                //rootController.performSelector(onMainThread: #selector(RootViewController.doOpenTracker(_:)), with: NSNumber(value: tid), waitUntilDone: false)
                 completionHandler(true)
             } else {
                 completionHandler(false)

@@ -440,6 +440,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
             sliderUpdate(Int(finishSlider.value), hrtf: finishHr, mntf: finishMin, ampml: finishTimeAmPm)
         } else {
             enableFinishButton.isSelected = false
+            sliderUpdate(nr!.until, hrtf: finishHr, mntf: finishMin, ampml: finishTimeAmPm)
         }
         updateCheckBtn(enableFinishButton)
 
@@ -558,11 +559,11 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
                 nr!.times = 2
             }
             nr?.untilEnabled = true
-        } else {
+        } /* else {
             nr?.until = -1
             nr?.times = 1
             nr?.untilEnabled = false
-        }
+        } */
 
         /*
             self.nr.until = (self.finishSlider.enabled ? self.finishSlider.value : -1);
@@ -1210,6 +1211,9 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
             } else {
                 sender.text = "2"
             }
+        }
+        if 1440 < Int(sender.text ?? "") ?? 0 {  // max is 1440 minutes per day, can't work with smaller intervals so indicate here
+            sender.text = "1440"
         }
     }
 

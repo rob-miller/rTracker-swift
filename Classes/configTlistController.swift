@@ -442,7 +442,7 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
                 self.tableView.reloadData()
             })
         } else if selSegNdx == SegmentMoveDelete {
-            DBGWarn("selected for move/delete?")
+            DBGErr("selecteLogd for move/delete?")
         }
     }
 }

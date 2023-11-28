@@ -796,7 +796,7 @@ class rTracker_resource: NSObject {
                 toPath: rTracker_resource.ioFilePath(newFname, access: DBACCESS))
         } catch let e {
             error = e
-            DBGWarn(String("Unable to copy file \(oldFname) to \(newFname): \(error?.localizedDescription)"))
+            DBGErr(String("Unable to copy file \(oldFname) to \(newFname): \(error?.localizedDescription)"))
         }
     }
 
@@ -823,7 +823,7 @@ class rTracker_resource: NSObject {
             try fm.removeItem(atPath: rTracker_resource.ioFilePath(fname, access: DBACCESS))
         } catch let e {
             error = e
-            DBGWarn(String("Unable to delete file \(fname): \(error?.localizedDescription)"))
+            DBGErr(String("Unable to delete file \(fname): \(error?.localizedDescription)"))
         }
         lastStashedTid = 0
 
@@ -852,7 +852,7 @@ class rTracker_resource: NSObject {
                 toPath: rTracker_resource.ioFilePath(newFname, access: DBACCESS))
         } catch let e {
             error = e
-            DBGWarn(String("Unable to move file \(oldFname) to \(newFname): \(error?.localizedDescription)"))
+            DBGErr(String("Unable to move file \(oldFname) to \(newFname): \(error?.localizedDescription)"))
         }
     }
 

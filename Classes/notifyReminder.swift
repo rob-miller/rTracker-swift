@@ -114,7 +114,7 @@ class notifyReminder: NSObject {
     var fromLast = false
     var saveDate = 0
     var notifContent: UNMutableNotificationContent?
-    var uNid: String?
+    //var uNid: String?
     
     let UNTILFLAG = 0x01 << 0
     let TIMESRFLAG = 0x01 << 1
@@ -180,7 +180,10 @@ class notifyReminder: NSObject {
     }
     
     deinit {
-        //DBGLog(@"nr dealloc");
+        DBGLog("nr dealloc");
+        // do not remove here as may cancel out of changes
+        //UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["\(rid)"])
+
     }
     
     func save(_ to: trackerObj) {
@@ -445,7 +448,8 @@ class notifyReminder: NSObject {
         //NSDictionary *infoDict = [NSDictionary dictionaryWithObject:[NSNumber numberWithInt:self.tid] forKey:@"tid"];
         let infoDict = [
             "tid": NSNumber(value: tid),
-            "rid": NSNumber(value: rid)
+            "rid": NSNumber(value: rid),
+            "soundfile": NSString(string:soundFileName ?? "")
         ]
         notifContent?.userInfo = infoDict
         DBGLog("created. \(infoDict)")
@@ -453,7 +457,7 @@ class notifyReminder: NSObject {
     
     func cancelOld() {
         let center = UNUserNotificationCenter.current()
-        let idArr = [String(format: "%ld", rid)]
+        let idArr = ["\(tid)-\(rid)"]
         center.removePendingNotificationRequests(withIdentifiers: idArr)
     }
     
@@ -500,7 +504,7 @@ class notifyReminder: NSObject {
         if let request {
             center.add(request, withCompletionHandler: { error in
                 if let error {
-                    DBGWarn(String("error scheduling reminder \(idStr): \(error)"))
+                    DBGErr(String("error scheduling reminder \(idStr): \(error)"))
                 }
             })
         }
@@ -512,6 +516,7 @@ class notifyReminder: NSObject {
         rTracker_resource.playSound(soundFileName)
     }
     
+    // process (callback) with the list of rid's for pending notifications for this tid
     static func useRidArray(_ center: UNUserNotificationCenter, tid: Int, callback: @escaping ([String]) -> Void) {
         var ridArray = [String]()
         center.getPendingNotificationRequests { notifications in
@@ -524,6 +529,7 @@ class notifyReminder: NSObject {
                     }
                 }
             }
+            DBGLog("rid array = \(ridArray)")
             callback(ridArray)
         }
     }

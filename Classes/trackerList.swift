@@ -610,7 +610,7 @@ class trackerList: tObjBase {
                 atPath: rTracker_resource.ioFilePath(fn, access: DBACCESS),
                 toPath: rTracker_resource.ioFilePath(newFn, access: DBACCESS))
         } catch {
-            DBGWarn(String("Unable to move file \(fn) to \(newFn): \(error.localizedDescription)")) // only if gtUnique fails ?
+            DBGErr(String("Unable to move file \(fn) to \(newFn): \(error.localizedDescription)")) // only if gtUnique fails ?
         }
 
         ftid = newTid

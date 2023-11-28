@@ -72,6 +72,7 @@ final class rTrackerUITests: XCTestCase {
             try testPrivacyGo()
             try testSavePrivateGo()
             
+            try testReminders()
         } catch {
             XCTFail("error: \(error)")
         }
@@ -1468,6 +1469,188 @@ Kate Bell
         app.buttons["< rTracker"].tap()
     }
     
+    func testReminders() throws {
+        app.buttons["Edit"].tap()
+        sleep(1)
+        app.tables.cells["configt_🚴 Exercise"].tap()
+        app.buttons["modTrkrConfig"].tap()
+        app.buttons["Reminders"].tap()
+        
+        var weekdaysMap = [String: Int]()
+        for d in 0...6 {
+            let wdbtn = String("nrvc_wd\(d)")
+            weekdaysMap[app.buttons[wdbtn].label] = d
+            //app.buttons[wdbtn].tap()
+        }
+        
+        let tue = app.buttons["nrvc_wd\(weekdaysMap["Tue"]!)"]
+        tue.tap()
+        let attfm = app.textFields["nrvc_at_minutes"]
+        clearTextField(attfm)
+        attfm.tap()
+        attfm.typeText("47\n")
+        let attfh = app.textFields["nrvc_at_hrs"]
+        clearTextField(attfh)
+        attfh.tap()
+        attfh.typeText("06\n")
+        app.buttons["nrvc_done"].tap()
+        app.buttons["set reminders"].tap()
+        app.buttons["database info"].tap()
+        sleep(1)
+        let ExAlert = app.alerts["🚴 Exercise"]
+        XCTAssert(ExAlert.exists)
+        
+        /*
+        let foo = ExAlert.staticTexts
+
+        for i in 0..<foo.count {
+            let text = foo.element(boundBy: i).label
+            print("Static Text \(i): \(text)")
+        }
+        
+        let label = ExAlert.staticTexts.element(boundBy: 1).label
+        let pattern = " at 6:47[  ]AM"  // Include both regular and non-breaking space in the pattern
+
+        do {
+            let regex = try NSRegularExpression(pattern: pattern)
+            let range = NSRange(location: 0, length: label.utf16.count)
+            let matches = regex.matches(in: label, options: [], range: range)
+
+            XCTAssertTrue(!matches.isEmpty, "Label does not match the pattern.")
+        } catch {
+            XCTFail("Regular expression is invalid.")
+        }
+
+        for scalar in label.unicodeScalars {
+            print("\(scalar) - \(scalar.value)")
+        }
+
+        */
+        
+        let Exlabel = ExAlert.staticTexts.element(boundBy: 1).label
+        XCTAssertTrue(Exlabel.contains("1 stored reminders"))
+        XCTAssertTrue(Exlabel.contains("1 scheduled reminders"))
+        XCTAssertTrue(Exlabel.contains("Tuesday,"))
+        //XCTAssertTrue(Exlabel.contains(" at 6:47 AM"))
+        let pattern = " at 6:47[  ]AM"  // Include both regular and non-breaking space in the pattern
+
+        do {
+            let regex = try NSRegularExpression(pattern: pattern)
+            let range = NSRange(location: 0, length: Exlabel.utf16.count)
+            let matches = regex.matches(in: Exlabel, options: [], range: range)
+
+            XCTAssertTrue(!matches.isEmpty, "06:47 AM time match fail")
+        } catch {
+            XCTFail("Regular expression is invalid.")
+        }
+
+        ExAlert.buttons["OK"].tap()
+        
+        app.buttons["Reminders"].tap()
+        tue.tap()
+        
+        for d in 0...6 {
+            let wdbtn = String("nrvc_wd\(d)")
+            app.buttons[wdbtn].tap()
+        }
+        
+        let enableBtn = app.buttons["nrvc_enable"]
+        let nextBtn = app.buttons["nrvc_next"]
+        XCTAssert(enableBtn.exists)
+        XCTAssert(nextBtn.isEnabled)
+        
+        app.buttons["nrvc_enable_until"].tap()
+        let untilSlider = app.sliders["nrvc_until_slider"]
+        untilSlider.adjust(toNormalizedSliderPosition: 0.0)  // until before at/from
+        XCTAssertFalse(enableBtn.exists)
+        XCTAssertFalse(nextBtn.isEnabled)
+        
+        untilSlider.adjust(toNormalizedSliderPosition: 1.0)
+        let untiltfm = app.textFields["nrvc_until_minutes"]
+        XCTAssertEqual("59", untiltfm.value as! String)
+        let untiltfh = app.textFields["nrvc_until_hrs"]
+        XCTAssertEqual("11", untiltfh.value as! String)
+    
+        let atSlider = app.sliders["nrvc_at_slider"]
+        atSlider.adjust(toNormalizedSliderPosition: 0.0)
+        
+        XCTAssertEqual("12", attfh.value as! String)
+        
+        let tctf = app.textFields["nrvc_times_count"]
+        clearTextField(tctf)
+        tctf.tap()
+        tctf.typeText("1440\n")
+        //*
+        app.buttons["nrvc_config"].tap()
+        app.pickerWheels.element(boundBy: 0).adjust(toPickerWheelValue: "bugle charge")
+        app.buttons["nrvc2_done"].tap()
+        //*/
+        nextBtn.tap()
+        
+        XCTAssertEqual("07", attfh.value as! String)
+        XCTAssertEqual("00", attfm.value as! String)
+        XCTAssertEqual("11", untiltfh.value as! String)
+        XCTAssertEqual("00", untiltfm.value as! String)
+
+        let wd3 = app.buttons["nrvc_wd3"]
+        wd3.tap()
+        sleep(1)
+        let prev = app.buttons["nrvc_prev"]
+        prev.tap()
+        
+        XCTAssert(wd3.isSelected)
+        nextBtn.tap()
+        XCTAssert(wd3.isSelected)
+        XCTAssertEqual("00", untiltfm.value as! String)
+        XCTAssertEqual("11", untiltfh.value as! String)
+        nextBtn.tap()
+        XCTAssertFalse(wd3.isSelected)
+        prev.tap()
+        wd3.tap()
+        XCTAssertFalse(enableBtn.exists)
+        XCTAssertFalse(nextBtn.isEnabled)
+        
+        app.buttons["nrvc_done"].tap()
+        app.buttons["configtvo_done"].tap()
+        app.buttons["Save"].tap()
+        sleep(1)
+        app.buttons["rTracker"].tap()
+
+        let testr0 = "trkr_🚴 Exercise"
+        let testr1 = "trkr_➜ 🚴 Exercise"
+        let etrkrCell0 = app.tables.cells[testr0]
+        let etrkrCell1 = app.tables.cells[testr1]
+        etrkrCell0.tap()
+        sleep(1)
+        app.buttons["< rTracker"].tap()
+        XCTAssert(etrkrCell0.exists)
+        sleep(71)
+        //etrkrCell = app.tables.cells[testr1]
+        etrkrCell1.tap()
+        sleep(1)
+        app.buttons["< rTracker"].tap()
+        //etrkrCell = app.tables.cells[testr0]
+        XCTAssert(etrkrCell0.exists)
+        
+        app.buttons["Edit"].tap()
+        sleep(1)
+        app.tables.cells["configt_🚴 Exercise"].tap()
+        app.buttons["modTrkrConfig"].tap()
+        app.buttons["Reminders"].tap()
+        for d in 0...6 {
+            let wdbtn = String("nrvc_wd\(d)")
+            app.buttons[wdbtn].tap()
+        }
+        XCTAssertFalse(enableBtn.exists)
+        app.buttons["nrvc_done"].tap()
+        app.buttons["configtvo_done"].tap()
+        app.buttons["Save"].tap()
+        app.buttons["rTracker"].tap()
+        XCTAssert(etrkrCell0.exists)
+        XCTAssertFalse(etrkrCell1.exists)
+        //print("hello")
+        
+    }
     func testLaunchPerformance() throws {
         if #available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 7.0, *) {
             // This measures how long it takes to launch your application.

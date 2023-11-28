@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="22154" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="22155" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
     <device id="retina6_1" orientation="portrait" appearance="light"/>
     <dependencies>
         <deployment identifier="iOS"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="22130"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="22131"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
         <capability name="Stack View standard spacing" minToolsVersion="9.0"/>
         <capability name="System colors in document resources" minToolsVersion="11.0"/>
@@ -156,7 +156,7 @@
                             <subviews>
                                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="12">
                                     <rect key="frame" x="0.0" y="0.0" width="31" height="30"/>
-                                    <accessibility key="accessibilityConfiguration" identifier="nrvc_mon"/>
+                                    <accessibility key="accessibilityConfiguration" identifier="nrvc_wd0"/>
                                     <state key="normal" title="Mon"/>
                                     <connections>
                                         <action selector="wdBtn:" destination="-1" eventType="touchUpInside" id="269"/>
@@ -164,7 +164,7 @@
                                 </button>
                                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="13">
                                     <rect key="frame" x="58" y="0.0" width="30" height="30"/>
-                                    <accessibility key="accessibilityConfiguration" identifier="nrvc_tue"/>
+                                    <accessibility key="accessibilityConfiguration" identifier="nrvc_wd1"/>
                                     <state key="normal" title="Tue">
                                         <color key="titleShadowColor" red="0.5" green="0.5" blue="0.5" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                     </state>
@@ -174,7 +174,7 @@
                                 </button>
                                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="14">
                                     <rect key="frame" x="115" y="0.0" width="31" height="30"/>
-                                    <accessibility key="accessibilityConfiguration" identifier="nrvc_wed"/>
+                                    <accessibility key="accessibilityConfiguration" identifier="nrvc_wd2"/>
                                     <state key="normal" title="Wed">
                                         <color key="titleShadowColor" red="0.5" green="0.5" blue="0.5" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                     </state>
@@ -184,7 +184,7 @@
                                 </button>
                                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="15">
                                     <rect key="frame" x="173" y="0.0" width="30" height="30"/>
-                                    <accessibility key="accessibilityConfiguration" identifier="nrvc_thu"/>
+                                    <accessibility key="accessibilityConfiguration" identifier="nrvc_wd3"/>
                                     <state key="normal" title="Thu">
                                         <color key="titleShadowColor" red="0.5" green="0.5" blue="0.5" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                     </state>
@@ -194,7 +194,7 @@
                                 </button>
                                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="16">
                                     <rect key="frame" x="230" y="0.0" width="30" height="30"/>
-                                    <accessibility key="accessibilityConfiguration" identifier="nrvc_fri"/>
+                                    <accessibility key="accessibilityConfiguration" identifier="nrvc_wd4"/>
                                     <state key="normal" title="Fri">
                                         <color key="titleShadowColor" red="0.5" green="0.5" blue="0.5" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                     </state>
@@ -204,7 +204,7 @@
                                 </button>
                                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="17">
                                     <rect key="frame" x="287" y="0.0" width="30" height="30"/>
-                                    <accessibility key="accessibilityConfiguration" identifier="nrvc_sat"/>
+                                    <accessibility key="accessibilityConfiguration" identifier="nrvc_wd5"/>
                                     <state key="normal" title="Sat">
                                         <color key="titleShadowColor" red="0.5" green="0.5" blue="0.5" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                     </state>
@@ -214,7 +214,7 @@
                                 </button>
                                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="18">
                                     <rect key="frame" x="344" y="0.0" width="30" height="30"/>
-                                    <accessibility key="accessibilityConfiguration" identifier="nrvc_sun"/>
+                                    <accessibility key="accessibilityConfiguration" identifier="nrvc_wd6"/>
                                     <state key="normal" title="Sun">
                                         <color key="titleShadowColor" red="0.5" green="0.5" blue="0.5" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                     </state>
@@ -244,6 +244,7 @@
                     <fontDescription key="fontDescription" type="system" pointSize="14"/>
                     <textInputTraits key="textInputTraits" keyboardType="numbersAndPunctuation" returnKeyType="done"/>
                     <connections>
+                        <action selector="TFdidBeginEditing:" destination="-1" eventType="editingDidBegin" id="pKx-Mb-kef"/>
                         <action selector="startHrChange:" destination="-1" eventType="editingDidEndOnExit" id="hry-mP-5r7"/>
                         <outlet property="delegate" destination="-1" id="7ai-x2-3AF"/>
                     </connections>
@@ -260,6 +261,7 @@
                     <fontDescription key="fontDescription" type="system" pointSize="14"/>
                     <textInputTraits key="textInputTraits" keyboardType="numbersAndPunctuation" returnKeyType="done"/>
                     <connections>
+                        <action selector="TFdidBeginEditing:" destination="-1" eventType="editingDidBegin" id="15a-o8-6tM"/>
                         <action selector="startMinChange:" destination="-1" eventType="editingDidEndOnExit" id="BbP-hX-NTv"/>
                         <outlet property="delegate" destination="-1" id="2wo-XL-SYc"/>
                     </connections>

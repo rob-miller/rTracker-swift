@@ -1777,7 +1777,7 @@ class trackerObj: tObjBase {
         // default state here: start and finish as set on sliders, happening today
 
         // (1) if 'every' mode, adjust start time of day (else nr.start is already correct), for day set offsetComponents if is days/months/weeks
-        // 'every' refers to 'every Saturday' as opposed to specific calendar days
+        // 'every' does not seem to be available ?
         
         if nr?.everyVal != 0 {
             // if every, get start components from date of last save and adjust startInt
@@ -1923,14 +1923,15 @@ class trackerObj: tObjBase {
 
         // (2) if time is range (from/to) adjust start time to next position within range, or determine if single time is still coming today or mark for later day
 
-        if -1 != finInt {
+        if nr!.untilEnabled {  //}-1 != finInt {
             // set startInt to next time point between from/until entries [ 2 times from/until || every 3 mins from [last] until ]
             if 0 == nr?.times {
                 nr?.times = nr?.timesRandom ?? false ? 1 : 2 // safety: if 'until', must be at least 2 for interval (begin,end) or 1 for random
             }
 
-            let intervalStep = Int(Double(Int(d(finInt - nr!.start) / d(nr!.times - (nr!.timesRandom ? 0 : 1)))) + 0.5) // if interval then 1x less 'times' for start
-            //let intervalStep = Double(Int(d(finInt - nr!.start) / d(nr!.times - (nr!.timesRandom ? 0 : 1))))  // if interval then 1x less 'times' for start
+            let intervalStep = max(Int(Double(Int(d(finInt - nr!.start) / d(nr!.times - (nr!.timesRandom ? 0 : 1)))) + 0.5), 1) // if interval then 1x less 'times' for start
+
+            // allow sub-minute intervals but can only get to nearest next minute
             DBGLog(String("times= \(nr!.times) intervalStep= \(intervalStep)  startInt= \(nr!.start)  finInt= \(finInt)"))
 
             // startInt<finInt here because either startInt=nr.start or caught above in everyMode
@@ -1993,6 +1994,7 @@ class trackerObj: tObjBase {
                 DBGLog(String("randomise new startInt= \(startInt) => \(nr?.timeStr(startInt) ?? "") (delta= \(delta))"))
             }
         } else {
+            // nr.untilEnabled = false if here
             // else nr.times == 1 => startInt remains at default
             if eventIsToday && (startInt <= nowInt) {
                 eventIsToday = false
@@ -2081,7 +2083,10 @@ class trackerObj: tObjBase {
                 // weekdays -- have for weekdays mode and for every mode, so offsetComponents may already be set
 
                 // establish current targDate
-                let tmpTargDate = gregorian.date(byAdding: offsetComponents, to: today)!
+                var tmpTargDate = gregorian.date(byAdding: offsetComponents, to: today)!
+                if lastEntryDate > tmpTargDate {
+                    tmpTargDate = lastEntryDate
+                }
 
 
                 // Get the weekday component of the current targDate
@@ -2128,21 +2133,16 @@ class trackerObj: tObjBase {
 
         DBGLog(String("finish setReminder offsetComponents= \(offsetComponents)"))
 
-        let targDate = gregorian.date(byAdding: offsetComponents, to: today)
+        let baseDate = lastEntryDate > today ? lastEntryDate : today
+        let targDate = gregorian.date(byAdding: offsetComponents, to: baseDate)
 
         //targDate = gregorian.date(byAdding: offsetComponents, to: today)
 
         //DBGLog(@"finish setReminder startInt= %@",[nr timeStr:startInt]);
-        if let targDate {
-            DBGLog(String("finish setReminder targDate= \(DateFormatter.localizedString(from: targDate, dateStyle: .full, timeStyle: .short))"))
-
-        }
-
-
 
         nr?.schedule(targDate)
-
-        DBGLog(String("done \(targDate!)"))
+        DBGLog(String("finish setReminder targDate= \(DateFormatter.localizedString(from: targDate!, dateStyle: .full, timeStyle: .short))  now= \(DateFormatter.localizedString(from: today, dateStyle: .full, timeStyle: .short))"))
+        DBGLog(String("done "))
 
     }
 
@@ -2162,7 +2162,9 @@ class trackerObj: tObjBase {
         let center = UNUserNotificationCenter.current()
         //NSMutableArray *toRemove = [notifyReminder getRidArray:center tid:self.toid];
         notifyReminder.useRidArray(center, tid: super.toid, callback: { toRemove in
-            center.removePendingNotificationRequests(withIdentifiers: toRemove)
+            let rmIdStrs = toRemove.map { "\(super.toid)-\($0)" }
+            center.removePendingNotificationRequests(withIdentifiers: rmIdStrs)
+            DBGLog("removed identifiers \(rmIdStrs)")
         })
     }
 
