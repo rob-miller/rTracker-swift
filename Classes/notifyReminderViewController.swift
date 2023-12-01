@@ -36,7 +36,7 @@ import UIKit
  bools:
  fromLast
  until
- interval/random + continuous
+ interval/random
 
  message : nsstring
 
@@ -142,6 +142,21 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
     @IBOutlet var intervalButton: UIButton!
     @IBOutlet var enableFinishButton: UIButton!
 
+
+    @IBOutlet weak var r_nextevent: UILabel!
+    @IBOutlet weak var r_day: UILabel!
+    @IBOutlet weak var r_month: UILabel!
+    @IBOutlet weak var r_monthday: UILabel!
+    @IBOutlet weak var r_year: UILabel!
+    @IBOutlet weak var r_hour: UILabel!
+    @IBOutlet weak var r_colon: UILabel!
+    @IBOutlet weak var r_minute: UILabel!
+    @IBOutlet weak var r_ampm: UILabel!
+    
+    var r_set: [UILabel] {
+        [r_nextevent, r_day, r_month, r_monthday, r_year, r_hour, r_colon, r_minute, r_ampm]
+    }
+    
     /*
     - (IBAction)finishSliderAction:(id)sender;
     - (IBAction)timesChange:(id)sender;
@@ -162,6 +177,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         //self.title=@"hello";
         // Custom initialization
         // [self viewDidLoad];
+        
     }
 
     // MARK: -
@@ -298,6 +314,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         btnDone(nil)
     }
 
+    // shifting to another nr, do we delete current because it is cleared, or save?
     func leaveNR() -> Bool {
         if nullNRguiState() {
             if nr?.rid != 0 {  // nil rtmx
@@ -383,6 +400,10 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         
         dismissalHandler?()  // so presenting controller configTVObjVC can know when we finish
     }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        updateEnabledButton()
+    }
 
     // MARK: -
 
@@ -401,8 +422,14 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         // return ([@"Delay:" isEqualToString:[[self.delayDaysButton titleLabel] text]]);  // race condition immediately after set
     }
 
+    func clearGui() {
+        clearWeekDays()
+        clearEvery()
+        clearMonthDays()
+    }
+    
     func guiFromNr() {
-
+        clearGui()
         if nil == nr {
             nr = notifyReminder()
             nr!.msg = tracker!.trackerName
@@ -432,8 +459,6 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
             repeatTimes.text = String(format: "%ld", Int(nr?.times ?? 0))
             if nr!.timesRandom {
                 intervalButton.setTitle("Random", for: .normal)
-            } else if nr!.timesContinuous {
-                intervalButton.setTitle("Continuous", for: .normal)
             } else {
                 intervalButton.setTitle("Equal Intervals", for: .normal)
             }
@@ -450,14 +475,12 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
             //self.weekMonthEvery.selectedSegmentIndex=SEGMONTH;
             setDelayDaysButtonTitle(true)
             var nma: [String] = [] // (repeating: nil, count: 32)
-            for i in 0..<32 {
-                if Int(nr?.monthDays ?? 0) & (0x01 << i) != 0 {
+            for i in 0..<31 {
+                if nr!.monthDays & (0x01 << i) != 0 {
                     nma.append("\(i + 1)")
                 }
             }
             monthDays.text = nma.joined(separator: ",")
-            clearWeekDays()
-            clearEvery()
         } else {
             // if (self.nr.everyVal) {
             //self.weekMonthEvery.selectedSegmentIndex=SEGEVERY;
@@ -484,8 +507,6 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
             updateCheckBtn(fromLastButton)
 
             setEveryTrackerBtnName()
-            clearWeekDays()
-            clearMonthDays()
 
             for i in 0..<7 {
                 // added weekdays to every
@@ -554,8 +575,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
             nr!.until = Int(finishSlider.value)
             nr!.times = Int(repeatTimes.text ?? "") ?? 2
             nr!.timesRandom = intervalButton.title(for: .normal) == "Random"
-            nr!.timesContinuous = intervalButton.title(for: .normal) == "Continuous"
-            if nr!.times < 2 && !nr!.timesRandom && !nr!.timesContinuous {
+            if nr!.times < 2 && !nr!.timesRandom {
                 nr!.times = 2
             }
             nr?.untilEnabled = true
@@ -588,10 +608,12 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
                 }
             }
         } else {
-            let monthDayComponents = monthDays.text?.components(separatedBy: ",")
-            for mdComp in monthDayComponents ?? [] {
-                nr?.monthDays |= UInt32((0x01 << (Int(mdComp) ?? 0 - 1)))
+            let monthDayComponents = monthDays.text?.components(separatedBy: ",").map{ $0.trimmingCharacters(in: .whitespaces) }.compactMap { Int($0) }.sorted()
+            nr?.monthDays = 0
+            for i in monthDayComponents ?? [] {
+                nr?.monthDays |= UInt32((0x01 << (i-1)))
             }
+            //print(nr!.monthDays)
         }
         /*
             int wme = self.weekMonthEvery.selectedSegmentIndex;
@@ -635,6 +657,15 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
 
     }
 
+    // return true if gui is not valid reminder state // return false if reminder should be enabled
+    //   logic is so enableBtn.isHidden = result
+    // valid is
+    // start is less than finish
+    // and
+    //   delay from tracker with at least one day set
+    // or
+    //   any positive value in monthDays
+    
     func nullNRguiState() -> Bool {
         if startSlider.isEnabled && finishSlider.isEnabled && (startSlider.value > finishSlider.value) {
             return true // if start > fin yes it is null state
@@ -648,9 +679,9 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
                 }
             }
         } else {
-            let monthDayComponents = monthDays.text?.components(separatedBy: ",") // if any positive value here no it is not null
+            let monthDayComponents = monthDays.text?.components(separatedBy: ",").map{ $0.trimmingCharacters(in: .whitespaces) }.compactMap { Int($0) } // if any positive value here no it is not null
             for mdComp in monthDayComponents ?? [] {
-                if 0 < Int(mdComp) ?? 0 {
+                if 0 < Int(mdComp) {
                     return false
                 }
             }
@@ -719,8 +750,73 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
                 rTracker_resource.alert("Notifications disabled", msg: "Notifications are disabled for \(bdn ?? "") in system settings, so reminders cannot work.\n\nPlease go to System Settings -> Notifications -> \(bdn ?? "") and allow notifications.\n\n\(bdn ?? "") reminders use badges, sounds and lock screen alerts.", vc: self)
             }
         }
+        
+        updateReminderDateDisplay(guiStateIsNull)
     }
+    
+    func getDateComponents(for date: Date) -> (dayName: String, day: Int, month: String, year: Int, hour: Int, minute: Int, ampm: String?) {
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.year, .month, .day, .weekday, .hour, .minute], from: date)
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.locale = Locale.current
 
+        // Day name
+        dateFormatter.dateFormat = "EEEE"
+        let dayName = dateFormatter.string(from: date)
+
+        // Month name
+        dateFormatter.dateFormat = "MMMM"
+        let monthName = dateFormatter.string(from: date)
+
+        // AM/PM
+        dateFormatter.dateFormat = "a"
+        let ampm = dateFormatter.string(from: date) // This will be an empty string in locales that don't use AM/PM
+
+        return (dayName, components.day!, monthName, components.year!, components.hour!, components.minute!, ampm.isEmpty ? nil : ampm)
+    }
+    
+    func hideReminderDateDiaplay(_ noDisplay: Bool) {
+        r_set.forEach{ $0.isHidden = noDisplay}
+    }
+    
+    func updateReminderDateDisplay(_ noDisplay: Bool) {
+        hideReminderDateDiaplay(noDisplay)
+        if !noDisplay {
+            nrFromGui()
+            if let nrDate = tracker?.getNextreminderDate(nr) {
+                let components = getDateComponents(for: nrDate)
+                DBGLog("Day Name: \(components.dayName), Day: \(components.day), Month: \(components.month), Year: \(components.year), Hour: \(components.hour), Minute: \(components.minute), AM/PM: \(components.ampm ?? "")")
+
+                r_day.text = components.dayName
+                r_monthday.text = "\(components.day)"
+                r_month.text = components.month
+                r_year.text = "\(components.year)"
+                r_minute.text = "\(String(format: "%02d", components.minute))"
+                
+                if components.ampm != nil {
+                    r_ampm.text = components.ampm
+                    var hr = components.hour
+                    if hr > 12 {
+                        hr -= 12
+                    }
+                    if hr == 0 {
+                        hr = 12
+                    }
+                    r_hour.text = "\(hr)"
+                } else {
+                    r_ampm.isHidden = true
+                    r_hour.text = "\(components.hour)"
+                }
+            } else {
+                hideReminderDateDiaplay(true)
+                DBGLog("no next reminder date")
+            }
+        } else {
+            DBGLog("invalid GUI state")
+        }
+    }
+    
     func updateCheckBtn(_ btn: UIButton?) {
         if btn?.isSelected ?? false {
             btn?.setImage(chkImg, for: .normal)
@@ -735,8 +831,8 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
     }
 
     // 3rd 5th 7th 10th day of each month
-    // every n hrs / days / weeks / months
-    // n mins / hrs / days / weeks / months from last save
+    // every n hrs / days / weeks / months  <-- no longer supported but 'delay' below uses same values
+    // n mins / hrs / days / weeks / months delay from last save
     //  if days / weeks / months can set at time
 
     func fromLastBtnStateUpdate() {
@@ -747,9 +843,20 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
             enableStartControls(true)
             //}
             everyTrackerButton.isHidden = false
+
+            everyTF.text = String(format: "%ld", Int(nr!.everyVal))
+            everyTF.isEnabled = true
+            everyTF.isHidden = false
+            everyButton.isHidden = false
+        
         } else {
             enableStartControls(true)
             everyTrackerButton.isHidden = true
+            everyTF.text = ""
+            everyTF.isEnabled = false
+            everyTF.isHidden = true
+            everyButton.isHidden = true
+
         }
         updateMessage()
     }
@@ -757,6 +864,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
     @IBAction func fromLastBtn(_ sender: Any) {
         DBGLog("fromLastBtn")
         toggleCheckBtn(fromLastButton)
+
         fromLastBtnStateUpdate()
     }
 
@@ -1077,7 +1185,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
     @IBAction func enableBtn(_ sender: UIButton) {
         toggleCheckBtn(sender)
         if !sender.isSelected {
-            rTracker_resource.alert("Reminder disabled", msg: "This reminder is now disabled.  To delete it, clear the settings and navigate away.", vc: self)
+            rTracker_resource.alert("Reminder disabled", msg: "This reminder is now disabled.  To delete it, clear the settings and 'set reminders' or save the tracker.", vc: self)
         }
     }
 
@@ -1096,25 +1204,13 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         DBGLog(String("intervalBtn \(sender.currentTitle)"))
         DBGLog(String("everyBtn \(intervalButton.title(for: .normal))"))
         if intervalButton.title(for: .normal) == "Random" {
-            /*
-             // not implementing Continuous because can do with equal intervals (just lots)
-            intervalButton.setTitle("Continuous", for: .normal)
-            repeatTimes.isHidden = true
-            repeatTimesLabel.isHidden = true
-        } else if intervalButton.title(for: .normal) == "Continuous" {
-             */
             intervalButton.setTitle("Equal Intervals", for: .normal)
-            if Int(repeatTimes.text ?? "0")! < 2 {
-                repeatTimes.text = "2"
-            }
-            //repeatTimes.isHidden = false
-            //repeatTimesLabel.isHidden = false
         } else {
             intervalButton.setTitle("Random", for: .normal)
-            //repeatTimes.isHidden = false
-            //repeatTimesLabel.isHidden = false
         }
-        //((UIButton*)sender).selected = ! ((UIButton*)sender).selected;
+
+        limitTimes()
+        updateEnabledButton()
     }
 
     func sliderUpdate(_ val: Int, hrtf: UITextField?, mntf: UITextField?, ampml: UILabel?) {
@@ -1138,6 +1234,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         hrtf?.text = String(format: "%02ld", hrVal)
         mntf?.text = String(format: "%02ld", mnVal)
 
+        limitTimes()
         updateEnabledButton()
     }
 
@@ -1202,19 +1299,25 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         timeTfUpdate(finishSlider, hrtf: finishHr, mntf: finishMin, ampml: finishTimeAmPm)
     }
 
-    @IBAction func timesChange(_ sender: UITextField) {
-        DBGLog(String("timesChange \(sender.text)"))
-
-        if 2 > Int(sender.text ?? "") ?? 0 {
+    func limitTimes() {
+        if 2 > Int(repeatTimes.text ?? "") ?? 0 {
             if nr?.timesRandom ?? false {
-                sender.text = "1"
+                repeatTimes.text = "1"
             } else {
-                sender.text = "2"
+                repeatTimes.text = "2"
             }
         }
-        if 1440 < Int(sender.text ?? "") ?? 0 {  // max is 1440 minutes per day, can't work with smaller intervals so indicate here
-            sender.text = "1440"
+        let maxMinutes = Int(finishSlider.value - startSlider.value) + 1
+
+        if maxMinutes < Int(repeatTimes.text ?? "") ?? 0 {  // max is 1440 minutes per day, can't work with smaller intervals so indicate here
+            repeatTimes.text = "\(maxMinutes)"
         }
+    }
+    
+    @IBAction func timesChange(_ sender: UITextField) {
+        DBGLog(String("timesChange \(sender.text)"))
+        limitTimes()
+        updateEnabledButton()
     }
 
     // MARK: -

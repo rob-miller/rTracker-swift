@@ -108,7 +108,6 @@ class notifyReminder: NSObject {
     var msg: String?
     var soundFileName: String?
     var timesRandom = false
-    var timesContinuous = false
     var reminderEnabled = false
     var untilEnabled = false
     var fromLast = false
@@ -120,7 +119,6 @@ class notifyReminder: NSObject {
     let TIMESRFLAG = 0x01 << 1
     let ENABLEFLAG = 0x01 << 2
     let FROMLASTFLAG = 0x01 << 3
-    let TIMESCFLAG = 0x1 << 4
     
     override init() {
         
@@ -209,10 +207,6 @@ class notifyReminder: NSObject {
         var flags: UInt = 0
         if timesRandom {
             flags |= UInt(TIMESRFLAG)
-            flags &= ~UInt(TIMESCFLAG)
-        } else if timesContinuous {
-            flags |= UInt(TIMESCFLAG)
-            flags &= ~UInt(TIMESRFLAG)
         }
         if reminderEnabled {
             flags |= UInt(ENABLEFLAG)
@@ -228,7 +222,6 @@ class notifyReminder: NSObject {
     
     func putFlags(_ flags: UInt) {
         timesRandom = Int(flags) & TIMESRFLAG != 0 ? true : false
-        timesContinuous = Int(flags) & TIMESCFLAG != 0 ? true : false
         reminderEnabled = Int(flags) & ENABLEFLAG != 0 ? true : false
         untilEnabled = Int(flags) & UNTILFLAG != 0 ? true : false
         fromLast = Int(flags) & FROMLASTFLAG != 0 ? true : false
@@ -318,7 +311,6 @@ class notifyReminder: NSObject {
         //}
         //self.soundFileName=nil;
         timesRandom = false
-        timesContinuous = false
         reminderEnabled = true
         untilEnabled = false
         fromLast = false

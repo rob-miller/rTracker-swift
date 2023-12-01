@@ -1741,407 +1741,192 @@ class trackerObj: tObjBase {
         }
         return true
     }
+    
+    func weekDaysAdjustedDate(baseDate: Date, weekDayBits: UInt8, timeSet: [Int]) -> Date? {
+        let calendar = Calendar.current
+
+        var nextDate: Date?
+        var dayAdd = 0
+        while nextDate == nil && dayAdd < 7 {
+            var components = calendar.dateComponents([.year, .month, .day], from: baseDate)
+            components.day! += dayAdd
+
+            if let adjustedDate = calendar.date(from: components) {
+                let updatedComponents = calendar.dateComponents([.weekday], from: adjustedDate)
+                
+                print(updatedComponents)
+                if (weekDayBits & (0x01 << (updatedComponents.weekday! - 1))) != 0 {
+                    for startInt in timeSet {
+                        let startHour = startInt / 60
+                        let startMinute = startInt % 60
+
+                        components = calendar.dateComponents([.year, .month, .day], from: adjustedDate)
+                        components.hour = startHour
+                        components.minute = startMinute
+                        components.second = 0
+                        
+                        if let newDate = calendar.date(from: components), newDate > baseDate {
+                            return newDate
+                        }
+                    }
+                }
+            }
+            
+            dayAdd += 1
+        }
+
+        return nil
+    }
+
+
+    func monthDaysAdjustedDate(baseDate: Date, monthDayBits: UInt32, timeSet: [Int]) -> Date? {
+        let calendar = Calendar.current
+
+        //var nextDate: Date?
+        var monthAdd = 0
+        while monthAdd < 2 {
+            for day in 1...31 {
+                if (monthDayBits & (0x01 << (day - 1))) != 0 {
+                    for startInt in timeSet {
+                        let startHour = startInt / 60
+                        let startMinute = startInt % 60
+
+                        var components = calendar.dateComponents([.year, .month, .day], from: baseDate)
+                        components.month! += monthAdd
+                        components.hour = startHour
+                        components.minute = startMinute
+                        components.second = 0
+                        components.day = day
+                        
+                        guard let newDate = calendar.date(from: components) else { continue }
+                        let checkMonth = components.month! > 12 ? components.month! - 12 : components.month!
+                        if calendar.component(.month, from: newDate) != checkMonth {
+                            // month rolled over without monthAdd, that's wrong
+                            continue
+                        }
+                        
+                        if newDate > baseDate {
+                            // nextDate = newDate
+                            // break
+                            return newDate
+                        }
+                    }
+                }
+            }
+            monthAdd += 1
+        }
+
+        //return nextDate
+        return nil
+    }
 
     //
-    // convert options sset in notifyReminder to single target datetime for next reminder to fire
+    // convert options set in notifyReminder to single target datetime for next reminder to fire
     //
-    func setReminder(_ nr: notifyReminder?, today: Date?, gregorian: Calendar?) {
+    // 3rd 5th 7th 10th day of each month
+    // every n hrs / days / weeks / months  <-- not directly supported but 'delay' below uses same values, so variable refer to 'every'
+    // n mins / hrs / days / weeks / months delay from last save
+    //  if days / weeks / months can set at time
+
+    func getNextreminderDate(_ nr: notifyReminder?) -> Date? {
+        guard nr != nil else {
+            return nil
+        }
         var sql: String
+        // ensure we can set notifications or all pointless
         rTracker_resource.setNotificationsEnabled()
-
-        let gregorian = Calendar(identifier: .gregorian)
-        let today = Date()
-        let todayComponents = gregorian.dateComponents([.year, .month, .day, .hour, .minute, .second, .weekday], from: today)
-
-        //NSDateComponents *everyStartComponents = NULL;
-        let nowInt = (60 * todayComponents.hour!) + todayComponents.minute!
-        var lastEntryDate = Date(timeIntervalSince1970: TimeInterval(nr!.saveDate)) // default to when reminder created
-
-        var offsetComponents = DateComponents()
-        offsetComponents.day = 0
-
-        var startInt = nr?.start ?? 0
-        let finInt = nr?.until ?? 0
-
-        var eventIsToday = weekMonthDaysIsToday(nr, todayComponents: todayComponents) // not today if does not meet weekday mask
-
-        DBGLog(String("now= \(today)"))
-        DBGLog(String("\(nr!.description)"))
-
-        DBGLog(
-            String("today: yr \(todayComponents.year!) mo \(todayComponents.month!) dy \(todayComponents.day!) hr \(todayComponents.hour!) mn \(todayComponents.minute!) sc \(todayComponents.second!) wkdy \(todayComponents.weekday!)")
-        )
-        DBGLog(String("startInt = \(nr?.timeStr(startInt) ?? ""), finInt= \(nr?.timeStr(finInt) ?? "")"))
-        DBGLog(String("nowInt= \(nr?.timeStr(nowInt) ?? "")"))
-
-        // default state here: start and finish as set on sliders, happening today
-
-        // (1) if 'every' mode, adjust start time of day (else nr.start is already correct), for day set offsetComponents if is days/months/weeks
-        // 'every' does not seem to be available ?
         
-        if nr?.everyVal != 0 {
-            // if every, get start components from date of last save and adjust startInt
-            //int lastEventStart=0;
-            if nr?.fromLast ?? false {
-                if nr?.vid != 0 {
-                    sql = String(format: "select date from voData where id=%ld order by date desc limit 1", Int(nr?.vid ?? 0))
-                } else {
-                    sql = "select date from voData order by date desc limit 1"
-                }
-                let lastInt = toQry2Int(sql:sql)!
-                if lastInt != 0 {
-                    lastEntryDate = Date(timeIntervalSince1970: TimeInterval(lastInt)) // stay with when reminder created if no data stored for this tracker yet
-                }
-            }
-            DBGLog(String("lastEntryDate= \(lastEntryDate)"))
-            //everyStartComponents = [gregorian components:(NSCalendarUnitHour | NSCalendarUnitMinute) fromDate:lastEntryDate];
-            //lastEventStart = (60 * [everyStartComponents hour]) + [everyStartComponents minute];     // lasteventstart now set for appropriate offset minutes into day
-
-            // but might not be today!
-
-            // cannot do delay and then [x times in window] -- because can't differentiate (in window) vs (already done) from last save
-            if 0 != (Int(nr?.everyMode ?? 0) & EV_DAYS) {
-
-                let days = unitsWithinEra(from: lastEntryDate, to: today, calUnit: .day, calendar: gregorian)
-                let currFrac = days % (nr?.everyVal ?? 0)
-                if ((0 != currFrac) /* if not exactly today */) || ((days < (nr?.everyVal ?? 0)) /* or (have not passed 1x target days offset) */) {
-                    eventIsToday = false
-                    offsetComponents.day = (nr?.everyVal ?? 0) - currFrac
-                }
-
-                DBGLog(String(" every- days= \(days) days_mod_times= \(days % (nr!.everyVal)) eventIsToday= \(eventIsToday))"))
-            } else if 0 != (Int(nr?.everyMode ?? 0) & EV_WEEKS) {
-                /* NSCalendarUnitWeekOfMOnth vs. NSCalendarUnitWeekOfYear does not seem to make any difference here
-                            NSInteger weeks1 = [self unitsWithinEraFromDate:lastEntryDate toDate:today calUnit:NSWeekCalendarUnit calendar:gregorian];
-                            NSInteger weeks2 = [self unitsWithinEraFromDate:lastEntryDate toDate:today calUnit:NSCalendarUnitWeekOfMonth calendar:gregorian];
-                            */
-                let weeks = unitsWithinEra(from: lastEntryDate, to: today, calUnit: .weekOfYear, calendar: gregorian)
-                let currFrac = weeks % (nr?.everyVal ?? 0)
-                if (0 != currFrac) || (weeks < (nr?.everyVal ?? 0)) {
-                    eventIsToday = false
-                    offsetComponents.weekOfMonth = (nr?.everyVal ?? 0) - currFrac
-                }
-                DBGLog(String(" every- weeks weeks_passed= \(weeks) weeks_mod_times= \(weeks % (nr!.times)) eventIsToday= \(eventIsToday)"))
-            } else if 0 != (Int(nr?.everyMode ?? 0) & EV_MONTHS) {
-                let months = unitsWithinEra(from: lastEntryDate, to: today, calUnit: .month, calendar: gregorian)
-                let currFrac = months % (nr?.everyVal ?? 0)
-                if (0 != currFrac) || (months < (nr?.everyVal ?? 0)) {
-                    eventIsToday = false
-                    offsetComponents.month = (nr?.everyVal ?? 0) - currFrac
-                }
-                DBGLog(String(" every- months= \(months) months_mod_times= \(months % nr!.times) eventIsToday= \(eventIsToday)"))
-            } else {
-                //EV_MINUTES or EV_HOURS => eventIsToday  // unless wraparound!  // or not selected weekdays!
-                let minutes = Int((today.timeIntervalSince(lastEntryDate)) / 60) //[self unitsWithinEraFromDate:lastEntryDate toDate:today calUnit:NSCalendarUnitMinute calendar:gregorian];
-                let blockMinutes = (EV_HOURS == Int(nr!.everyMode) ? 60 * (nr!.everyVal) : nr!.everyVal)
-                let currFrac = minutes % blockMinutes
-                var targStart: Int
-
-                DBGLog(String("sm= \(currFrac)"))
-                if minutes < nowInt {
-                    // or if 'every 5 mins' instead of 'delay 5 mins'
-                    targStart = nowInt + (blockMinutes - currFrac)
-                    //DBGLog(@"fractional targStart = %d",targStart);
-                } else {
-                    targStart = nowInt
-                    //targStart = startInt; // if have passed delay interval then to early start time
-                    //DBGLog(@"past delay interval so targStart = start = %d",targStart);
-                }
-                DBGLog(String(" every- mins/hrs -- add \(currFrac) minutes  mins= \(minutes)  blockMins=\(blockMinutes) times= \(nr!.everyVal) targStart= \(nr!.timeStr(targStart)!)"))
-                DBGLog(String(" finInt= \(nr?.timeStr(finInt) ?? "") targStart= \(nr!.timeStr(targStart)!) startInt= \(nr!.timeStr(startInt)!) eventIsToday= \(eventIsToday)"))
-
-                //offsetComponents day = 0 at this point unless added code above
-                dbgNSAssert(0 == offsetComponents.day, "offsetComponents day not 0")
-
-                //xxx split into eventistoday and wraparound out of today / event not today, wraparound takes into weekday match in window / weekday match after wraparound
-                if (24 * 60) < targStart {
-                    // if wraparound put that many
-                    //if (eventIsToday) {
-                    eventIsToday = false
-                    offsetComponents.day = (targStart / (24 * 60)) // shift however many days required - know it is at least 1
-                    targStart = targStart % (24 * 60) // whatever left after removing days // was startInt;
-                    DBGLog(String("  - went past 24hr, add \(offsetComponents.day ?? 0) offset days, targStart now \(nr!.timeStr(targStart))"))
-                    //} else {
-
-                    //}
-                } else if !eventIsToday {
-                    // if weekdays does not match (set above)
-                    DBGLog(String("not today, reset targstart to \(startInt) \(nr!.timeStr(startInt))"))
-                    targStart = startInt
-                }
-
-                //xxx
-
-                if (-1 == finInt) && (targStart > startInt) {
-                    // if past startInt and not window, shift another day forward and set to startInt
-                    eventIsToday = false
-                    targStart = startInt
-                    offsetComponents.day = offsetComponents.day! + 1
-                    DBGLog("  - went past startInt with no finInt, reset to startInt")
-                }
-
-
-                if (-1 != finInt) && (targStart > finInt) {
-                    // if window and past finish shift another day forward and set to startInt
-                    eventIsToday = false
-                    targStart = startInt
-                    offsetComponents.day = offsetComponents.day! + 1
-                    DBGLog("  - went past finInt, reset to startInt tomorrow")
-                }
-
-                if targStart < startInt {
-                    // if too early shift to start time
-                    DBGLog("  - before startInt, reset to startInt  startInt= \(startInt) targStart= \(targStart) ")
-                    targStart = startInt
-                }
-
-                startInt = targStart
-            }
-
-            DBGLog(" every- lastEntry \(lastEntryDate)")
-            //DBGLog(@" every- lastEntry hr %d mn %d -> new startInt= %@",[everyStartComponents hour],[everyStartComponents minute], [nr timeStr:startInt]);
-            DBGLog(String(" every- new startInt= \(nr!.timeStr(startInt))"))
-
-            //state: if everyMode, startInt now at earliest time(minutes)ToFire
-        }
-
-        /*  not needed ? if not every this already set, else this could mess up setting from every
-
-            if(!eventIsToday) { // weekday check set above
-                DBGLog(@"weekday not today, reset startInt to %d %@",nr.start,[nr timeStr:nr.start]);
-                startInt = nr.start;
-            }
-
-            */
-
-        // state here: startInt = earliest time(minutes)ToFire; finInt, eventIsToday accurate
-        // if not today, don't know next day but may have set some offset days or weeks
-        // lastEntryDate set
-
-        DBGLog(String("past every: eventIsToday= \(eventIsToday)  startInt= \(nr!.timeStr(startInt)!)  finInt= \(nr!.timeStr(finInt)!)"))
-
-
-        // (2) if time is range (from/to) adjust start time to next position within range, or determine if single time is still coming today or mark for later day
-
-        if nr!.untilEnabled {  //}-1 != finInt {
-            // set startInt to next time point between from/until entries [ 2 times from/until || every 3 mins from [last] until ]
-            if 0 == nr?.times {
-                nr?.times = nr?.timesRandom ?? false ? 1 : 2 // safety: if 'until', must be at least 2 for interval (begin,end) or 1 for random
-            }
-
-            let intervalStep = max(Int(Double(Int(d(finInt - nr!.start) / d(nr!.times - (nr!.timesRandom ? 0 : 1)))) + 0.5), 1) // if interval then 1x less 'times' for start
-
-            // allow sub-minute intervals but can only get to nearest next minute
-            DBGLog(String("times= \(nr!.times) intervalStep= \(intervalStep)  startInt= \(nr!.start)  finInt= \(finInt)"))
-
-            // startInt<finInt here because either startInt=nr.start or caught above in everyMode
-            if eventIsToday {
-                if nowInt >= finInt {
-                    // if everyMode have already set startInt=nr.start for this case
-                    eventIsToday = false
-                    offsetComponents.day = 1
-                    DBGLog("time window past finInt")
-                } else {
-                    var tcount = nr?.times ?? 0
-                    var tstart = nr?.start ?? 0
-                    while 0 < tcount && (tstart <= nowInt || tstart < startInt) {
-                        tstart += intervalStep
-                        tcount -= 1
-                    }
-                    // tstart now next intervalStep after now
-                    DBGLog(String("tstart= \(nr?.timeStr(tstart) ?? "")"))
-
-                    if (startInt > nowInt) && false {
-                        // this works for 'every' but we have 'delay and then' mode need to shift to next timestep
-                        DBGLog("startInt within time window and yet to happen")
-                        // all ok, startInt still coming and in window
-                    } else if (nowInt > (nr?.start ?? 0)) && (nowInt < finInt) {
-                        // now is within today's fire window and past startInt
-                        if (tstart > startInt) && (tstart >= nowInt) {
-                            startInt = tstart // shift startInt to end of current interval
-                            DBGLog(String("time window, shift startInt to \(nr!.timeStr(startInt))"))
-                        } else {
-                            startInt = nr?.start ?? 0
-                            eventIsToday = false // else we have gone past for today, try for later (tomorrow at least)
-                            offsetComponents.day = 1
-                            DBGLog("time window no interval left so wrap")
-                        }
-                    } else if nowInt < tstart {
-                        startInt = tstart // shift startInt to end of current interval
-                        DBGLog(String("time window, not started yet, shift startInt to \(nr!.timeStr(startInt))"))
-                    }
-                }
-                // else event not today so startInt at nr.start
-            }
-
-
-            if nr?.timesRandom ?? false {
-                let rnd = DBLRANDOM
-                let delta = Int((rnd * d(intervalStep)) - (d(intervalStep) / 2.0)) // startInt += rand * (+/- (0.5 * step))
-
-                if (eventIsToday && (nowInt < (startInt + delta))) || !eventIsToday {
-                    // randomise startInt unless that pushes it into past
-                    startInt += delta
-                    //DBGLog(@"r: startInt %d nr.start %d finInt %d delta %d",startInt,nr.start,finInt,delta);
-                    if startInt <= (nr!.start) {
-                        startInt = (nr!.start) + abs(delta / 2)
-                    } else if startInt > finInt {
-                        startInt = (nr!.start) + abs(delta / 2)
-                        eventIsToday = false
-                        offsetComponents.day = 1
-                    }
-                }
-                DBGLog(String("randomise new startInt= \(startInt) => \(nr?.timeStr(startInt) ?? "") (delta= \(delta))"))
-            }
+        // get singel start time or list of times between start/until and equal interfals or random
+        var timeSet:[Int] = []
+        if !nr!.untilEnabled {
+            timeSet.append(nr!.start)
         } else {
-            // nr.untilEnabled = false if here
-            // else nr.times == 1 => startInt remains at default
-            if eventIsToday && (startInt <= nowInt) {
-                eventIsToday = false
-                offsetComponents.day = 1
-                DBGLog(String("1 time before now so not today startInt \(nr?.timeStr(startInt) ?? "")  nowInt \(nr?.timeStr(nowInt) ?? "")"))
+            if nr!.timesRandom {  // random
+                var step = (nr!.until - nr!.start) / nr!.times
+                step = step == 0 ? 1 : step
+                var fin = nr!.start
+                while fin < nr!.until {
+                    let rnd = Double.random(in: 0...1)
+                    let adjust = Int( d(step) * rnd)
+                    timeSet.append(fin + adjust)
+                    fin += step
+                }
+            } else {  // equal intervals
+                var step = (nr!.until - nr!.start) / (nr!.times - 1)
+                step = step == 0 ? 1 : step
+                var fin = nr!.start
+                while fin <= nr!.until {
+                    timeSet.append(fin)
+                    fin += step
+                }
+            }
+            if timeSet.count != nr!.times {
+                DBGWarn("reminders count [\(nr!.timesRandom ? "random" : "equal intervals")] wrong \(timeSet.count) should be \(nr!.times)")
+            }
+        }
+
+        // start from now
+        let todayNow = Date()
+        var baseDate = todayNow
+        
+        // adjust forward if there is a saved 'start from' date
+        let saveDate = Date(timeIntervalSince1970: TimeInterval(nr!.saveDate)) // default to when reminder created, but will be startFrom if set
+        baseDate = saveDate > baseDate ? saveDate : baseDate
+
+        // delay from last tracker/valobj entry
+        if nr?.fromLast ?? false {
+            var lastEntryDate:Date = Date.distantPast
+            
+            if nr?.vid != 0 {
+                sql = String(format: "select date from voData where id=%ld order by date desc limit 1", Int(nr?.vid ?? 0))
             } else {
-                DBGLog(String("1 time > now so is today startInt \(nr?.timeStr(startInt) ?? "")  nowInt \(nr?.timeStr(nowInt) ?? "")"))
+                sql = "select date from voData order by date desc limit 1"
+            }
+            let lastInt = toQry2Int(sql:sql)!
+            if lastInt != 0 {
+                lastEntryDate = Date(timeIntervalSince1970: TimeInterval(lastInt))
+                var addUnits = nr?.everyVal ?? 0
+                let evm = nr?.everyMode  // default is minutes
+                switch(evm) {
+                case UInt8(EV_WEEKS):
+                    addUnits *= 7
+                    fallthrough
+                case UInt8(EV_DAYS):
+                    addUnits *= 24
+                    fallthrough
+                case UInt8(EV_HOURS):
+                    addUnits *= 60
+                    lastEntryDate = Calendar.current.date(byAdding: .minute, value: addUnits, to: lastEntryDate) ?? lastEntryDate
+                case UInt8(EV_MONTHS):
+                    lastEntryDate = Calendar.current.date(byAdding: .month, value: addUnits, to: lastEntryDate) ?? lastEntryDate
+                default:
+                    break
+                }
+            }
+            baseDate = lastEntryDate > baseDate ? lastEntryDate : baseDate
+            
+            if let wdb = nr?.weekDays {
+                //  alternate to delay above is set of calendar days
+                if let nextWeekDays = weekDaysAdjustedDate(baseDate: baseDate, weekDayBits: wdb, timeSet: timeSet) {
+                    baseDate = nextWeekDays > baseDate ? nextWeekDays : baseDate
+                }
+            }
+                
+        } else if let mdb = nr?.monthDays {
+            //  alternate to delay above is set of calendar days
+            if let nextMonthDays = monthDaysAdjustedDate(baseDate: baseDate, monthDayBits: mdb, timeSet: timeSet) {
+                baseDate = nextMonthDays > baseDate ? nextMonthDays : baseDate
             }
         }
-
-        // startInt has day_minute of 1st notification, whether today or later day
-        //  for case of everyVal or time range (multiple times)
-
-        // if eventIsToday we are ready
-        // else determine days offset to next event
-
-        // lastEntryDate is correct if everyVal
-
-
-        // (3) work out next event day if not today
-
-        if !eventIsToday {
-            var days = 0
-
-            if nr?.monthDays != 0 {
-                // not everyMode so offsetComponents not set above
-                let itoday = todayComponents.day! - 1
-                var ifirst = -1
-                var inext = -1
-
-                if itoday != 0 {
-                    // today not 0, i.e. 1st of month
-                    for i in 0..<itoday {
-                        if Int(nr?.monthDays ?? 0) & (0x01 << i) != 0 {
-                            ifirst = i
-                        }
-                    }
-                } else {
-                    ifirst = 0
-                }
-                for i in itoday..<32 {
-                    if Int(nr?.monthDays ?? 0) & (0x01 << i) != 0 {
-                        inext = i
-                    }
-                }
-                if -1 != inext {
-                    days = inext - itoday
-                    DBGLog(String("not today- monthDays: today is \(itoday), trigger on next= \(inext) so +\(days) days"))
-                    if 0 == days {
-                        offsetComponents.month = 1
-                        DBGLog("monthdays - days=0 so adding 1 month")
-                    }
-                } else if -1 != ifirst {
-                    var dateComponents = DateComponents()
-                    dateComponents.month = 1
-                    var nextMonth = gregorian.date(byAdding: dateComponents, to: today)
-
-                    dateComponents = gregorian.dateComponents([.year, .month, .day, .hour, .minute, .second], from: nextMonth!)
-
-                    dateComponents.day = ifirst + 1
-                    nextMonth = gregorian.date(from: dateComponents)
-                    days = unitsWithinEra(from: today, to: nextMonth!, calUnit: .day, calendar: gregorian)
-                    DBGLog(String("not today- monthDays: today is \(itoday), wrap around to first = \(ifirst) so +\(days) days"))
-                } else {
-                    DBGErr(String("not today- monthDays fail: \(String(format: "%0x", nr?.monthDays ?? 0)) today is \(itoday)"))
-                }
-
-                // offsetComponents not otherwised modified here because not every mode
-                offsetComponents.day = days
-
-                // } else if (nr.everyVal) {  // nr.every can have weekdays too
-                /*
-                                // all handeld above -- offsetComponents already set
-
-                            if ((EV_MINUTES == nr.everyMode) || (EV_HOURS == nr.everyMode)) {
-                                DBGLog(@"not today- every: mins/hrs -> trigger tomorrow ");
-                            } else if (EV_DAYS == nr.everyMode) {
-                                DBGLog(@"not today- every: days so + days");
-                            } else if (EV_WEEKS == nr.everyMode) {
-                                DBGLog(@"not today- every: weeks so + weeks");
-                            } else { // EV_MONTHS
-                                DBGLog(@"not today- every: months so + months");
-                            }
-                            */
-            } else if nr?.weekDays != 0 {
-                // weekdays -- have for weekdays mode and for every mode, so offsetComponents may already be set
-
-                // establish current targDate
-                var tmpTargDate = gregorian.date(byAdding: offsetComponents, to: today)!
-                if lastEntryDate > tmpTargDate {
-                    tmpTargDate = lastEntryDate
-                }
-
-
-                // Get the weekday component of the current targDate
-                let weekdayComponents = gregorian.dateComponents([.weekday], from: tmpTargDate)
-
-                // date is not today if we are here; either not today's weekday if weekday mode, or every mode and tmpTargDate already has some offset
-
-                // work out the next weekday set in nr.weekdays
-
-                //DBGLog(@"tmpTargDate weekday componenet is %d",[weekdayComponents weekday]);
-                var ttdWeekDay = (weekdayComponents.weekday ?? 0) - 1 // nr.weekdays is 0-indexed but NSDateComponents is not
-                var targWeekDay = 0
-
-                // arggg what if ttdWeekDay is 0
-
-                for i in ttdWeekDay..<7 {
-                    if 0 != (Int(nr?.weekDays ?? 0) & (0x01 << i)) {
-                        targWeekDay = i + 1 // not 0-indexed
-                    }
-                }
-                if 0 == targWeekDay {
-                    // did not find weekday in rest of this week so go into next week
-                    for i in 0..<ttdWeekDay {
-                        // tested i= ttdWeekDay above
-                        if 0 != (Int(nr?.weekDays ?? 0) & (0x01 << i)) {
-                            targWeekDay = i + 1 // not 0-indexed
-                        }
-                    }
-                }
-                ttdWeekDay += 1 // ttdWeekDays now 1-indexed
-                days = targWeekDay - ttdWeekDay
-                if days < 0 {
-                    days += 7 // wrap around into next week
-                }
-
-                DBGLog(String("not today- weekdays: targ= \(targWeekDay) curr= \(ttdWeekDay) so +\(days) days"))
-                DBGLog(String("event not today, about to add days \(days) to offsetComponents= \(offsetComponents)"))
-                offsetComponents.day = days + offsetComponents.day! // ttdWeekDay is already an offset from today, add that here
-            }
+        
+        return baseDate > todayNow ? baseDate : nil
+    }
+    
+    func setReminder(_ nr: notifyReminder?) {
+        if let nextDate = getNextreminderDate(nr) {
+            nr?.schedule(nextDate)
+            DBGLog(String("finish setReminder targDate= \(DateFormatter.localizedString(from: nextDate, dateStyle: .full, timeStyle: .short))  now= \(DateFormatter.localizedString(from: Date(), dateStyle: .full, timeStyle: .short))"))
         }
-
-        offsetComponents.minute = startInt - nowInt
-        offsetComponents.second = 0
-
-        DBGLog(String("finish setReminder offsetComponents= \(offsetComponents)"))
-
-        let baseDate = lastEntryDate > today ? lastEntryDate : today
-        let targDate = gregorian.date(byAdding: offsetComponents, to: baseDate)
-
-        //targDate = gregorian.date(byAdding: offsetComponents, to: today)
-
-        //DBGLog(@"finish setReminder startInt= %@",[nr timeStr:startInt]);
-
-        nr?.schedule(targDate)
-        DBGLog(String("finish setReminder targDate= \(DateFormatter.localizedString(from: targDate!, dateStyle: .full, timeStyle: .short))  now= \(DateFormatter.localizedString(from: today, dateStyle: .full, timeStyle: .short))"))
         DBGLog(String("done "))
 
     }
@@ -2173,14 +1958,11 @@ class trackerObj: tObjBase {
         // delete all reminders for this tracker
         clearScheduledReminders()
         // create unUserNotif here with access to nr data and tracker data
-        let today = Date()
-        //NSCalendar *gregorian = [[NSCalendar alloc] initWithCalendarIdentifier:NSCalendarIdentifierGregorian];   // could use [NSCalendar currentCalendar]; ?
-        let cal = Calendar.current
 
         _ = loadReminders()
         for nr in reminders {
             if nr.reminderEnabled {
-                setReminder(nr, today: today, gregorian: cal)
+                setReminder(nr)
             }
         }
         //[gregorian release];
@@ -2191,14 +1973,11 @@ class trackerObj: tObjBase {
         let center = UNUserNotificationCenter.current()
         //NSMutableArray *ridSet = [notifyReminder getRidArray:center tid:self.toid];
         notifyReminder.useRidArray(center, tid: super.toid, callback: { [self] ridSet in
-            let today = Date()
-            let cal = Calendar.current
-
             _ = loadReminders()
             for nr in reminders {
                 if nr.reminderEnabled && !(ridSet.contains( String(nr.rid))) {
                     //[self setReminder:nr today:today gregorian:gregorian];
-                    setReminder(nr, today: today, gregorian: cal)
+                    setReminder(nr)
                 }
             }
         })

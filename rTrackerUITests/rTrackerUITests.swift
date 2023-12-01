@@ -1486,6 +1486,8 @@ Kate Bell
         let tue = app.buttons["nrvc_wd\(weekdaysMap["Tue"]!)"]
         tue.tap()
         let attfm = app.textFields["nrvc_at_minutes"]
+        let rday = app.staticTexts["r_day"]
+        XCTAssert(rday.label == "Tuesday")
         clearTextField(attfm)
         attfm.tap()
         attfm.typeText("47\n")
@@ -1493,6 +1495,10 @@ Kate Bell
         clearTextField(attfh)
         attfh.tap()
         attfh.typeText("06\n")
+        let rhour = app.staticTexts["r_hour"]
+        let rminute = app.staticTexts["r_minute"]
+        XCTAssert(rminute.label == "47")
+        XCTAssert(rhour.label == "6")
         app.buttons["nrvc_done"].tap()
         app.buttons["set reminders"].tap()
         app.buttons["database info"].tap()

@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="22154" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="22155" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
     <device id="retina6_1" orientation="portrait" appearance="light"/>
     <accessibilityOverrides isEnabled="YES"/>
     <dependencies>
         <deployment identifier="iOS"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="22130"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="22131"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
         <capability name="System colors in document resources" minToolsVersion="11.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
@@ -15,6 +15,7 @@
                 <outlet property="btnDoneOutlet" destination="3se-M0-UIi" id="9wE-xa-ybD"/>
                 <outlet property="btnHelpOutlet" destination="qVB-kd-MoK" id="TQi-f0-CBi"/>
                 <outlet property="btnTestOutlet" destination="ptc-mh-Pkl" id="EG5-a6-w9V"/>
+                <outlet property="clearStartDate" destination="lph-gk-Myc" id="udO-rN-SUd"/>
                 <outlet property="datePicker" destination="ARu-3J-MtR" id="Oc2-YN-B4Y"/>
                 <outlet property="soundPicker" destination="ZOi-vZ-ifs" id="icb-N2-ayD"/>
                 <outlet property="view" destination="iN0-l3-epB" id="hoh-TD-DEd"/>
@@ -75,16 +76,27 @@
                         </barButtonItem>
                     </items>
                 </toolbar>
+                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="lph-gk-Myc">
+                    <rect key="frame" x="313" y="60" width="68" height="35"/>
+                    <accessibility key="accessibilityConfiguration" hint="reset the start date" identifier="clearStartDate"/>
+                    <state key="normal" title="Button"/>
+                    <buttonConfiguration key="configuration" style="plain" title="Reset"/>
+                    <connections>
+                        <action selector="btnResetStartDate:" destination="-1" eventType="touchUpInside" id="zH8-dU-M89"/>
+                    </connections>
+                </button>
             </subviews>
             <viewLayoutGuide key="safeArea" id="A2F-yv-2SR"/>
             <color key="backgroundColor" systemColor="systemBackgroundColor"/>
             <constraints>
                 <constraint firstItem="sxv-Cu-qT8" firstAttribute="trailing" secondItem="A2F-yv-2SR" secondAttribute="trailing" id="0Np-Hq-OMf"/>
+                <constraint firstItem="A2F-yv-2SR" firstAttribute="trailing" secondItem="lph-gk-Myc" secondAttribute="trailing" constant="33" id="3eD-EW-MW9"/>
                 <constraint firstItem="tuu-EB-uSs" firstAttribute="leading" secondItem="A2F-yv-2SR" secondAttribute="leading" constant="10" id="KA8-jt-8TG"/>
                 <constraint firstItem="S5U-xH-gBz" firstAttribute="top" secondItem="ARu-3J-MtR" secondAttribute="bottom" constant="5" id="SVM-zr-EnG"/>
                 <constraint firstItem="ARu-3J-MtR" firstAttribute="trailing" secondItem="A2F-yv-2SR" secondAttribute="trailing" id="U0m-RG-bpP"/>
                 <constraint firstItem="ZOi-vZ-ifs" firstAttribute="trailing" secondItem="A2F-yv-2SR" secondAttribute="trailing" id="UEE-JL-uJH"/>
                 <constraint firstItem="ARu-3J-MtR" firstAttribute="leading" secondItem="A2F-yv-2SR" secondAttribute="leading" constant="10" id="bMf-GC-qmx"/>
+                <constraint firstItem="lph-gk-Myc" firstAttribute="baseline" secondItem="tuu-EB-uSs" secondAttribute="baseline" id="bdZ-A8-ndm"/>
                 <constraint firstItem="A2F-yv-2SR" firstAttribute="trailing" secondItem="ptc-mh-Pkl" secondAttribute="trailing" constant="30" id="eK9-bf-ENA"/>
                 <constraint firstItem="S5U-xH-gBz" firstAttribute="centerY" secondItem="ptc-mh-Pkl" secondAttribute="centerY" id="eVx-mL-ErD"/>
                 <constraint firstItem="ZOi-vZ-ifs" firstAttribute="leading" secondItem="A2F-yv-2SR" secondAttribute="leading" constant="10" id="fHi-aF-tqo"/>

@@ -1539,11 +1539,11 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                     let newURL = url.deletingLastPathComponent().appendingPathComponent(String(newName)).appendingPathExtension(fileExtension)
                     
                     try fileManager.moveItem(at: url, to: newURL)
-                    print("Renamed \(url.lastPathComponent) to \(newURL.lastPathComponent)")
+                    DBGLog("Renamed \(url.lastPathComponent) to \(newURL.lastPathComponent)")
                 }
             }
         } catch {
-            print("out2in - An error occurred: \(error)")
+            DBGWarn("out2in - An error occurred: \(error)")
         }
     }
     @objc func btnXpriv() {
@@ -1697,8 +1697,8 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         //NSUInteger row = [indexPath row];
         //DBGLog(@"selected row %d : %@", row, [self.tlist.topLayoutNames objectAtIndex:row]);
         
-        print("Navigation controller: \(String(describing: self.navigationController))")
-        print("Top controller: \(String(describing: self.navigationController?.topViewController))")
+        //print("Navigation controller: \(String(describing: self.navigationController))")
+        //print("Top controller: \(String(describing: self.navigationController?.topViewController))")
         
         tableView.cellForRow(at: indexPath)?.isSelected = false
         openTracker(tlist.getTIDfromIndex(indexPath.row), rejectable: false)

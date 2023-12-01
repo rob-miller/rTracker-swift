@@ -37,7 +37,8 @@ class notifyReminderVC2: UIViewController, UIPickerViewDelegate, UIPickerViewDat
     @IBOutlet var btnTestOutlet: UIButton!
     @IBOutlet var btnHelpOutlet: UIBarButtonItem!
     @IBOutlet var btnDoneOutlet: UIBarButtonItem!
-
+    @IBOutlet weak var clearStartDate: UIButton!
+    
     override init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) {
         super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)
         var sfa: [String] = []
@@ -137,9 +138,14 @@ class notifyReminderVC2: UIViewController, UIPickerViewDelegate, UIPickerViewDat
         DBGLog(String("leaving - datepicker says \(datePicker.date)"))
         parentNRVC?.nr?.saveDate = Int(datePicker.date.timeIntervalSince1970)
 
-        dismiss(animated: true)
+        dismiss(animated: true) {
+            self.parentNRVC?.updateEnabledButton()
+        }
     }
-
+    
+    @IBAction func btnResetStartDate(_ sender: Any) {
+        datePicker.date = Date()
+    }
     /*
     #pragma mark - Navigation
 
