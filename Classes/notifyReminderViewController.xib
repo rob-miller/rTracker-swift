@@ -88,6 +88,7 @@
                 </navigationBar>
                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="nFu-OQ-Q19">
                     <rect key="frame" x="20" y="76" width="43" height="30"/>
+                    <accessibility key="accessibilityConfiguration" identifier="dly_dom"/>
                     <state key="normal" title="Delay:">
                         <color key="titleShadowColor" red="0.5" green="0.5" blue="0.5" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                     </state>
@@ -130,6 +131,7 @@
                 </button>
                 <textField hidden="YES" opaque="NO" clipsSubviews="YES" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="center" borderStyle="roundedRect" placeholder="1,8,15,22,29" minimumFontSize="17" translatesAutoresizingMaskIntoConstraints="NO" id="911">
                     <rect key="frame" x="10" y="111" width="394" height="34"/>
+                    <accessibility key="accessibilityConfiguration" identifier="r_domtf"/>
                     <fontDescription key="fontDescription" type="system" pointSize="14"/>
                     <textInputTraits key="textInputTraits" keyboardType="numbersAndPunctuation" returnKeyType="done"/>
                     <connections>

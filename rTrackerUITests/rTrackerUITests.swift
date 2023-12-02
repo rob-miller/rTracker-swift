@@ -1554,7 +1554,19 @@ Kate Bell
         
         app.buttons["Reminders"].tap()
         tue.tap()
+        //----------
+        let dlyBtn = app.buttons["dly_dom"]
+        dlyBtn.tap()
+        let domtf = app.textFields["r_domtf"]
+        domtf.tap()
+        domtf.typeText("4\n")
+        let rmday = app.staticTexts["r_monthday"]
+        XCTAssert(rmday.label == "4")
+        clearTextField(domtf)
+        dlyBtn.tap()
         
+        XCTAssertFalse(rmday.exists)
+        //--------
         for d in 0...6 {
             let wdbtn = String("nrvc_wd\(d)")
             app.buttons[wdbtn].tap()
