@@ -1745,16 +1745,16 @@ class trackerObj: tObjBase {
     func weekDaysAdjustedDate(baseDate: Date, weekDayBits: UInt8, timeSet: [Int]) -> Date? {
         let calendar = Calendar.current
 
-        var nextDate: Date?
+        //var nextDate: Date?
         var dayAdd = 0
-        while nextDate == nil && dayAdd < 7 {
+        while dayAdd < 7 {
             var components = calendar.dateComponents([.year, .month, .day], from: baseDate)
             components.day! += dayAdd
 
             if let adjustedDate = calendar.date(from: components) {
                 let updatedComponents = calendar.dateComponents([.weekday], from: adjustedDate)
                 
-                print(updatedComponents)
+                //print(updatedComponents)
                 if (weekDayBits & (0x01 << (updatedComponents.weekday! - 1))) != 0 {
                     for startInt in timeSet {
                         let startHour = startInt / 60
@@ -1766,6 +1766,7 @@ class trackerObj: tObjBase {
                         components.second = 0
                         
                         if let newDate = calendar.date(from: components), newDate > baseDate {
+                            //nextDate = newDate  // just to silence warning
                             return newDate
                         }
                     }

@@ -175,7 +175,7 @@ class tictacV: UIView {
             AddLineTo(context, hborder + hlen, vborder + vlen)
             AddLineTo(context, hborder, vborder + vlen)
             AddLineTo(context, hborder, vborder)
-            Stroke(context)
+            context.strokePath()
             
             context.setStrokeColor(UIColor.label.cgColor)
             
@@ -190,7 +190,7 @@ class tictacV: UIView {
                 MoveTo(context, hborder + (CGFloat(i) * hstep), vborder)
                 AddLineTo(context, hborder + (CGFloat(i) * hstep), vborder + vlen)
             }
-            Stroke(context)
+            context.strokePath()
         }
     }
 

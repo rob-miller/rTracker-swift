@@ -931,7 +931,8 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         UNUserNotificationCenter.current().delegate = self
         NotificationCenter.default.addObserver(self, selector: #selector(handleNotifyOpenTracker(_:)), name: .notifyOpenTracker, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(handleNotifyOpenTrackerInApp(_:)), name: .notifyOpenTrackerInApp, object: nil)
-
+        NotificationCenter.default.addObserver(self, selector: #selector(appWillEnterBackgroundRVC), name: UIApplication.didEnterBackgroundNotification, object: nil)
+        
         //DBGLog(@"rvc: viewDidLoad privacy= %d",[privacyObj getPrivacyValue]);
 
         //refreshLock = false
@@ -995,6 +996,20 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         refreshView()
     }
 
+    @objc func appWillEnterBackgroundRVC() {
+        // Adjust your table view data source for privacy mode off
+        // ...
+
+        // Reload the table view
+        //tableView.reloadData()
+        print("will enter background")
+
+        //DispatchQueue.main.async(execute: {
+            _ = privacyObj.lockDown() // hiding is handled after startup - viewDidAppear() below
+            tableView?.reloadData()
+        //})
+    }
+    
     public override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         setViewMode()
         tableView!.setNeedsDisplay()
@@ -1136,8 +1151,8 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         DBGLog(String("rvc: viewWillAppear privacy= \(privacyValue)"))
         countScheduledReminders()
 
-        restorePriv()
-
+        restorePriv()  // for returning from jump to maxpriv
+        
         navigationController?.setToolbarHidden(false, animated: false)
         // tableView?.reloadData() // now in countScheduledReminders
         super.viewWillAppear(animated)
@@ -1606,6 +1621,10 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
         // Configure the cell.
         let row = indexPath.row
+        if row >= tlist.topLayoutIDs?.count ?? 0 {
+            DBGErr("getting toplevel cell for row \(row) but only \(tlist.topLayoutIDs?.count ?? 0) in tlist")
+            return cell!
+        }
         let tid = (tlist.topLayoutIDs)?[row]
         let cellLabel = NSMutableAttributedString()
 

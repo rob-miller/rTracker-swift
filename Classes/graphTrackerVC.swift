@@ -744,7 +744,7 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
 
         if (1 == touch?.tapCount) && (1 == (touches?.count ?? 0)) {
             let touchPoint = touch?.location(in: gtv) // sv=> full zoomed content size ; gtv => gtv frame but zoom/scroll mapped
-            //DBGLog(@"gtv tap at %f, %f.  taps= %d  numTouches= %d",touchPoint.x, touchPoint.y, [touch tapCount],[touches count]);
+            DBGLog("gtv tap at \(touchPoint!.x), \(touchPoint!.y).  taps= \(touch!.tapCount)  numTouches= \(touches!.count)");
 
             let nearDate = Int(Double(tracker!.togd!.firstDate) + (touchPoint!.x * (tracker!.togd!.dateScaleInv)))
             let newDate = tracker?.dateNearest(nearDate) ?? 0
@@ -790,6 +790,16 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
             if "1" == vo.optDict["graph"] {
                 switch vo.vtype {
                 case VOT_NUMBER, VOT_FUNC:
+                    if let gminStr = vo.optDict["gmin"],
+                       let gmaxStr = vo.optDict["gmax"],
+                       let gmin = Double(gminStr),
+                       let gmax = Double(gmaxStr) {
+                        if gmin == gmax {  // both set and equal then override
+                            vo.optDict["autoscale"] = "1"
+                        }
+                    } else {  // not both set then override
+                        vo.optDict["autoscale"] = "1"
+                    }
                     if "0" == vo.optDict["autoscale"] {
                         maxw = testDblWidth(Double(vo.optDict["gmin"]!)!, max: maxw)
                         maxw = testDblWidth(Double(vo.optDict["gmax"]!)!, max: maxw)

@@ -79,6 +79,19 @@ class vogd: NSObject {
         let myTOGD = myTracker.togd!
 
         if (vo.vtype == VOT_NUMBER || vo.vtype == VOT_FUNC) && ("0" == vo.optDict["autoscale"]) {
+            // override autoscale if needed
+            if let gminStr = vo.optDict["gmin"],
+               let gmaxStr = vo.optDict["gmax"],
+               let gmin = Double(gminStr),
+               let gmax = Double(gmaxStr) {
+                if gmin == gmax {  // both set and equal then override
+                    vo.optDict["autoscale"] = "1"
+                }
+            } else {  // not both set then override
+                vo.optDict["autoscale"] = "1"
+            }
+        }
+        if (vo.vtype == VOT_NUMBER || vo.vtype == VOT_FUNC) && ("0" == vo.optDict["autoscale"]) {
             //DBGLog(@"autoscale= %@", [self.vo.optDict objectForKey:@"autoscale"]);
             minVal = getMinMax("min", alt: (vo.optDict["gmin"])!)
             maxVal = getMinMax("max", alt: (vo.optDict["gmax"])!)
@@ -157,10 +170,10 @@ class vogd: NSObject {
 
         if VOT_CHOICE != vo.vtype {
             let yScaleExpand = (maxVal - minVal) * GRAPHSCALE
-            if nil == vo.optDict["gmax"] {
+            if nil == vo.optDict["gmax"] || "" == vo.optDict["gmax"] {
                 maxVal += yScaleExpand // +5% each way for visibility unless specified
             }
-            if nil == vo.optDict["gmin"] {
+            if nil == vo.optDict["gmin"] || "" == vo.optDict["gmin"] {
                 minVal -= yScaleExpand
             }
         }

@@ -124,7 +124,9 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
     //- (void)applicationDidFinishLaunching:(UIApplication *)application {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
 
-
+        //NotificationCenter.default.addObserver(self, selector: #selector(appWillEnterBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(appWillEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
+        
         #if !RELEASE
         DBGWarn(String("docs dir= \(rTracker_resource.ioFilePath(nil, access: true))"))
         #endif
@@ -235,7 +237,9 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
                 //newMaintainer()
             }
         }
+        
 
+        
         /*
             // for when actually not running, not just in background:
             UILocalNotification *notification = launchOptions[UIApplicationLaunchOptionsLocalNotificationKey];
@@ -451,7 +455,46 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
         return (currentSettings.types & type);
     }
     */
+    
+    /*
+     // needs notification set above, still called after applicationWillResignActive()
+    @objc func appWillEnterBackground() {
+        // Adjust your table view data source for privacy mode off
+        // ...
 
+        // Reload the table view
+        //tableView.reloadData()
+        print("will enter background")
+        
+        let rootController = (navigationController.viewControllers)[0]
+        let topController = navigationController.viewControllers.last
+
+        
+        DispatchQueue.main.async(execute: {
+            _ = (rootController as? RootViewController)?.privacyObj.lockDown() // hiding is handled after startup - viewDidAppear() below
+            (rootController as? RootViewController)?.tableView?.reloadData()
+        })
+    }
+     */
+
+    @objc func appWillEnterForeground() {
+        // Adjust your table view data source for privacy mode off
+        // ...
+
+        // Reload the table view
+        //tableView.reloadData()
+        print("will enter foreground")
+        
+        let rootController = (navigationController.viewControllers)[0]
+        let topController = navigationController.viewControllers.last
+
+        
+        //DispatchQueue.main.async(execute: {
+            _ = (rootController as? RootViewController)?.privacyObj.lockDown() // hiding is handled after startup - viewDidAppear() below
+            (rootController as? RootViewController)?.tableView?.reloadData()
+        //})
+    }
+    
     func applicationWillResignActive(_ application: UIApplication) {
         if regNotifs {
             return  // spurious event when registering for notifications
@@ -462,7 +505,12 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
         let rootController = (navigationController.viewControllers)[0]
         let topController = navigationController.viewControllers.last
 
-        _ = (rootController as? RootViewController)?.privacyObj.lockDown() // hiding is handled after startup - viewDidAppear() below
+        
+        DispatchQueue.main.async(execute: {
+            _ = (rootController as? RootViewController)?.privacyObj.lockDown() // hiding is handled after startup - viewDidAppear() below
+            (rootController as? RootViewController)?.tableView?.reloadData()
+        })
+        
         UIApplication.shared.isIdleTimerDisabled = false
 
         let rtSelector = NSSelectorFromString("rejectTracker")

@@ -39,7 +39,7 @@ class graphTrackerV: UIScrollView {
     var gtvCurrVO: valueObj?
     var selectedVO = false
     var doDrawGraph = false
-    var xMark: CGFloat = 0.0
+    var xMark: CGFloat = NOXMARK
     var parentGTVC: Any?
     var searchXpoints: [NSNumber]?
     //- (void)setTransform:(CGAffineTransform)newValue;
@@ -193,7 +193,7 @@ class graphTrackerV: UIScrollView {
             AddBigCircle(context, x, y)
         }
 
-        Stroke(context)
+        context.strokePath()
     }
 
     /*
@@ -303,7 +303,7 @@ class graphTrackerV: UIScrollView {
                     AddBigCircle(context, x, y)
                 }
                 if vogd?.vo.vtype == VOT_CHOICE {
-                    Stroke(context)
+                    context.strokePath()
                 }
                 if x > maxX {
                     break
@@ -324,7 +324,7 @@ class graphTrackerV: UIScrollView {
                         AddCircle(context, lastX, lastY)
                     }
                     if vogd?.vo.vtype == VOT_CHOICE {
-                        Stroke(context)
+                        context.strokePath()
                     }
                 }
                 going = true // going, show current
@@ -340,16 +340,16 @@ class graphTrackerV: UIScrollView {
                 }
 
                 if vogd?.vo.vtype == VOT_CHOICE {
-                    Stroke(context)
+                    context.strokePath()
                 }
             }
         }
 
         // swift change
         if vogd?.vo.vtype != VOT_CHOICE {
-            Stroke(context)
+            context.strokePath()
         }
-        //Stroke(context)
+
     }
 
     // TODO: enable putting text on graph
@@ -459,7 +459,7 @@ class graphTrackerV: UIScrollView {
                 AddLineTo(context, x, y)
                 //AddCircle(x,y);
                 if vogd?.vo.vtype == VOT_CHOICE {
-                    Stroke(context)
+                    context.strokePath()
                 }
                 if x > maxX {
                     break
@@ -476,7 +476,7 @@ class graphTrackerV: UIScrollView {
                     AddLineTo(context, lastX, lastY)
                     //AddCircle(lastX,lastY);
                     if vogd?.vo.vtype == VOT_CHOICE {
-                        Stroke(context)
+                        context.strokePath()
                     }
                 }
                 going = true // going, show current
@@ -484,16 +484,15 @@ class graphTrackerV: UIScrollView {
                 AddLineTo(context, x, y)
                 //AddCircle(x,y);
                 if vogd?.vo.vtype == VOT_CHOICE {
-                    Stroke(context)
+                    context.strokePath()
                 }
             }
         }
 
         if vogd?.vo.vtype != VOT_CHOICE {
-            Stroke(context)
+            context.strokePath()
         }
-        //Stroke(context);
-
+        
         context.setAlpha(STD_ALPHA)
         context.setLineWidth(STD_LINE_WIDTH)
 
@@ -517,7 +516,7 @@ class graphTrackerV: UIScrollView {
                     safeDispatchSync({ [self] in
                        AddLineTo(context, frame.size.width, yline)
                     })
-                    Stroke(context)
+                    context.strokePath()
                 }
             } else {
                 // draw zero line if no Y line specified
@@ -528,7 +527,7 @@ class graphTrackerV: UIScrollView {
                     safeDispatchSync({ [self] in
                         AddLineTo(context, frame.size.width, currVogd!.yZero)
                     })
-                    Stroke(context)
+                    context.strokePath()
                 }
             }
             
@@ -612,11 +611,14 @@ class graphTrackerV: UIScrollView {
         if xMark != NOXMARK {
             context.setFillColor(UIColor.white.cgColor)
             context.setStrokeColor(UIColor.white.cgColor)
+            context.setLineWidth(SRCH_LINE_WIDTH) // rtmx grasping
             MoveTo(context, xMark, 0.0)
             safeDispatchSync({ [self] in
                 AddLineTo(context, xMark, frame.size.height)
             })
-            //Stroke(context)
+            DBGLog("mark x=\(xMark) y=0 to \(frame.size.height)")
+
+            context.strokePath()
         }
         if let searchXpoints {
             //UIColor *smColor = [UIColor colorWithRed:0.2 green:0.5 blue:1.0 alpha:0.7];
@@ -633,7 +635,8 @@ class graphTrackerV: UIScrollView {
                 safeDispatchSync({ [self] in
                     AddLineTo(context, xm.doubleValue, frame.size.height)
                 })
-                //Stroke(context)
+
+                context.strokePath()
             }
 
             context.setLineDash(phase: 0.0, lengths: [])
@@ -703,6 +706,25 @@ class graphTrackerV: UIScrollView {
         tm = CGAffineTransform(a: 1.0, b: 0.0, c: 0.0, d: -1.0, tx: 0.0, ty: 0.0)
         super.init(coder: aDecoder)
     }
+    
+    
+    // MARK: -
+    // MARK: touch support
+    #if DEBUGLOG
+    func touchReport(_ touches: Set<UITouch>) -> String {
+        guard let touch = touches.first else { return "No touches" }
+        let touchPoint = touch.location(in: self)
+        
+        return "touch at \(touchPoint.x), \(touchPoint.y).  taps= \(touch.tapCount)  numTouches= \(touches.count)"
+    }
+    #endif
+    
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        // DBGLog("touches ended: \(touchReport(touches))")
+
+        (parentGTVC as? graphTrackerVC)?.gtvTap(touches)
+    }
+
 }
 
 //#import "togd.h"
@@ -722,21 +744,21 @@ let USELAYER = 1
         }
          */
 //CGContextSetLineWidth(context, STD_LINE_WIDTH);
+/*
+ ???
 func CGContextSetAlpha(_ context: Int, _ STD_ALPHA: Int) {
 }
+*/
 
 // transform y to origin at lower left ( -y + height )
 // scale x to date range -- unfortunately buggered because line width is in user coords applied to both x and y
 //CGAffineTransform tm = { ((self.bounds.size.width - 2.0f*BORDER) / (lastDate - firstDate)) , 0.0f, 0.0f, -1.0f, 0.0f, self.bounds.size.height };
-func CGContextConcatCTM(_ context: Int, _ tm: Int) {
+/*
+ ???
+ func CGContextConcatCTM(_ context: Int, _ tm: Int) {
 }
+*/
 
-// MARK: -
-// MARK: touch support
-
-#if DEBUGLOG
-//return @"";
-#endif
 /*
 - (void) touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event {
     DBGLog(@"touches began: %@", [self touchReport:touches]);
@@ -746,6 +768,7 @@ func CGContextConcatCTM(_ context: Int, _ tm: Int) {
     DBGLog(@"touches cancelled: %@", [self touchReport:touches]);
 }
 *///DBGLog(@"touches ended: %@", [self touchReport:touches]);
+
 
 /*
 - (void) touchesMoved:(NSSet *)touches withEvent:(UIEvent *)event {

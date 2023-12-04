@@ -369,8 +369,11 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
             if let gminStr = self.tempValObj!.optDict["gmin"],
                let gmaxStr = self.tempValObj!.optDict["gmax"],
                let gmn = Double(gminStr),
-               let gmx = Double(gmaxStr),
-               gmn == gmx {
+               let gmx = Double(gmaxStr) {
+                if gmn == gmx {  // both set and equal then override
+                    self.tempValObj!.optDict["autoscale"] = "1"
+                }
+            } else {  // not both set then override
                 self.tempValObj!.optDict["autoscale"] = "1"
             }
         }
