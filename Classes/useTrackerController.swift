@@ -1538,8 +1538,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 target: self,
                 action: #selector(btnCurrDate))
             
-            _currDateBtn!.accessibilityLabel = "Date"
-            _currDateBtn!.accessibilityHint = "tap modify entry time and date"
+            //_currDateBtn!.accessibilityLabel = "Date"
+            _currDateBtn!.accessibilityHint = "tap to modify entry time and date"
             _currDateBtn!.accessibilityIdentifier = "trkrDate"
         }
 
@@ -1612,7 +1612,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 ],
                 for: .normal)
             
-            _searchBtn!.accessibilityLabel = "trkrSearch"
+            _searchBtn!.accessibilityLabel = "Search"
             _searchBtn!.accessibilityHint = "tap for search instructions"
             _searchBtn!.accessibilityIdentifier = "trkrSearch"
             

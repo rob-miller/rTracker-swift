@@ -124,7 +124,7 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
     //- (void)applicationDidFinishLaunching:(UIApplication *)application {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
 
-        //NotificationCenter.default.addObserver(self, selector: #selector(appWillEnterBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(appWillEnterBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(appWillEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
         
         #if !RELEASE
@@ -456,44 +456,44 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
     }
     */
     
-    /*
+    ///*
      // needs notification set above, still called after applicationWillResignActive()
     @objc func appWillEnterBackground() {
-        // Adjust your table view data source for privacy mode off
-        // ...
+        // hide screen in case private
+        DBGLog("will enter background - appDelegate")
 
-        // Reload the table view
-        //tableView.reloadData()
-        print("will enter background")
-        
-        let rootController = (navigationController.viewControllers)[0]
-        let topController = navigationController.viewControllers.last
+        let blankViewController = UIViewController()
+        blankViewController.view.backgroundColor = UIColor.black
+        blankViewController.modalPresentationStyle = .fullScreen
 
+        // Assuming your launch image is named "LaunchImage" in the asset catalog
+        if let launchImage = UIImage(named: "LaunchScreenImg") {
+            let imageView = UIImageView(frame: blankViewController.view.bounds)
+            imageView.image = launchImage
+            imageView.contentMode = .scaleAspectFill // Adjust as needed
+            imageView.clipsToBounds = true
+
+            // Add the image view as a subview
+            blankViewController.view.addSubview(imageView)
+            blankViewController.view.sendSubviewToBack(imageView) // Ensure it's behind any other views
+        }
         
-        DispatchQueue.main.async(execute: {
-            _ = (rootController as? RootViewController)?.privacyObj.lockDown() // hiding is handled after startup - viewDidAppear() below
-            (rootController as? RootViewController)?.tableView?.reloadData()
-        })
+         let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+         let window = windowScene!.windows.first
+         let rootViewController = window!.rootViewController!
+         rootViewController.present(blankViewController, animated: false, completion: nil)
     }
-     */
+
 
     @objc func appWillEnterForeground() {
-        // Adjust your table view data source for privacy mode off
-        // ...
-
-        // Reload the table view
-        //tableView.reloadData()
-        print("will enter foreground")
-        
-        let rootController = (navigationController.viewControllers)[0]
-        let topController = navigationController.viewControllers.last
-
-        
-        //DispatchQueue.main.async(execute: {
-            _ = (rootController as? RootViewController)?.privacyObj.lockDown() // hiding is handled after startup - viewDidAppear() below
-            (rootController as? RootViewController)?.tableView?.reloadData()
-        //})
+        // Unhide screen, rvc enterForeground refreshes the view
+        DBGLog("will enter foreground - appdelegate")
+        let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+        let window = windowScene!.windows.first
+        let rootViewController = window!.rootViewController!
+        rootViewController.dismiss(animated: false, completion: nil)
     }
+    
     
     func applicationWillResignActive(_ application: UIApplication) {
         if regNotifs {
@@ -506,10 +506,10 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
         let topController = navigationController.viewControllers.last
 
         
-        DispatchQueue.main.async(execute: {
+        //DispatchQueue.main.async(execute: {
             _ = (rootController as? RootViewController)?.privacyObj.lockDown() // hiding is handled after startup - viewDidAppear() below
-            (rootController as? RootViewController)?.tableView?.reloadData()
-        })
+           // (rootController as? RootViewController)?.tableView?.reloadData()
+        //})
         
         UIApplication.shared.isIdleTimerDisabled = false
 

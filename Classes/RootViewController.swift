@@ -69,6 +69,10 @@ extension Notification.Name {
     static let notifyOpenTrackerInApp = Notification.Name("notifyOpenTrackerInApp")
 }
 
+extension Notification.Name {
+    static let notifyPrivacyLockdown = Notification.Name("notifyPrivacyLockdown")
+}
+
 public class RootViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, UNUserNotificationCenterDelegate {
     var tableView: UITableView?
     
@@ -799,7 +803,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         //DBGLog(@"refresh tool bar, noshow= %d",(PVNOSHOW == self.privacyObj.showing));
 #if TESTING
         setToolbarItems(
-            [out2inBtn, xprivBtn, flexibleSpaceButtonItem, helpBtn, privateBtn].compactMap { $0 },
+            [out2inBtn, xprivBtn, tstBtn, flexibleSpaceButtonItem, helpBtn, privateBtn].compactMap { $0 },
             animated: animated)
 #else
         setToolbarItems(
@@ -911,7 +915,14 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         //tableView!.reloadData() // redundant but waiting for countScheduledReminders to complete
         //view.setNeedsDisplay()
     }
-
+/*
+    @objc func handlePrivacyLockdown(_ notification: Notification) {
+        DispatchQueue.main.async(execute: {
+            _ = self.privacyObj.lockDown() // hiding is handled after startup - viewDidAppear() below
+            self.tableView?.reloadData()
+        })
+    }
+ */
     func setViewMode() {
         rTracker_resource.setViewMode(self)
         if #available(iOS 13.0, *) {
@@ -932,7 +943,9 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         NotificationCenter.default.addObserver(self, selector: #selector(handleNotifyOpenTracker(_:)), name: .notifyOpenTracker, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(handleNotifyOpenTrackerInApp(_:)), name: .notifyOpenTrackerInApp, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(appWillEnterBackgroundRVC), name: UIApplication.didEnterBackgroundNotification, object: nil)
-        
+        NotificationCenter.default.addObserver(self, selector: #selector(appWillEnterForegroundRVC), name: UIApplication.willEnterForegroundNotification, object: nil)
+        //NotificationCenter.default.addObserver(self, selector: #selector(handlePrivacyLockdown(_:)), name: .notifyPrivacyLockdown, object: nil)
+
         //DBGLog(@"rvc: viewDidLoad privacy= %d",[privacyObj getPrivacyValue]);
 
         //refreshLock = false
@@ -997,17 +1010,13 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     }
 
     @objc func appWillEnterBackgroundRVC() {
-        // Adjust your table view data source for privacy mode off
-        // ...
-
-        // Reload the table view
-        //tableView.reloadData()
-        print("will enter background")
-
-        //DispatchQueue.main.async(execute: {
-            _ = privacyObj.lockDown() // hiding is handled after startup - viewDidAppear() below
-            tableView?.reloadData()
-        //})
+        // set privacy mode off
+        _ = self.privacyObj.lockDown()
+    }
+    @objc func appWillEnterForegroundRVC() {
+        // privacy locked down when rvc entered background, while appdelegate puts up and pulls down blank image
+        // this refreshview seems to happen before the blank view controller disappears
+        refreshView()
     }
     
     public override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
@@ -1434,6 +1443,21 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         }
         return _xprivBtn!
     }
+    
+    var _tstBtn: UIBarButtonItem?
+    var tstBtn: UIBarButtonItem {
+        if _tstBtn == nil {
+            _tstBtn = UIBarButtonItem(
+                title: "tst",
+                style: .plain,
+                target: self,
+                action: #selector(btnTst))
+            
+            _tstBtn!.accessibilityLabel = "tst"
+            //_tstBtn!.accessibilityIdentifier = "tst"
+        }
+        return _tstBtn!
+    }
     #endif
     
     /*
@@ -1566,6 +1590,13 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         privacyObj.resetPw()
         privacyObj.dbClrKeys()
         privBtnSetImg(_privateBtn!.customView as? UIButton, noshow: true)
+    }
+    
+    @objc func btnTst() {
+        DBGLog("tst pressed")
+        _ = self.privacyObj.lockDown()
+        refreshView()
+        //tableView?.reloadData()
     }
     #endif
     /*

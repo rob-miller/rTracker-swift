@@ -63,6 +63,7 @@ final class rTrackerUITests: XCTestCase {
     func test_rTracker() throws {
         do {
             try testTrackerDemoInstall()
+            try testTapGraphTap()
             try testEditTrackerRank()
             try testSearchGo()
             try testTrackerDemoUse()
@@ -92,6 +93,31 @@ final class rTrackerUITests: XCTestCase {
         let fnTotalLabel = app.staticTexts["fnVal_total"]
         XCTAssertEqual(fnTotalLabel.label, "22.00")
         
+        app.buttons["< rTracker"].tap()
+    }
+    
+    func testTapGraphTap() throws {
+        app.tables.cells["trkr_👣rTracker demo"].tap()
+        sleep(1)
+        let swipeAlert = app.alerts["Swipe control"]
+        if swipeAlert.exists {
+            swipeAlert.buttons["OK"].tap()
+            sleep(1)
+        }
+        XCUIDevice.shared.orientation = .landscapeRight
+        sleep(2)
+        let gtv = app.scrollViews["graphView"]
+        let normalizedOffset = CGVector(dx: 0.7, dy: 0.5)
+        let coordinate = gtv.coordinate(withNormalizedOffset: normalizedOffset)
+
+        // Perform the tap
+        coordinate.tap()
+        sleep(1)
+        XCUIDevice.shared.orientation = .portrait
+        
+        let tdate = app.buttons["trkrDate"]
+        //print(tdate.label)
+        XCTAssertEqual(tdate.label, "18/12/2014, 01:16")
         app.buttons["< rTracker"].tap()
     }
     

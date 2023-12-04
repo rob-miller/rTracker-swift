@@ -61,7 +61,7 @@ class voSlider: voState {
             _sliderCtl?.isContinuous = true
             // Add an accessibility label that describes the slider.
             //[sliderCtl setAccessibilityLabel:NSLocalizedString(@"StandardSlider", @"")];
-            _sliderCtl?.accessibilityLabel = "\(vo.valueName ?? "") slider"
+            _sliderCtl?.accessibilityHint = "\(vo.valueName ?? "") slider"
             _sliderCtl?.accessibilityIdentifier = "\(self.tvn())_slider"
 
         }

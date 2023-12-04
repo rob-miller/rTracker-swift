@@ -1745,7 +1745,6 @@ class trackerObj: tObjBase {
     func weekDaysAdjustedDate(baseDate: Date, weekDayBits: UInt8, timeSet: [Int]) -> Date? {
         let calendar = Calendar.current
 
-        //var nextDate: Date?
         var dayAdd = 0
         while dayAdd < 7 {
             var components = calendar.dateComponents([.year, .month, .day], from: baseDate)
@@ -1766,7 +1765,6 @@ class trackerObj: tObjBase {
                         components.second = 0
                         
                         if let newDate = calendar.date(from: components), newDate > baseDate {
-                            //nextDate = newDate  // just to silence warning
                             return newDate
                         }
                     }

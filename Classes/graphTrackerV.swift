@@ -73,6 +73,8 @@ class graphTrackerV: UIScrollView {
         tempTiledLayer?.levelsOfDetail = 5
         tempTiledLayer?.levelsOfDetailBias = 2
         
+        accessibilityIdentifier = "graphView"
+        
         //#endif
         isOpaque = false
         doDrawGraph = true // rtm dbg
