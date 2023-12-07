@@ -284,7 +284,7 @@ class notifyReminder: NSObject {
             "until": NSNumber(value: until),
             "times": NSNumber(value: times),
             "msg": msg ?? "",
-            "soundFile": soundFileName as Any,
+            "soundFile": soundFileName ?? "",
             "flags": NSNumber(value: flags),
             "tid": NSNumber(value: tid),
             "vid": NSNumber(value: vid),

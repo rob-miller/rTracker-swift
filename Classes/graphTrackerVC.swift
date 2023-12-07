@@ -307,7 +307,7 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
             gtv?.xMark = Double(targSecs) * (tracker!.togd!.dateScale)
         }
 
-        if nil != (tracker?.optDict)?["dirtyFns"] {
+        if let _ = (tracker?.optDict)?["dirtyFns"] {
             fireRecalculateFns()
         }
         fireRegenSearchMatches()

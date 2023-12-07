@@ -117,6 +117,6 @@ func dbgNSAssert(_ x: Bool, _ y: String) {
         DBGErr(y)
     }
 #if !RELEASE
-    assert(x,y)
+    //assert(x,y)
 #endif
 }

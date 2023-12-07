@@ -107,7 +107,8 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     var loadingInputFiles = false
     var stashAnimated = false
     var audioPlayer: AVAudioPlayer?
-
+    var tldStashedTID = -1
+    
     //openUrlLock, inputURL,
 
     // MARK: -
@@ -115,6 +116,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
     deinit {
         DBGLog("rvc dealloc")
+        NotificationCenter.default.removeObserver(self)
     }
     
     var _tlist: trackerList?
@@ -195,9 +197,6 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         let localFileManager = FileManager.default
         var newRtcsvTracker = false
 
-        jumpMaxPriv()
-
-
         //let files = try localFileManager.contentsOfDirectory(atPath: docsDir)
         let directoryURL = URL(fileURLWithPath: docsDir)
         let enumerator = localFileManager.enumerator(at: directoryURL, includingPropertiesForKeys: [.isDirectoryKey], options: [])
@@ -235,7 +234,8 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
             if validMatch {
                 tname = String(fileName.dropLast(loadObj!.count))  // String(fileName.prefix(fileName.count - (loadObj!.count + 1))) // Removing suffix
                 DBGLog("\(loadObj!) load input: \(fname) as \(tname!)")
-
+                jumpMaxPriv()
+                tlist.loadTopLayoutTable()
                 let tid = tlist.getTIDfromName(tname)
                 if tid != 0 {
                     to = trackerObj(tid)
@@ -249,7 +249,8 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                     newRtcsvTracker = true
                     DBGLog("created new tracker for rtcsv, id= \(to!.toid)")
                 }
-
+                restorePriv()
+                tlist.loadTopLayoutTable()
                 if let to = to {
                     safeDispatchSync { [self] in
                         rTracker_resource.startActivityIndicator(view, navItem: nil, disable: false, str: "loading \(tname ?? "")...")
@@ -259,12 +260,18 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                         let csvString = try String(contentsOfFile: fullPath.path, encoding: .utf8)
                         safeDispatchSync { [self] in
                             UIApplication.shared.isIdleTimerDisabled = true
+                            //jumpMaxPriv()  just needed to get in tracker list above
                             doCSVLoad(csvString, to: to, fname: fname)
+                            //restorePriv()
+                            do {
+                                try localFileManager.removeItem(at: fullPath)
+                            } catch {
+                                DBGWarn("Error deleting file \(fname): \(error)")
+                            }
                             UIApplication.shared.isIdleTimerDisabled = false
                         }
-                        try localFileManager.removeItem(at: fullPath)
                     } catch {
-                        DBGWarn("Error reading or deleting file: \(error)")
+                        DBGWarn("Error reading or deleting file \(fname): \(error)")
                     }
 
                     safeDispatchSync { [self] in
@@ -275,7 +282,6 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         }
 
 
-        restorePriv()
 
         if newRtcsvTracker {
             refreshViewPart2()
@@ -322,6 +328,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
             // found tracker with same name and maybe same tid
             if !loadingDemos {
                 rTracker_resource.stashTracker(matchTID) // make copy of current tracker so can reject newTID later
+                tldStashedTID = matchTID
             }
             tlist.updateTID(matchTID, new: newTIDi) // change existing tracker tid to match new (restore if we discard later)
 
@@ -342,6 +349,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
             inputTO?.saveConfig() // write to db
             tlist.add(toTopLayoutTable: inputTO!) // insert in top list
             DBGLog(String("loaded new \(tname)"))
+            tldStashedTID = -1
         }
 
 
@@ -467,8 +475,8 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
             let fname = file.lastPathComponent
             DBGLog("process input: \(fname)")
 
-            let newTarget = file.path + "_reading".replacingOccurrences(of: "Documents/Inbox/", with: "Documents/")
-            
+            let newTarget = (file.path + "_reading").replacingOccurrences(of: "Documents/Inbox/", with: "Documents/")
+            DBGLog("newTarget= \(newTarget)")
             do {
                 try localFileManager.moveItem(atPath: file.path, toPath: newTarget)
             } catch {
@@ -482,19 +490,23 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
                 if fname.hasSuffix("_in.plist") {
                     rtrkTid = handleOpenFileURL(URL(fileURLWithPath: newTarget), tname: String(fname.prefix(fname.count - 9)))
+                    rTracker_resource.rmStashedTracker(tldStashedTID)  // if there was name match, we stashed it as rejectable, so dump the stash copy now because they said to load the file
+                    tldStashedTID = -1
                 } else {
                     rtrkTid = handleOpenFileURL(URL(fileURLWithPath: newTarget), tname: nil)
+                    stashedTIDs.append(NSNumber(value: rtrkTid))
                 }
 
                 UIApplication.shared.isIdleTimerDisabled = false
             }
 
+            /*
             if fname.hasSuffix("_in.plist") {
                 rTracker_resource.rmStashedTracker(0)
             } else {
                 stashedTIDs.append(NSNumber(value: rtrkTid))
             }
-
+             */
             readingFile = false
             rTracker_resource.setProgressVal(Float(plistReadCount) / Float(plistLoadCount))
             plistReadCount += 1
@@ -539,7 +551,8 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
     func refreshViewPart2() {
         //DBGLog(@"entry");
-        // rtmx tlist.confirmToplevelTIDs()
+        // rtmx 
+        tlist.confirmToplevelTIDs()
         tlist.loadTopLayoutTable()
         DispatchQueue.main.async(execute: { [self] in
             tableView!.reloadData()
@@ -1027,7 +1040,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
     func refreshEditBtn() {
 
-        if (tlist.topLayoutNames?.count ?? 0) == 0 {
+        if tlist.topLayoutNames.count == 0 {
             if navigationItem.leftBarButtonItem != nil {
                 navigationItem.leftBarButtonItem = nil
             }
@@ -1618,13 +1631,13 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
     // Customize the number of rows in the table view.
     public func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return tlist.topLayoutNames?.count ?? 0
+        return tlist.topLayoutNames.count
     }
 
     func pendingNotificationCount() -> Int {
         var erc = 0
         var src = 0
-        for nsn in tlist.topLayoutReminderCount ?? [] {
+        for nsn in tlist.topLayoutReminderCount {
             erc += nsn
         }
         for (tid, _) in scheduledReminderCounts {
@@ -1652,19 +1665,17 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
         // Configure the cell.
         let row = indexPath.row
-        if row >= tlist.topLayoutIDs?.count ?? 0 {
-            DBGErr("getting toplevel cell for row \(row) but only \(tlist.topLayoutIDs?.count ?? 0) in tlist")
+        if row >= tlist.topLayoutIDs.count {
+            DBGErr("getting toplevel cell for row \(row) but only \(tlist.topLayoutIDs.count) in tlist")
             return cell!
         }
-        let tid = (tlist.topLayoutIDs)?[row]
+        let tid = tlist.topLayoutIDs[row]
         let cellLabel = NSMutableAttributedString()
 
-        let erc = ((tlist.topLayoutReminderCount)?[row] as? NSNumber)?.intValue ?? 0
-        var src: Int? = nil
-        if let tid {
-            src = scheduledReminderCounts[tid] ?? 0
-        }
-        DBGLog(String("src: \(src!)  erc:  \(erc) \(tlist.topLayoutNames![row]) (\(tid!))"))
+        let erc = tlist.topLayoutReminderCount[row]
+        let src = scheduledReminderCounts[tid] ?? 0
+
+        DBGLog(String("src: \(src)  erc:  \(erc) \(tlist.topLayoutNames[row]) (\(tid))"))
         //NSString *formatString = @"%@";
         //UIColor *bg = [UIColor clearColor];
         if erc != src {
@@ -1681,7 +1692,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         //DBGLog(@"erc= %d  src= %d",erc,src);
         //[cellLabel appendAttributedString:
         // [[NSAttributedString alloc]initWithString:(self.tlist.topLayoutNames)[row] attributes:@{NSForegroundColorAttributeName: [UIColor blackColor]}]] ;
-        cellLabel.append(NSAttributedString(string: (tlist.topLayoutNames)?[row] as? String ?? ""))
+        cellLabel.append(NSAttributedString(string: tlist.topLayoutNames[row]))
 
         cell?.textLabel?.attributedText = cellLabel
         cell?.accessibilityIdentifier = "trkr_\(cellLabel.string)"
@@ -1692,7 +1703,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         var tn: String?
         let row = indexPath.row
         if NSNotFound != row {
-            tn = (tlist.topLayoutNames)?[row] as? String
+            tn = tlist.topLayoutNames[row]
         } else {
             tn = "Sample"
         }

@@ -39,10 +39,10 @@ class trackerList: tObjBase {
 
     }*/
 
-    var topLayoutNames: [String]?
-    var topLayoutIDs: [Int]?
-    var topLayoutPriv: [Int]?
-    var topLayoutReminderCount: [Int]?
+    var topLayoutNames: [String] = []
+    var topLayoutIDs: [Int] = []
+    var topLayoutPriv: [Int] = []
+    var topLayoutReminderCount: [Int] = []
 
     //@synthesize tObj;
 
@@ -112,7 +112,8 @@ class trackerList: tObjBase {
     //@property (nonatomic,retain) trackerObj *tObj;
     override init() {
         //DBGLog(@"init trackerList");
-
+        print("init trackerlist")
+        
         super.init()
         topLayoutNames = []
         topLayoutIDs = []
@@ -124,11 +125,11 @@ class trackerList: tObjBase {
 
     func dbgtlist() {
 #if DEBUGLOG
-        let c = topLayoutNames!.count
+        let c = topLayoutNames.count
         DBGLog(String("tlist \(c) privacy= \(privacyValue)"))
         print("n   id   priv   name   (tlist)")
         for i in 0...c-1 {
-            print(String("\(i+1) \(topLayoutIDs![i])  \(topLayoutPriv![i])  \(topLayoutNames![i])"))
+            print(String("\(i+1) \(topLayoutIDs[i])  \(topLayoutPriv[i])  \(topLayoutNames[i])"))
         }
         toQry2Log(sql:"select rank, id, priv, name from toplevel order by rank")
 #endif
@@ -139,10 +140,10 @@ class trackerList: tObjBase {
 
     func loadTopLayoutTable() {
         //DBGTLIST(self);
-        topLayoutNames?.removeAll()
-        topLayoutIDs?.removeAll()
-        topLayoutPriv?.removeAll()
-        topLayoutReminderCount?.removeAll()
+        topLayoutNames.removeAll()
+        topLayoutIDs.removeAll()
+        topLayoutPriv.removeAll()
+        topLayoutReminderCount.removeAll()
 
         //self.sql = @"select * from toplevel";
         //[self toQry2Log];
@@ -150,23 +151,23 @@ class trackerList: tObjBase {
         let sql = String(format: "select id, name, priv, remindercount from toplevel where priv <= %i order by rank;", privacyValue)
         let idnameprivrc = toQry2AryISII(sql: sql)
         for (id, name, priv, rc) in idnameprivrc {
-            topLayoutIDs?.append(id)
-            topLayoutNames?.append(name)
-            topLayoutPriv?.append(priv)
-            topLayoutReminderCount?.append(rc)
+            topLayoutIDs.append(id)
+            topLayoutNames.append(name)
+            topLayoutPriv.append(priv)
+            topLayoutReminderCount.append(rc)
         }
         //self.sql = nil;
-        DBGLog(String("loadTopLayoutTable finished, priv=\(privacyValue) tlt=\(topLayoutNames!)"))
+        DBGLog(String("loadTopLayoutTable finished, priv=\(privacyValue) tlt=\(topLayoutNames)"))
         //DBGTLIST(self);
     }
 
     func add(toTopLayoutTable tObj: trackerObj, nrank: Int? = nil) {
         DBGLog(String("\(tObj.trackerName) toid \(tObj.toid)"))
 
-        topLayoutIDs?.append(tObj.toid)
-        topLayoutNames?.append(tObj.trackerName!)
-        topLayoutPriv?.append(Int(tObj.optDict["privacy"] as? String ?? "1") ?? 1)
-        topLayoutReminderCount?.append(tObj.enabledReminderCount())
+        topLayoutIDs.append(tObj.toid)
+        topLayoutNames.append(tObj.trackerName!)
+        topLayoutPriv.append(Int(tObj.optDict["privacy"] as? String ?? "1") ?? 1)
+        topLayoutReminderCount.append(tObj.enabledReminderCount())
 
         confirmToplevelEntry(tObj, nrank: nrank)
     }
@@ -222,7 +223,7 @@ class trackerList: tObjBase {
         var dbDict = toQry2DictII(sql:"select id, rank from toplevel")  // all trackers even private ones
         
         var nrank = 1
-        for tid in topLayoutIDs! {  // update rank for non-private in TLT
+        for tid in topLayoutIDs {  // update rank for non-private in TLT
             //let orank = dbDict[tid]
             dbDict[tid] = nrank
             nrank += 1
@@ -250,10 +251,10 @@ class trackerList: tObjBase {
         var nrank = 0
         var sql = "delete from toplevel where priv <= \(privacyValue);"
         toExecSql(sql:sql)
-        for tracker in topLayoutNames! {
-            let tid = topLayoutIDs![nrank]
-            let priv = topLayoutPriv![nrank]
-            let rc = topLayoutReminderCount![nrank]
+        for tracker in topLayoutNames {
+            let tid = topLayoutIDs[nrank]
+            let priv = topLayoutPriv[nrank]
+            let rc = topLayoutReminderCount[nrank]
 
             nrank += 1  // arrays above 0-indexed, rank in db non-0 so increment here and cover both.
             
@@ -265,16 +266,16 @@ class trackerList: tObjBase {
     }
 
     func getTIDfromIndex(_ ndx: Int) -> Int {
-        return ((topLayoutIDs)?[ndx] as? NSNumber)?.intValue ?? 0
+        return topLayoutIDs[ndx]
     }
 
     func getPrivFromLoadedTID(_ tid: Int) -> Int {
 
-        let ndx = topLayoutIDs?.firstIndex(of:tid) ?? NSNotFound
+        let ndx = topLayoutIDs.firstIndex(of:tid) ?? NSNotFound
         if NSNotFound == ndx {
             return MAXPRIV
         }
-        return (topLayoutPriv)?[ndx] ?? PRIVDFLT
+        return topLayoutPriv[ndx] // ?? PRIVDFLT
     }
 
     func checkTIDexists(_ tid: NSNumber?) -> Bool {
@@ -286,7 +287,7 @@ class trackerList: tObjBase {
     // return tid for first matching name
     func getTIDfromName(_ str: String?) -> Int {
         var ndx = 0
-        for tname in topLayoutNames ?? [] {
+        for tname in topLayoutNames {
             if tname == str {
                 return getTIDfromIndex(ndx)
             }
@@ -376,31 +377,20 @@ class trackerList: tObjBase {
     func reorderTLT(_ fromRow: Int, toRow: Int) {
         dbgtlist()  // DBGTLIST(self)
 
-        let tName = (topLayoutNames)?[fromRow]
-        let tID = (topLayoutIDs)?[fromRow]
-        let tPriv = (topLayoutPriv)?[fromRow]
-        let tRC = (topLayoutReminderCount)?[fromRow]
+        let tName = topLayoutNames[fromRow]
+        let tID = topLayoutIDs[fromRow]
+        let tPriv = topLayoutPriv[fromRow]
+        let tRC = topLayoutReminderCount[fromRow]
 
-        topLayoutNames?.remove(at: fromRow)
-        topLayoutIDs?.remove(at: fromRow)
-        topLayoutPriv?.remove(at: fromRow)
-        topLayoutReminderCount?.remove(at: fromRow)
+        topLayoutNames.remove(at: fromRow)
+        topLayoutIDs.remove(at: fromRow)
+        topLayoutPriv.remove(at: fromRow)
+        topLayoutReminderCount.remove(at: fromRow)
 
-        if let tName {
-            topLayoutNames?.insert(tName, at: toRow)
-        }
-        if let tID {
-            topLayoutIDs?.insert(tID, at: toRow)
-        }
-        if let tPriv {
-            topLayoutPriv?.insert(tPriv, at: toRow)
-        }
-        if let tRC {
-            topLayoutReminderCount?.insert(tRC, at: toRow)
-        }
-
-
-        //DBGTLIST(self);
+        topLayoutNames.insert(tName, at: toRow)
+        topLayoutIDs.insert(tID, at: toRow)
+        topLayoutPriv.insert(tPriv, at: toRow)
+        topLayoutReminderCount.insert(tRC, at: toRow)
     }
 
     func copy(toConfig srcTO: trackerObj?) -> trackerObj? {
@@ -430,28 +420,28 @@ class trackerList: tObjBase {
     }
 
     func deleteTrackerAllRow(_ row: Int) {
-        if row >= (topLayoutIDs?.count ?? 0) {
+        if row >= topLayoutIDs.count {
             return
         }
 
-        let tid = ((topLayoutIDs)?[row] as? NSNumber)?.intValue ?? 0
+        let tid = topLayoutIDs[row]
         let to = trackerObj(tid)
-        DBGLog(String("delete tracker all name:\(to.trackerName) id:\(to.toid) rowtext= \(topLayoutNames?[row])"))
+        DBGLog(String("delete tracker all name:\(to.trackerName) id:\(to.toid) rowtext= \(topLayoutNames[row])"))
         to.clearScheduledReminders()
         to.deleteTrackerDB()
 
         toExecSql(sql:"delete from toplevel where id=\(tid) and name='\(to.trackerName!)'")
 
-        topLayoutNames?.remove(at: row)
-        topLayoutIDs?.remove(at: row)
-        topLayoutPriv?.remove(at: row)
-        topLayoutReminderCount?.remove(at: row)
+        topLayoutNames.remove(at: row)
+        topLayoutIDs.remove(at: row)
+        topLayoutPriv.remove(at: row)
+        topLayoutReminderCount.remove(at: row)
     }
 
     func deleteTrackerAllTID(_ nsnTID: Int?, name: String?) {
         var row: Int = NSNotFound
         if let nsnTID {
-            row = topLayoutIDs?.firstIndex(of: nsnTID) ?? NSNotFound
+            row = topLayoutIDs.firstIndex(of: nsnTID) ?? NSNotFound
         }
         let tid = nsnTID ?? 0
         let to = trackerObj(tid)
@@ -462,7 +452,7 @@ class trackerList: tObjBase {
     }
 
     func deleteTrackerRecordsRow(_ row: Int) {
-        let tid = ((topLayoutIDs)?[row] as? NSNumber)?.intValue ?? 0
+        let tid = topLayoutIDs[row]
         let to = trackerObj(tid)
         to.deleteTrackerRecordsOnly()
     }
@@ -502,7 +492,7 @@ class trackerList: tObjBase {
     }
 
     func testConflict(_ tname: String?) -> Bool {
-        for n in topLayoutNames ?? [] {
+        for n in topLayoutNames {
             if tname == n {
                 return true
             }

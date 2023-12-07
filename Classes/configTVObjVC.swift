@@ -160,6 +160,10 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         }
     }
 
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
     override func viewDidLoad() {
 
         var name: String?
@@ -582,8 +586,8 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         //imageButton.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
         //imageButton.contentHorizontalAlignment = UIControlContentHorizontalAlignmentRight; //Center;
 
-        if nil != key {
-            wDict[key ?? ""] = button
+        if let key {
+            wDict[key] = button
         }
 
         button.addTarget(target, action: action, for: .touchUpInside)

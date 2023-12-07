@@ -229,6 +229,10 @@ class ppwV: UIView, UITextFieldDelegate {
         }
     }
 
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
     // MARK: -
     // MARK: external api
 

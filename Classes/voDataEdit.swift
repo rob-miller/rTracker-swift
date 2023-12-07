@@ -304,5 +304,7 @@ class voDataEdit: UIViewController, UITextViewDelegate {
         //[vo release];
 
 
+        NotificationCenter.default.removeObserver(self)
+        
     }
 }

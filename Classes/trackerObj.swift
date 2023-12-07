@@ -1037,9 +1037,22 @@ class trackerObj: tObjBase {
 
         fname = "\(trackerName ?? "")_out.plist"
         fpath = rTracker_resource.ioFilePath(fname, access: true)
+
         if !(((dictFromTO() as NSDictionary?)?.write(toFile: fpath, atomically: true)) ?? false) {
+
             DBGErr(String("problem writing file \(fname)"))
             result = false
+            
+            /*
+            let foo = dictFromTO() as NSDictionary?
+            do {
+                let plistData = try PropertyListSerialization.data(fromPropertyList: (dictFromTO() as NSDictionary?), format: .xml, options: 0)
+                try plistData.write(to: URL(fileURLWithPath: fpath))
+            } catch {
+                print("Error writing plist to file: \(error)")
+            }
+             */
+
         } else {
             //[rTracker_resource protectFile:fpath];
         }
@@ -1194,15 +1207,9 @@ class trackerObj: tObjBase {
                             var voStr = ""
                             if vo.vtype == VOT_CHOICE {
                                 voStr = ((vo.optDict)["c\(i)"]) ?? ""
-                                /*
-                                 if nil == voStr {
-                                    voStr = ""
-                                }
-                                */
+                                // got "" if no choice at this position, "" is valid place holder so write
                             }
-                            if voStr != "" {
-                                outString = outString + ",\(csvSafe(voStr) ?? "")"
-                            }
+                            outString = outString + ",\(csvSafe(voStr) ?? "")"
                         }
                     }
                     outString = outString + "\n"
@@ -1370,9 +1377,10 @@ class trackerObj: tObjBase {
                     if "" != val2Store {
                         // could still be config data for choice or bool, timestamp not needed
                         if (VOT_CHOICE == valobjType) || (VOT_BOOLEAN == valobjType) {
-                            let vo = getValObj(valobjID)!
-                            val2Store = vo.vos!.mapCsv2Value(val2Store!) // updates dict val for bool; for choice maps to choice number, adds choice to dict if needed
-                            saveVoOptdict(vo)
+                            if let vo = getValObj(valobjID) {
+                                val2Store = vo.vos!.mapCsv2Value(val2Store!) // updates dict val for bool; for choice maps to choice number, adds choice to dict if needed
+                                saveVoOptdict(vo)
+                            }
                         }
                         // rtm TODO: should add function def string to rtcsv data
                     }
@@ -1746,7 +1754,7 @@ class trackerObj: tObjBase {
         let calendar = Calendar.current
 
         var dayAdd = 0
-        while dayAdd < 7 {
+        while dayAdd < 8 {
             var components = calendar.dateComponents([.year, .month, .day], from: baseDate)
             components.day! += dayAdd
 
@@ -1835,7 +1843,7 @@ class trackerObj: tObjBase {
         // ensure we can set notifications or all pointless
         rTracker_resource.setNotificationsEnabled()
         
-        // get singel start time or list of times between start/until and equal interfals or random
+        // get single start time or list of times between start/until and equal interfals or random
         var timeSet:[Int] = []
         if !nr!.untilEnabled {
             timeSet.append(nr!.start)

@@ -88,7 +88,7 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
 
         DBGLog("export all")
         let navframe = navigationController?.navigationBar.frame
-        rTracker_resource.alert("exporting trackers", msg: "_out.csv and _out.plist files are being saved to the rTracker Documents directory on this device.  Access them through iTunes/Finder on your PC/Mac, or with a program like iExplorer from Macroplant.com.  Import by changing the names to _in.csv and _in.plist, and read about .rtcsv file import capabilities in the help pages.\n\nNote: All private (hidden) data has been saved to output files.", vc: self)
+        rTracker_resource.alert("exporting trackers", msg: "_out.csv and _out.plist files are being saved to the rTracker Documents directory on this device\(rTracker_resource.getRtcsvOutput() ? " in rtCSV format" : "").  Access them through iTunes/Finder on your PC/Mac, or with a program like iExplorer from Macroplant.com.  Import by changing the names to _in.csv and _in.plist, and read about .rtcsv file import capabilities in the help pages.\n\nNote: All private (hidden) data has been saved to output files.", vc: self)
         rTracker_resource.startProgressBar(view, navItem: navigationItem, disable: true, yloc: (navframe?.size.height ?? 0.0) + (navframe?.origin.y ?? 0.0))
 
         Thread.detachNewThreadSelector(#selector(startExport), toTarget: self, with: nil)
@@ -297,7 +297,7 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
 
     // Customize the number of rows in the table view.
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return tlist?.topLayoutNames?.count ?? 0
+        return tlist?.topLayoutNames.count ?? 0
     }
 
     // Customize the appearance of table view cells.
@@ -316,7 +316,7 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
 
         // Configure the cell.
         let row = indexPath.row
-        cell.textLabel?.text = tlist!.topLayoutNames![row]
+        cell.textLabel?.text = tlist!.topLayoutNames[row]
         cell.textLabel?.textColor = .label
         cell.accessibilityIdentifier = "configt_\(cell.textLabel!.text!)"
         return cell

@@ -28,66 +28,6 @@ import UIKit
 // MARK: -
 // MARK: total db methods
 
-//- (sqlite3*) tDb {
-//    return _tDb;  // don't auto-allocate; allow to be nil
-//}
-
-/*
-- (NSString *) trackerDbFilePath {
-	NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);  // file itunes accessible
-	//NSArray *paths = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask, YES);  // files not accessible
-	NSString *docsDir = [paths objectAtIndex:0];
-	return [docsDir stringByAppendingPathComponent:self.dbName];
-}
-*/
-/*
-private func col_str_flt(_ udp: UnsafeMutableRawPointer?, _ lenA: Int, _ strA: UnsafeRawPointer?, _ lenB: Int, _ strB: UnsafeRawPointer?) -> Int {
-    // strAm strB not guaranteed to be null-terminated
-
-    //double va = atof(strA);
-    //double vb = atof(strB);
-    let astr = UnsafePointer<Int8>(Int8(strA ?? 0))
-    let bstr = UnsafePointer<Int8>(Int8(strB ?? 0))
-    var ta = Int8((astr[lenA - 1]) ?? 0)
-    var tb = Int8((bstr[lenB - 1]) ?? 0)
-    let va = strtod(strA, &ta)
-    let vb = strtod(strB, &tb)
-    var r = 0
-    if va > vb {
-        r = 1
-    }
-    if va < vb {
-        r = -1
-    }
-    //DBGLog(@"a= %f  b= %f  r= %d",va,vb,r);
-
-    return r
-}
-*/
-/*
-func col_str_flt(_ udp: UnsafeMutableRawPointer?, _ lenA: Int32, _ strA: UnsafeRawPointer?, _ lenB: Int32, _ strB: UnsafeRawPointer?) -> Int32 {
-    guard let strA = strA?.assumingMemoryBound(to: CChar.self), let strB = strB?.assumingMemoryBound(to: CChar.self) else {
-        return 0
-    }
-    
-    // strAm strB not guaranteed to be null-terminated
-    
-    let astr = strA.advanced(by: Int(lenA) - 1)
-    let bstr = strB.advanced(by: Int(lenB) - 1)
-    let va = Double(String(cString: astr))
-    let vb = Double(String(cString: bstr))
-    var r = 0
-    if va! > vb! {
-        r = 1
-    }
-    if va! < vb! {
-        r = -1
-    }
-    //DBGLog(@"a= %f  b= %f  r= %d",va,vb,r);
-    
-    return Int32(r)
-}
-*/
 // gpt-4 version
 func col_str_flt(udp: UnsafeMutableRawPointer?, lenA: Int32, strA: UnsafeRawPointer?, lenB: Int32, strB: UnsafeRawPointer?) -> Int32 {
     
@@ -110,18 +50,13 @@ func col_str_flt(udp: UnsafeMutableRawPointer?, lenA: Int32, strA: UnsafeRawPoin
 }
 
 class tObjBase: NSObject {
-    /*{
 
-    	NSInteger toid;
-    	NSString *dbName;
-    	NSString *sql;
-    	sqlite3 *tDb;
-    	int tuniq;
-    }*/
+    static var dbConnections: [Int: OpaquePointer?] = [:]
+    
     var toid = 0
     //@property (nonatomic, strong) NSString *sql;
     var dbName: String?
-    var tDb: OpaquePointer? = nil // sqlite3?
+    var tDb: OpaquePointer? = nil
     var tuniq = 0
 
     //sqlite3 *tDb;
@@ -149,17 +84,14 @@ class tObjBase: NSObject {
 
     deinit {
         //DBGLog(@"dealloc tObjBase: %@  id=%d",self.dbName,self.toid);
-
-        //UIApplication *app = [UIApplication sharedApplication];
+        closeTDb()
+        
         NotificationCenter.default.removeObserver(
             self,
             name: UIApplication.willTerminateNotification,
             object: nil)
-        //object:app];
-        closeTDb()
 
-
-
+        NotificationCenter.default.removeObserver(self)
 
     }
 
@@ -173,23 +105,30 @@ class tObjBase: NSObject {
         dbgNSAssert(dbName != nil, "getTDb called with no dbName set")
 
         if tDb != nil {
-            return // don't instantiate if already open
+            return // don't instantiate if already open  .. don't think this can happen
         }
-
+        
+        // Check if a connection for this tid already exists
+        if let existingConnection = tObjBase.dbConnections[toid] {
+            tDb = existingConnection
+            return
+        }
+        
         if sqlite3_open_v2(
             rTracker_resource.ioFilePath(dbName!, access: DBACCESS),
             &tDb,
             SQLITE_OPEN_FILEPROTECTION_COMPLETE | SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, nil) != SQLITE_OK {
             if let errorPointer = sqlite3_errmsg(tDb) {
                     let errorMessage = String(cString: errorPointer)
-                    DBGErr("SQLite error: \(errorMessage)")
+                    DBGErr("SQLite error: \(errorMessage) \(dbName ?? "dbname is nil!")")
                 } else {
                     DBGErr("SQLite error with unknown error message")
                 }
             sqlite3_close(tDb)
             dbgNSAssert(false, "error opening rTracker database \(dbName!)")
         } else {
-            DBGLog(String("opened tDb \(dbName)"))
+            DBGLog(String("opened tDb \(dbName) tDb= \(tDb)"))
+
             var c: Int
             toExecSql(sql:"create table if not exists uniquev (id integer primary key, value integer);")
             c = toQry2Int(sql:"select count(*) from uniquev where id=0;")!
@@ -198,19 +137,10 @@ class tObjBase: NSObject {
                 DBGLog("init uniquev")
                 toExecSql(sql:"insert into uniquev (id, value) values (0, 1);")
             }
-            /*
-            #if DEBUGLOG
-                    else {
-            		sql = @"select value from uniquev where id=0;";
-            			c = [self toQry2Int:sql];
-            			DBGLog(@"uniquev= %d",c);
-            		}
-            #endif
-            */
-            //self.sql = nil;
-
 
             sqlite3_create_collation(tDb, "CMPSTRDBL", SQLITE_UTF8, nil, col_str_flt) // set how comparisons will be done on this database
+
+            tObjBase.dbConnections[toid] = tDb  // log successful open connection
 
             let app = UIApplication.shared // add callback to close database on app terminate
             NotificationCenter.default.addObserver(
@@ -231,24 +161,33 @@ class tObjBase: NSObject {
     */
 
     func deleteTDb() {
-        DBGLog(String("deleteTDb dbName= \(dbName!) id=\(toid)"))
-        dbgNSAssert(dbName != nil && dbName != "", "deleteTDb called with no dbName set")
-        sqlite3_close(tDb)
-        tDb = nil
-        if rTracker_resource.deleteFile(atPath: rTracker_resource.ioFilePath(dbName!, access: DBACCESS)) {
-            dbName = nil
+        DBGLog(String("deleteTDb dbName= \(dbName ?? "") id=\(toid)"))
+        guard let _ = dbName else {
+            DBGWarn("deleteTDb called for tid \(toid) with no dbName set")
+            return
+        }
+        //dbgNSAssert(dbName != nil && dbName != "", "deleteTDb called with no dbName set")
+        
+        closeTDb()
+        
+        if rTracker_resource.deleteFile(atPath: rTracker_resource.ioFilePath(self.dbName, access: DBACCESS)) {
+            DBGLog("deleteTDb  deleted \(dbName!)")
+            self.dbName = nil
         } else {
-            DBGErr(String("error removing tDb named \(dbName!)"))
+            DBGErr(String("error removing tDb named \(self.dbName)"))
         }
     }
 
     func closeTDb() {
-        if tDb != nil {
-            sqlite3_close(tDb)
-            tDb = nil
-            DBGLog(String("closed tDb: \(dbName!)"))
-        //} else {
-            // DBGLog(String("hey! tdb close when tDb already closed \(dbName!)"))
+        if let db = tDb {
+            if sqlite3_close(tDb) == SQLITE_OK {
+                tObjBase.dbConnections[toid] = nil
+                tDb = nil
+                DBGLog("closeTDb closed \(dbName!) tdb= \(db)")
+                DBGLog(String("closed tDb: \(dbName!) tdb= \(db)"))
+            } else {
+                DBGErr("failed to close databae \(dbName!) tDb \(tDb!)")
+            }
         }
     }
 
@@ -565,10 +504,10 @@ class tObjBase: NSObject {
                 SQLDbg(String("  rslt: \(sqlite3_column_int(stmt, 0)) -> \(dict[Int(sqlite3_column_int(stmt, 0))])"))
             }
             //tobDoneCheck(rslt, sql: sql)
+            sqlite3_finalize(stmt)
         } else {
             tobPrepError(sql)
         }
-        sqlite3_finalize(stmt)
         SQLDbg(String("  returns \(dict)"))
         return dict
     }
@@ -590,10 +529,10 @@ class tObjBase: NSObject {
                 SQLDbg(String("  rslt: \(sqlite3_column_int(stmt, 0)) "))
             }
             //tobDoneCheck(rslt, sql: sql)
+            sqlite3_finalize(stmt)
         } else {
             tobPrepError(sql)
         }
-        sqlite3_finalize(stmt)
         objc_sync_exit(self)
         SQLDbg(String("  returns \(set)"))
         return set
@@ -614,10 +553,10 @@ class tObjBase: NSObject {
                 i2 = Int(sqlite3_column_int(stmt, 1))
                 SQLDbg(String("  rslt: \(i1) \(i2)"))
             }
+            sqlite3_finalize(stmt)
         } else {
             tobPrepError(sql)
         }
-        sqlite3_finalize(stmt)
         SQLDbg(String("  returns \(i1) \(i2)"))
                        
         return (i1, i2)
@@ -639,10 +578,10 @@ class tObjBase: NSObject {
                     i3 = Int(sqlite3_column_int(stmt, 2))
                     SQLDbg(String("  rslt: \(i1) \(i2) \(i3)"))
                 }
+                sqlite3_finalize(stmt)
             } else {
                 tobPrepError(sql)
             }
-            sqlite3_finalize(stmt)
             SQLDbg(String("  returns \(i1) \(i2) \(i3)"))
                            
             return (i1, i2, i3)
@@ -661,15 +600,16 @@ class tObjBase: NSObject {
             while sqlite3_step(stmt) == SQLITE_ROW {
                 irslt = Int(sqlite3_column_int(stmt, 0))
             }
+            sqlite3_finalize(stmt)
         } else {
             tobPrepError(sql)
         }
-        sqlite3_finalize(stmt)
         SQLDbg("  returns \(irslt)")
 
         return irslt
     }
 
+    /*
     func toQry2Str(sql: String) -> String? {
         SQLDbg(String("toQry2StrCopy: \(dbName!) => _\(sql)_"))
         guard let tDb = tDb else {
@@ -691,16 +631,44 @@ class tObjBase: NSObject {
                 tobExecError(sql)
             }
             //[self tobDoneCheck:rslt];
+            sqlite3_finalize(stmt)
         } else {
             tobPrepError(sql)
         }
-        sqlite3_finalize(stmt)
         objc_sync_exit(self)
         SQLDbg(String("  returns _\(srslt ?? "nil")_"))
 
         return srslt
     }
+     */
+    
+    func toQry2Str(sql: String) -> String? {
+        SQLDbg(String("toQry2StrCopy: \(dbName!) => _\(sql)_"))
+        guard let tDb = tDb else {
+            dbgNSAssert(false, "toQry2StrCopy called with no tDb")
+            return nil
+        }
 
+        var stmt: OpaquePointer?
+        var srslt : String?
+        
+        if sqlite3_prepare_v2(tDb, sql, -1, &stmt, nil) == SQLITE_OK {
+            while sqlite3_step(stmt) == SQLITE_ROW {
+                let textPointer = sqlite3_column_text(stmt, 0)
+                if let textPointer = textPointer {
+                    srslt = rTracker_resource.fromSqlStr(String(cString: textPointer))
+                }
+            }
+            //[self tobDoneCheck:rslt];
+            sqlite3_finalize(stmt)
+        } else {
+            tobPrepError(sql)
+        }
+        //objc_sync_exit(self)
+        SQLDbg(String("  returns _\(srslt ?? "nil")_"))
+
+        return srslt
+    }
     func toQry2I12aS1(sql: String) -> ([Int], String)? {
 
         SQLDbg(String("toQry2AryI11S1: \(dbName!) => _\(sql)_"))
@@ -724,10 +692,10 @@ class tObjBase: NSObject {
                 }
                 SQLDbg(String("  rslt: \(arr[0]) \(arr[1]) \(arr[2]) \(arr[3]) \(arr[4]) \(arr[5]) \(arr[6]) \(arr[7]) \(arr[8]) \(arr[9]) \(arr[10]) \(arr[11]) \(srslt)"))
             }
+            sqlite3_finalize(stmt)
         } else {
             tobPrepError(sql)
         }
-        sqlite3_finalize(stmt)
         SQLDbg(String("  returns \(arr[0]) \(arr[1]) \(arr[2]) \(arr[3]) \(arr[4]) \(arr[5]) \(arr[6]) \(arr[7]) \(arr[8]) \(arr[9]) \(arr[10]) \(arr[11]) \(srslt)"))
         return (arr, srslt)
     }
@@ -746,10 +714,10 @@ class tObjBase: NSObject {
             while sqlite3_step(stmt) == SQLITE_ROW {
                 frslt = Float(sqlite3_column_double(stmt, 0))
             }
+            sqlite3_finalize(stmt)
         } else {
             tobPrepError(sql)
         }
-        sqlite3_finalize(stmt)
         SQLDbg(String("  returns \(frslt)"))
 
         return frslt
@@ -770,10 +738,10 @@ class tObjBase: NSObject {
             while sqlite3_step(stmt) == SQLITE_ROW {
                 drslt = sqlite3_column_double(stmt, 0)
             }
+            sqlite3_finalize(stmt)
         } else {
             tobPrepError(sql)
         }
-        sqlite3_finalize(stmt)
         SQLDbg("  returns \(drslt)")
 
         return drslt
@@ -791,10 +759,10 @@ class tObjBase: NSObject {
             if sqlite3_step(stmt) != SQLITE_DONE {
                 tobExecError(sql)
             }
+            sqlite3_finalize(stmt)
         } else {
             tobPrepError(sql)
         }
-        sqlite3_finalize(stmt)
     }
 
     // so we can ignore error when adding column
@@ -809,8 +777,8 @@ class tObjBase: NSObject {
 
         if sqlite3_prepare_v2(tDb, sql, -1, &stmt, nil) == SQLITE_OK {
             sqlite3_step(stmt)
+            sqlite3_finalize(stmt)
         }
-        sqlite3_finalize(stmt)
     }
 
     func toQry2Log(sql: String) {
@@ -843,10 +811,11 @@ class tObjBase: NSObject {
                 print("\(cols)")
             }
             //tobDoneCheck(rslt, sql: sql)
+            sqlite3_finalize(stmt)
         } else {
             tobPrepError(sql)
         }
-        sqlite3_finalize(stmt)
         #endif
     }
 }
+

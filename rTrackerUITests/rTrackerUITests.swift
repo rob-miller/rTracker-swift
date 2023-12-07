@@ -20,6 +20,8 @@ final class rTrackerUITests: XCTestCase {
         // In UI tests it is usually best to stop immediately when a failure occurs.
         continueAfterFailure = false
         
+        app.launchArguments += ["-AppleLanguages", "(en)"]
+        app.launchArguments += ["-AppleLocale", "en_US"]
         app.launch()
         // In UI tests it’s important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
         
@@ -117,7 +119,7 @@ final class rTrackerUITests: XCTestCase {
         
         let tdate = app.buttons["trkrDate"]
         //print(tdate.label)
-        XCTAssertEqual(tdate.label, "18/12/2014, 01:16")
+        XCTAssertEqual(tdate.label, "12/18/14, 1:16 AM")
         app.buttons["< rTracker"].tap()
     }
     

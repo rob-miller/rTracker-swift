@@ -46,6 +46,7 @@ class vogd: NSObject {
     var maxVal = 0.0
     var vScale = 0.0
     var yZero: CGFloat = 0.0
+    var choiceCount = 0
 
     
     init(_ inVO: valueObj) {
@@ -111,6 +112,7 @@ class vogd: NSObject {
         } else if vo.vtype == VOT_CHOICE {
             minVal = d(0)
             maxVal = d(0)
+            choiceCount = 0
             var c = 0
             for i in 0..<CHOICES {
                 let key = "cv\(i)"
@@ -127,25 +129,26 @@ class vogd: NSObject {
                     if maxVal < tval {
                         maxVal = tval
                     }
-                } else if nil != tstStr {
+                } else if "" != tstStr {
                     c += 1
                 }
             }
+            choiceCount = c  // +1 but zero-indexed
             if minVal == maxVal {
                 // if no cv values set above, default to choice numbers
                 minVal = d(1)
-                maxVal = d(CHOICES)
+                maxVal = d(choiceCount)  // CHOICES
             }
             #if GRAPHDBG
             DBGLog(String("minVal= \(minVal) maxVal= \(maxVal)"))
             #endif
 
-            let step = (maxVal - minVal) / Double(c) //  CHOICES;
+            let step = (maxVal - minVal) / Double(choiceCount-1) //  CHOICES;
             minVal -= step //( d( YTICKS - CHOICES ) /2.0 ) * step;   // YTICKS=7, CHOICES=6, so need blank positions at top and bottom
-            maxVal += step * d(YTICKS - Double(c)) // step ; //( d( YTICKS - CHOICES ) /2.0 ) * step;
+            maxVal += step * d(YTICKS - Double(choiceCount-1)) // step ; //( d( YTICKS - CHOICES ) /2.0 ) * step;
             #if GRAPHDBG
-            DBGLog(String("minVal= \(minVal) maxVal= \(maxVal)"))
-            //DBGLog(@"Foo");
+            DBGLog(String("\(inVO.valueName) minVal= \(minVal) maxVal= \(maxVal) step = \(step)"))
+            DBGLog("Foo");
             #endif
         } else {
             // number or function with autoscale
@@ -202,7 +205,7 @@ class vogd: NSObject {
         for (ni, nv) in idrslt {
 
             #if GRAPHDBG
-            DBGLog(String("i: \(ni)  f: \(nv)"))
+            //DBGLog(String("i: \(ni)  f: \(nv)"))
             #endif
             var d = Double(ni) // date as int secs cast to float
             var v = Double(nv) // val as float

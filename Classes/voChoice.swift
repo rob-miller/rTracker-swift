@@ -537,21 +537,22 @@ class voChoice: voState {
         DBGLog(String("inCsv= \(inCsv)"))
         for ndx in 0..<count {
             let key = "c\(ndx)"
-            let val = vo.optDict[key]
-            if nil != val {
-                maxc = ndx
-                if let lc = vo.optDict["cc\(ndx)"] {
-                    lastColor = Int(lc)!
-                }
-                if val == inCsv {
-                    //DBGLog(@"matched, returning %d",ndx+1);
-                    //return [NSString stringWithFormat:@"%d",ndx+1];    // found match, return 1-based index and be done
-                    // change for can spec value for choice
-                    DBGLog(String("matched, ndx=\(ndx)"))
-                    let key = "cv\(ndx)"
-                    return vo.optDict[key] ?? String("\(ndx+1)")
-                } else if (-1 == firstBlank) && ("" == val) {
-                    firstBlank = ndx
+            if let val = vo.optDict[key] {
+                if "" != val {
+                    maxc = ndx
+                    if let lc = vo.optDict["cc\(ndx)"] {
+                        lastColor = Int(lc)!
+                    }
+                    if val == inCsv {
+                        //DBGLog(@"matched, returning %d",ndx+1);
+                        //return [NSString stringWithFormat:@"%d",ndx+1];    // found match, return 1-based index and be done
+                        // change for can spec value for choice
+                        DBGLog(String("matched, ndx=\(ndx)"))
+                        let key = "cv\(ndx)"
+                        return vo.optDict[key] ?? String("\(ndx+1)")
+                    } else if (-1 == firstBlank) && ("" == val) {
+                        firstBlank = ndx
+                    }
                 }
             }
         }

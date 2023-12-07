@@ -119,6 +119,10 @@ class gtYAxV: UIView {
         let svHeight = graphSV!.contentSize.height
         let svOffsetY = svHeight - (graphSV!.frame.size.height + graphSV!.contentOffset.y)
         let unitsPerSVY = d(vogd!.maxVal - vogd!.minVal) / svHeight
+        
+        let vtype = vogd?.vo.vtype ?? 0
+
+        
         let startUnit = (vogd?.minVal ?? 0.0) + (svOffsetY * unitsPerSVY)
         let finUnit = (vogd?.minVal ?? 0.0) + ((svOffsetY + (graphSV?.frame.size.height ?? 0.0)) * unitsPerSVY)
 
@@ -135,7 +139,6 @@ class gtYAxV: UIView {
         let x1 = x0 - TICKLEN
         let x2 = x1 - 3.0
 
-        let vtype = vogd?.vo.vtype ?? 0
         var fmt = "%0.2f"
 
         /*
@@ -172,6 +175,7 @@ class gtYAxV: UIView {
                     vtChoiceSetColor(context, ndx: choice)
                     let ch = "c\(choice)"
                     vstr = vogd?.vo.optDict[ch] as? String
+                    DBGLog("i= \(i) ch= \(ch)  vstr= \(vstr!) val= \(val)")
                 }
             case VOT_BOOLEAN:
                 if 1 == i {

@@ -370,6 +370,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         devc = nil
 
         //self.alphaArray = nil;
+        NotificationCenter.default.removeObserver(self)
     }
 
     @objc func tbBtnAction(_ sender: Any?) {

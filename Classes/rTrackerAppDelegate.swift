@@ -264,6 +264,11 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
 
         return true
     }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
 
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
 
@@ -297,7 +302,7 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
             let tlist = rootController.tlist
             tlist.loadTopLayoutTable()
 
-            if tlist.topLayoutIDs!.contains(tid) {
+            if tlist.topLayoutIDs.contains(tid) {
                 rootController.performSelector(onMainThread: #selector(rootController.doOpenTracker(_:)), with: tid, waitUntilDone: false)
             } else {
                 rTracker_resource.alert("no tracker found", msg: "No tracker with ID \(tid) found in \(bdn).  Edit the tracker, tap the ⚙, and look in 'database info' for the tracker id.", vc: rootController)

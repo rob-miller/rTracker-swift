@@ -499,6 +499,10 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         super.viewDidAppear(animated)
     }
 
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
     override func viewWillDisappear(_ animated: Bool) {
         viewDisappearing = true
         /*
