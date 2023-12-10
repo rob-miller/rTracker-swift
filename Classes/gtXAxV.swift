@@ -58,7 +58,7 @@ class gtXAxV: UIView {
         MoveTo(context!, scaleOriginX, 0.0)
         AddLineTo(context!, scaleWidthX, 0.0)
         //Stroke
-
+        context!.strokePath()
         drawXAxis(context)
     }
 
@@ -84,13 +84,12 @@ class gtXAxV: UIView {
         var nextXd = -2 * DOFFST
 
         for i in 1...Int(XTICKS) {
-            var x = d(i) * step
+            var x = CGFloat(d(i) * step)
             var y: CGFloat = 0.0 // self.bounds.size.height - BORDER;
             MoveTo(context!, x, y)
             y += TICKLEN
-            //if (i>0)  // from when 1st tick at origin
             AddLineTo(context!, x, y)
-
+            
             y += 1.0 // skip space to time label
             let y2 = y + 4.0 // hack to lengthen ticks where date label can be drawn
             let x2 = x
@@ -151,6 +150,7 @@ class gtXAxV: UIView {
             }
         }
 
+        context!.strokePath()
         //Stroke
     }
 

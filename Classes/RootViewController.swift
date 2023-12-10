@@ -196,7 +196,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         let docsDir = rTracker_resource.ioFilePath(nil, access: true)
         let localFileManager = FileManager.default
         var newRtcsvTracker = false
-
+        
         //let files = try localFileManager.contentsOfDirectory(atPath: docsDir)
         let directoryURL = URL(fileURLWithPath: docsDir)
         let enumerator = localFileManager.enumerator(at: directoryURL, includingPropertiesForKeys: [.isDirectoryKey], options: [])
@@ -205,83 +205,98 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         while let url = enumerator?.nextObject() as? URL {
             files.append(url.lastPathComponent)
         }
-        for fileName in files {
-            let fullPath = URL(fileURLWithPath: docsDir).appendingPathComponent(fileName)
-            var to: trackerObj? = nil
-            let fname = URL(fileURLWithPath: fileName).lastPathComponent
-            var tname: String? = nil
-            var validMatch = false
-            var loadObj: String?
-
-            switch fullPath.pathExtension {
-            case "csv":
-                loadObj = "_in.csv"
-                if fileName.hasSuffix("_in.csv") {
-                    validMatch = true
-                }
-            case "rtcsv":
-                loadObj = "_in.rtcsv"
-                if fileName.hasSuffix(loadObj!) {
-                    validMatch = true
-                } else {
-                    loadObj = ".rtcsv"  // accept _in above, already know it has .rtcsv extension
-                    validMatch = true
-                }
-            default:
-                continue
-            }
-
-            if validMatch {
-                tname = String(fileName.dropLast(loadObj!.count))  // String(fileName.prefix(fileName.count - (loadObj!.count + 1))) // Removing suffix
-                DBGLog("\(loadObj!) load input: \(fname) as \(tname!)")
-                jumpMaxPriv()
-                tlist.loadTopLayoutTable()
-                let tid = tlist.getTIDfromName(tname)
-                if tid != 0 {
-                    to = trackerObj(tid)
-                    DBGLog("found existing tracker tid \(tid) with matching name")
-                } else if fullPath.pathExtension == "rtcsv" {
-                    to = trackerObj()
-                    to?.trackerName = tname
-                    to?.toid = tlist.getUnique()
-                    to?.saveConfig()
-                    tlist.add(toTopLayoutTable: to!)
-                    newRtcsvTracker = true
-                    DBGLog("created new tracker for rtcsv, id= \(to!.toid)")
-                }
-                restorePriv()
-                tlist.loadTopLayoutTable()
-                if let to = to {
-                    safeDispatchSync { [self] in
-                        rTracker_resource.startActivityIndicator(view, navItem: nil, disable: false, str: "loading \(tname ?? "")...")
-                    }
-
-                    do {
-                        let csvString = try String(contentsOfFile: fullPath.path, encoding: .utf8)
-                        safeDispatchSync { [self] in
-                            UIApplication.shared.isIdleTimerDisabled = true
-                            //jumpMaxPriv()  just needed to get in tracker list above
-                            doCSVLoad(csvString, to: to, fname: fname)
-                            //restorePriv()
-                            do {
-                                try localFileManager.removeItem(at: fullPath)
-                            } catch {
-                                DBGWarn("Error deleting file \(fname): \(error)")
-                            }
-                            UIApplication.shared.isIdleTimerDisabled = false
+        
+        safeDispatchSync { [self] in
+            jumpMaxPriv()
+            tlist.loadTopLayoutTable()  // runs on main queue
+            DispatchQueue.global(qos: .userInitiated).async { [self] in  // all this in background queue
+                
+                for fileName in files {
+                    let fullPath = URL(fileURLWithPath: docsDir).appendingPathComponent(fileName)
+                    var to: trackerObj? = nil
+                    let fname = URL(fileURLWithPath: fileName).lastPathComponent
+                    var tname: String? = nil
+                    var validMatch = false
+                    var loadObj: String?
+                    
+                    switch fullPath.pathExtension {
+                    case "csv":
+                        loadObj = "_in.csv"
+                        if fileName.hasSuffix("_in.csv") {
+                            validMatch = true
                         }
-                    } catch {
-                        DBGWarn("Error reading or deleting file \(fname): \(error)")
+                    case "rtcsv":
+                        loadObj = "_in.rtcsv"
+                        if fileName.hasSuffix(loadObj!) {
+                            validMatch = true
+                        } else {
+                            loadObj = ".rtcsv"  // accept _in above, already know it has .rtcsv extension
+                            validMatch = true
+                        }
+                    default:
+                        continue
                     }
-
-                    safeDispatchSync { [self] in
-                        rTracker_resource.finishActivityIndicator(view, navItem: nil, disable: false)
+                    
+                    if validMatch {
+                        tname = String(fileName.dropLast(loadObj!.count))
+                        let tid = tlist.getTIDfromName(tname)
+                        if tid != 0 {
+                            to = trackerObj(tid)
+                            DBGLog("found existing tracker tid \(tid) with matching name")
+                        } else if fullPath.pathExtension == "rtcsv" {
+                            to = trackerObj()
+                            to?.trackerName = tname
+                            to?.toid = tlist.getUnique()
+                            to?.saveConfig()
+                            tlist.add(toTopLayoutTable: to!)
+                            newRtcsvTracker = true
+                            DBGLog("created new tracker for rtcsv, id= \(to!.toid)")
+                        }
+                        
+                        if let to = to {
+                            safeDispatchSync { [self] in
+                                rTracker_resource.startActivityIndicator(self.view, navItem: nil, disable: false, str: "loading \(tname ?? "")...")
+                                UIApplication.shared.isIdleTimerDisabled = true
+                                //print("activity indicator \(tname ?? "tname nil")")
+                            }
+                            do {
+                                
+                                let csvString = try String(contentsOfFile: fullPath.path, encoding: .utf8)
+                                //jumpMaxPriv()  just needed to get in tracker list above
+                                self.doCSVLoad(csvString, to: to, fname: fname)
+                                //print("back from csv load \(tname ?? "tname nil")")
+                                //restorePriv()
+                                do {
+                                    try localFileManager.removeItem(at: fullPath)
+                                } catch {
+                                    DBGWarn("Error deleting file \(fname): \(error)")
+                                }
+                                DispatchQueue.main.async { [self] in
+                                    UIApplication.shared.isIdleTimerDisabled = false
+                                    // Stop activity indicator and any other UI updates
+                                    rTracker_resource.finishActivityIndicator(view, navItem: nil, disable: false)
+                                    //print("stop activity indicator \(tname ?? "tname nil")")
+                                }
+                            } catch {
+                                DispatchQueue.main.async {
+                                    UIApplication.shared.isIdleTimerDisabled = false
+                                    DBGWarn("Error processing file \(fname): \(error)")
+                                    rTracker_resource.finishActivityIndicator(self.view, navItem: nil, disable: false)
+                                    //print("error stop activity indicator \(tname ?? "tname nil")")
+                                }
+                            }
+                        }
                     }
                 }
-            }
-        }
-
-
+                // still on background queue
+                restorePriv()
+                tlist.loadTopLayoutTable()  // runs on main queue
+                safeDispatchSync {
+                    refreshToolBar(true)
+                }
+                
+            }  // end of background queue
+        }  // end of main queue
 
         if newRtcsvTracker {
             refreshViewPart2()
@@ -1545,6 +1560,10 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         if PVNOSHOW != privacyObj.showing {
             return
         }
+        if privacyObj.jmpriv {
+            return
+        }
+        
         var ctlc: configTlistController?
         ctlc = configTlistController(nibName: "configTlistController", bundle: nil)
         ctlc?.tlist = tlist
@@ -1751,10 +1770,15 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     public func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
 
         
-        if _privacyObj != nil && PVNOSHOW != privacyObj.showing {
-            return
+        if _privacyObj != nil {
+            if PVNOSHOW != privacyObj.showing {
+                return
+            }
+            if privacyObj.jmpriv {
+                return
+            }
         }
-
+        
         //NSUInteger row = [indexPath row];
         //DBGLog(@"selected row %d : %@", row, [self.tlist.topLayoutNames objectAtIndex:row]);
         

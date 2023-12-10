@@ -26,7 +26,7 @@ import UIKit
  */
 
 
-let GFXHDEBUG = 0
+// let GFXHDEBUG = 1  // control in project - targets rTracker - swift compiler custom flags - active compilation conditions
 
 func CGPush(_ c: CGContext) {
     c.saveGState()

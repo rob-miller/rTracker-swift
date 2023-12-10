@@ -131,19 +131,8 @@ class voChoice: voState {
             }
             #if DEBUGLOG
             let chTitle = segmentedControl?.titleForSegment(at: segNdx)
-            DBGLog(String("get v for seg title \(chTitle) ndx \(UInt(segNdx)) rslt \(rslt)")) // why tf not just return fn on segNdx?
+            DBGLog(String("get v= \(rslt) for seg title \(chTitle) ndx \(UInt(segNdx)) rslt \(rslt)")) // why tf not just return fn on segNdx?
             #endif
-            /*
-                    for (i=0; i<CHOICES;i++) {
-                        NSString *key = [NSString stringWithFormat:@"c%d",i];
-                        NSString *val = [self.vo.optDict objectForKey:key];
-                        if ([val isEqualToString:chTitle]) {
-                            rslt = [NSString stringWithFormat:@"%d",i+1];  // disabled = 0 = no selection; all else gives value
-                            break;
-                        }
-                    }
-                    dbgNSAssert(i<CHOICES,@"segmentAction: failed to identify choice!");
-            */
         }
 
         return rslt

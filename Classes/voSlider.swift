@@ -90,29 +90,21 @@ class voSlider: voState {
 
     @objc func sliderAction(_ sender: UISlider?) {
         DBGLog(String("slider action value = \((sender)?.value ?? 0.0)"))
-        /*
-        	//
-        	//[self.vo.value setString:[NSString stringWithFormat:@"%f",sender.value]];
-            DBGLog(@"sender action value: %f",sender.value);
-        	DBGLog(@"slider action value = %f", self.sliderCtl.value);
-            DBGLog(@"prev val= %@",self.vo.value);
-            DBGLog(@"tracking= %d  touchinside= %d",[sender isTracking], [sender isTouchInside]);
-            //if (sender.value == 0.0f) {
-            if ((![sender isTracking]) && [sender isTouchInside] && (sender.value == 0.0f)) {
-                DBGLog(@"poo...");
-                return;
-            }
-            */
+
 
         if !vo.useVO {
             vo.enableVO()
         }
-
+        
         if vo.optDict["integerstepsb"] == "1" {
-            let slider = sender
-            let ival = Int(Double(Int(slider?.value ?? 0)) + 0.5)
-            slider?.setValue(Float(ival), animated: true)
+            if let slider = sender {
+                //let ival = Int(Double(Int(slider?.value ?? 0)) + 0.5)
+                //let ival = Int((slider?.value ?? 0.0) + 0.5)
+                let ival = Int(slider.value + Float(0.5))
+                slider.setValue(Float(ival), animated: true)
+            }
         }
+         
         vo.value = "\(sliderCtl?.value ?? 0.0)"
 
         //DBGLog(@"slider action value = %f valstr= %@ vs dbl= %f", ((UISlider *)sender).value, self.vo.value, [self.vo.value doubleValue]);

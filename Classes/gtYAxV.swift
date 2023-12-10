@@ -140,43 +140,112 @@ class gtYAxV: UIView {
         let x2 = x1 - 3.0
 
         var fmt = "%0.2f"
+        
+        var choiceMap: [Int: Int] = [:]
+        if VOT_CHOICE == vtype {
+            var deltaMap: [Int:Double] = [:]
+            var valMap: [Int:Double] = [:]
+            for i in 1...Int(YTICKS) {
+                let val = startUnit + (d(YTICKS - Double(i)) * unitStep)
+                let chc = vogd?.vo.getChoiceIndex(forValue: "\(val)") ?? 0
+                let chcVal = Double(vogd?.vo.optDict["cv\(chc)"] ?? "") ?? Double(i+1)
+                choiceMap[i] = chc
+                valMap[i] = val
+                deltaMap[i] = abs(chcVal - val)
+            }
+            
+            var delSet: Set<Int> = []
+            // don't have any choices duplicated
+            for (ndx, chc) in choiceMap {
+                for (ndx2, chc2) in choiceMap {
+                    if ndx != ndx2 && chc == chc2 {
+                        if deltaMap[ndx2]! < deltaMap[ndx]! {
+                            delSet.insert(ndx)
+                        }
+                    }
+                }
+                // don't have any undefined chnoices
+                if vogd?.vo.optDict["c\(chc)"] == nil {
+                    delSet.insert(ndx)
+                }
+            }
+            for i in delSet {
+                choiceMap[i] = nil
+            }
 
-        /*
-            NSArray *choiceMap;
+            /*
+            // don't miss any choices ... not working
+            var addSet: Set<Int> = []
+            for i in 0..<vogd!.choiceCount {
+                var missed = true
+                for (_, chc) in choiceMap {
+                    if i == chc {
+                        missed = false
+                        break
+                    }
+                }
+                if missed {
+                    print("missed \(i)  \(vogd!.vo.optDict["c\(i)"]!)")
+                    addSet.insert(i)
+                }
+            }
 
-            if (VOT_CHOICE == vtype) {
-                choiceMap = [CHOICEARR sortedArrayUsingFunction:choiceCompare context:(void*)self];
+            for newChoice in addSet {
+                let newValue = Double(vogd?.vo.optDict["cv\(newChoice)"] ?? "") ?? Double(newChoice+1)
+                // Find the position to insert the new value
+                let insertPosition = valMap.first(where: { $0.value >= newValue })?.key ?? choiceMap.count
+
+                // Shift the elements from the end to the insert position
+                for i in stride(from: choiceMap.keys.max() ?? 0, to: insertPosition - 1, by: -1) {
+                    choiceMap[i + 1] = choiceMap[i]
+                }
+
+                // Insert the new value
+                choiceMap[insertPosition] = newChoice
+
+                //print(dict) // Result: [2: 3, 4: 4, 0: 1, 5: 6, 1: 2, 3: 5]
+
             }
              */
-        //NSString *vsCopy = nil;
+        }
 
         i = Int(YTICKS)
         while i >= 1 {
             var y = d(i) * step
             MoveTo(context, x0, y)
             AddLineTo(context, x1, y)
-
+            context.strokePath()
 
             let val = startUnit + (d(YTICKS - Double(i)) * unitStep)
             var vstr: String?
             switch vtype {
             case VOT_CHOICE:
-                if YTICKS == Double(i) {
-                    vstr = ""
-                } else {
-                    //DBGLog(@"choiceMap: %@",choiceMap);
-                    //NSUInteger ndx = (YTICKS-i)-1;
+                //if YTICKS == Double(i) {
+                //    vstr = ""
+                //} else {
 
-                    //DBGLog(@"i= %d ndx= %lu",i, (unsigned long) ndx);
-                    //DBGLog(@"obj= %@",[choiceMap objectAtIndex:ndx]);
-                    //DBGLog(@"choice= %d", [ [choiceMap objectAtIndex:ndx] intValue ]);
-                    //int choice = [ [choiceMap objectAtIndex:ndx] intValue ];
-                    let choice = vogd?.vo.getChoiceIndex(forValue: "\(val)") ?? 0
-                    vtChoiceSetColor(context, ndx: choice)
-                    let ch = "c\(choice)"
+                    if let choice = choiceMap[i] {  // vogd?.vo.getChoiceIndex(forValue: "\(val)") ?? 0
+                        vtChoiceSetColor(context, ndx: choice)
+                        let ch = "c\(choice)"
+                        vstr = vogd?.vo.optDict[ch] as? String
+                        DBGLog("i= \(i) ch= \(ch)  vstr= \(vstr!) val= \(val)")
+                    } else {
+                        vstr = ""
+                    }
+                //}
+                /*
+                let choice = choiceMap[i]  // vogd?.vo.getChoiceIndex(forValue: "\(val)") ?? 0
+                if let choice {
+                    vtChoiceSetColor(context, ndx: choice!)
+                    let ch = "c\(choice!)"
                     vstr = vogd?.vo.optDict[ch] as? String
                     DBGLog("i= \(i) ch= \(ch)  vstr= \(vstr!) val= \(val)")
+                } else {
+                    vstr = ""
                 }
+
+                //}
+                 */
             case VOT_BOOLEAN:
                 if 1 == i {
                     vstr = (vogd?.vo.optDict)?["boolval"] as? String
@@ -261,18 +330,45 @@ class gtYAxV: UIView {
             safeDispatchSync({ [self] in
                 if let myFont {
                     let myGraphColor = vogd.myGraphColor()
+
+                    // Save the current graphics context
+                    if let context = UIGraphicsGetCurrentContext() {
+                        context.saveGState()
+
+                        // Translate and rotate the context
+                        context.translateBy(x: 0, y: frame.size.height)
+                        context.rotate(by: -(.pi / 2)) // 90 degrees counterclockwise
+
+                        // Draw the string
+                        let attributes: [NSAttributedString.Key: Any] = [
+                            .font: myFont,
+                            .foregroundColor: myGraphColor
+                        ]
+                        
+                        // Note: The position might need to be adjusted based on your layout
+                        let textPosition = CGPoint(x: 5 * SPACE5, y: BORDER/2)
+                        vogd.vo.valueName?.draw(at: textPosition, withAttributes: attributes)
+
+                        // Restore the graphics context
+                        context.restoreGState()
+                    }
+                }
+                /*
+                if let myFont {
+                    let myGraphColor = vogd.myGraphColor()
                     vogd.vo.valueName?.draw(at: CGPoint(x: 3 * SPACE5, y: frame.size.height - BORDER), withAttributes: [
                         NSAttributedString.Key.font: myFont,
                         NSAttributedString.Key.foregroundColor: myGraphColor
                     ])
                 }
+                 */
             })
         }
         //[self.vogd.vo.valueName drawAtPoint:(CGPoint) {SPACE5,(self.frame.size.height - BORDER)} withFont:self.myFont];
         UIColor.white.set()
 
         //Stroke
-
+        context.strokePath()
         // rtm debug
         //backgroundColor = .yellow
     }

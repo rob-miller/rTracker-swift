@@ -115,40 +115,48 @@ class vogd: NSObject {
             choiceCount = 0
             var c = 0
             for i in 0..<CHOICES {
+                var tval:Double? = nil
                 let key = "cv\(i)"
                 let tstVal = vo.optDict[key]
                 let skey = "c\(i)"
                 let tstStr = vo.optDict[skey]
-                if nil != tstVal {
-                    // only do specified choices
+                if let tstVal {
+                    // only do specified choice values
                     c += 1
-                    let tval = Double(tstVal ?? "") ?? 0.0
+                    tval = Double(tstVal) ?? 0.0
+                } else if tstStr != nil && "" != tstStr {
+                    c += 1
+                    tval = Double(i)
+                }
+                if let tval {
                     if minVal > tval {
                         minVal = tval
                     }
                     if maxVal < tval {
                         maxVal = tval
                     }
-                } else if "" != tstStr {
-                    c += 1
                 }
             }
-            choiceCount = c  // +1 but zero-indexed
+            choiceCount = c
             if minVal == maxVal {
                 // if no cv values set above, default to choice numbers
+                // should not happen
                 minVal = d(1)
                 maxVal = d(choiceCount)  // CHOICES
             }
             #if GRAPHDBG
-            DBGLog(String("minVal= \(minVal) maxVal= \(maxVal)"))
+            DBGLog(String("choice minVal= \(minVal) maxVal= \(maxVal)"))
             #endif
 
+            /*
             let step = (maxVal - minVal) / Double(choiceCount-1) //  CHOICES;
             minVal -= step //( d( YTICKS - CHOICES ) /2.0 ) * step;   // YTICKS=7, CHOICES=6, so need blank positions at top and bottom
-            maxVal += step * d(YTICKS - Double(choiceCount-1)) // step ; //( d( YTICKS - CHOICES ) /2.0 ) * step;
+            maxVal += step // d(YTICKS - Double(choiceCount-1)) // step ; //( d( YTICKS - CHOICES ) /2.0 ) * step;
+            */
+             
             #if GRAPHDBG
-            DBGLog(String("\(inVO.valueName) minVal= \(minVal) maxVal= \(maxVal) step = \(step)"))
-            DBGLog("Foo");
+            //DBGLog(String("\(inVO.valueName) minVal= \(minVal) maxVal= \(maxVal) step = \(step)"))
+            //DBGLog("Foo");
             #endif
         } else {
             // number or function with autoscale
@@ -209,7 +217,7 @@ class vogd: NSObject {
             #endif
             var d = Double(ni) // date as int secs cast to float
             var v = Double(nv) // val as float
-
+            //DBGLOG("\(vo.valueName!) \(d) \(v)")
             d -= Double(myTOGD.firstDate) // self.firstDate;
             d *= myTOGD.dateScale
             v -= minVal

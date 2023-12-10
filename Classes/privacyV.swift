@@ -62,6 +62,8 @@ let PRVBTNLBL = "  <  "
 // MARK: singleton privacyValue support
 
 private var _privacyValue: Int = PRIVDFLT
+private var _jmpriv = false
+
 var privacyValue: Int {
     get {
         return _privacyValue
@@ -83,6 +85,7 @@ func jumpMaxPriv() {
 
     //[self.privacyObj setPrivacyValue:MAXPRIV];  // temporary max privacy level so see all
     privacyValue = MAXPRIV
+    _jmpriv = true
     DBGLog("priv jump!")
 }
 
@@ -97,6 +100,7 @@ func restorePriv() {
     //[self.privacyObj setPrivacyValue:[self.stashedPriv intValue]];  // return to privacy level
     privacyValue = stashedPriv?.intValue ?? 0
     stashedPriv = nil
+    _jmpriv = false
 
 }
 
@@ -142,7 +146,14 @@ class privacyV: UIView {
         }
         return _ttv
     }
-
+    var jmpriv: Bool {
+        get {
+            return _jmpriv
+        }
+        set {
+            _jmpriv = newValue
+        }
+    }
     private var _ppwv: ppwV?
     var ppwv: ppwV? {
         if nil == _ppwv {

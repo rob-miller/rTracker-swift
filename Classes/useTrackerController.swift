@@ -1274,7 +1274,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             safeDispatchSync({ [self] in
                 rTracker_resource.finishProgressBar(view, navItem: navigationItem, disable: true)
             })
-            rTracker_resource.alert("Tracker saved", msg: "\(tracker!.trackerName ?? "")_out.csv and _out.plist files have been saved to the rTracker Documents directory on this device.  Access them through iTunes on your PC/Mac, or with a program like iExplorer from Macroplant.com.  Import by changing the names to _in.csv and _in.plist, and read about .rtcsv file import capabilities in the help pages.\n\nNote: Hidden private data has not been saved.", vc: self)
+            rTracker_resource.alert("Tracker saved", msg: "\(tracker!.trackerName ?? "")_out.csv and _out.plist files have been saved to the rTracker Documents directory on this device\(rTracker_resource.getRtcsvOutput() ? " in rtCSV format" : "").  Access them through iTunes on your PC/Mac, or with a program like iExplorer from Macroplant.com.  Import by changing the names to _in.csv and _in.plist, and read about .rtcsv file import capabilities in the help pages.\n\nNote: Hidden private data has not been saved.", vc: self)
         }
     }
 

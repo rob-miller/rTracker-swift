@@ -69,6 +69,9 @@ final class rTrackerUITests: XCTestCase {
             try testEditTrackerRank()
             try testSearchGo()
             try testTrackerDemoUse()
+            try testTrackerDemoClear()
+            try testTrackerDemoClear()
+            try testTrackerDemoClear()
 
             try testNewTrackerGo()
             
@@ -559,10 +562,12 @@ Kate Bell
     }
     
     func testTrackerDemoClear() throws {
+        sleep(1)
         let rTdemoCell = app.tables.cells["trkr_👣rTracker demo"]
         
         // enter demo tracker, if old data then discard, exit and re-enter
         rTdemoCell.tap()
+        sleep(2)
         let exitTrkrBtn = app.buttons["< rTracker"]
         exitTrkrBtn.tap()
         let modAlert = app.alerts["👣rTracker demo modified"]
@@ -1118,6 +1123,7 @@ Kate Bell
     }
     
     func testNewTracker() throws {
+        sleep(1)
         app.tables.cells["trkr_testTracker"].tap()
         let vfuncLabel = app.staticTexts["fnVal_vfunction"]
         app.swipeRight()

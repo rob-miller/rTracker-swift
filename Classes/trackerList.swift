@@ -112,14 +112,14 @@ class trackerList: tObjBase {
     //@property (nonatomic,retain) trackerObj *tObj;
     override init() {
         //DBGLog(@"init trackerList");
-        print("init trackerlist")
         
         super.init()
+        /*
         topLayoutNames = []
         topLayoutIDs = []
         topLayoutPriv = []
         topLayoutReminderCount = []
-
+         */
         initTDb()
     }
 
@@ -139,26 +139,28 @@ class trackerList: tObjBase {
     // MARK: TopLayoutTable <-> db support
 
     func loadTopLayoutTable() {
-        //DBGTLIST(self);
-        topLayoutNames.removeAll()
-        topLayoutIDs.removeAll()
-        topLayoutPriv.removeAll()
-        topLayoutReminderCount.removeAll()
-
-        //self.sql = @"select * from toplevel";
-        //[self toQry2Log];
-
+        
         let sql = String(format: "select id, name, priv, remindercount from toplevel where priv <= %i order by rank;", privacyValue)
-        let idnameprivrc = toQry2AryISII(sql: sql)
-        for (id, name, priv, rc) in idnameprivrc {
-            topLayoutIDs.append(id)
-            topLayoutNames.append(name)
-            topLayoutPriv.append(priv)
-            topLayoutReminderCount.append(rc)
+        let idnameprivrc = self.toQry2AryISII(sql: sql)
+        
+        safeDispatchSync { [self] in
+
+            //DBGTLIST(self);
+            topLayoutNames.removeAll()
+            topLayoutIDs.removeAll()
+            topLayoutPriv.removeAll()
+            topLayoutReminderCount.removeAll()
+            
+            for (id, name, priv, rc) in idnameprivrc {
+                topLayoutIDs.append(id)
+                topLayoutNames.append(name)
+                topLayoutPriv.append(priv)
+                topLayoutReminderCount.append(rc)
+            }
+            //self.sql = nil;
+            DBGLog(String("loadTopLayoutTable finished, priv=\(privacyValue) tlt=\(self.topLayoutNames)"))
+            //DBGTLIST(self);
         }
-        //self.sql = nil;
-        DBGLog(String("loadTopLayoutTable finished, priv=\(privacyValue) tlt=\(topLayoutNames)"))
-        //DBGTLIST(self);
     }
 
     func add(toTopLayoutTable tObj: trackerObj, nrank: Int? = nil) {
