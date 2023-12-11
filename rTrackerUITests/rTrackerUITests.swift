@@ -66,12 +66,10 @@ final class rTrackerUITests: XCTestCase {
         do {
             try testTrackerDemoInstall()
             try testTapGraphTap()
+            try testTapGraphTap2()
             try testEditTrackerRank()
             try testSearchGo()
             try testTrackerDemoUse()
-            try testTrackerDemoClear()
-            try testTrackerDemoClear()
-            try testTrackerDemoClear()
 
             try testNewTrackerGo()
             
@@ -119,11 +117,36 @@ final class rTrackerUITests: XCTestCase {
         coordinate.tap()
         sleep(1)
         XCUIDevice.shared.orientation = .portrait
-        
+
         let tdate = app.buttons["trkrDate"]
         //print(tdate.label)
         XCTAssertEqual(tdate.label, "12/18/14, 1:16 AM")
         app.buttons["< rTracker"].tap()
+    }
+    
+    func testTapGraphTap2() throws {
+        app.tables.cells["trkr_👣rTracker demo"].tap()
+        sleep(1)
+        let swipeAlert = app.alerts["Swipe control"]
+        if swipeAlert.exists {
+            swipeAlert.buttons["OK"].tap()
+            sleep(1)
+        }
+        XCUIDevice.shared.orientation = .landscapeRight
+        sleep(2)
+        let gtv = app.otherElements["gtYAxV"]
+        let normalizedOffset = CGVector(dx: 0.7, dy: 0.5)
+        let coordinate = gtv.coordinate(withNormalizedOffset: normalizedOffset)
+
+        // cycle through all graph labels to test no crash
+        for _ in 0...10 {
+            coordinate.tap()
+            sleep(1)
+        }
+        XCUIDevice.shared.orientation = .portrait
+        sleep(1)
+        app.buttons["< rTracker"].tap()
+        sleep(1)
     }
     
     func testEditTrackerRank() throws {
@@ -217,6 +240,7 @@ final class rTrackerUITests: XCTestCase {
             try testSearchSetup()
             try testSearch()
             try testSearchClear()
+
         } catch {
             XCTFail("error: \(error)")
         }
@@ -559,6 +583,10 @@ Kate Bell
         
         app.buttons["< rTracker"].tap()
         modAlert.buttons["Save"].tap()
+        sleep(1)
+        
+        try testTrackerDemoClear()
+        try testTrackerDemoClear()
     }
     
     func testTrackerDemoClear() throws {

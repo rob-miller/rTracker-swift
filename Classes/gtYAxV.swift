@@ -102,6 +102,7 @@ class gtYAxV: UIView {
         //self.alpha = 1.0f;
 
         //DBGLog(@"gtyaxv init done");
+        accessibilityIdentifier = "gtYAxV"
     }
 
     //- (void) setBackgroundColor:(UIColor *) col {
