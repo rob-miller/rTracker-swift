@@ -602,8 +602,9 @@ class valueObj: NSObject, UITextFieldDelegate {
     func getLabelSize() -> CGSize {
         let labelSize = valueName?.size(withAttributes: [
             NSAttributedString.Key.font: PrefBodyFont
-        ])
-        return labelSize ?? CGSize.zero
+        ]) ?? .zero // Fallback to .zero size if valueName is nil
+        //labelSize.height = minLabelHeight(labelSize.height)
+        return labelSize
 
         //return [self.valueName sizeWithAttributes:@{NSFontAttributeName:[UIFont systemFontOfSize:[UIFont systemFontSize]]}];
     }
@@ -619,6 +620,7 @@ class valueObj: NSObject, UITextFieldDelegate {
                 NSAttributedString.Key.font: PrefBodyFont
             ], context: nil)
             labelSize.height += (ltrect?.size.height ?? 0.0) - (ltrect?.origin.y ?? 0.0)
+            labelSize.height = minLabelHeight(labelSize.height)
             labelSize.width = ltrect?.size.width ?? 0.0
         }
         return labelSize

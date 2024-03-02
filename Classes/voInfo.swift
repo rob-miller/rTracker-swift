@@ -168,7 +168,7 @@ class voInfo: voState {
             NSAttributedString.Key.font: PrefBodyFont
         ]).width
         frame.size.width = tfWidth
-        frame.size.height = ctvovc?.lfHeight ?? 0.0
+        frame.size.height = minLabelHeight(ctvovc?.lfHeight ?? 0.0)
 
         frame = ctvovc?.configTextField(
             frame,
@@ -185,7 +185,7 @@ class voInfo: voState {
 
         labframe = ctvovc?.configLabel("Write value in database and CSV", frame: frame, key: "infosaveLab", addsv: true)
         frame = CGRect(x: (labframe?.size.width ?? 0.0) + MARGIN + SPACE, y: frame.origin.y, width: labframe?.size.height ?? 0.0, height: labframe?.size.height ?? 0.0)
-        frame = ctvovc?.configCheckButton(
+        frame = ctvovc?.configSwitch(
             frame,
             key: "infosaveBtn",
             state: vo.optDict["infosave"] == "1",

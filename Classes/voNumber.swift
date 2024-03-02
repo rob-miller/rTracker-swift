@@ -200,6 +200,10 @@ class voNumber: voState, UITextFieldDelegate {
         return dtf
     }
 
+    override func voTVCellHeight() -> CGFloat {
+        return minLabelHeight(super.voTVCellHeight())
+    }
+    
     override func update(_ instr: String) -> String {
         // confirm textfield not forgotten
         if ((nil == _dtf) /* NOT self.dtf as we want to test if is instantiated */) || !(instr == "") {
@@ -257,29 +261,31 @@ class voNumber: voState, UITextFieldDelegate {
 
         var frame = CGRect(x: MARGIN, y: ctvovc.lasty, width: 0.0, height: 0.0)
 
-        var labframe = ctvovc.configLabel("Start with last saved value:", frame: frame, key: "swlLab", addsv: true)
+        var labframe = ctvovc.configLabel("Start with last saved value: ", frame: frame, key: "swlLab", addsv: true)
         frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
-        frame = ctvovc.configCheckButton(
+
+        frame = ctvovc.configSwitch(
             frame,
             key: "swlBtn",
             state: vo.optDict["nswl"] == "1",
             addsv: true)
+
         frame.origin.x = MARGIN
         frame.origin.y += MARGIN + frame.size.height
 
         frame = ctvovc.yAutoscale(frame)
 
-        frame.origin.y += frame.size.height + MARGIN
+        //frame.origin.y += frame.size.height + MARGIN
         frame.origin.x = MARGIN
 
-        labframe = ctvovc.configLabel("graph decimal places (-1 auto):", frame: frame, key: "numddpLab", addsv: true)
+        labframe = ctvovc.configLabel("graph decimal places (-1 for auto): ", frame: frame, key: "numddpLab", addsv: true)
 
         frame.origin.x += labframe.size.width + SPACE
         let tfWidth = "99999".size(withAttributes: [
             NSAttributedString.Key.font: PrefBodyFont
         ]).width
         frame.size.width = tfWidth
-        frame.size.height = ctvovc.lfHeight  // self.labelField.frame.size.height; // lab.frame.size.height;
+        frame.size.height = minLabelHeight(ctvovc.lfHeight)
 
         frame = ctvovc.configTextField(
             frame,

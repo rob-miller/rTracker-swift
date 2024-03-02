@@ -960,7 +960,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         frame.origin.y += labframe.size.height + MARGIN
         labframe = ctvovc.configLabel("Use number of lines for graph value:", frame: frame, key: "tbnlLab", addsv: true) // can't do cleanly for function value (can't get linecount in sql and still use for other vtypes)
         frame = CGRect(x:labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
-        frame = ctvovc.configCheckButton(
+        frame = ctvovc.configSwitch(
             frame,
             key: "tbnlBtn",
             state: (vo.optDict["tbnl"] == "1") /* default:0 */,
@@ -972,7 +972,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         frame.origin.y += MARGIN + frame.size.height
         labframe = ctvovc.configLabel("Names index:", frame: frame, key: "tbniLab", addsv: true)
         frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
-        frame = ctvovc.configCheckButton(
+        frame = ctvovc.configSwitch(
             frame,
             key: "tbniBtn",
             state: !(vo.optDict["tbni"] == "0"),
@@ -982,7 +982,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         frame.origin.y += MARGIN + frame.size.height
         labframe = ctvovc.configLabel("History index:", frame: frame, key: "tbhiLab", addsv: true)
         frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
-        frame = ctvovc.configCheckButton(
+        frame = ctvovc.configSwitch(
             frame,
             key: "tbhiBtn",
             state: (vo.optDict["tbhi"] == "1") /* default:0 */,

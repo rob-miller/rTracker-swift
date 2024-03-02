@@ -162,7 +162,7 @@ class voState: NSObject, voProtocol {
 
         //-- draw graphs button
 
-        _ = ctvovc.configCheckButton(
+        let switchFrame = ctvovc.configSwitch(
             frame,
             key: "ggBtn",
             state: !(vo.optDict["graph"] == "0"),
@@ -170,9 +170,9 @@ class voState: NSObject, voProtocol {
 
         //-- privacy level label
 
-        frame.origin.x += frame.size.width + MARGIN + SPACE
+        frame.origin.x += frame.size.width + switchFrame.size.width  //  MARGIN + SPACE
         //frame.origin.y += MARGIN + frame.size.height;
-        labframe = ctvovc.configLabel("Privacy level:", frame: frame, key: "gpLab", addsv: true)
+        labframe = ctvovc.configLabel("Privacy level: ", frame: frame, key: "gpLab", addsv: true)
 
         //-- privacy level textfield
 
@@ -181,7 +181,7 @@ class voState: NSObject, voProtocol {
             NSAttributedString.Key.font: PrefBodyFont
         ]).width
         frame.size.width = tfWidth
-        frame.size.height = ctvovc.lfHeight  // self.labelField.frame.size.height; // lab.frame.size.height;
+        frame.size.height = minLabelHeight(ctvovc.lfHeight)
 
         _ = ctvovc.configTextField(
             frame,
@@ -205,7 +205,7 @@ class voState: NSObject, voProtocol {
             NSAttributedString.Key.font: PrefBodyFont
         ]).width
         frame.size.width = tfWidth
-        frame.size.height = ctvovc.lfHeight // self.labelField.frame.size.height; // lab.frame.size.height;
+        frame.size.height = minLabelHeight(ctvovc.lfHeight)
 
         _ = ctvovc.configTextField(
             frame,

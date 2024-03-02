@@ -36,7 +36,11 @@ let DBLRANDOM = Double(arc4random()) / 0x100000000
 // tag for background view to un/hide
 let BGTAG = 99
 
+let LABELMINHEIGHT = 31.0  // uiswitch minimum intrinsic height
 
+func minLabelHeight(_ height : CGFloat) -> CGFloat {
+    return max(height, LABELMINHEIGHT)
+}
 // Sample code from iOS 7 Transistion Guide
 // Loading Resources Conditionally
 //NSUInteger DeviceSystemMajorVersion();
@@ -891,6 +895,7 @@ class rTracker_resource: NSObject {
 
     class func rrConfigTextField(_ frame: CGRect, key: String?, target: Any?, delegate: Any?, action: Selector, num: Bool, place: String?, text: String?) -> UITextField? {
         DBGLog(String(" frame x \(frame.origin.x) y \(frame.origin.y) w \(frame.size.width)) h \(frame.size.height)"))
+        
         var rtf: UITextField?
         if num {
             rtf = numField(frame: frame) as UITextField

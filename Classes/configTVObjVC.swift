@@ -410,6 +410,9 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         frame.size = text.size(withAttributes: [
             NSAttributedString.Key.font: PrefBodyFont
         ])
+        
+        frame.size.height = minLabelHeight(frame.size.height)  
+
 
         let rlab = UILabel(frame: frame)
         rlab.font = PrefBodyFont
@@ -495,13 +498,9 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
             okey = "x" // make analyze happy
         }
 
-        if dfltState == true {
-            dflt = "1"
-            ndflt = "0"
-        } else {
-            dflt = "0"
-            ndflt = "1"
-        }
+        dflt = dfltState ? "1" : "0"
+        ndflt = dfltState ? "0" : "1"
+
 
         if vo == nil {
             if to!.optDict[okey!] as? String ?? "" == ndflt {
@@ -526,21 +525,16 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
 
     }
 
-    func configCheckButton(_ frame: CGRect, key: String?, state: Bool, addsv: Bool) -> CGRect {
-        /*
-            if (frame.origin.x + frame.size.width > [rTracker_resource getKeyWindowWidth]) {
-                frame.origin.x = MARGIN;
-                frame.origin.y += MARGIN + frame.size.height;
-            }
-            */
+    func configCheckButton(_ frame: CGRect, key: String, state: Bool, addsv: Bool) -> CGRect {
+        // checkbox button using my images
 
         let imageButton = UIButton(type: .custom)
-        //imageButton.frame = CGRectInset(frame,-3,-3); // a bit bigger please
+
         imageButton.frame = frame
         imageButton.contentVerticalAlignment = .center
         imageButton.contentHorizontalAlignment = .right //Center;
 
-        wDict[key ?? ""] = imageButton
+        wDict[key] = imageButton
         imageButton.addTarget(self, action: #selector(checkBtnAction(_:)), for: .touchUpInside)
 
         imageButton.setImage(
@@ -548,26 +542,149 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
             for: .normal)
 
         if vo == nil {
-            imageButton.accessibilityIdentifier = "\(to!.trackerName ?? "tnull")_\(key!)"
+            imageButton.accessibilityIdentifier = "\(to!.trackerName ?? "tnull")_\(key)"
         } else {
-            imageButton.accessibilityIdentifier = "\(vo!.vos!.tvn())_\(key!)"
+            imageButton.accessibilityIdentifier = "\(vo!.vos!.tvn())_\(key)"
         }
         
         if addsv {
-            //[self.view addSubview:imageButton];
             scroll.addSubview(imageButton)
         }
 
         return frame
     }
 
-    func configActionBtn(_ pframe: CGRect, key: String?, label: String?, target: Any?, action: Selector) -> CGRect {
-        /*
-            if (frame.origin.x + frame.size.width > [rTracker_resource getKeyWindowWidth]) {
-                frame.origin.x = MARGIN;
-                frame.origin.y += MARGIN + frame.size.height;
+    
+    func configSwitch(_ frame: CGRect, key: String, state: Bool, addsv: Bool) -> CGRect {
+        // Switch control
+        let switchControl = UISwitch(frame: frame)
+        // print(switchControl.intrinsicContentSize)
+        // Set the switch state
+        switchControl.isOn = state
+
+        // Store the switch in a dictionary if needed, similar to how the button was stored
+        wDict[key] = switchControl
+
+        // Add target action for the switch
+        switchControl.addTarget(self, action: #selector(switchAction(_:)), for: .valueChanged)
+
+        // Accessibility identifier setup
+        if vo == nil {
+            switchControl.accessibilityIdentifier = "\(to!.trackerName ?? "tnull")_\(key)"
+        } else {
+            switchControl.accessibilityIdentifier = "\(vo!.vos!.tvn())_\(key)"
+        }
+
+        // Adding the switch to the scroll view
+        if addsv {
+            scroll.addSubview(switchControl)
+        }
+
+        return frame
+    }
+
+    // The action method for the switch
+    @objc func switchAction(_ sender: UISwitch) {
+        // Handle the switch action here
+        let key = sender.accessibilityIdentifier
+        // Update your model or perform an action based on the switch's state
+        DBGLog("Switch for \(key ?? "") is now \(sender.isOn ? "ON" : "OFF")")
+        
+        var okey: String?
+        var dflt: String?
+        var ndflt: String?
+        //var img: String?
+        var dfltState = AUTOSCALEDFLT
+
+        if sender == (wDict["nasBtn"] as? UISwitch) {
+            okey = "autoscale"
+            dfltState = AUTOSCALEDFLT
+            if ((vo?.optDict)?[okey!] as? String) == "0" {
+                // will switch on
+                removeGraphMinMax()
+                //[self addGraphFromZero];  // ASFROMZERO
+            } else {
+                //[self removeGraphFromZero];
+                addGraphMinMax() // ASFROMZERO
             }
-            */
+        } else if sender == (wDict["csbBtn"] as?  UISwitch) {
+            okey = "shrinkb"
+            dfltState = SHRINKBDFLT
+        } else if sender == (wDict["cevBtn"] as?  UISwitch) {
+            okey = "exportvalb"
+            dfltState = EXPORTVALBDFLT
+        } else if sender == (wDict["stdBtn"] as?  UISwitch) {
+            okey = "setstrackerdate"
+            dfltState = SETSTRACKERDATEDFLT
+        } else if sender == (wDict["sisBtn"] as?  UISwitch) {
+            okey = "integerstepsb"
+            dfltState = INTEGERSTEPSBDFLT
+        } else if sender == (wDict["sdeBtn"] as?  UISwitch) {
+            okey = "defaultenabledb"
+            dfltState = DEFAULTENABLEDBDFLT
+        } else if sender == (wDict["sswlBtn"] as?  UISwitch) {
+            okey = "slidrswlb"
+            dfltState = SLIDRSWLBDFLT
+        } else if sender == (wDict["tbnlBtn"] as?  UISwitch) {
+            okey = "tbnl"
+            dfltState = TBNLDFLT
+        } else if sender == (wDict["tbniBtn"] as?  UISwitch) {
+            okey = "tbni"
+            dfltState = TBNIDFLT
+        } else if sender == (wDict["tbhiBtn"] as?  UISwitch) {
+            okey = "tbhi"
+            dfltState = TBHIDFLT
+        } else if sender == (wDict["ggBtn"] as?  UISwitch) {
+            okey = "graph"
+            dfltState = GRAPHDFLT
+        } else if sender == (wDict["swlBtn"] as?  UISwitch) {
+            okey = "nswl"
+            dfltState = NSWLDFLT
+        } else if sender == (wDict["srBtn"] as?  UISwitch) {
+            okey = "savertn"
+            dfltState = SAVERTNDFLT
+        } else if sender == (wDict["graphLastBtn"] as?  UISwitch) {
+            okey = "graphlast"
+            dfltState = GRAPHLASTDFLT
+        } else if sender == (wDict["infosaveBtn"] as?  UISwitch) {
+            okey = "infosave"
+            dfltState = INFOSAVEDFLT
+        } else {
+            dbgNSAssert(false, "ckButtonAction cannot identify switch")
+            okey = "x" // make analyze happy
+        }
+
+        dflt = dfltState ? "1" : "0"
+        ndflt = dfltState ? "0" : "1"
+
+        var newState : Bool = false
+        
+        if vo == nil {
+            if to!.optDict[okey!] as? String ?? "" == ndflt {
+                to!.optDict[okey!] = dflt
+                newState = dfltState ? true : false // going to default state
+            } else {
+                to!.optDict[okey!] = ndflt
+                newState = dfltState ? false : true // going to not default state
+            }
+
+        } else {
+            if (vo!.optDict[okey!]) == ndflt {
+                vo!.optDict[okey!] = dflt
+                newState = dfltState ? true : false // going to default state
+            } else {
+                vo!.optDict[okey!] = ndflt
+                newState = dfltState ? false : true // going to not default state
+            }
+            
+        }
+        
+        dbgNSAssert(newState == sender.isOn, "state mismatch on switch for key \(okey!)")
+    }
+
+    
+    func configActionBtn(_ pframe: CGRect, key: String?, label: String?, target: Any?, action: Selector) -> CGRect {
+        // button consisting of title only which starts an action like 'database info' or 'set reminders'
 
         let button = UIButton(type: .roundedRect)
         var frame = pframe
@@ -701,15 +818,12 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
     }
 
     func configTextField(_ pframe: CGRect, key: String?, target: Any?, action: Selector?, num: Bool, place: String?, text: String?, addsv: Bool) -> CGRect {
-        /*
-            if (frame.origin.x + frame.size.width > [rTracker_resource getKeyWindowWidth]) {
-                frame.origin.x = MARGIN;
-                frame.origin.y += MARGIN + frame.size.height;
-            }
-            */
+
 
         var frame = pframe
         frame.origin.y -= TFXTRA
+        frame.size.height = minLabelHeight(frame.size.height)
+        
         let rtf = rTracker_resource.rrConfigTextField(
             frame,
             key: key,
@@ -845,7 +959,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         labframe = configLabel("Auto Scale:", frame: frame, key: "nasLab", addsv: true)
         frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
 
-        _ = configCheckButton(
+        _ = configSwitch(
             frame,
             key: "nasBtn",
             state: !((vo!.optDict["autoscale"]) == "0"),
@@ -862,7 +976,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
             NSAttributedString.Key.font: PrefBodyFont
         ]).width
         frame.size.width = tfWidth
-        frame.size.height = lfHeight // self.labelField.frame.size.height; // lab.frame.size.height;
+        frame.size.height = minLabelHeight(lfHeight) 
 
         _ = configTextField(
             frame,
@@ -879,7 +993,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
 
         frame.origin.x += labframe.size.width + SPACE
         frame.size.width = tfWidth
-        frame.size.height = lfHeight // self.labelField.frame.size.height; // lab.frame.size.height;
+        frame.size.height = minLabelHeight(lfHeight) 
 
         _ = configTextField(
             frame,
@@ -1056,15 +1170,10 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         var labframe = configLabel("save returns to tracker list:", frame: frame, key: "srLab", addsv: true)
 
         frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
-        /*
-            if (frame.origin.x + frame.size.width > [rTracker_resource getKeyWindowWidth]) {
-                frame.origin.x = MARGIN;
-                frame.origin.y += MARGIN + frame.size.height;
-            }
-            */
+
         //-- save returns to tracker list button
 
-        frame = configCheckButton(
+        frame = configSwitch(
             frame,
             key: "srBtn",
             state: !(to!.optDict["savertn"] as? String ?? "" == "0"),  // default is true "1"
@@ -1085,7 +1194,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
             NSAttributedString.Key.font: PrefBodyFont
         ]).width
         frame.size.width = tfWidth
-        frame.size.height = lfHeight // self.labelField.frame.size.height; // lab.frame.size.height;
+        frame.size.height = minLabelHeight(lfHeight)
 
         frame = configTextField(
             frame,
@@ -1117,7 +1226,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
             NSAttributedString.Key.font: PrefBodyFont
         ]).width
         frame.size.width = tfWidth
-        frame.size.height = lfHeight // self.labelField.frame.size.height; // lab.frame.size.height;
+        frame.size.height = minLabelHeight(lfHeight)
 
         var gMaxDays = (to?.optDict)?["graphMaxDays"] as? String
         if gMaxDays == "0" {
@@ -1154,7 +1263,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
 
         //tfWidth = [@"" sizeWithFont:PrefBodyFont].width;
         frame.size.width = view.frame.size.width - (2 * SPACE) - labframe.size.width - MARGIN
-        frame.size.height = lfHeight // self.labelField.frame.size.height; // lab.frame.size.height;
+        frame.size.height = minLabelHeight(lfHeight)
 
         let dfltEmail = (to?.optDict)?["dfltEmail"] as? String
 
