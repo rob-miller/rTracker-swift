@@ -1712,13 +1712,14 @@ class trackerObj: tObjBase {
         }
 
 
+        /*
         #if REMINDERDBG
         let today = Date()
         let gregorian = Calendar(identifier: .gregorian)
 
         setReminder(saveNR, today: today, gregorian: gregorian)
         #endif
-
+         */
     }
 
     func initReminderTable() {
