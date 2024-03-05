@@ -933,7 +933,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         if let userInfo = notification.userInfo as? [String: Any] {
             if let tidNumber = userInfo["tid"] as? NSNumber {
                 let tid = tidNumber.intValue
-                doOpenTracker(tid)
+                doOpenTrackerOC(tid)
             }
         }
     }
@@ -1235,18 +1235,30 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         super.viewDidAppear(stashAnimated)
     }
 
-    @objc func doOpenTrackerRejectable(_ nsnTid: NSNumber?) {
+    func doOpenTrackerRejectable(_ nsnTid: NSNumber?) {
+        DispatchQueue.main.async { let nsnTid = nsnTid
+            self.openTracker(nsnTid?.intValue ?? 0, rejectable: true)
+        }
+    }
+    
+    @objc func doOpenTrackerOCRejectable(_ nsnTid: NSNumber?) {
         openTracker(nsnTid?.intValue ?? 0, rejectable: true)
     }
 
-    @objc func doOpenTracker(_ nsnTid: Int) {
+    func doOpenTracker(_ tid: Int) {
+        DispatchQueue.main.async { let tid = tid
+            self.openTracker(tid, rejectable: false)
+        }
+    }
+    
+    @objc func doOpenTrackerOC(_ nsnTid: Int) {
         openTracker(nsnTid, rejectable: false)
     }
 
     func doRejectableTracker() {
         //DBGLog(@"stashedTIDs= %@",self.stashedTIDs);
         let nsntid = stashedTIDs.last as? NSNumber
-        performSelector(onMainThread: #selector(doOpenTrackerRejectable(_:)), with: nsntid, waitUntilDone: true)
+        performSelector(onMainThread: #selector(doOpenTrackerOCRejectable(_:)), with: nsntid, waitUntilDone: true)
         stashedTIDs.removeLast()
     }
 
