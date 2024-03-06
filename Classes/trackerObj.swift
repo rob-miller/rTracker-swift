@@ -933,10 +933,10 @@ class trackerObj: tObjBase {
     // MARK: -
     //#pragma write tracker as rtrk or plist+csv for iTunes
 
-    func getPath(_ `extension`: String?) -> String? {
-        let fpatho = rTracker_resource.ioFilePath("outbox", access: false)
+    func getPath(_ ext: String) -> String {
+        let fpatho = rTracker_resource.ioFilePath(nil, access: false)
         try? FileManager.default.createDirectory(atPath: fpatho, withIntermediateDirectories: false, attributes: nil)
-        let fname = (rTracker_resource.sanitizeFileNameString(trackerName) ?? "") + (`extension` ?? "")
+        let fname = (rTracker_resource.sanitizeFileNameString(trackerName) ?? "") + ext
         //NSString *fname = [ self.trackerName stringByAppendingString:extension];
         let fpath = URL(fileURLWithPath: fpatho).appendingPathComponent(fname).path
         return fpath
@@ -953,8 +953,8 @@ class trackerObj: tObjBase {
     func writeCSV() -> Bool {
         let result = true
         let fpath = getPath(CSVext)
-        FileManager.default.createFile(atPath: fpath ?? "", contents: nil, attributes: nil)
-        let nsfh = FileHandle(forWritingAtPath: fpath ?? "")
+        FileManager.default.createFile(atPath: fpath, contents: nil, attributes: nil)
+        let nsfh = FileHandle(forWritingAtPath: fpath)
         writeTrackerCSV(nsfh)
         nsfh?.closeFile()
 
@@ -1003,7 +1003,7 @@ class trackerObj: tObjBase {
         ]
 
         let fp = getPath(RTRKext)
-        if !(((rtrkDict as NSDictionary?)?.write(toFile: fp ?? "", atomically: true)) ?? false) {
+        if !(((rtrkDict as NSDictionary?)?.write(toFile: fp, atomically: true)) ?? false) {
             DBGErr(String("problem writing file \(fp)"))
             result = false
         } else {
@@ -1425,7 +1425,7 @@ class trackerObj: tObjBase {
             }
         }
         var fp = getPath(TmpTrkrData)
-        if !((saveData as NSArray).write(toFile: fp ?? "", atomically: true)) {
+        if !((saveData as NSArray).write(toFile: fp, atomically: true)) {
             DBGErr(String("problem writing file \(fp)"))
         } else {
             //[rTracker_resource protectFile:fp];
@@ -1438,7 +1438,7 @@ class trackerObj: tObjBase {
             }
         }
         fp = getPath(TmpTrkrNames)
-        if !((saveNames as NSArray).write(toFile: fp ?? "", atomically: true)) {
+        if !((saveNames as NSArray).write(toFile: fp, atomically: true)) {
             DBGErr(String("problem writing file \(fp)"))
         } else {
             //[rTracker_resource protectFile:fp];
@@ -1448,7 +1448,7 @@ class trackerObj: tObjBase {
     // read temp version of data only
     func loadTempTrackerData() -> Bool {
 
-        let checkNames = NSArray(contentsOfFile: getPath(TmpTrkrNames) ?? "") as? [AnyHashable]
+        let checkNames = NSArray(contentsOfFile: getPath(TmpTrkrNames)) as? [AnyHashable]
         if 0 == (checkNames?.count ?? 0) {
             return false
         }
@@ -1462,7 +1462,7 @@ class trackerObj: tObjBase {
             }
         }
 
-        let loadData = NSArray(contentsOfFile: getPath(TmpTrkrData) ?? "") as? [AnyHashable]
+        let loadData = NSArray(contentsOfFile: getPath(TmpTrkrData)) as? [AnyHashable]
         if 0 == (loadData?.count ?? 0) {
             return false
         }
