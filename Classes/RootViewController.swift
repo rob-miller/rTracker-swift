@@ -933,7 +933,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         if let userInfo = notification.userInfo as? [String: Any] {
             if let tidNumber = userInfo["tid"] as? NSNumber {
                 let tid = tidNumber.intValue
-                doOpenTrackerOC(tid)
+                doOpenTracker(tid)
             }
         }
     }
@@ -1235,31 +1235,47 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         super.viewDidAppear(stashAnimated)
     }
 
-    func doOpenTrackerRejectable(_ nsnTid: NSNumber?) {
-        DispatchQueue.main.async { let nsnTid = nsnTid
+    func doOpenTrackerRejectable(_ nsnTid: NSNumber?, completion: @escaping () -> Void) {
+        DispatchQueue.main.async {
             self.openTracker(nsnTid?.intValue ?? 0, rejectable: true)
+            completion()  // Call the completion handler when done
         }
+        
+        // Usage
+        //  doOpenTrackerRejectable(nsnTid) {
+        //    // Code here will run after `openTracker` in the async block
+        //  }
+        // or
+        //   doOpenTrackerRejectable(nsnTid)
+        // for don't wait / no completion handler
     }
     
+    /*
     @objc func doOpenTrackerOCRejectable(_ nsnTid: NSNumber?) {
         openTracker(nsnTid?.intValue ?? 0, rejectable: true)
     }
-
+     */
+    
     func doOpenTracker(_ tid: Int) {
         DispatchQueue.main.async { let tid = tid
             self.openTracker(tid, rejectable: false)
         }
     }
-    
+    /*
     @objc func doOpenTrackerOC(_ nsnTid: Int) {
         openTracker(nsnTid, rejectable: false)
     }
-
+*/
+    
     func doRejectableTracker() {
         //DBGLog(@"stashedTIDs= %@",self.stashedTIDs);
         let nsntid = stashedTIDs.last as? NSNumber
-        performSelector(onMainThread: #selector(doOpenTrackerOCRejectable(_:)), with: nsntid, waitUntilDone: true)
-        stashedTIDs.removeLast()
+        doOpenTrackerRejectable(nsntid) {
+            self.stashedTIDs.removeLast()
+        }
+        
+        // performSelector(onMainThread: #selector(doOpenTrackerOCRejectable(_:)), with: nsntid, waitUntilDone: true)
+        // stashedTIDs.removeLast()
     }
 
     public override func viewDidAppear(_ animated: Bool) {

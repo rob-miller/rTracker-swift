@@ -34,11 +34,6 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
     // MARK: -
     // MARK: Application lifecycle
 
-    /*
-    - (void)application:(UIApplication *)application didRegisterUserNotificationSettings:(UIUserNotificationSettings *)notificationSettings {
-        [application registerForRemoteNotifications];
-    }
-    */
     func registerForNotifications() {
         let center = UNUserNotificationCenter.current()
         let options: UNAuthorizationOptions = [.alert, .badge, .sound]
@@ -77,53 +72,16 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
                             rTracker_resource.setToldAboutNotifications(true)
                             UserDefaults.standard.set(true, forKey: "toldAboutNotifications")
                             UserDefaults.standard.synchronize()
-                            //newMaintainer()
                         })
 
                     alert.addAction(defaultAction)
-                    //rootController?.navigationController?.present(alert, animated: true)
                     rootViewController.present(alert, animated: true)
                 }
             }
-
-
-            //[rTracker_resource alert:@"" msg:@"Authorise notifications to use tracker reminders." vc:rootController];
         }
 
     }
 
-    /*
-    func newMaintainer() {
-        let sud = UserDefaults.standard
-        if !sud.bool(forKey: "maintainerRqst") {
-            // if not yet told
-            //let rootController = (navigationController.viewControllers)[0] as? RootViewController
-            let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
-            let window = windowScene!.windows.first
-            let rootViewController = window!.rootViewController!
-            let alert = UIAlertController(
-                title: "rTracker is 10!",
-                message: "rTracker is 10 years old and needs a new maintainer.",
-                preferredStyle: .alert)
-
-            let defaultAction = UIAlertAction(
-                title: "OK",
-                style: .default,
-                handler: { action in
-                    rTracker_resource.setMaintainerRqst(true)
-                    UserDefaults.standard.set(true, forKey: "maintainerRqst")
-                    UserDefaults.standard.synchronize()
-
-                })
-
-            alert.addAction(defaultAction)
-            //rootController?.navigationController?.present(alert, animated: true)
-            rootViewController.present(alert, animated: true)
-        }
-    }
-     */
-    
-    //- (void)applicationDidFinishLaunching:(UIApplication *)application {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
 
         NotificationCenter.default.addObserver(self, selector: #selector(appWillEnterBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
@@ -135,12 +93,12 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
         let sud = UserDefaults.standard
         sud.synchronize()
 
-        let rootController = (navigationController.viewControllers)[0] as? RootViewController
+        let rootController = (navigationController.viewControllers)[0] as! RootViewController
 
         if nil == sud.object(forKey: "reload_sample_trackers_pref") {
 
             //((RootViewController *) [self.navigationController.viewControllers objectAtIndex:0]).initialPrefsLoad = YES;
-            rootController?.initialPrefsLoad = true
+            rootController.initialPrefsLoad = true
 
             let mainBundlePath = Bundle.main.bundlePath
             let settingsPropertyListPath = URL(fileURLWithPath: mainBundlePath).appendingPathComponent("Settings.bundle/Root.plist").path
@@ -190,17 +148,7 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
         let bld = Bundle.main.infoDictionary?["CFBundleVersion"]
         DBGLog(String("product \(prod!) version \(ver!) build \(bld!)  db_ver \(RTDB_VERSION)  fn_ver \(RTFN_VERSION) samples_ver \(SAMPLES_VERSION) demos_ver \(DEMOS_VERSION)"))
 
-        //NSURL *url = (NSURL *)[launchOptions valueForKey:UIApplicationLaunchOptionsURLKey];
-        // docs say app openURL below is called anyway, so don't do here which is only if app not already open
-        //
-        // if (url != nil && [url isFileURL]) {
-        //    [rootController handleOpenFileURL:url];
-        //}
-        //DBGLog(@"rt app delegate: app did finish launching");
-
         rTracker_resource.initHasAmPm()
-
-        //if (![rTracker_resource getAcceptLicense]) {
 
         DispatchQueue.main.async{
             if !sud.bool(forKey: "acceptLicense") {
@@ -232,11 +180,8 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
                 
                 alert.addAction(defaultAction)
                 alert.addAction(recoverAction)
-                
-                //rootController?.navigationController?.present(alert, animated: true)
+
                 rootViewController.present(alert, animated: true)
-            } else {
-                //newMaintainer()
             }
         }
         
@@ -256,13 +201,11 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
             }
         */
 
-        if SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO("9.0") {
-            let shortcutItem = launchOptions?[.shortcutItem] as? UIApplicationShortcutItem
-            if nil != shortcutItem {
-                //let foo = (shortcutItem?.userInfo)?["tid"]
-                //print("\(foo)")
-                rootController?.performSelector(onMainThread: #selector(RootViewController.doOpenTrackerOC(_:)), with: (shortcutItem?.userInfo)?["tid"], waitUntilDone: false)
+        if let shortcutItem = launchOptions?[.shortcutItem] as? UIApplicationShortcutItem {
+            if let tidString = shortcutItem.userInfo?["tid"] as? String, let tid = Int(tidString) {
+                rootController.doOpenTracker(tid)
                 return false // http://stackoverflow.com/questions/32634024/3d-touch-home-shortcuts-in-obj-c
+                // When you return a value of NO, the system does not call the application:performActionForShortcutItem:completionHandler: method.
             }
         }
 
@@ -297,19 +240,13 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
 
         // Finally, scan the integer value
         if scanner.scanInt(&tid) {
-            //rTracker_resource.alert("hello", msg: "open tracker\(tid) .", vc: rootController)
-
-        //if scanner.scanString(base, into: nil) && scanner.scanString("tid=", into: nil) && scanner.scanInt(&tid) {
             DBGLog("curl=\(urlas) format=\(format) tid=\(tid)")
        
             let tlist = rootController.tlist
             tlist.loadTopLayoutTable()
 
             if tlist.topLayoutIDs.contains(tid) {
-                //rootController.performSelector(onMainThread: #selector(rootController.doOpenTrackerOC(_:)), with: tid, waitUntilDone: false)
-               //DispatchQueue.main.async { let tid = tid
-                    rootController.doOpenTracker(tid)
-                //}
+                rootController.doOpenTracker(tid)
             } else {
                 rTracker_resource.alert("no tracker found", msg: "No tracker with ID \(tid) found in \(bdn).  Edit the tracker, tap the ⚙, and look in 'database info' for the tracker id.", vc: rootController)
             }
@@ -435,11 +372,9 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
                 navigationController.popViewController(animated: true)
             }
         }
-        //if ([self checkNotificationType:UIUserNotificationTypeBadge]) {  // minimum version is iOS 8 currently (14.iv.2016)
-        // iOS >= 10 just silently fail?
+
         application.applicationIconBadgeNumber = (rootController as? RootViewController)?.pendingNotificationCount() ?? 0
-        //}
-        //[rTracker_resource disableOrientationData];
+
         resigningActive = false
     }
 
@@ -472,10 +407,10 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
     }
     
     func application(_ application: UIApplication, performActionFor shortcutItem: UIApplicationShortcutItem, completionHandler: @escaping (Bool) -> Void) {
-
+        // don't think this ever gets called with handler in didFinishLaunching
         if let rootController = getRootController() {
             if let tid = shortcutItem.userInfo?["tid"] as? Int {
-                rootController.doOpenTrackerOC(tid)
+                rootController.doOpenTracker(tid)
                 completionHandler(true)
             } else {
                 completionHandler(false)
@@ -484,11 +419,4 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
             completionHandler(false)
         }
     }
-
-    func xxapplication(_ application: UIApplication, performActionFor shortcutItem: UIApplicationShortcutItem, completionHandler: @escaping (Bool) -> Void) {
-        let rootController = (navigationController.viewControllers)[0] as? RootViewController
-        rootController?.performSelector(onMainThread: #selector(RootViewController.doOpenTrackerOC(_:)), with: (shortcutItem.userInfo)?["tid"], waitUntilDone: false)
-    }
-    // MARK: -
-    // MARK: Memory management
 }
