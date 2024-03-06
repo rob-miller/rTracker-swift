@@ -1051,68 +1051,6 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         }
     }
 
-    func duplicateEntry() {
-        tracker!.trackerDate = Date()
-        needSave = true
-
-        showSaveBtn()
-
-        // write temp tracker here
-        tracker!.saveTempTrackerData()
-        updateToolBar()
-        updateTrackerTableView()
-
-        //[[NSNotificationCenter defaultCenter] postNotificationName:rtTrackerUpdatedNotification object:self]; // not sure why this doesn't work here....
-
-
-    }
-
-    @IBAction func iTunesExport() {
-
-        DBGLog("exporting tracker:")
-        #if DEBUGLOG
-        tracker!.describe()
-        #endif
-        //[rTracker_resource startProgressBar:self.view navItem:self.navigationItem disable:YES];
-        let navframe = navigationController?.navigationBar.frame
-        rTracker_resource.startProgressBar(view, navItem: navigationItem, disable: true, yloc: (navframe?.size.height ?? 0.0) + (navframe?.origin.y ?? 0.0))
-        //[rTracker_resource startProgressBar:self.navigationController.view navItem:self.navigationItem disable:YES];
-        Thread.detachNewThreadSelector(#selector(doPlistExport), toTarget: self, with: nil)
-    }
-
-    func handleExportTracker(_ buttonTitle: String?) {
-
-        if emCancel == buttonTitle {
-            DBGLog("cancelled")
-        } else if emItunesExport == buttonTitle {
-            iTunesExport()
-        } else if emDuplicate == buttonTitle {
-            duplicateEntry()
-        } else {
-            openMail(buttonTitle)
-        }
-
-    }
-
-    /*
-    - (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
-        if ([alertView.title hasSuffix:@"modified"]) {          // tracker modified and trying to leave without save
-            [self dispatchHandleModifiedTracker:buttonIndex];
-        } else if ([alertView.title hasPrefix:@"Really"]) {     // pessed delete button for entry
-            [self handleDeleteEntry:buttonIndex];
-        }else {                                                 // export menu
-            [self handleExportTracker:[alertView buttonTitleAtIndex:buttonIndex]];
-        }
-    }
-     */
-    /*
-    xxx stuck here - how to get back to setTrackerDate or btnCancel ?
-
-    save targD somewhere
-    if targd exists then do settrackerdate
-    else do btnCancel/btnSave
-    */
-
     func alertChkSave() {
         let title = tracker!.trackerName! + " modified" // 'modified' needed by handler
         let msg = "Save this record before leaving?"
@@ -1268,70 +1206,12 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     @objc func doPlistExport() {
         autoreleasepool {
-            //DBGLog(@"start export");
-
             _ = tracker!.saveToItunes()
             safeDispatchSync({ [self] in
                 rTracker_resource.finishProgressBar(view, navItem: navigationItem, disable: true)
             })
             rTracker_resource.alert("Tracker saved", msg: "\(tracker!.trackerName ?? "")_out.csv and _out.plist files have been saved to the rTracker Documents directory on this device\(rTracker_resource.getRtcsvOutput() ? " in rtCSV format" : "").  Access them through iTunes on your PC/Mac, or with a program like iExplorer from Macroplant.com.  Import by changing the names to _in.csv and _in.plist, and read about .rtcsv file import capabilities in the help pages.\n\nNote: Hidden private data has not been saved.", vc: self)
         }
-    }
-
-    @IBAction func btnMenu() {
-
-        //int prevD = (int)[self.tracker prevDate];
-        let postD = tracker!.postDate()
-        let lastD = tracker!.lastDate()
-        let currD = Int(tracker!.trackerDate?.timeIntervalSince1970 ?? 0)
-        /*
-             DBGLog(@"prevD = %d %@",prevD,[NSDate dateWithTimeIntervalSince1970:prevD]);
-             DBGLog(@"currD = %d %@",currD,[NSDate dateWithTimeIntervalSince1970:currD]);
-             DBGLog(@"postD = %d %@",postD,[NSDate dateWithTimeIntervalSince1970:postD]);
-             DBGLog(@"lastD = %d %@",lastD,[NSDate dateWithTimeIntervalSince1970:lastD]);
-             */
-        _currDateBtn = nil
-
-        let title = "\(tracker!.trackerName ?? "") tracker"
-        let msg: String? = nil
-        // NSString *btn5 = (postD != 0 || (lastD == currD)) ? emDuplicate : nil;
-
-        let alert = UIAlertController(
-            title: title,
-            message: msg,
-            preferredStyle: .alert)
-
-        let ecsvAction = UIAlertAction(title: emEmailCsv, style: .default, handler: { [self] action in
-            handleExportTracker(emEmailCsv)
-        })
-        let etAction = UIAlertAction(title: emEmailTracker, style: .default, handler: { [self] action in
-            handleExportTracker(emEmailTracker)
-        })
-        let etdAction = UIAlertAction(title: emEmailTrackerData, style: .default, handler: { [self] action in
-            handleExportTracker(emEmailTrackerData)
-        })
-        let iteAction = UIAlertAction(title: emItunesExport, style: .default, handler: { [self] action in
-            handleExportTracker(emItunesExport)
-        })
-        let cancelAction = UIAlertAction(title: emCancel, style: .default, handler: { [self] action in
-            handleExportTracker(emCancel)
-        })
-        if MFMailComposeViewController.canSendMail() {
-            alert.addAction(ecsvAction)
-            alert.addAction(etAction)
-            alert.addAction(etdAction)
-        }
-        alert.addAction(iteAction)
-        if postD != 0 || (lastD == currD) {
-            let dupAction = UIAlertAction(title: emDuplicate, style: .default, handler: { [self] action in
-                handleExportTracker(emDuplicate)
-            })
-            alert.addAction(dupAction)
-        }
-        alert.addAction(cancelAction)
-
-        present(alert, animated: true)
-
     }
 
     func privAlert(_ tpriv: Int, vpm: Int) {
@@ -1667,8 +1547,187 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     }
 
     // MARK: -
+    // MARK: share sheet
+    
+    func duplicateEntry() {
+        tracker!.trackerDate = Date()
+        needSave = true
+
+        showSaveBtn()
+
+        // write temp tracker here
+        tracker!.saveTempTrackerData()
+        updateToolBar()
+        updateTrackerTableView()
+    }
+
+    @IBAction func iTunesExport() {
+
+        DBGLog("exporting tracker:")
+        #if DEBUGLOG
+        tracker!.describe()
+        #endif
+        let navframe = navigationController?.navigationBar.frame
+        rTracker_resource.startProgressBar(view, navItem: navigationItem, disable: true, yloc: (navframe?.size.height ?? 0.0) + (navframe?.origin.y ?? 0.0))
+        Thread.detachNewThreadSelector(#selector(doPlistExport), toTarget: self, with: nil)
+    }
+  
+    // Menu options
+    enum MenuOption: String {
+        case shareCSV = "Share CSV"
+        case shareTracker = "Share Tracker"
+        case shareTrackerData = "Share Tracker+Data"
+        case saveToPC = "Save to app directory"
+        case duplicateEntry = "Duplicate Entry to Now"
+        case cancel = "Cancel"
+    }
+    
+    
+    @IBAction func btnMenu() {
+        let alert = UIAlertController(title: tracker?.trackerName ?? "", message: nil, preferredStyle: .actionSheet)
+        
+        var options: [MenuOption] = [.shareCSV, .shareTracker, .shareTrackerData, .saveToPC]
+        
+        let postD = tracker!.postDate()
+        let lastD = tracker!.lastDate()
+        let currD = Int(tracker!.trackerDate?.timeIntervalSince1970 ?? 0)
+        if postD != 0 || lastD == currD {
+            options.append(.duplicateEntry)
+        }
+
+        for option in options {
+            let action = UIAlertAction(title: option.rawValue, style: .default) { [self] _ in
+                handleMenuOption(option)
+            }
+            alert.addAction(action)
+        }
+        
+        alert.addAction(UIAlertAction(title: MenuOption.cancel.rawValue, style: .cancel, handler: nil))
+        
+        present(alert, animated: true)
+    }
+    
+    func handleMenuOption(_ option: MenuOption) {
+        guard let tracker = tracker else { return }
+        
+        var fileURL: URL?
+        // var fileType: String?
+        
+        switch option {
+        case .shareCSV:
+            /*
+             // fileType inferred from extension so this not used
+            if rTracker_resource.getRtcsvOutput() {
+                fileType = "com.realidata.rTracker.rtcsv"   // public mimetype is text/csv
+            } else {
+                fileType = "public.comma-separated-values-text"  // apple ecosystem UTI
+                // fileType = "text/csv"  // mime type
+            }
+             */
+            fileURL = URL(fileURLWithPath:tracker.getPath(CSVext))
+            if !tracker.writeCSV() { return }
+        case .shareTracker, .shareTrackerData :
+            // fileType = "com.realidata.rTracker.rtrk"
+            fileURL = URL(fileURLWithPath:tracker.getPath(RTRKext))
+            if !tracker.writeRtrk(option == .shareTrackerData) { return }
+        case .saveToPC:
+            iTunesExport()
+        case .duplicateEntry:
+            duplicateEntry()
+        case .cancel:
+            break
+        }
+
+        guard let fileURL = fileURL else {
+            // exit pathe for iTunesExport and duplicateEntry
+            return
+        }
+
+        let activityViewController = UIActivityViewController(activityItems: [fileURL], applicationActivities: nil)
+        activityViewController.completionWithItemsHandler = { activityType, completed, returnedItems, activityError in
+            // Handle completion
+            // try? FileManager.default.removeItem(at: fileURL) // Ensure temporary files are cleaned up
+        }
+        self.present(activityViewController, animated: true)
+    }
+    
+
+    /*
+    // MARK: -
     // MARK: mail support
 
+     func handleExportTracker(_ buttonTitle: String?) {
+
+         if emCancel == buttonTitle {
+             DBGLog("cancelled")
+         } else if emItunesExport == buttonTitle {
+             iTunesExport()
+         } else if emDuplicate == buttonTitle {
+             duplicateEntry()
+         } else {
+             openMail(buttonTitle)
+         }
+
+     }
+     
+   
+     @IBAction func btnMenu() {
+
+         //int prevD = (int)[self.tracker prevDate];
+         let postD = tracker!.postDate()
+         let lastD = tracker!.lastDate()
+         let currD = Int(tracker!.trackerDate?.timeIntervalSince1970 ?? 0)
+         /*
+              DBGLog(@"prevD = %d %@",prevD,[NSDate dateWithTimeIntervalSince1970:prevD]);
+              DBGLog(@"currD = %d %@",currD,[NSDate dateWithTimeIntervalSince1970:currD]);
+              DBGLog(@"postD = %d %@",postD,[NSDate dateWithTimeIntervalSince1970:postD]);
+              DBGLog(@"lastD = %d %@",lastD,[NSDate dateWithTimeIntervalSince1970:lastD]);
+              */
+         _currDateBtn = nil
+
+         let title = "\(tracker!.trackerName ?? "") tracker"
+         let msg: String? = nil
+         // NSString *btn5 = (postD != 0 || (lastD == currD)) ? emDuplicate : nil;
+
+         let alert = UIAlertController(
+             title: title,
+             message: msg,
+             preferredStyle: .alert)
+
+         let ecsvAction = UIAlertAction(title: emEmailCsv, style: .default, handler: { [self] action in
+             handleExportTracker(emEmailCsv)
+         })
+         let etAction = UIAlertAction(title: emEmailTracker, style: .default, handler: { [self] action in
+             handleExportTracker(emEmailTracker)
+         })
+         let etdAction = UIAlertAction(title: emEmailTrackerData, style: .default, handler: { [self] action in
+             handleExportTracker(emEmailTrackerData)
+         })
+         let iteAction = UIAlertAction(title: emItunesExport, style: .default, handler: { [self] action in
+             handleExportTracker(emItunesExport)
+         })
+         let cancelAction = UIAlertAction(title: emCancel, style: .default, handler: { [self] action in
+             handleExportTracker(emCancel)
+         })
+         if MFMailComposeViewController.canSendMail() {
+             alert.addAction(ecsvAction)
+             alert.addAction(etAction)
+             alert.addAction(etdAction)
+         }
+         alert.addAction(iteAction)
+         if postD != 0 || (lastD == currD) {
+             let dupAction = UIAlertAction(title: emDuplicate, style: .default, handler: { [self] action in
+                 handleExportTracker(emDuplicate)
+             })
+             alert.addAction(dupAction)
+         }
+         alert.addAction(cancelAction)
+
+         present(alert, animated: true)
+
+     }
+
+     
     func attachTrackerData(_ mailer: MFMailComposeViewController?, key: String?) -> Bool {
         var result: Bool
         var fp = tracker!.getPath(RTRKext)
@@ -1742,7 +1801,6 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         mailer.setMessageBody(emailBody ?? "", isHTML: true)
         if attachTrackerData(mailer, key: btnTitle) {
             present(mailer, animated: true)
-            //[self presentModalViewController:mailer animated:YES];
         }
         #if RELEASE
         _ = rTracker_resource.deleteFile(atPath: tracker!.getPath(ext))
@@ -1767,10 +1825,9 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         }
         // Remove the mail view
         dismiss(animated: true)
-        // some say this way but don't think so: [controller dismissViewControllerAnimated:YES completion:NULL ];
-        //[self dismissModalViewControllerAnimated:YES];
     }
-
+*/
+    
     // MARK: -
     // MARK: Table view methods
 
