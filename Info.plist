@@ -143,7 +143,7 @@
 				<key>public.filename-extension</key>
 				<string>rtcsv</string>
 				<key>public.mime-type</key>
-				<string>application/rTracker</string>
+				<string>text/csv</string>
 			</dict>
 		</dict>
 	</array>
