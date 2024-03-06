@@ -1332,9 +1332,6 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
         present(alert, animated: true)
 
-
-
-
     }
 
     func privAlert(_ tpriv: Int, vpm: Int) {
