@@ -8,6 +8,8 @@
 
 import XCTest
 
+var exerciseTracker: Int = 3
+
 final class rTrackerUITests: XCTestCase {
     
     let app = XCUIApplication()
@@ -77,11 +79,16 @@ final class rTrackerUITests: XCTestCase {
             try testSavePrivateGo()
             
             try testReminders()
+            
+            try testURLSchemePrep()
+            try testURLSchemeTest()
+            
         } catch {
             XCTFail("error: \(error)")
         }
     }
     
+
     func testTrackerDemoInstall() throws {
         app.tables.cells["trkr_👣rTracker demo"].tap()
         sleep(1)
@@ -702,7 +709,7 @@ Kate Bell
         
         addVal("textbox", noSave:true)
         avoConfig.tap()
-        app.buttons["tnull_vtextbox_tbnlBtn"].tap()
+        app.switches["tnull_vtextbox_tbnlBtn"].tap()
         app.buttons["configtvo_done"].tap()
         saveBtn.tap()
         addValBtn.tap()
@@ -803,10 +810,9 @@ Kate Bell
         
         addVal("function", noSave:true)
         vname.tap()
-        vname.typeText("vnfo")
+        vname.typeText("vinfofn")  // to differentiate from vinfo
         saveBtn.tap()
         addValBtn.tap()
-        
         
         avoCancel.tap()  // exit last addValObj
         
@@ -830,7 +836,7 @@ Kate Bell
         app.tables.cells["configt_testTracker"].tap()
         
         app.buttons["modTrkrConfig"].tap()
-        app.buttons["testTracker_srBtn"].tap()
+        app.switches["testTracker_srBtn"].tap()
         app.buttons["configtvo_done"].tap()
         
         var targCell = app.tables.cells["testTracker_vfunction"]
@@ -1077,7 +1083,7 @@ Kate Bell
         app.buttons["configtvo_done"].tap()
         app.buttons["avoSave"].tap()
         //--
-        targCell = app.tables.cells["testTracker_vnfo"]
+        targCell = app.tables.cells["testTracker_vinfofn"]
         coordinate = targCell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)) // center of the cell
         coordinate.tap()
         //app.tables.cells["testTracker_vfunction"].tap()
@@ -1600,7 +1606,7 @@ Kate Bell
         XCTAssertTrue(Exlabel.contains("1 scheduled reminders"))
         XCTAssertTrue(Exlabel.contains("Tuesday,"))
         //XCTAssertTrue(Exlabel.contains(" at 6:47 AM"))
-        let pattern = " at 6:47[  ]AM"  // Include both regular and non-breaking space in the pattern
+        var pattern = " at 6:47[  ]AM"  // Include both regular and non-breaking space in the pattern
 
         do {
             let regex = try NSRegularExpression(pattern: pattern)
@@ -1612,6 +1618,19 @@ Kate Bell
             XCTFail("Regular expression is invalid.")
         }
 
+        // while we are here, extract tracker number for URL scheme test
+        pattern = "tracker number (\\d+)"
+        do {
+            let regex = try NSRegularExpression(pattern: pattern)
+            let match = regex.firstMatch(in: Exlabel, range: NSRange(Exlabel.startIndex..., in: Exlabel))
+            let range = Range(match!.range(at: 1), in: Exlabel)!
+            let numberString = String(Exlabel[range])
+            if let trackerNumber = Int(numberString) {
+                exerciseTracker = trackerNumber
+            }
+        }
+        
+        
         ExAlert.buttons["OK"].tap()
         
         app.buttons["Reminders"].tap()
@@ -1731,6 +1750,38 @@ Kate Bell
         //print("hello")
         
     }
+    
+    func testURLSchemePrep() throws {
+        // needs new tracker and setReminders() run
+        app.buttons["Edit"].tap()
+        app.tables.cells["configt_testTracker"].tap()
+        let targCell = app.tables.cells["testTracker_vinfo"]
+        let coordinate = targCell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)) // center of the cell
+        coordinate.tap()
+        //app.tables.cells["testTracker_vfunction"].tap()
+        app.buttons["avoConfig"].tap()
+        
+        let urltf = app.textFields["testTracker_vinfo_iurlTF"]
+        clearTextField(urltf)
+        urltf.tap()
+        urltf.typeText("rTracker://tid=\(exerciseTracker)\n")
+        app.buttons["configtvo_done"].tap()
+        app.buttons["avoSave"].tap()
+        app.buttons["addTrkrSave"].tap()
+        app.buttons["rTracker"].tap()
+    }
+
+    func testURLSchemeTest() throws {
+        app.tables.cells["trkr_testTracker"].tap()
+        let vinfo = app.tables.cells["useT_testTracker_vinfo"]
+        vinfo.tap()
+        let ihrcell = app.tables.cells["useT_🚴 Exercise_distance"]
+        XCTAssert(ihrcell.exists)
+        app.buttons["< rTracker"].tap()
+        XCTAssert(vinfo.exists)
+        app.buttons["< rTracker"].tap()
+    }
+
     func testLaunchPerformance() throws {
         if #available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 7.0, *) {
             // This measures how long it takes to launch your application.
