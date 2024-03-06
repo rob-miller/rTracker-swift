@@ -166,23 +166,25 @@ class rTracker_resource: NSObject {
     //---------------------------
 
     class func ioFilePath(_ fname: String?, access: Bool) -> String {
-        // nil acceptable for fname to just get docsdir
-        var paths: [AnyHashable]?
+        var pathURL: URL
+        
         if access {
-            paths = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).map(\.path) // file itunes accessible
+            // File iTunes accessible - use Documents directory
+            pathURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
         } else {
-            paths = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).map(\.path) // files not accessible
+            // Files not accessible via iTunes - use Temporary directory
+            pathURL = FileManager.default.temporaryDirectory
         }
-        let docsDir = paths![0] as? String
-
-        //DBGLog(@"ioFilePath= %@",[docsDir stringByAppendingPathComponent:fname] );
-
-        if let fname {
-            return URL(fileURLWithPath: docsDir!).appendingPathComponent(fname).path as String
+        
+        if let filename = fname {
+            // If a filename is provided, append it to the directory path
+            return pathURL.appendingPathComponent(filename).path
         } else {
-            return URL(fileURLWithPath: docsDir!).path
+            // If no filename is provided, return the directory path
+            return pathURL.path
         }
     }
+
 
     class func deleteFile(atPath fp: String?) -> Bool {
         var err: Error?
