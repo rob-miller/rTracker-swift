@@ -961,7 +961,7 @@ class trackerObj: tObjBase {
         writeTrackerCSV(nsfh)
         nsfh?.closeFile()
 
-        return URL(string:fpath)
+        return URL(fileURLWithPath:fpath)
     }
 
     func writeTmpRtrk(_ withData: Bool) -> URL? {
@@ -1010,7 +1010,7 @@ class trackerObj: tObjBase {
             //[rTracker_resource protectFile:fp];
         }
 
-        return URL(string:fp)
+        return URL(fileURLWithPath:fp)
     }
 
     func saveToItunes() -> Bool {
