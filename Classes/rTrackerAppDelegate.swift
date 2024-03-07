@@ -254,8 +254,11 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
         } else if urlas == base {
             // do nothing because rTracker:// should open with default trackerList page
         } else if urlas.hasPrefix(base) || urlas.hasPrefix(base.lowercased()) {
-            DBGLog("sscanf fail curl=\(urlas) format=\(format)")
+            DBGLog("sscanf fail url=\(urlas) format=\(format)")
             rTracker_resource.alert("bad URL", msg: "URL received was \(url.absoluteString) but should look like \(format)", vc: rootController)
+        } else if urlas.hasPrefix("file://") {
+            rTracker_resource.copyFileToInboxDirectory(from: url)
+            // rootviewcontroller will read as rejectable
         }
        
         return true
