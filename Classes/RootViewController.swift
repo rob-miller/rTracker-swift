@@ -192,16 +192,56 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         rTracker_resource.startActivityIndicator(view, navItem: nil, disable: false, str: str)
     }
 
+    func is_rtcsv(_ url: URL) -> Bool {
+        do {
+            // Read the content of the file
+            let content = try String(contentsOf: url, encoding: .utf8)
+            // Split the content into lines
+            let lines = content.split(separator: "\n")
+            
+            // Ensure there's at least a second line
+            guard lines.count >= 2 else { return false }
+            
+            // Extract the second line
+            let secondLine = String(lines[1])
+            
+            // Check if the second line starts with a comma
+            guard secondLine.starts(with: ",") else { return false }
+            
+            // Define the regular expression pattern for matching the fields
+            let pattern = "^,(\"[a-zA-Z]+:[a-zA-Z]*:[0-9]+\"(?:,\"[a-zA-Z]+:[a-zA-Z]*:[0-9]+\")*)$"
+            
+            // Create a regular expression with the pattern
+            let regex = try NSRegularExpression(pattern: pattern)
+            
+            // Perform the regex match on the second line
+            let matches = regex.matches(in: secondLine, range: NSRange(secondLine.startIndex..., in: secondLine))
+            
+            // If there is at least one match, the line is valid
+            return !matches.isEmpty
+        } catch {
+            // If there's an error reading the file or processing the regex, return false
+            print(error.localizedDescription)
+            return false
+        }
+    }
+    
     func loadTrackerCsvFiles() {
-        let docsDir = rTracker_resource.ioFilePath(nil, access: true)
         let localFileManager = FileManager.default
         var newRtcsvTracker = false
         
-        //let files = try localFileManager.contentsOfDirectory(atPath: docsDir)
-        let directoryURL = URL(fileURLWithPath: docsDir)
-        let enumerator = localFileManager.enumerator(at: directoryURL, includingPropertiesForKeys: [.isDirectoryKey], options: [])
+        var docsDir = rTracker_resource.ioFilePath(nil, access: true)
+        var directoryURL = URL(fileURLWithPath: docsDir)
+        var enumerator = localFileManager.enumerator(at: directoryURL, includingPropertiesForKeys: [.isDirectoryKey], options: [])
         
         var files: [URL] = []
+        while let url = enumerator?.nextObject() as? URL {
+            files.append(url)
+        }
+        
+        docsDir = rTracker_resource.ioFilePath("Inbox", access: true)
+        directoryURL = URL(fileURLWithPath: docsDir)
+        enumerator = localFileManager.enumerator(at: directoryURL, includingPropertiesForKeys: [.isDirectoryKey], options: [])
         while let url = enumerator?.nextObject() as? URL {
             files.append(url)
         }
@@ -221,13 +261,16 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                     
                     switch fileUrl.pathExtension {
                     case "csv":
-                        loadObj = "_in.csv"
                         if fname.hasSuffix("_in.csv") {
+                            loadObj = "_in.csv"
+                            validMatch = true
+                        } else if fileUrl.pathComponents.contains("Inbox") {
+                            loadObj = ".csv"
                             validMatch = true
                         }
                     case "rtcsv":
-                        loadObj = "_in.rtcsv"
-                        if fname.hasSuffix(loadObj!) {
+                        if fname.hasSuffix("_in.rtcsv") {
+                            loadObj = "_in.rtcsv"
                             validMatch = true
                         } else {
                             loadObj = ".rtcsv"  // accept _in above, already know it has .rtcsv extension
@@ -240,10 +283,11 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                     if validMatch {
                         tname = String(fname.dropLast(loadObj!.count))
                         let tid = tlist.getTIDfromName(tname)
+                        let isRtcsv = is_rtcsv(fileUrl)
                         if tid != 0 {
                             to = trackerObj(tid)
                             DBGLog("found existing tracker tid \(tid) with matching name for _in.[rt]csv file")
-                        } else if fileUrl.pathExtension == "rtcsv" {
+                        } else if isRtcsv {
                             to = trackerObj()
                             to?.trackerName = tname
                             to?.toid = tlist.getUnique()
@@ -251,6 +295,9 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                             tlist.add(toTopLayoutTable: to!)
                             newRtcsvTracker = true
                             DBGLog("created new tracker for rtcsv, id= \(to!.toid)")
+                        } else {
+                            rTracker_resource.alert("No matching tracker", msg: "No 'tname' tracker found for \(fname), and the file does not conform to rtCSV format.", vc: self)
+                            _ = rTracker_resource.deleteFile(atPath: fileUrl.path)
                         }
                         
                         if let to = to {
@@ -618,10 +665,13 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         // end of this thread, refreshLock still on, userInteraction disabled, activityIndicator still spinning and doLoadCsvFiles is in charge
     }
 
-    func countInputFiles(_ targ_ext: String?) -> Int {
+    func countInputFiles(_ targ_ext: String?, Inbox: Bool = false) -> Int {
         var retval = 0
 
-        let docsDir = rTracker_resource.ioFilePath(nil, access: true)
+        var docsDir = rTracker_resource.ioFilePath(nil, access: true)
+        if Inbox {
+            docsDir = rTracker_resource.ioFilePath("Inbox", access: true)
+        }
         let localFileManager = FileManager.default
 
 
@@ -656,8 +706,11 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         //if (!self.openUrlLock) {
         csvLoadCount = countInputFiles("_in.csv")
         plistLoadCount = countInputFiles("_in.plist")
-        let rtrkLoadCount = countInputFiles(".rtrk")
+        var rtrkLoadCount = countInputFiles(".rtrk")
         csvLoadCount += countInputFiles(".rtcsv")
+        rtrkLoadCount += countInputFiles(".rtrk", Inbox: true)
+        csvLoadCount += countInputFiles(".csv", Inbox: true)
+        csvLoadCount += countInputFiles(".rtcsv", Inbox: true)
 
         // handle rtrks as plist + csv, just faster if only has data or only has tracker def
         csvLoadCount += rtrkLoadCount
