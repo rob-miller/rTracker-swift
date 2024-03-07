@@ -391,8 +391,8 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     @IBAction func nameFieldDone(_ sender: UIResponder) {
         sender.resignFirstResponder()
-        if nameField.text != nil {
-            tempTrackerObj?.trackerName = rTracker_resource.sanitizeFileNameString(nameField.text)
+        if let nftxt = nameField.text {
+            tempTrackerObj?.trackerName = rTracker_resource.sanitizeFileNameString(nftxt)
         }
     }
 

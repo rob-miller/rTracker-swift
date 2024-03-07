@@ -1624,7 +1624,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 // fileType = "text/csv"  // mime type
             }
              */
-            fileURL = URL(fileURLWithPath:tracker.getPath(CSVext))
+            let ext = ( rTracker_resource.getRtcsvOutput() ? RTCSVext : CSVext)
+            fileURL = URL(fileURLWithPath:tracker.getPath(ext))
             if !tracker.writeCSV() { return }
         case .shareTracker, .shareTrackerData :
             // fileType = "com.realidata.rTracker.rtrk"

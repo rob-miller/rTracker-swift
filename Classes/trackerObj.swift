@@ -934,9 +934,10 @@ class trackerObj: tObjBase {
     //#pragma write tracker as rtrk or plist+csv for iTunes
 
     func getPath(_ ext: String) -> String {
+        guard let trackerName = trackerName else { return "" }
         let fpatho = rTracker_resource.ioFilePath(nil, access: false)
         try? FileManager.default.createDirectory(atPath: fpatho, withIntermediateDirectories: false, attributes: nil)
-        let fname = (rTracker_resource.sanitizeFileNameString(trackerName) ?? "") + ext
+        let fname = (rTracker_resource.sanitizeFileNameString(trackerName)) + ext
         //NSString *fname = [ self.trackerName stringByAppendingString:extension];
         let fpath = URL(fileURLWithPath: fpatho).appendingPathComponent(fname).path
         return fpath
@@ -952,7 +953,8 @@ class trackerObj: tObjBase {
 
     func writeCSV() -> Bool {
         let result = true
-        let fpath = getPath(CSVext)
+        let ext = ( rTracker_resource.getRtcsvOutput() ? RTCSVext : CSVext)
+        let fpath = getPath(ext)
         FileManager.default.createFile(atPath: fpath, contents: nil, attributes: nil)
         let nsfh = FileHandle(forWritingAtPath: fpath)
         writeTrackerCSV(nsfh)

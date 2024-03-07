@@ -374,7 +374,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     // MARK: -
     // MARK: load .plists and .rtrks for input trackers
 
-    func handleOpenFileURL(_ url: URL?, tname: String?) -> Int {
+    func handleOpenFileURL(_ url: URL, tname: String?) -> Int {
         var tname = tname
         var tdict: [String : Any] = [:]
         var dataDict: [String : [String : String]]? = nil
@@ -385,42 +385,40 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         jumpMaxPriv()
         if nil != tname {
             // if tname set it is just a plist
-            if let url {
-                tdict = (NSDictionary(contentsOf: url) as Dictionary? as! [String : Any])
-            }
+            tdict = (NSDictionary(contentsOf: url) as Dictionary? as! [String : Any])
         } else {
             // else is an rtrk
             var rtdict: [String : Any] = [:]
-            if let url {
-                rtdict = NSDictionary(contentsOf: url) as Dictionary? as! [String : Any]
-                /*
-                 "trackerName" : String
-                 "dataDict" : [String : [String : String] ]
-                 "tid" : String
-                 "configDict" :
-                    ["reminders: : []],
-                    ["tid" : int],
-                    ["optDict", Any] =>
-                        ["height" : Double]
-                        ["graphMaxDays" : String]
-                        ["rt_version" : String]
-                        ["prevTID" : String]
-                        ["privacy" : String]
-                        ["rt_build" : String]
-                        ["rtdb_version" : String]
-                        ["savertn" : String]
-                        ["width : Double]
-                        ["name" : String]
-                    ["valObjTable" : Any] =>
-                        ["vcolor" : Int]
-                        ["vGraphType" : Int]
-                        ["vpriv" : Int]
-                        ["valueName" : String]
-                        ["vid" : Int]
-                        ["vtype" : Int]
-                        ["optDict" : [String : String]
-                 */
-            }
+
+            rtdict = NSDictionary(contentsOf: url) as Dictionary? as! [String : Any]
+            /*
+             "trackerName" : String
+             "dataDict" : [String : [String : String] ]
+             "tid" : String
+             "configDict" :
+                ["reminders: : []],
+                ["tid" : int],
+                ["optDict", Any] =>
+                    ["height" : Double]
+                    ["graphMaxDays" : String]
+                    ["rt_version" : String]
+                    ["prevTID" : String]
+                    ["privacy" : String]
+                    ["rt_build" : String]
+                    ["rtdb_version" : String]
+                    ["savertn" : String]
+                    ["width : Double]
+                    ["name" : String]
+                ["valObjTable" : Any] =>
+                    ["vcolor" : Int]
+                    ["vGraphType" : Int]
+                    ["vpriv" : Int]
+                    ["valueName" : String]
+                    ["vid" : Int]
+                    ["vtype" : Int]
+                    ["optDict" : [String : String]
+             */
+
             tname = rtdict["trackerName"] as? String
             tdict = (rtdict["configDict"] ?? [:]) as! [String : Any]
             dataDict = rtdict["dataDict"] as? [String : [String : String]]
@@ -452,8 +450,8 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         DBGLog("ltd/ldd finish")
 
         restorePriv()
-        DBGLog(String("removing file \(url?.path)"))
-        _ = rTracker_resource.deleteFile(atPath: url?.path)
+        DBGLog(String("removing file \(url.path)"))
+        _ = rTracker_resource.deleteFile(atPath: url.path)
 
         return tid
     }
@@ -466,7 +464,6 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         let localFileManager = FileManager.default
 
         var filesToProcess: [URL] = []
-
 
         let directoryURL = URL(fileURLWithPath: docsDir)
         let enumerator = FileManager.default.enumerator(at: directoryURL, includingPropertiesForKeys: [.isDirectoryKey], options: [])
