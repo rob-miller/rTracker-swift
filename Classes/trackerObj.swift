@@ -954,17 +954,17 @@ class trackerObj: tObjBase {
     }
      */
     
-    func writeTmpCSV() -> String {
+    func writeTmpCSV() -> URL? {
         let fpath = getTmpPath(rTracker_resource.getRtcsvOutput() ? RTCSVext : CSVext)
         FileManager.default.createFile(atPath: fpath, contents: nil, attributes: nil)
         let nsfh = FileHandle(forWritingAtPath: fpath)
         writeTrackerCSV(nsfh)
         nsfh?.closeFile()
 
-        return fpath
+        return URL(string:fpath)
     }
 
-    func writeTmpRtrk(_ withData: Bool) -> String? {
+    func writeTmpRtrk(_ withData: Bool) -> URL? {
         var tData: [AnyHashable : Any] = [:]
 
         if withData {
@@ -1010,7 +1010,7 @@ class trackerObj: tObjBase {
             //[rTracker_resource protectFile:fp];
         }
 
-        return fp
+        return URL(string:fp)
     }
 
     func saveToItunes() -> Bool {

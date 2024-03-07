@@ -1615,22 +1615,9 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         
         switch option {
         case .shareCSV:
-            /*
-             // fileType inferred from extension so this not used
-            if rTracker_resource.getRtcsvOutput() {
-                fileType = "com.realidata.rTracker.rtcsv"   // public mimetype is text/csv
-            } else {
-                fileType = "public.comma-separated-values-text"  // apple ecosystem UTI
-                // fileType = "text/csv"  // mime type
-            }
-             */
-            let ext = ( rTracker_resource.getRtcsvOutput() ? RTCSVext : CSVext)
-            fileURL = URL(fileURLWithPath:tracker.getPath(ext))
-            if !tracker.writeCSV() { return }
+            fileURL = tracker.writeTmpCSV()
         case .shareTracker, .shareTrackerData :
-            // fileType = "com.realidata.rTracker.rtrk"
-            fileURL = URL(fileURLWithPath:tracker.getPath(RTRKext))
-            if !tracker.writeRtrk(option == .shareTrackerData) { return }
+            fileURL = tracker.writeTmpRtrk(option == .shareTrackerData)
         case .saveToPC:
             iTunesExport()
         case .duplicateEntry:
@@ -1640,14 +1627,14 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         }
 
         guard let fileURL = fileURL else {
-            // exit pathe for iTunesExport and duplicateEntry
+            // exit path for iTunesExport, duplicateEntry and faile to writeTmpXXX
             return
         }
 
         let activityViewController = UIActivityViewController(activityItems: [fileURL], applicationActivities: nil)
         activityViewController.completionWithItemsHandler = { activityType, completed, returnedItems, activityError in
             // Handle completion
-            // try? FileManager.default.removeItem(at: fileURL) // Ensure temporary files are cleaned up
+            try? FileManager.default.removeItem(at: fileURL) // Ensure temporary files are cleaned up
         }
         self.present(activityViewController, animated: true)
     }
