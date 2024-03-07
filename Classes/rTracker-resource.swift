@@ -165,7 +165,7 @@ class rTracker_resource: NSObject {
 
     //---------------------------
 
-    class func ioFilePath(_ fname: String?, access: Bool) -> String {
+    class func ioFilePath(_ fname: String?, access: Bool, tmp: Bool = false) -> String {
         var pathURL: URL
         
         if access {
@@ -173,7 +173,11 @@ class rTracker_resource: NSObject {
             pathURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
         } else {
             // Files not accessible via iTunes - use Temporary directory
-            pathURL = FileManager.default.temporaryDirectory
+            if tmp {
+                pathURL = FileManager.default.temporaryDirectory
+            } else {
+                pathURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first!
+            }
         }
         
         if let filename = fname {
