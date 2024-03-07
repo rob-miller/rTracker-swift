@@ -447,7 +447,8 @@
 				D417E3032A2121560093564A /* TSQCalendarView.h */,
 				D417E3092A2121570093564A /* TSQCalendarView.m */,
 			);
-			path = TimesSquare;
+			name = TimesSquare;
+			path = Classes/TimesSquare;
 			sourceTree = "<group>";
 		};
 		D43EE365133CBF4100737E76 /* csv support */ = {
