@@ -201,9 +201,9 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         let directoryURL = URL(fileURLWithPath: docsDir)
         let enumerator = localFileManager.enumerator(at: directoryURL, includingPropertiesForKeys: [.isDirectoryKey], options: [])
         
-        var files: [String] = []
+        var files: [URL] = []
         while let url = enumerator?.nextObject() as? URL {
-            files.append(url.lastPathComponent)
+            files.append(url)
         }
         
         safeDispatchSync { [self] in
@@ -211,23 +211,23 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
             tlist.loadTopLayoutTable()  // runs on main queue
             DispatchQueue.global(qos: .userInitiated).async { [self] in  // all this in background queue
                 
-                for fileName in files {
-                    let fullPath = URL(fileURLWithPath: docsDir).appendingPathComponent(fileName)
+                for fileUrl in files {
+                    //let fullPath = URL(fileURLWithPath: docsDir).appendingPathComponent(fileName)
                     var to: trackerObj? = nil
-                    let fname = URL(fileURLWithPath: fileName).lastPathComponent
+                    let fname = fileUrl.lastPathComponent
                     var tname: String? = nil
                     var validMatch = false
                     var loadObj: String?
                     
-                    switch fullPath.pathExtension {
+                    switch fileUrl.pathExtension {
                     case "csv":
                         loadObj = "_in.csv"
-                        if fileName.hasSuffix("_in.csv") {
+                        if fname.hasSuffix("_in.csv") {
                             validMatch = true
                         }
                     case "rtcsv":
                         loadObj = "_in.rtcsv"
-                        if fileName.hasSuffix(loadObj!) {
+                        if fname.hasSuffix(loadObj!) {
                             validMatch = true
                         } else {
                             loadObj = ".rtcsv"  // accept _in above, already know it has .rtcsv extension
@@ -238,12 +238,12 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                     }
                     
                     if validMatch {
-                        tname = String(fileName.dropLast(loadObj!.count))
+                        tname = String(fname.dropLast(loadObj!.count))
                         let tid = tlist.getTIDfromName(tname)
                         if tid != 0 {
                             to = trackerObj(tid)
-                            DBGLog("found existing tracker tid \(tid) with matching name")
-                        } else if fullPath.pathExtension == "rtcsv" {
+                            DBGLog("found existing tracker tid \(tid) with matching name for _in.[rt]csv file")
+                        } else if fileUrl.pathExtension == "rtcsv" {
                             to = trackerObj()
                             to?.trackerName = tname
                             to?.toid = tlist.getUnique()
@@ -261,13 +261,13 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                             }
                             do {
                                 
-                                let csvString = try String(contentsOfFile: fullPath.path, encoding: .utf8)
+                                let csvString = try String(contentsOfFile: fileUrl.path, encoding: .utf8)
                                 //jumpMaxPriv()  just needed to get in tracker list above
                                 self.doCSVLoad(csvString, to: to, fname: fname)
                                 //print("back from csv load \(tname ?? "tname nil")")
                                 //restorePriv()
                                 do {
-                                    try localFileManager.removeItem(at: fullPath)
+                                    try localFileManager.removeItem(at: fileUrl)
                                 } catch {
                                     DBGWarn("Error deleting file \(fname): \(error)")
                                 }
