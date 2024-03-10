@@ -379,7 +379,7 @@ class voChoice: voState {
             NSAttributedString.Key.font: PrefBodyFont
         ]).width
 
-        frame.size.height = ctvovc.lfHeight // self.labelField.frame.size.height; // lab.frame.size.height;
+        frame.size.height = minLabelHeight(ctvovc.lfHeight)
 
         //var i: Int
         var j = 1
@@ -453,7 +453,7 @@ class voChoice: voState {
 
         frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
 
-        frame = ctvovc.configCheckButton(
+        frame = ctvovc.configSwitch(
             frame,
             key: "csbBtn",
             state: (vo.optDict["shrinkb"] == "1") /* default:0 */,
@@ -468,7 +468,7 @@ class voChoice: voState {
 
         frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
 
-        frame = ctvovc.configCheckButton(
+        frame = ctvovc.configSwitch(
             frame,
             key: "cevBtn",
             state: (vo.optDict["exportvalb"] == "1") /* default:0 */,

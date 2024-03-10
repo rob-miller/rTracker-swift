@@ -1384,11 +1384,14 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             }
 
             if (0 == component) && (ISCALFREP(Int(vo.optDict[key]!)!)) {
-                let ckBtn = (ctvovcp?.wDict)?["graphLastBtn"] as? UIButton
+                let ckBtn = (ctvovcp?.wDict)?["graphLastBtn"] as? UISwitch // UIButton
                 let state = !(vo.optDict["graphlast"] == "0") // default:1
+                ckBtn?.isOn = state
+                /*
                 ckBtn?.setImage(
                     UIImage(named: state ? "checked.png" : "unchecked.png"),
                     for: .normal)
+                */
                 if let ckBtn {
                     ctvovcp?.scroll.addSubview(ckBtn)
                 }
@@ -1450,7 +1453,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             NSAttributedString.Key.font: PrefBodyFont
         ]).width
         frame.size.width = tfWidth
-        frame.size.height = ctvovcp?.lfHeight ?? 0.0
+        frame.size.height = minLabelHeight(ctvovcp?.lfHeight ?? 0.0)
 
         _ = ctvovcp?.configTextField(
             frame,
@@ -1481,7 +1484,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             addsv: false)
 
         frame.origin.x += (labframe?.size.width ?? 0.0) + SPACE
-        _ = ctvovcp?.configCheckButton(
+        _ = ctvovcp?.configSwitch(
             frame,
             key: "graphLastBtn",
             state: !(vo.optDict["graphlast"] == "0"),
@@ -1719,7 +1722,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             NSAttributedString.Key.font: PrefBodyFont
         ]).width
         frame.size.width = tfWidth
-        frame.size.height = ctvovcp?.lfHeight ?? 0.0
+        frame.size.height = minLabelHeight(ctvovcp?.lfHeight ?? 0.0)
 
         _ = ctvovcp?.configTextField(
             frame,

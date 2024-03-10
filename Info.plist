@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
 	<key>CFBundleDisplayName</key>
 	<string>${TARGET_NAME}</string>
 	<key>CFBundleDocumentTypes</key>
@@ -42,6 +44,16 @@
 				<string>com.realidata.rTracker.rtcsv</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>CSV Files</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.comma-separated-values-text</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleExecutable</key>
 	<string>${EXECUTABLE_NAME}</string>
@@ -73,7 +85,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>7916</string>
+	<string>7945</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
@@ -141,7 +153,7 @@
 				<key>public.filename-extension</key>
 				<string>rtcsv</string>
 				<key>public.mime-type</key>
-				<string>application/rTracker</string>
+				<string>text/csv</string>
 			</dict>
 		</dict>
 	</array>

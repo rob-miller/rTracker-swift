@@ -113,6 +113,7 @@ let ACCEPTLICENSEDFLT = false
 //#define HIDERTIMESDFLT YES
 let SCICOUNTDFLT = 6
 
+let RTCSVext = ".csv"
 let CSVext = ".csv"
 let RTRKext = ".rtrk"
 let TmpTrkrData = ".tdata"

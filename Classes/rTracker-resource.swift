@@ -36,7 +36,11 @@ let DBLRANDOM = Double(arc4random()) / 0x100000000
 // tag for background view to un/hide
 let BGTAG = 99
 
+let LABELMINHEIGHT = 31.0  // uiswitch minimum intrinsic height
 
+func minLabelHeight(_ height : CGFloat) -> CGFloat {
+    return max(height, LABELMINHEIGHT)
+}
 // Sample code from iOS 7 Transistion Guide
 // Loading Resources Conditionally
 //NSUInteger DeviceSystemMajorVersion();
@@ -161,31 +165,37 @@ class rTracker_resource: NSObject {
 
     //---------------------------
 
-    class func ioFilePath(_ fname: String?, access: Bool) -> String {
-        // nil acceptable for fname to just get docsdir
-        var paths: [AnyHashable]?
+    class func ioFilePath(_ fname: String?, access: Bool, tmp: Bool = false) -> String {
+        var pathURL: URL
+        
         if access {
-            paths = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).map(\.path) // file itunes accessible
+            // File iTunes accessible - use Documents directory
+            pathURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
         } else {
-            paths = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).map(\.path) // files not accessible
+            // Files not accessible via iTunes - use Temporary directory
+            if tmp {
+                pathURL = FileManager.default.temporaryDirectory
+            } else {
+                pathURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first!
+            }
         }
-        let docsDir = paths![0] as? String
-
-        //DBGLog(@"ioFilePath= %@",[docsDir stringByAppendingPathComponent:fname] );
-
-        if let fname {
-            return URL(fileURLWithPath: docsDir!).appendingPathComponent(fname).path as String
+        
+        if let filename = fname {
+            // If a filename is provided, append it to the directory path
+            return pathURL.appendingPathComponent(filename).path
         } else {
-            return URL(fileURLWithPath: docsDir!).path
+            // If no filename is provided, return the directory path
+            return pathURL.path
         }
     }
 
-    class func deleteFile(atPath fp: String?) -> Bool {
+
+    class func deleteFile(atPath fp: String) -> Bool {
         var err: Error?
-        if true == FileManager.default.fileExists(atPath: fp ?? "") {
+        if true == FileManager.default.fileExists(atPath: fp) {
             DBGLog(String("deleting file at path \(fp)"))
             do {
-                try FileManager.default.removeItem(atPath: fp ?? "")
+                try FileManager.default.removeItem(atPath: fp)
             } catch let e {
                 err = e
                 DBGErr(String("Error deleting file: \(fp) error: \(err)"))
@@ -198,6 +208,40 @@ class rTracker_resource: NSObject {
         }
     }
 
+    class func copyFileToInboxDirectory(from sourceURL: URL) {
+        let fileManager = FileManager.default
+        
+        // Construct the target URL in the app's Documents/Inbox directory
+        guard let documentsDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            print("Failed to locate the Documents directory.")
+            return
+        }
+        let inboxDirectory = documentsDirectory.appendingPathComponent("Inbox")
+        let targetURL = inboxDirectory.appendingPathComponent(sourceURL.lastPathComponent)
+        
+        // Create the Inbox directory if it does not exist
+        if !fileManager.fileExists(atPath: inboxDirectory.path) {
+            do {
+                try fileManager.createDirectory(at: inboxDirectory, withIntermediateDirectories: true, attributes: nil)
+            } catch {
+                print("Failed to create the Inbox directory: \(error)")
+                return
+            }
+        }
+        
+        // Copy the file from the source URL to the target URL
+        do {
+            if fileManager.fileExists(atPath: targetURL.path) {
+                // Optional: Remove the existing file at the target location before copying
+                try fileManager.removeItem(at: targetURL)
+            }
+            try fileManager.copyItem(at: sourceURL, to: targetURL)
+            print("File copied successfully to \(targetURL.path)")
+        } catch {
+            print("Failed to copy the file: \(error)")
+        }
+    }
+    
     class func protectFile(_ fp: String?) -> Bool {
         // not needed because NSFileProtectionComplete enabled at app level
 
@@ -891,6 +935,7 @@ class rTracker_resource: NSObject {
 
     class func rrConfigTextField(_ frame: CGRect, key: String?, target: Any?, delegate: Any?, action: Selector, num: Bool, place: String?, text: String?) -> UITextField? {
         DBGLog(String(" frame x \(frame.origin.x) y \(frame.origin.y) w \(frame.size.width)) h \(frame.size.height)"))
+        
         var rtf: UITextField?
         if num {
             rtf = numField(frame: frame) as UITextField
@@ -1434,9 +1479,9 @@ class rTracker_resource: NSObject {
         return result
     }
 
-    class func sanitizeFileNameString(_ fileName: String?) -> String? {
+    class func sanitizeFileNameString(_ fileName: String) -> String {
         let illegalFileNameCharacters = CharacterSet(charactersIn: "/\\?%*|\"<>")
-        return fileName?.components(separatedBy: illegalFileNameCharacters).joined(separator: "")
+        return fileName.components(separatedBy: illegalFileNameCharacters).joined(separator: "")
     }
 
     class func setViewMode(_ vc: UIViewController?) {

@@ -149,7 +149,7 @@ class voBoolean: voState {
             NSAttributedString.Key.font: PrefBodyFont
         ]).width
         frame.size.width = tfWidth
-        frame.size.height = ctvovc.lfHeight
+        frame.size.height = minLabelHeight(ctvovc.lfHeight)
 
         frame = ctvovc.configTextField(
             frame,
@@ -172,7 +172,7 @@ class voBoolean: voState {
 
         frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
 
-        frame = ctvovc.configCheckButton(
+        frame = ctvovc.configSwitch(
             frame,
             key: "stdBtn",
             state: (vo.optDict["setstrackerdate"] == "1") /* default:0 */,

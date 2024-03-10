@@ -286,7 +286,7 @@ class voSlider: voState {
             NSAttributedString.Key.font: PrefBodyFont
         ]).width
         frame.size.width = tfWidth
-        frame.size.height = ctvovc.lfHeight
+        frame.size.height = minLabelHeight(ctvovc.lfHeight)
 
         frame = ctvovc.configTextField(
             frame,
@@ -303,7 +303,7 @@ class voSlider: voState {
 
         frame.origin.x += labframe.size.width + SPACE
         frame.size.width = tfWidth
-        frame.size.height = ctvovc.lfHeight
+        frame.size.height = minLabelHeight(ctvovc.lfHeight)
 
         frame = ctvovc.configTextField(
             frame,
@@ -348,7 +348,7 @@ class voSlider: voState {
 
         frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
 
-        frame = ctvovc.configCheckButton(
+        frame = ctvovc.configSwitch(
             frame,
             key: "sisBtn",
             state: (vo.optDict["integerstepsb"] == "1") /* default:0 */,
@@ -361,7 +361,7 @@ class voSlider: voState {
 
         frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
 
-        frame = ctvovc.configCheckButton(
+        frame = ctvovc.configSwitch(
             frame,
             key: "sswlBtn",
             state: (vo.optDict["slidrswlb"] == "1") /* default:0 */,
