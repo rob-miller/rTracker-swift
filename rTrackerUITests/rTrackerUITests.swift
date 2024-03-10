@@ -65,23 +65,28 @@ final class rTrackerUITests: XCTestCase {
     }
     
     func test_rTracker() throws {
+        // still to do manually
+        // - drop down menu on long press to start tracker
+        // - install reads old trackers
+        // - create new tracker with rtrk, rtcsv input file
         do {
-            try testTrackerDemoInstall()
-            try testTapGraphTap()
-            try testTapGraphTap2()
-            try testEditTrackerRank()
-            try testSearchGo()
-            try testTrackerDemoUse()
+            try testTrackerDemoInstall()  // Demo exists and can swipe to previous date, correct data loaded
+            try testTapGraphTap()  // can rotate demo to graph, tap, rotate back to correct date entry
+            try testTapGraphTap2()  // can cycle through 10 graph Y axis labels without crash
+            try testEditTrackerRank()  // can edit tracker and adjust valobj order as instructed
+            try testSearchGo()  // can enter data in Car tracker textbox and correctly find records and data
+            try testTrackerDemoUse()  // can use/save number, switch, slider/enable, choices/enable/custom_values, textbox/history/contacts/search, textline, alerts
 
-            try testNewTrackerGo()
+            try testNewTrackerGo()  // can create/use tracker with number, text, textbox, slider, choice/custom_vals, switch, functions, info,
             
-            try testPrivacyGo()
-            try testSavePrivateGo()
+            try testPrivacyGo()  // create/use privacy patterns and see/hide private trackers and values
+            try testSavePrivateGo()  // can save and reload tracker including private data from app directory
             
-            try testReminders()
+            try testReminders()  // set and trigger reminders with sound; get tracker number for URL schem (should be 3)
             
-            try testURLSchemePrep()
-            try testURLSchemeTest()
+            try testURLSchemeGo()  // add URL to Demo Info, tap to open Car, return back to Demo 
+
+            try testShareAndOpenDemoTracker()  // share/load tracker with data and csv only, confirm data updated
             
         } catch {
             XCTFail("error: \(error)")
@@ -586,7 +591,7 @@ Kate Bell
             app.swipeRight()
         }
         app.buttons["trkrMenu"].tap()
-        app.buttons["duplicate entry to now"].tap()  // make testTrackerDemoInstall() pass
+        app.buttons["Duplicate Entry to Now"].tap()  // make testTrackerDemoInstall() pass
         
         app.buttons["< rTracker"].tap()
         modAlert.buttons["Save"].tap()
@@ -822,6 +827,7 @@ Kate Bell
         XCTAssert(alert.exists, "no tracker set name alert")
         alert.buttons["OK"].tap()
         
+        app.swipeDown()
         let tname = app.textFields["addTrkrName"]
         tname.tap()
         tname.typeText("testTracker")
@@ -1491,7 +1497,7 @@ Kate Bell
         let ttrkr = app.tables.cells["trkr_testTracker"]
         ttrkr.tap()
         app.buttons["trkrMenu"].tap()
-        app.buttons["save for PC (iTunes)"].tap()
+        app.buttons["Save to app directory"].tap()
         sleep(1)
         let savAlert = app.alerts["Tracker saved"]
         savAlert.buttons["OK"].tap()
@@ -1782,6 +1788,65 @@ Kate Bell
         app.buttons["< rTracker"].tap()
     }
 
+    func testURLSchemeGo() throws {
+        try testURLSchemePrep()
+        try testURLSchemeTest()
+    }
+
+    func testShareAndOpenDemoTracker() throws {
+        let rTdemoCell = app.tables.cells["trkr_👣rTracker demo"]
+        rTdemoCell.tap()
+        let exitTrkrBtn = app.buttons["< rTracker"]
+        let saveBtn = app.buttons["Save"]
+        let ySwitch = app.switches["👣rTracker demo_Yes!_switch"]
+        let trkrMenu = app.buttons["trkrMenu"]
+        ySwitch.tap()
+        saveBtn.tap()    // Yes is on and saved
+        
+        rTdemoCell.tap()
+        trkrMenu.tap()
+        app.buttons["Share Tracker+Data"].tap()
+        
+        let rTrackerCell = app.cells["rTracker"]
+        
+        if rTrackerCell.waitForExistence(timeout: 5) {
+            rTrackerCell.tap()
+        } else {
+            XCTFail("The rTracker cell was not found.")
+        }
+        
+        app.swipeRight()
+        XCTAssertEqual(ySwitch.value as! String, "1", "The Yes! switch should be On")
+        ySwitch.tap()
+        saveBtn.tap()    // Yes is off and saved
+        sleep(3)  // should load input tracker
+        let acceptBtn = app.buttons["Accept"]
+        XCTAssert(acceptBtn.exists)
+        acceptBtn.tap()  // accept the saved tracker data which overwrites what we just saved
+        
+        rTdemoCell.tap()
+        app.swipeRight()
+        sleep(1)
+        XCTAssertEqual(ySwitch.value as! String, "1", "The Yes! switch should be On")
+        
+        trkrMenu.tap()
+        app.buttons["Share CSV"].tap()
+        
+        if rTrackerCell.waitForExistence(timeout: 5) {
+            rTrackerCell.tap()
+        } else {
+            XCTFail("The rTracker cell was not found.")
+        }
+        ySwitch.tap()
+        saveBtn.tap()    // Yes is off and saved
+        sleep(3)  // should load tracker data from csv without permission
+        rTdemoCell.tap()
+        app.swipeRight()
+        XCTAssertEqual(ySwitch.value as! String, "1", "The Yes! switch should be On")
+        exitTrkrBtn.tap()
+
+    }
+    
     func testLaunchPerformance() throws {
         if #available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 7.0, *) {
             // This measures how long it takes to launch your application.
