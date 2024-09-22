@@ -313,12 +313,14 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                                 self.doCSVLoad(csvString, to: to, fname: fname)
                                 //print("back from csv load \(tname ?? "tname nil")")
                                 //restorePriv()
+                                let fm = FileManager.default  // Swift 6 needs more local filemanager here 
                                 do {
-                                    try localFileManager.removeItem(at: fileUrl)
+                                    try fm.removeItem(at: fileUrl)
                                 } catch {
                                     DBGWarn("Error deleting file \(fname): \(error)")
                                 }
                                 DispatchQueue.main.async { [self] in
+
                                     UIApplication.shared.isIdleTimerDisabled = false
                                     // Stop activity indicator and any other UI updates
                                     rTracker_resource.finishActivityIndicator(view, navItem: nil, disable: false)
