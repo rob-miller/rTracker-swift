@@ -313,8 +313,9 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                                 self.doCSVLoad(csvString, to: to, fname: fname)
                                 //print("back from csv load \(tname ?? "tname nil")")
                                 //restorePriv()
-                                let fm = FileManager.default  // Swift 6 needs more local filemanager here 
+                                
                                 do {
+                                    let fm = FileManager.default  // Swift 6 needs more local filemanager here 
                                     try fm.removeItem(at: fileUrl)
                                 } catch {
                                     DBGWarn("Error deleting file \(fname): \(error)")
