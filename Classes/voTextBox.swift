@@ -863,8 +863,9 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
 
         // Loop through the contacts and add their names to the array
         for contact in contacts {
-            let name = formatter.string(from: contact)
-            namesArray.append(name!)
+            if let name = formatter.string(from: contact) {  // 10.xi.24 avoid empty contact
+                namesArray.append(name)
+            }
         }
 
     }
