@@ -467,7 +467,7 @@ final class rTrackerUITests: XCTestCase {
         
         // test slider action enables and function counts result
         let slider = app.sliders["👣rTracker demo_Low|High_slider"]
-        slider.adjust(toNormalizedSliderPosition: 0.25)  // sets to 24 slider value
+        slider.adjust(toNormalizedSliderPosition: 0.24)  // sets to 24 slider value
         XCTAssertEqual(sliderEnable.value as! String, "1", "The sliderEnable switch should be On")
         XCTAssertEqual(fnTotalLabel.label, "25.00", "function total is incorrect (slider) before save")
         

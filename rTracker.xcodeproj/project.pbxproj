@@ -34,6 +34,7 @@
 		D417E3132A2121570093564A /* TSQCalendarView.m in Sources */ = {isa = PBXBuildFile; fileRef = D417E3092A2121570093564A /* TSQCalendarView.m */; };
 		D417E3142A2121570093564A /* TSQCalendarRowCell.m in Sources */ = {isa = PBXBuildFile; fileRef = D417E30E2A2121570093564A /* TSQCalendarRowCell.m */; };
 		D417E3152A2121570093564A /* changes.rtm in Resources */ = {isa = PBXBuildFile; fileRef = D417E30F2A2121570093564A /* changes.rtm */; };
+		D41AA9032D26CDD6001393C8 /* healthkitSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D41AA9022D26CDD5001393C8 /* healthkitSupport.swift */; };
 		D427446A1438B8090011EFE6 /* iTunesArtwork in Resources */ = {isa = PBXBuildFile; fileRef = D42744691438B8090011EFE6 /* iTunesArtwork */; };
 		D43216B225F2444100B2E582 /* ContactsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D43216B025F2444100B2E582 /* ContactsUI.framework */; };
 		D43216B325F2444100B2E582 /* Contacts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D43216B125F2444100B2E582 /* Contacts.framework */; };
@@ -181,6 +182,8 @@
 		D417E30D2A2121570093564A /* TSQCalendarMonthHeaderCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TSQCalendarMonthHeaderCell.h; path = Classes/TimesSquare/TSQCalendarMonthHeaderCell.h; sourceTree = SOURCE_ROOT; };
 		D417E30E2A2121570093564A /* TSQCalendarRowCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TSQCalendarRowCell.m; path = Classes/TimesSquare/TSQCalendarRowCell.m; sourceTree = SOURCE_ROOT; };
 		D417E30F2A2121570093564A /* changes.rtm */ = {isa = PBXFileReference; lastKnownFileType = text; name = changes.rtm; path = Classes/TimesSquare/changes.rtm; sourceTree = SOURCE_ROOT; };
+		D41AA9012D26CA62001393C8 /* rTrackerDebug no-log.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = "rTrackerDebug no-log.entitlements"; path = "rTracker/rTrackerDebug no-log.entitlements"; sourceTree = "<group>"; };
+		D41AA9022D26CDD5001393C8 /* healthkitSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = healthkitSupport.swift; sourceTree = "<group>"; };
 		D42744691438B8090011EFE6 /* iTunesArtwork */ = {isa = PBXFileReference; lastKnownFileType = file; name = iTunesArtwork; path = Resources/png/iTunesArtwork; sourceTree = "<group>"; };
 		D427FD3F126C78D100A8ED9A /* rTracker-constants.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = "rTracker-constants.swift"; path = "Classes/rTracker-constants.swift"; sourceTree = "<group>"; };
 		D43216B025F2444100B2E582 /* ContactsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ContactsUI.framework; path = System/Library/Frameworks/ContactsUI.framework; sourceTree = SDKROOT; };
@@ -338,6 +341,7 @@
 				D43EE365133CBF4100737E76 /* csv support */,
 				D40DC28F133BEC3600023D5D /* rTracker-resource.swift */,
 				D4620056182C046E00F6F2C2 /* notifyReminder.swift */,
+				D41AA9022D26CDD5001393C8 /* healthkitSupport.swift */,
 				D46F7C941BA89E3A00CC768B /* numField.swift */,
 				D49A7C5D29DDE7B300A4F4C0 /* atomicTestSet.swift */,
 			);
@@ -356,6 +360,7 @@
 		29B97314FDCFA39411CA2CEA /* CustomTemplate */ = {
 			isa = PBXGroup;
 			children = (
+				D41AA9012D26CA62001393C8 /* rTrackerDebug no-log.entitlements */,
 				D4B091BE2A166EFA00C0D5E3 /* rTracker-Bridging-Header.h */,
 				D4ACDDBB29C8D8B900B1F9A4 /* dbg-defs.swift */,
 				D427FD3F126C78D100A8ED9A /* rTracker-constants.swift */,
@@ -839,6 +844,7 @@
 				D4CB672F18B3FF7100096490 /* voInfo.swift in Sources */,
 				D4B6AE7C127EC38300C036ED /* voChoice.swift in Sources */,
 				D4B6AE83127EC39800C036ED /* voBoolean.swift in Sources */,
+				D41AA9032D26CDD6001393C8 /* healthkitSupport.swift in Sources */,
 				D4B6AE8A127EC3AA00C036ED /* voImage.swift in Sources */,
 				D4B6AE8F127EC3BE00C036ED /* voFunction.swift in Sources */,
 				D4B6AEB6127EE24D00C036ED /* voState.swift in Sources */,
@@ -1233,7 +1239,7 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
@@ -1281,7 +1287,7 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
@@ -1329,7 +1335,7 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
@@ -1377,7 +1383,7 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
@@ -1425,7 +1431,7 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
@@ -1473,7 +1479,7 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
@@ -1516,7 +1522,7 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
@@ -1557,7 +1563,7 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
@@ -2161,6 +2167,7 @@
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = "";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGN_ENTITLEMENTS = "rTracker/rTrackerDebug no-log.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
@@ -2229,6 +2236,7 @@
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
@@ -2245,7 +2253,7 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;

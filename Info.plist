@@ -85,13 +85,15 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>7945</string>
+	<string>7954</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
 	<key>NSContactsUsageDescription</key>
 	<string>$(PRODUCT_NAME) can use your contact names in trackers.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Enable reading Apple Health data into your trackers</string>
 	<key>NSMainNibFile</key>
 	<string>MainWindow</string>
 	<key>UIApplicationSceneManifest</key>
