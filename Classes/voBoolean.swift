@@ -212,6 +212,12 @@ class voBoolean: voState {
 
         super.voDrawOptions(ctvovc)
     }
+    
+    override func voTVCellHeight() -> CGFloat {
+        //return CELL_HEIGHT_TALL;
+        DBGLog(String("\(bSwitch!.frame.size.height) \(3 * MARGIN) \(vo.getLabelSize().height) \(vo.getLongTitleSize().height)"))
+        return bSwitch!.frame.size.height + MARGIN   // (3 * MARGIN) // + vo.getLabelSize().height + vo.getLongTitleSize().height
+    }
 
     /* rtm here : export value option -- need to parse and match value if choice did not match
      */
