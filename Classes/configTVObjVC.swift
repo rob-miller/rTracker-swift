@@ -1009,6 +1009,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
             addGraphMinMax()
         }
 
+        frame.origin.y += MARGIN + frame.size.height
         return frame
     }
 
