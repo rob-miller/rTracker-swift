@@ -66,6 +66,7 @@ final class rTrackerUITests: XCTestCase {
     
     func test_rTracker() throws {
         // still to do manually
+        //  *** must enable access to contacts - textbox - contacts - allow full access
         // - drop down menu on long press to start tracker
         // - install reads old trackers
         // - create new tracker with rtrk, rtcsv input file
@@ -517,8 +518,8 @@ final class rTrackerUITests: XCTestCase {
         
         //tbseg.buttons["tbox-seg-contacts"].tap()
         
-        let contactMonitor = addUIInterruptionMonitor(withDescription: "") { (alert) -> Bool in  // Allow Notifications
-            let okButton = alert.buttons["OK"]
+        let contactMonitor = addUIInterruptionMonitor(withDescription: "Contact Access Prompt") { (alert) -> Bool in  // Allow Notifications
+            let okButton = alert.buttons["Allow Full Access"]
 
             if okButton.exists {
                 okButton.tap()
@@ -527,9 +528,21 @@ final class rTrackerUITests: XCTestCase {
             return false
         }
 
+        /*
+        let contactMonitor2 = addUIInterruptionMonitor(withDescription: "Contact Access Prompt") { (alert) -> Bool in  // Allow Notifications
+            let okButton = alert.buttons["Allow Full Access"]
+
+            if okButton.exists {
+                okButton.tap()
+                return true
+            }
+            return false
+        }
+         */
         tbseg.buttons["tbox-seg-contacts"].tap()
         app.tap()
         sleep(1)
+
         tbAdd.tap()
         
         removeUIInterruptionMonitor(contactMonitor)
@@ -767,54 +780,63 @@ Kate Bell
         
         addVal("function", noSave:true)
         vname.tap()
+        clearTextField(vname)
         vname.typeText("sumvnum")
         saveBtn.tap()
         addValBtn.tap()
         
         addVal("function", noSave:true)
         vname.tap()
+        clearTextField(vname)
         vname.typeText("civnum")
         saveBtn.tap()
         addValBtn.tap()
         
         addVal("function", noSave:true)
         vname.tap()
+        clearTextField(vname)
         vname.typeText("vc1")
         saveBtn.tap()
         addValBtn.tap()
         
         addVal("function", noSave:true)
         vname.tap()
+        clearTextField(vname)
         vname.typeText("ynvc2")
         saveBtn.tap()
         addValBtn.tap()
         
         addVal("function", noSave:true)
         vname.tap()
+        clearTextField(vname)
         vname.typeText("vtxt")
         saveBtn.tap()
         addValBtn.tap()
         
         addVal("function", noSave:true)
         vname.tap()
+        clearTextField(vname)
         vname.typeText("vtb")
         saveBtn.tap()
         addValBtn.tap()
         
         addVal("function", noSave:true)
         vname.tap()
+        clearTextField(vname)
         vname.typeText("sliderVal")
         saveBtn.tap()
         addValBtn.tap()
         
         addVal("function", noSave:true)
         vname.tap()
+        clearTextField(vname)
         vname.typeText("vc2")
         saveBtn.tap()
         addValBtn.tap()
         
         addVal("function", noSave:true)
         vname.tap()
+        clearTextField(vname)
         vname.typeText("vinfofn")  // to differentiate from vinfo
         saveBtn.tap()
         addValBtn.tap()
