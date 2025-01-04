@@ -103,6 +103,15 @@ final class rTrackerUITests: XCTestCase {
             swipeAlert.buttons["OK"].tap()
             sleep(1)
         }
+        // enter textbox editor
+        let tbButton = app.buttons["👣rTracker demo_Text 📖 with history and search_tbButton"]
+        tbButton.tap()
+        let tbseg = app.segmentedControls["tbox-seg-control"]
+        tbseg.buttons["tbox-seg-contacts"].tap()
+        app.tap()
+        sleep(5)
+        app.buttons["<"].tap()
+        
         app.swipeRight()
         sleep(1)
         
