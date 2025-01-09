@@ -120,6 +120,9 @@
 		D4C18740128A971000A612C4 /* voDataEdit.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4C1873E128A971000A612C4 /* voDataEdit.swift */; };
 		D4C5210A123F9DF700554627 /* blueButton.png in Resources */ = {isa = PBXBuildFile; fileRef = D4C52109123F9DF700554627 /* blueButton.png */; };
 		D4C6B88026247FB200345F2A /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D4C6B87F26247FB100345F2A /* UserNotifications.framework */; };
+		D4CA92BB2D2B115400554F55 /* ahViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4CA92BA2D2B115400554F55 /* ahViewController.swift */; };
+		D4CA92BC2D2B115400554F55 /* ahViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4CA92BA2D2B115400554F55 /* ahViewController.swift */; };
+		D4CA92BE2D2EF2E400554F55 /* filePickerVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4CA92BD2D2EF2DF00554F55 /* filePickerVC.swift */; };
 		D4CB672F18B3FF7100096490 /* voInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4CB672E18B3FF7100096490 /* voInfo.swift */; };
 		D4D5550E1BAC7C8900064968 /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = D4D5550D1BAC7C8900064968 /* Launch Screen.storyboard */; };
 		D4D555111BAC84C600064968 /* LaunchScreenImg.png in Resources */ = {isa = PBXBuildFile; fileRef = D4D555101BAC84C600064968 /* LaunchScreenImg.png */; };
@@ -280,6 +283,8 @@
 		D4C1873E128A971000A612C4 /* voDataEdit.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = voDataEdit.swift; sourceTree = "<group>"; };
 		D4C52109123F9DF700554627 /* blueButton.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = blueButton.png; path = Resources/png/blueButton.png; sourceTree = "<group>"; };
 		D4C6B87F26247FB100345F2A /* UserNotifications.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UserNotifications.framework; path = System/Library/Frameworks/UserNotifications.framework; sourceTree = SDKROOT; };
+		D4CA92BA2D2B115400554F55 /* ahViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ahViewController.swift; sourceTree = "<group>"; };
+		D4CA92BD2D2EF2DF00554F55 /* filePickerVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = filePickerVC.swift; sourceTree = "<group>"; };
 		D4CB672E18B3FF7100096490 /* voInfo.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = voInfo.swift; sourceTree = "<group>"; };
 		D4D5550D1BAC7C8900064968 /* Launch Screen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
 		D4D555101BAC84C600064968 /* LaunchScreenImg.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = LaunchScreenImg.png; path = Resources/png/LaunchScreenImg.png; sourceTree = "<group>"; };
@@ -340,6 +345,7 @@
 				D4956B1F12E06EAA00B0BB9B /* valueObj classes */,
 				D43EE365133CBF4100737E76 /* csv support */,
 				D40DC28F133BEC3600023D5D /* rTracker-resource.swift */,
+				D4CA92BD2D2EF2DF00554F55 /* filePickerVC.swift */,
 				D4620056182C046E00F6F2C2 /* notifyReminder.swift */,
 				D41AA9022D26CDD5001393C8 /* healthkitSupport.swift */,
 				D46F7C941BA89E3A00CC768B /* numField.swift */,
@@ -589,6 +595,7 @@
 				D44695C317D6894A00BB5A38 /* configTlistController.xib */,
 				D47B564419411739002B0CCA /* trackerCalViewController.swift */,
 				D4B634B617B1C3B500E96BC1 /* notifyReminderViewController.swift */,
+				D4CA92BA2D2B115400554F55 /* ahViewController.swift */,
 				D4B634B717B1C3B500E96BC1 /* notifyReminderViewController.xib */,
 				D47D169019028FBE006563B9 /* notifyReminderVC2.swift */,
 				D47D168D19028F2C006563B9 /* notifyReminderVC2.xib */,
@@ -818,6 +825,7 @@
 			files = (
 				D417E3142A2121570093564A /* TSQCalendarRowCell.m in Sources */,
 				1D3623260D0F684500981E51 /* rTrackerAppDelegate.swift in Sources */,
+				D4CA92BE2D2EF2E400554F55 /* filePickerVC.swift in Sources */,
 				28C286E10D94DF7D0034E888 /* RootViewController.swift in Sources */,
 				D482D272114FEB5E00CE6BC8 /* trackerList.swift in Sources */,
 				D482D276114FEB7500CE6BC8 /* trackerObj.swift in Sources */,
@@ -853,6 +861,7 @@
 				D4E8F90412E868A300A2526B /* tictacV.swift in Sources */,
 				D4E8F90712E868B700A2526B /* ppwV.swift in Sources */,
 				D46F7C951BA89E3A00CC768B /* numField.swift in Sources */,
+				D4CA92BB2D2B115400554F55 /* ahViewController.swift in Sources */,
 				D40DC290133BEC3F00023D5D /* rTracker-resource.swift in Sources */,
 				D43EE368133CBF8D00737E76 /* CSVParser.swift in Sources */,
 				D4A700CD13798874005E0E23 /* togd.swift in Sources */,
@@ -877,6 +886,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D4CA92BC2D2B115400554F55 /* ahViewController.swift in Sources */,
 				D49F29482ACC8CC800B11560 /* rTrackerUITestsLaunchTests.swift in Sources */,
 				D49F29462ACC8CC800B11560 /* rTrackerUITests.swift in Sources */,
 			);
@@ -906,7 +916,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = JDRASZK6A8;
-				ENABLE_DEBUG_DYLIB = NO;
+				ENABLE_DEBUG_DYLIB = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)",
@@ -967,7 +977,7 @@
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = JDRASZK6A8;
-				ENABLE_DEBUG_DYLIB = NO;
+				ENABLE_DEBUG_DYLIB = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)",
@@ -1165,7 +1175,7 @@
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = JDRASZK6A8;
-				ENABLE_DEBUG_DYLIB = NO;
+				ENABLE_DEBUG_DYLIB = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)",
@@ -1641,7 +1651,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = JDRASZK6A8;
-				ENABLE_DEBUG_DYLIB = NO;
+				ENABLE_DEBUG_DYLIB = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)",
@@ -1749,7 +1759,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = JDRASZK6A8;
-				ENABLE_DEBUG_DYLIB = NO;
+				ENABLE_DEBUG_DYLIB = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)",
@@ -1857,7 +1867,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = JDRASZK6A8;
-				ENABLE_DEBUG_DYLIB = NO;
+				ENABLE_DEBUG_DYLIB = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)",
@@ -1965,7 +1975,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = JDRASZK6A8;
-				ENABLE_DEBUG_DYLIB = NO;
+				ENABLE_DEBUG_DYLIB = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)",
@@ -2073,7 +2083,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = JDRASZK6A8;
-				ENABLE_DEBUG_DYLIB = NO;
+				ENABLE_DEBUG_DYLIB = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)",
@@ -2182,7 +2192,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = JDRASZK6A8;
-				ENABLE_DEBUG_DYLIB = NO;
+				ENABLE_DEBUG_DYLIB = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)",

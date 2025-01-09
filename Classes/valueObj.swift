@@ -88,6 +88,7 @@ let TBNIDFLT = true
 let TBHIDFLT = false
 let GRAPHDFLT = true
 let NSWLDFLT = false
+let NAHSDFLT = false
 let GRAPHLASTDFLT = true
 let SETSTRACKERDATEDFLT = false
 

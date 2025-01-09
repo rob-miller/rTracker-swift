@@ -23,6 +23,7 @@
 
 import Foundation
 import UIKit
+import SwiftUI
 
 class voNumber: voState, UITextFieldDelegate {
     /*{
@@ -102,7 +103,8 @@ class voNumber: voState, UITextFieldDelegate {
     
     
     var startStr: String?
-
+    var ctvovcp: configTVObjVC?
+    
     func textFieldDidBeginEditing(_ textField: UITextField) {
         //DBGLog(@"number tf begin editing vid=%ld",(long)self.vo.vid);
         startStr = textField.text
@@ -229,6 +231,10 @@ class voNumber: voState, UITextFieldDelegate {
             vo.optDict["nswl"] = NSWLDFLT ? "1" : "0"
         }
 
+        if nil == vo.optDict["nahs"] {
+            vo.optDict["nahs"] = NAHSDFLT ? "1" : "0"
+        }
+        
         if nil == vo.optDict["autoscale"] {
             vo.optDict["autoscale"] = AUTOSCALEDFLT ? "1" : "0"
         }
@@ -248,6 +254,7 @@ class voNumber: voState, UITextFieldDelegate {
         }
 
         if ((key == "nswl") && (val == (NSWLDFLT ? "1" : "0")))
+            || ((key == "nahs") && (val == (NAHSDFLT ? "1" : "0")))
             || ((key == "autoscale") && (val == (AUTOSCALEDFLT ? "1" : "0")))
             || ((key == "numddp") && (Int(val ?? "") ?? 0 == NUMDDPDFLT)) {
             vo.optDict.removeValue(forKey: key)
@@ -257,8 +264,50 @@ class voNumber: voState, UITextFieldDelegate {
         return super.cleanOptDictDflts(key)
     }
 
+    @objc func configAppleHealthView() {
+        DBGLog("config Apple Health view!")
+        
+        let hostingController = UIHostingController(
+            rootView: ahViewController(
+                selectedChoice: vo.optDict["ahSource"] ?? "None",
+                onDismiss: { [self] updatedChoice in
+                    vo.optDict["ahSource"] = "None" == updatedChoice ? nil : updatedChoice
+                    if let button = ctvovcp?.scroll.subviews.first(where: { $0 is UIButton && $0.accessibilityIdentifier == "configtv_ahSelBtn" }) as? UIButton {
+                        print("ahSelect view returned: \(updatedChoice) optDict is \(vo.optDict["ahSource"] ?? "nil")")
+                        DispatchQueue.main.async {
+                            button.setTitle(self.vo.optDict["ahSource"] ?? "Configure", for: .normal)
+                            button.sizeToFit()
+                        }
+                    }
+                    //print("ahSelect view returned: \(updatedChoice) optDict is \(vo.optDict["ahSource"] ?? "nil")")
+                }
+            )
+        )
+        hostingController.modalTransitionStyle = .flipHorizontal
+        hostingController.modalPresentationStyle = .automatic
+        
+        // Present the hosting controller
+        ctvovcp?.present(hostingController, animated: true)
+        
+        //let ahvc = ahViewController()
+        //ahvc.modalTransitionStyle = .flipHorizontal
+        //ctvovc.present(ahvc, animated: true) {}
+        /*
+        let nrvc = notifyReminderViewController(nibName: "notifyReminderViewController", bundle: nil)
+        nrvc.tracker = to
+        nrvc.modalTransitionStyle = .flipHorizontal
+        deregisterForKeyboard()
+        present(nrvc, animated: true) {
+            nrvc.dismissalHandler = { [weak self] in
+                self?.registerForKeyboard()
+            }
+        }
+         */
+    }
+    
     override func voDrawOptions(_ ctvovc: configTVObjVC) {
-
+        ctvovcp = ctvovc  // save reference so can display config gui
+        
         var frame = CGRect(x: MARGIN, y: ctvovc.lasty, width: 0.0, height: 0.0)
 
         var labframe = ctvovc.configLabel("Start with last saved value: ", frame: frame, key: "swlLab", addsv: true)
@@ -300,8 +349,27 @@ class voNumber: voState, UITextFieldDelegate {
 
         frame.origin.x = MARGIN
         frame.origin.y += MARGIN + frame.size.height
-        //-- title label
+        
+        labframe = ctvovc.configLabel("Apple Health source: ", frame: frame, key: "ahsLab", addsv: true)
+        frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
 
+        frame = ctvovc.configSwitch(
+            frame,
+            key: "ahsBtn",
+            state: vo.optDict["nahs"] == "1",
+            addsv: true)
+
+        frame.origin.x = MARGIN
+        frame.origin.y += MARGIN + frame.size.height
+        
+        
+        frame = ctvovc.configActionBtn(frame, key: "ahSelBtn", label: vo.optDict["ahSource"] ?? "Configure", target: self, action: #selector(configAppleHealthView))
+        ctvovc.switchUpdate(okey: "nahs", newState: vo.optDict["nahs"] == "1")
+        
+        frame.origin.x = MARGIN
+        frame.origin.y += MARGIN + frame.size.height
+        
+        
         labframe = ctvovc.configLabel("Other options:", frame: frame, key: "noLab", addsv: true)
 
         ctvovc.lasty = frame.origin.y + labframe.size.height + MARGIN
