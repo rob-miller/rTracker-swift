@@ -5,156 +5,465 @@
 //  Created by Robert Miller on 02/01/2025.
 //  Copyright © 2025 Robert T. Miller. All rights reserved.
 //
+//import ZIPFoundation
 
 import Foundation
 import HealthKit
 
-let healthStore = HKHealthStore()
-
-func isHealthKitAvailable() -> Bool {
-    return HKHealthStore.isHealthDataAvailable()
+struct HealthDataQuery {
+    let identifier: String                    // Unique HK identifier (e.g., "HKQuantityTypeIdentifierHeight")
+    let displayName: String                   // User-friendly name for UI
+    let unit: HKUnit?                         // Default unit (optional)
+    let aggregationStyle: HKQuantityAggregationStyle  // Discrete or cumulative
+    let customProcessor: ((HKSample) -> Double)? // Optional custom logic
 }
 
-func requestHealthKitPermission() {
-    guard isHealthKitAvailable() else {
-        // HealthKit is not available on this device
-        return
+let healthDataQueries: [HealthDataQuery] = [
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierHeight",
+        displayName: "Height",
+        unit: HKUnit.meter(),
+        aggregationStyle: .discreteArithmetic,
+        customProcessor: nil
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierBodyMass",
+        displayName: "Weight",
+        unit: HKUnit.gramUnit(with: .kilo),
+        aggregationStyle: .discreteArithmetic,
+        customProcessor: nil
+    ),
+    HealthDataQuery(
+        identifier: "HKCategoryTypeIdentifierSleepAnalysis",
+        displayName: "Deep Sleep (Minutes)",
+        unit: nil,
+        aggregationStyle: .cumulative,
+        customProcessor: { sample in
+            guard let categorySample = sample as? HKCategorySample,
+                  categorySample.value == HKCategoryValueSleepAnalysis.asleepDeep.rawValue else {
+                return 0
+            }
+            return categorySample.endDate.timeIntervalSince(categorySample.startDate) / 60.0
+        }
+    )
+]
+
+enum enableStatus: Int {
+    case enabled = 0
+    case notAuthorised = 1
+    case notPresent = 2
+    case hidden = 3
+    case placeholder = 4
+}
+
+class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
+    static let shared = rtHealthKit()  // singleton class
+    //--- Healthkit specific
+    
+    let healthStore = HKHealthStore()
+    var tl : trackerList? = nil
+    var dbInitialised = false;
+
+    @Published var configurations: [HealthDataQuery] = []
+    
+    init() {
+        //super.init()
+        DBGLog("rtHealthKit init called")
+        tl = RootViewController.shared.tlist
+        let sql = "select count(*) from rthealthkit"
+        dbInitialised = (tl?.toQry2Int(sql:sql) ?? 0) != 0
+        loadHealthKitConfigurations()
     }
 
-    let readTypes = Set([HKObjectType.quantityType(forIdentifier: .bodyMass)!])
-    
-    healthStore.requestAuthorization(toShare: nil, read: readTypes) { (success, error) in
-        if !success {
-            // Handle the error - authorization was not granted
+
+    func updateAuthorisations(completion: @escaping () -> Void) {
+        let dispatchGroup = DispatchGroup()
+
+        //DispatchQueue.main.async {
+            DBGLog("updateAuthorisations enter")
+            dispatchGroup.enter()
+        //}
+        
+        requestHealthKitAuthorization(healthDataQueries: healthDataQueries) { success, error in
+            if let error = error {
+                DBGLog("HealthKit authorization failed with error: \(error.localizedDescription)")
+            } else {
+                DBGLog("HealthKit authorization \(success ? "succeeded" : "failed").")
+            }
+            DBGLog("updateAuthorisations leave")
+            //DispatchQueue.main.async { // Ensure leave is called on the main thread
+                dispatchGroup.leave()
+            //}
+        }
+        DBGLog("updateAuthorisations after requestAuth")
+        
+        
+        // this notify section is waiting until until leave() corresponding to enter() above is triggered
+        dispatchGroup.notify(queue: .main) { [self] in
+            DBGLog("updateAuthorisations after notify")
+            let dispatchGroup3 = DispatchGroup()
+            for query in healthDataQueries {
+                // Start a new group task for each query
+                DBGLog("enter processing healthDataQueries")
+                dispatchGroup3.enter()
+                
+                var status: HKAuthorizationStatus = .notDetermined
+                var dataExists = false
+                
+                let processQueryResult: () -> Void = {
+                    DispatchQueue.main.async {
+                        DBGLog("\(query.identifier) \(query.displayName) data= \(dataExists)")
+                        if status == .notDetermined {
+                            print("\(query.displayName): Not Determined")
+                        } else if status == .sharingAuthorized && dataExists {  // fix disabled column if in db otherwise no entry default is use
+                            let sql = "update rthealthkit set disabled = \(enableStatus.enabled.rawValue) where hkid = '\(query.identifier)';"
+                            self.tl?.toExecSql(sql: sql)
+                            DBGLog("\(query.displayName): Authorized and Data Available")
+                        } else if status == .sharingAuthorized && !dataExists {
+                            let sql = """
+                            insert into rthealthkit (hkid, disabled) 
+                            values ('\(query.identifier)', \(enableStatus.notPresent.rawValue)) 
+                            on conflict(hkid) do update set disabled = \(enableStatus.notPresent.rawValue);
+                            """
+                            self.tl?.toExecSql(sql: sql)
+                            DBGLog("\(query.displayName): Authorized but No Data Present")
+                        } else { // .sharingDenied
+                            let sql = """
+                            insert into rthealthkit (hkid, disabled) 
+                            values ('\(query.identifier)', \(enableStatus.notAuthorised.rawValue)) 
+                            on conflict(hkid) do update set disabled = \(enableStatus.notAuthorised.rawValue);
+                            """
+                            self.tl?.toExecSql(sql: sql)
+                            DBGLog("\(query.displayName): Sharing Denied (\(status))")
+                        }
+                        DBGLog("leave processing healthDataQueries")
+                        dispatchGroup3.leave() // Mark this task as completed
+                    }
+                }
+
+                if query.identifier.hasPrefix("HKQuantityTypeIdentifier"),
+                   let quantityType = HKObjectType.quantityType(forIdentifier: HKQuantityTypeIdentifier(rawValue: query.identifier)) {
+                    status = healthStore.authorizationStatus(for: quantityType)  // only checks write access, cannot query read access
+                    
+                    if (status == .sharingAuthorized || status == .sharingDenied) {  // reading denied same as reading no data present
+                        status = .sharingAuthorized
+                        let predicate = HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: [])
+                        let sampleQuery = HKSampleQuery(sampleType: quantityType, predicate: predicate, limit: 1, sortDescriptors: nil) { (_, samples, _) in
+                            DBGLog("\(query.identifier) \(query.displayName) \(samples?.count ?? -1)")
+                            dataExists = (samples?.count ?? 0) > 0
+                            processQueryResult()
+                        }
+                        healthStore.execute(sampleQuery)
+                    } else {
+                        processQueryResult()
+                    }
+                } else if query.identifier.hasPrefix("HKCategoryTypeIdentifier"),
+                          let categoryType = HKObjectType.categoryType(forIdentifier: HKCategoryTypeIdentifier(rawValue: query.identifier)) {
+                    status = healthStore.authorizationStatus(for: categoryType)
+                    
+                    if (status == .sharingAuthorized || status == .sharingDenied) {
+                        status = .sharingAuthorized
+                        let predicate = HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: [])
+                        let sampleQuery = HKSampleQuery(sampleType: categoryType, predicate: predicate, limit: 1, sortDescriptors: nil) { (_, samples, _) in
+                            dataExists = (samples?.count ?? 0) > 0
+                            processQueryResult()
+                        }
+                        healthStore.execute(sampleQuery)
+                    } else {
+                        processQueryResult()
+                    }
+                } else {
+                    processQueryResult()
+                }
+            }
+
+            DBGLog("updateAuthorisations after processed healthDataQueries")
+            // Notify when all tasks are done
+            dispatchGroup3.notify(queue: .main) {
+                print("updateAuthorisations All HealthKit queries completed.")
+                let sql = "insert or ignore into rthealthkit (hkid, disabled) values ('placeholder',\(enableStatus.placeholder.rawValue))"
+                self.tl?.toExecSql(sql: sql)
+                self.dbInitialised = true
+                completion() // Call the completion handler in loadHealthKitConfigurations
+            }
         }
     }
-}
 
-func readBodyWeight() {
-    guard let bodyMassType = HKObjectType.quantityType(forIdentifier: .bodyMass) else {
-        // The body mass type is not available
-        return
-    }
 
-    let query = HKSampleQuery(sampleType: bodyMassType, predicate: nil, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { (query, results, error) in
-        guard let samples = results as? [HKQuantitySample] else {
-            // Handle any errors or no results
+    func requestHealthKitAuthorization(healthDataQueries: [HealthDataQuery], completion: @escaping (Bool, Error?) -> Void) {
+        // Ensure HealthKit is available
+        guard HKHealthStore.isHealthDataAvailable() else {
+            completion(false, NSError(domain: "HealthKit", code: 1, userInfo: [NSLocalizedDescriptionKey: "HealthKit is not available on this device."]))
             return
         }
+        
+        let healthStore = HKHealthStore()
+        
+        // Extract HKObjectTypes from healthDataQueries
+        var readTypes: Set<HKObjectType> = []
+        
+        for query in healthDataQueries {
+            if query.identifier.hasPrefix("HKQuantityTypeIdentifier") {
+                if let quantityType = HKObjectType.quantityType(forIdentifier: HKQuantityTypeIdentifier(rawValue: query.identifier)) {
+                    readTypes.insert(quantityType)
+                }
+            } else if query.identifier.hasPrefix("HKCategoryTypeIdentifier") {
+                if let categoryType = HKObjectType.categoryType(forIdentifier: HKCategoryTypeIdentifier(rawValue: query.identifier)) {
+                    readTypes.insert(categoryType)
+                }
+            }
+        }
+        
+        // Request Authorization
+        healthStore.requestAuthorization(toShare: nil, read: readTypes) { success, error in
+            completion(success, error)
+        }
+    }
+    
+    func loadHealthKitConfigurations() {
+        DBGLog("load configs start")
+        let dispatchGroup2 = DispatchGroup()
+        
+        if !dbInitialised {
+            DBGLog("enter dg2 lhkc")
+            dispatchGroup2.enter()
+            DBGLog("load configs not dbinit so updateAuths")
+            updateAuthorisations(completion: {
+                DBGLog("leave dg2 lhkc")
+                dispatchGroup2.leave()
+            })
+            
+            // Wait for updateAuthorisations to complete
+            //dispatchGroup2.wait()
+        }
 
-        for sample in samples {
-            let weight = sample.quantity.doubleValue(for: HKUnit.pound())
-            // Do something with the weight value
-            print("Body weight: \(weight) pounds")
+        DBGLog("load configs past dbinit")
+        dispatchGroup2.notify(queue: .main) { [self] in
+            // Query user preferences
+            let sql = """
+            SELECT hkid, custom_unit, disabled
+            FROM rthealthkit;
+            """
+            let sqlConfig = tl!.toQry2ArySSI(sql: sql)
+            
+            var userPreferences: [String: (customUnit: String?, disabled: Int)] = [:]
+            for (k, u, d) in sqlConfig {
+                userPreferences[k] = (u, d)
+            }
+            
+            DBGLog("load configs after db query \(userPreferences)")
+            
+            var localConfigurations: [HealthDataQuery] = []  // temporary storage
+            
+            // Merge with hardcoded table
+            for query in healthDataQueries {
+                var unit = query.unit
+                var disabled = enableStatus.enabled.rawValue
+                if let preference = userPreferences[query.identifier] {
+                    disabled = preference.disabled
+                    unit = preference.customUnit != "" ? HKUnit(from: preference.customUnit!) : query.unit
+                }
+                if disabled == enableStatus.enabled.rawValue {
+                    localConfigurations.append(HealthDataQuery(
+                        identifier: query.identifier,
+                        displayName: query.displayName,
+                        unit: unit,
+                        aggregationStyle: query.aggregationStyle,
+                        customProcessor: query.customProcessor
+                    ))
+                }
+            }
+            
+            DBGLog("load configs assign _configurations")
+            // Assign to backing variable
+            configurations = localConfigurations
         }
     }
 
-    healthStore.execute(query)
-}
 
-import HealthKit
-
-func readBodyWeight(from startDate: Date, to endDate: Date) {
-    guard let bodyMassType = HKObjectType.quantityType(forIdentifier: .bodyMass) else {
-        // The body mass type is not available
-        return
-    }
-
-    // Create a date range predicate
-    let datePredicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: .strictStartDate)
-    
-    // Create a sort descriptor to sort the samples by date in descending order
-    let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
-    
-    let query = HKSampleQuery(sampleType: bodyMassType, predicate: datePredicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sortDescriptor]) { (query, results, error) in
-        guard let samples = results as? [HKQuantitySample] else {
-            // Handle any errors or no results
+    func readBodyWeight() {
+        guard let bodyMassType = HKObjectType.quantityType(forIdentifier: .bodyMass) else {
+            // The body mass type is not available
             return
         }
-
-        for sample in samples {
-            let weight = sample.quantity.doubleValue(for: HKUnit.pound())
-            let sampleDate = sample.startDate // The date when this sample was taken
-            // Do something with the weight and date
-            print("Body weight: \(weight) pounds, Date: \(sampleDate)")
+        
+        let query = HKSampleQuery(sampleType: bodyMassType, predicate: nil, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { (query, results, error) in
+            guard let samples = results as? [HKQuantitySample] else {
+                // Handle any errors or no results
+                return
+            }
+            
+            for sample in samples {
+                let weight = sample.quantity.doubleValue(for: HKUnit.pound())
+                // Do something with the weight value
+                DBGLog("Body weight: \(weight) pounds")
+            }
         }
+        
+        healthStore.execute(query)
     }
 
-    HKHealthStore().execute(query)
-}
+    
+    func readBodyWeight(from startDate: Date, to endDate: Date) {
+        guard let bodyMassType = HKObjectType.quantityType(forIdentifier: .bodyMass) else {
+            // The body mass type is not available
+            return
+        }
+        
+        // Create a date range predicate
+        let datePredicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: .strictStartDate)
+        
+        // Create a sort descriptor to sort the samples by date in descending order
+        let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
+        
+        let query = HKSampleQuery(sampleType: bodyMassType, predicate: datePredicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sortDescriptor]) { (query, results, error) in
+            guard let samples = results as? [HKQuantitySample] else {
+                // Handle any errors or no results
+                return
+            }
+            
+            for sample in samples {
+                let weight = sample.quantity.doubleValue(for: HKUnit.pound())
+                let sampleDate = sample.startDate // The date when this sample was taken
+                // Do something with the weight and date
+                DBGLog("Body weight: \(weight) pounds, Date: \(sampleDate)")
+            }
+        }
+        
+        HKHealthStore().execute(query)
+    }
+    
+    /*
+    //----  extract xml from zip file
+    
+    
+    func processExportXML(from zipFileURL: URL) {
+        do {
+            // Use the throwing initializer for Archive
+            let archive = try Archive(url: zipFileURL, accessMode: .read)
 
+            /*
+            DBGLog("Files in ZIP Archive:")
+            for entry in archive {
+                DBGLog(entry.path)
+            }
+             */
+            // Locate and extract `export.xml`
+            if let entry = archive["apple_health_export/export.xml"] {
+                var data = Data()
+                _ = try archive.extract(entry, consumer: { chunk in
+                    data.append(chunk)
+                })
 
-/*
- 
- let calendar = Calendar.current
- let endDate = Date() // today
- let startDate = calendar.date(byAdding: .year, value: -1, to: endDate) // one year ago
+                DBGLog("Successfully extracted export.xml")
+                parseExportXML(data: data)
+            } else {
+                DBGLog("export.xml not found in ZIP archive")
+            }
+        } catch {
+            DBGLog("Failed to open ZIP archive: \(error)")
+        }
+    }
+    
+    func parseExportXML(data: Data) {
+        let parser = XMLParser(data: data)
+        parser.delegate = self // Set up your XML parsing delegate
+        if parser.parse() {
+            DBGLog("XML parsing completed")
+        } else {
+            DBGLog("XML parsing failed: \(parser.parserError?.localizedDescription ?? "Unknown error")")
+        }
+    }
+    
 
- readBodyWeight(from: startDate!, to: endDate)
- 
- let bodyMassType = HKObjectType.quantityType(forIdentifier: .bodyMass)!
- let query = HKSampleQuery(sampleType: bodyMassType, predicate: nil, limit: 1, sortDescriptors: nil) { (query, results, error) in
+    func parser(_ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName: String?, attributes: [String : String] = [:]) {
+        DBGLog("Start element: \(elementName), attributes: \(attributes)")
+        // Handle specific elements, such as "Record"
+    }
+    
+    func parser(_ parser: XMLParser, foundCharacters string: String) {
+        DBGLog("Found characters: \(string)")
+        // Process text data within an element
+    }
+    
+    func parser(_ parser: XMLParser, didEndElement elementName: String, namespaceURI: String?, qualifiedName: String?) {
+        DBGLog("End element: \(elementName)")
+    }
+
+     */
+    
+    /*
+     
+     let calendar = Calendar.current
+     let endDate = Date() // today
+     let startDate = calendar.date(byAdding: .year, value: -1, to: endDate) // one year ago
+     
+     readBodyWeight(from: startDate!, to: endDate)
+     
+     let bodyMassType = HKObjectType.quantityType(forIdentifier: .bodyMass)!
+     let query = HKSampleQuery(sampleType: bodyMassType, predicate: nil, limit: 1, sortDescriptors: nil) { (query, results, error) in
      guard let samples = results as? [HKQuantitySample] else { return }
      
      for sample in samples {
-         // Example of converting the same sample into different units
-         let weightInKilograms = sample.quantity.doubleValue(for: HKUnit.gramUnit(with: .kilo))
-         let weightInPounds = sample.quantity.doubleValue(for: HKUnit.pound())
-         let weightInStones = sample.quantity.doubleValue(for: HKUnit.stone())
-         
-         // Use the weight in your app
-         print("Weight: \(weightInKilograms) kg, \(weightInPounds) lbs, \(weightInStones) st")
+     // Example of converting the same sample into different units
+     let weightInKilograms = sample.quantity.doubleValue(for: HKUnit.gramUnit(with: .kilo))
+     let weightInPounds = sample.quantity.doubleValue(for: HKUnit.pound())
+     let weightInStones = sample.quantity.doubleValue(for: HKUnit.stone())
+     
+     // Use the weight in your app
+     DBGLog("Weight: \(weightInKilograms) kg, \(weightInPounds) lbs, \(weightInStones) st")
      }
- }
-
- HKHealthStore().execute(query)
-
- import HealthKit
-
- let healthStore = HKHealthStore()
- let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount)!
-
- let startDate = ... // Your start date
- let endDate = ... // Your end date
- let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: .strictStartDate)
-
- let query = HKStatisticsQuery(quantityType: stepsType, quantitySamplePredicate: predicate, options: .cumulativeSum) { query, statistics, error in
+     }
+     
+     HKHealthStore().execute(query)
+     
+     import HealthKit
+     
+     let healthStore = HKHealthStore()
+     let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount)!
+     
+     let startDate = ... // Your start date
+     let endDate = ... // Your end date
+     let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: .strictStartDate)
+     
+     let query = HKStatisticsQuery(quantityType: stepsType, quantitySamplePredicate: predicate, options: .cumulativeSum) { query, statistics, error in
      guard error == nil, let statistics = statistics else {
-         print("An error occurred: \(error!.localizedDescription)")
-         return
+     DBGLog("An error occurred: \(error!.localizedDescription)")
+     return
      }
-
+     
      let count = statistics.sumQuantity()?.doubleValue(for: HKUnit.count())
-     print("Total steps count in the given period: \(count ?? 0)")
- }
-
- healthStore.execute(query)
-
- 
- 
- let interval = DateComponents(day: 1) // Daily intervals
-
- let anchorDate = ... // Typically the start of the day for the start date
- let query = HKStatisticsCollectionQuery(quantityType: stepsType,
-                                         quantitySamplePredicate: predicate,
-                                         options: .cumulativeSum,
-                                         anchorDate: anchorDate,
-                                         intervalComponents: interval)
-
- query.initialResultsHandler = { query, results, error in
+     DBGLog("Total steps count in the given period: \(count ?? 0)")
+     }
+     
+     healthStore.execute(query)
+     
+     
+     
+     let interval = DateComponents(day: 1) // Daily intervals
+     
+     let anchorDate = ... // Typically the start of the day for the start date
+     let query = HKStatisticsCollectionQuery(quantityType: stepsType,
+     quantitySamplePredicate: predicate,
+     options: .cumulativeSum,
+     anchorDate: anchorDate,
+     intervalComponents: interval)
+     
+     query.initialResultsHandler = { query, results, error in
      guard let statsCollection = results else {
-         print("An error occurred: \(error!.localizedDescription)")
-         return
+     DBGLog("An error occurred: \(error!.localizedDescription)")
+     return
      }
      
      statsCollection.enumerateStatistics(from: startDate, to: endDate) { statistics, stop in
-         let count = statistics.sumQuantity()?.doubleValue(for: HKUnit.count())
-         print("Steps count for \(statistics.startDate): \(count ?? 0)")
+     let count = statistics.sumQuantity()?.doubleValue(for: HKUnit.count())
+     DBGLog("Steps count for \(statistics.startDate): \(count ?? 0)")
      }
- }
-
- healthStore.execute(query)
-
- 
-
- */
+     }
+     
+     healthStore.execute(query)
+     
+     
+     
+     */
+}

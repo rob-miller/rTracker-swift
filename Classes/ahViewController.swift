@@ -9,16 +9,14 @@
 import SwiftUI
 
 struct ahViewController: View {
-    var selectedChoice: String = "" // Selected item in the picker
     var onDismiss: (String) -> Void
     @Environment(\.dismiss) var dismiss // For the Back/Exit button
-    @State private var choices: [String] = ["None", "Option 1", "Option 2", "Option 3"] // Data for the picker
-    @State private var currentSelection: String
+    @State private var currentSelection: String // Stores the user's selection
     @State private var isFilePickerPresented = false
-    @State private var selectedFileURL: URL?
+    
+    @ObservedObject var rthk = rtHealthKit.shared
     
     init(selectedChoice: String, onDismiss: @escaping (String) -> Void) {
-        self.selectedChoice = selectedChoice
         self.onDismiss = onDismiss
         self._currentSelection = State(initialValue: selectedChoice)
     }
@@ -27,60 +25,52 @@ struct ahViewController: View {
         NavigationView {
             VStack(spacing: 20) {
                 // Picker (Choice Wheel)
-                Picker("Select an Option", selection: $currentSelection) {
-                    ForEach(choices, id: \.self) { choice in
-                        Text(choice).tag(choice)
+                Picker("Choose data source", selection: $currentSelection) {
+                    if rthk.configurations.isEmpty {
+                        Text("Waiting for HealthKit data").tag("None") // Provide a single fallback choice
+                    } else {
+                        ForEach(rthk.configurations, id: \.identifier) { config in
+                            Text(config.displayName).tag(config.displayName)
+                        }
+                        //currentSelection = rthk.configurations.first?.displayName ?? "None"
                     }
                 }
                 .pickerStyle(WheelPickerStyle()) // Wheel picker style
+                /*.onAppear {
+                    // Update currentSelection if configurations are loaded
+                    if !rthk.configurations.isEmpty, currentSelection == "None" {
+                        currentSelection = rthk.configurations.first?.displayName ?? "None"
+                    }
+                }*/
                 
                 // Button to Update Choices
                 Button("Update Choices") {
-                    isFilePickerPresented = true
+                    rthk.dbInitialised = false
+                    rthk.loadHealthKitConfigurations()
                 }
-                .sheet(isPresented: $isFilePickerPresented) {
-                    FilePickerWrapper { fileURL in
-                        isFilePickerPresented = false
-                        if let fileURL = fileURL {
-                            print("Selected file: \(fileURL)")
-                            //processFile(fileURL)
-                        } else {
-                            print("File selection canceled")
-                        }
-                    }
-                }
-                
-                // Exit Button
-                Button("Exit") {
-                    onDismiss(currentSelection) // Pass back the selected value
-                    dismiss()
-                }
-                .padding()
-                .background(Color.red)
-                .foregroundColor(.white)
-                .cornerRadius(8)
-                
             }
             .padding()
-            .navigationTitle("Configure Options") // Navigation bar title
-        }
-        //Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
-    }
-    // Function to update choices
-    func updateChoices() {
-        isFilePickerPresented = true
-        choices = ["None", "New Option 1", "New Option 2", "New Option 3"]
-    }
-    
-    func processFile(_ fileURL: URL) {
-        // Logic to read and update choices based on the file
-        do {
-            let fileContents = try String(contentsOf: fileURL)
-            choices = ["None", "New Option 1", "New Option 2", "New Option 3"]
-            //choices = fileContents.split(separator: "\n").map { String($0) }
-            print("Choices updated to: \(choices)")
-        } catch {
-            print("Failed to read file: \(error)")
+            .navigationTitle("Choose source")
+            .toolbar {
+                            ToolbarItem(placement: .bottomBar) {
+                                HStack {
+                                    Button(action: {
+                                        if currentSelection == "None" {
+                                            currentSelection = rthk.configurations.first?.displayName ?? "None"
+                                        }
+                                        onDismiss(currentSelection)
+                                        dismiss()
+                                    }) {
+                                        Text("\u{2611}") // Ballot box with check
+                                            .font(.system(size: 28))
+                                            .foregroundColor(.blue)
+                                    }
+                                    .accessibilityLabel("Done")
+                                    .accessibilityIdentifier("confighk_done")
+                                    Spacer() // Pushes content to the left
+                                }
+                            }
+                        }
         }
     }
 }
@@ -89,7 +79,7 @@ struct ahViewController: View {
     ahViewController(
         selectedChoice: "Option 1",
         onDismiss: { updatedChoice in
-            print("Dismissed with choice: \(updatedChoice)")
+            DBGLog("Dismissed with choice: \(updatedChoice)")
         }
     )
 }

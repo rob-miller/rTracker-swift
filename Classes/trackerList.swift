@@ -61,7 +61,7 @@ class trackerList: tObjBase {
     func initTDb() {
         //int c;
 
-        //DBGLog(@"Initializing top level dtabase!");
+        //DBGLog(@"Initializing top level database!");
         dbName = "topLevel.sqlite3"
         getTDb()
 
@@ -105,7 +105,9 @@ class trackerList: tObjBase {
             }
         }
 
-
+        sql = "create table if not exists rthealthkit (hkid text primary key, custom_unit text default '', disabled integer default 0);"
+        toExecSql(sql:sql)
+        
         //self.sql = nil;
     }
 

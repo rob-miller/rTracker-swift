@@ -85,13 +85,17 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>7978</string>
+	<string>7992</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
 	<key>NSContactsUsageDescription</key>
 	<string>$(PRODUCT_NAME) can use your contact names in trackers.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>Enable user to load Healthkit identifiers</string>
+	<key>NSFileProviderUsageDescription</key>
+	<string>Enable user to load HealthKit identifiers</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Enable reading Apple Health data into your trackers</string>
 	<key>NSMainNibFile</key>

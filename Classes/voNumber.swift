@@ -254,18 +254,23 @@ class voNumber: voState, UITextFieldDelegate {
         }
 
         if ((key == "nswl") && (val == (NSWLDFLT ? "1" : "0")))
-            || ((key == "nahs") && (val == (NAHSDFLT ? "1" : "0")))
+            || ((key == "nahs") && ((val == (NAHSDFLT ? "1" : "0") || (vo.optDict["ahSource"] == nil))))  // unspecified ahSource disallowed
             || ((key == "autoscale") && (val == (AUTOSCALEDFLT ? "1" : "0")))
             || ((key == "numddp") && (Int(val ?? "") ?? 0 == NUMDDPDFLT)) {
             vo.optDict.removeValue(forKey: key)
             return true
         }
 
+        if key == "ahSource" && (vo.optDict["nahs"] ?? "0") == "0" {  // clear ahSource value if ah source disabled
+            vo.optDict.removeValue(forKey: key)
+            return true
+        }
+        
         return super.cleanOptDictDflts(key)
     }
 
     @objc func configAppleHealthView() {
-        DBGLog("config Apple Health view!")
+        DBGLog("config Apple Health view")
         
         let hostingController = UIHostingController(
             rootView: ahViewController(
