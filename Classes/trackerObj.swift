@@ -173,6 +173,11 @@ class trackerObj: tObjBase {
             sql = "create table if not exists trkrData (date int unique on conflict replace, minpriv int);"
             toExecSql(sql:sql)
         }
+        
+        // healthkit support added later
+        sql = "create table if not exists voHKfail (id int, date int, unique(id, date) on conflict ignore);"
+        toExecSql(sql:sql)
+        
         //self.sql = nil;
     }
 
@@ -237,6 +242,18 @@ class trackerObj: tObjBase {
 
         return true
     }
+    
+    func loadHKdata(dispatchGroup: DispatchGroup?) -> Bool {
+        var rslt = false
+        for vo in valObjTable {
+            if vo.optDict["ahksrc"] ?? "0" != "0" {
+                vo.vos?.loadHKdata(dispatchGroup: dispatchGroup)
+                rslt = true
+            }
+        }
+        return rslt
+    }
+
 
     func sortVoTable(byArray arr: [AnyHashable]?) {
         var dict: [AnyHashable : Any] = [:]

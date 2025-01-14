@@ -63,7 +63,7 @@ class voState: NSObject, voProtocol {
     func loadConfig() {
     }
 
-    func loadHKdata() {
+    func loadHKdata(dispatchGroup: DispatchGroup?) {
     }
     
     func setOptDictDflts() {

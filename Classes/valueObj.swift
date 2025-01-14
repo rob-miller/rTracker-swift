@@ -136,7 +136,7 @@ protocol voProtocol: AnyObject {
     func resetData()
     func mapValue2Csv() -> String?
     func mapCsv2Value(_ inCsv: String) -> String
-    func loadHKdata()
+    func loadHKdata(dispatchGroup: DispatchGroup?)
 }
 
 //extern const NSInteger kViewTag;

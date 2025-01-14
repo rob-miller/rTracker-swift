@@ -283,13 +283,6 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         }
         
         let identifier = queryConfig.identifier
-        /*
-         guard let identifier = queryConfig.identifier else {
-            print("No identifier found for displayName: \(displayName)")
-            completion([])
-            return
-        }
-         */
         
         let startDate = Date(timeIntervalSince1970: TimeInterval(targetDate) - 4 * 3600) // Minus 4 hours
         let endDate = Date(timeIntervalSince1970: TimeInterval(targetDate) + 4 * 3600)   // Plus 4 hours

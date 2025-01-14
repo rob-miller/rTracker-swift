@@ -64,6 +64,9 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     var searchSet: [Int]?
     var rvcTitle: String?
     var tableView: UITableView?
+    
+    var hkDataSource = false
+    
     /*
     var prevDateBtn: UIBarButtonItem?
     var postDateBtn: UIBarButtonItem?
@@ -282,15 +285,38 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             showSaveBtn()
         } else {
             // otherwise see if can load data from healthkit
-            for vo in tracker!.valObjTable {
-                if vo.optDict["ahksrc"] ?? "0" != "0" {
-                    vo.vos?.loadHKdata()
-                }
-            }
+            hkDataSource = tracker!.loadHKdata(dispatchGroup: nil)
         }
 
+        if hkDataSource {
+            let refreshControl = UIRefreshControl()
+            refreshControl.addTarget(self, action: #selector(handlePullDownAction), for: .valueChanged)
+            tableView!.refreshControl = refreshControl
+        }
+        
     }
 
+    @objc func handlePullDownAction() {
+        print("Refresh initiated")
+        let dispatchGroup = DispatchGroup()
+        
+        DispatchQueue.main.async {
+            let sql = "delete from voHKfail;"
+            self.tracker!.toExecSql(sql: sql)
+            
+            // Load HealthKit data and wait for all async tasks to complete
+            dispatchGroup.enter() // Mark the loadHKdata operation
+            let success = self.tracker!.loadHKdata(dispatchGroup: dispatchGroup)
+            dispatchGroup.leave() // Only if loadHKdata returns synchronously (no async left to track)
+            
+            // Notify when all operations are completed
+            dispatchGroup.notify(queue: .main) {
+                print("All HealthKit data loaded and SQL inserts completed.")
+                self.tableView!.refreshControl?.endRefreshing()
+            }
+        }
+    }
+    
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         setViewMode()
         tableView!.setNeedsDisplay()

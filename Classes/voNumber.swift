@@ -271,7 +271,7 @@ class voNumber: voState, UITextFieldDelegate {
         return super.cleanOptDictDflts(key)
     }
 
-    override func loadHKdata() {
+    override func loadHKdata(dispatchGroup: DispatchGroup?) {
         let to = vo.parentTracker
         
         let sql = """
@@ -282,9 +282,15 @@ class voNumber: voState, UITextFieldDelegate {
             FROM voData
             WHERE voData.date = trkrData.date
               AND voData.id = \(Int(vo.vid))
+        )
+        AND NOT EXISTS (
+            SELECT 1
+            FROM voHKfail
+            WHERE voHKfail.date = trkrData.date
+              AND voHKfail.id = \(Int(vo.vid))
         );
         """
-
+        
         let dateSet = to.toQry2AryI(sql: sql)
         guard let srcName = vo.optDict["ahSource"] else {
             DBGErr("no ahSource specified for valueObj \(vo.valueName ?? "no name")")
@@ -293,23 +299,33 @@ class voNumber: voState, UITextFieldDelegate {
         
         DBGLog("query complete, count is \(dateSet.count)")
         for dat in dateSet {
+            dispatchGroup?.enter() // Enter the group for each query
+            
             let targD = Date(timeIntervalSince1970: TimeInterval(dat))
             rthk.performHealthQuery(
                 displayName: srcName,
                 targetDate: dat,
-                specifiedUnit: nil // HKUnit.gramUnit(with: .kilo)
+                specifiedUnit: nil
             ) { results in
                 if results.isEmpty {
                     print("No results found for \(targD).")
+                    let sql = "insert into voHKfail (id, date) values (\(self.vo.vid), \(dat))"
+                    to.toExecSql(sql: sql)
                 } else {
                     for result in results {
                         print("target: \(targD) results - Date: \(result.date), Value: \(result.value), Unit: \(result.unit)")
                     }
+                    let result = results.last!
+                    let sql = "insert into voData (id, date, val) values (\(self.vo.vid), \(dat), \(result.value))"
+                    to.toExecSql(sql: sql)
                 }
+                
+                dispatchGroup?.leave() // Leave the group after this query is processed
             }
         }
-        DBGLog("done.")
+        DBGLog("done loadHKdata with \(dateSet.count) records.")
     }
+
     
     @objc func configAppleHealthView() {
         DBGLog("config Apple Health view")
