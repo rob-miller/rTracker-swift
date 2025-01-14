@@ -32,6 +32,8 @@ class voNumber: voState, UITextFieldDelegate {
 
 
     private var _dtf: UITextField?
+    var rthk = rtHealthKit.shared
+    
     var dtf: UITextField {
         //safeDispatchSync({ [self] in
         if _dtf?.frame.size.width != vosFrame.size.width {
@@ -231,8 +233,8 @@ class voNumber: voState, UITextFieldDelegate {
             vo.optDict["nswl"] = NSWLDFLT ? "1" : "0"
         }
 
-        if nil == vo.optDict["nahs"] {
-            vo.optDict["nahs"] = NAHSDFLT ? "1" : "0"
+        if nil == vo.optDict["ahksrc"] {
+            vo.optDict["ahksrc"] = AHKSRCDFLT ? "1" : "0"
         }
         
         if nil == vo.optDict["autoscale"] {
@@ -254,14 +256,14 @@ class voNumber: voState, UITextFieldDelegate {
         }
 
         if ((key == "nswl") && (val == (NSWLDFLT ? "1" : "0")))
-            || ((key == "nahs") && ((val == (NAHSDFLT ? "1" : "0") || (vo.optDict["ahSource"] == nil))))  // unspecified ahSource disallowed
+            || ((key == "ahksrc") && ((val == (AHKSRCDFLT ? "1" : "0") || (vo.optDict["ahSource"] == nil))))  // unspecified ahSource disallowed
             || ((key == "autoscale") && (val == (AUTOSCALEDFLT ? "1" : "0")))
             || ((key == "numddp") && (Int(val ?? "") ?? 0 == NUMDDPDFLT)) {
             vo.optDict.removeValue(forKey: key)
             return true
         }
 
-        if key == "ahSource" && (vo.optDict["nahs"] ?? "0") == "0" {  // clear ahSource value if ah source disabled
+        if key == "ahSource" && (vo.optDict["ahksrc"] ?? "0") == "0" {  // clear ahSource value if ah source disabled
             vo.optDict.removeValue(forKey: key)
             return true
         }
@@ -269,6 +271,46 @@ class voNumber: voState, UITextFieldDelegate {
         return super.cleanOptDictDflts(key)
     }
 
+    override func loadHKdata() {
+        let to = vo.parentTracker
+        
+        let sql = """
+        SELECT trkrData.date
+        FROM trkrData
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM voData
+            WHERE voData.date = trkrData.date
+              AND voData.id = \(Int(vo.vid))
+        );
+        """
+
+        let dateSet = to.toQry2AryI(sql: sql)
+        guard let srcName = vo.optDict["ahSource"] else {
+            DBGErr("no ahSource specified for valueObj \(vo.valueName ?? "no name")")
+            return
+        }
+        
+        DBGLog("query complete, count is \(dateSet.count)")
+        for dat in dateSet {
+            let targD = Date(timeIntervalSince1970: TimeInterval(dat))
+            rthk.performHealthQuery(
+                displayName: srcName,
+                targetDate: dat,
+                specifiedUnit: nil // HKUnit.gramUnit(with: .kilo)
+            ) { results in
+                if results.isEmpty {
+                    print("No results found for \(targD).")
+                } else {
+                    for result in results {
+                        print("target: \(targD) results - Date: \(result.date), Value: \(result.value), Unit: \(result.unit)")
+                    }
+                }
+            }
+        }
+        DBGLog("done.")
+    }
+    
     @objc func configAppleHealthView() {
         DBGLog("config Apple Health view")
         
@@ -293,21 +335,6 @@ class voNumber: voState, UITextFieldDelegate {
         
         // Present the hosting controller
         ctvovcp?.present(hostingController, animated: true)
-        
-        //let ahvc = ahViewController()
-        //ahvc.modalTransitionStyle = .flipHorizontal
-        //ctvovc.present(ahvc, animated: true) {}
-        /*
-        let nrvc = notifyReminderViewController(nibName: "notifyReminderViewController", bundle: nil)
-        nrvc.tracker = to
-        nrvc.modalTransitionStyle = .flipHorizontal
-        deregisterForKeyboard()
-        present(nrvc, animated: true) {
-            nrvc.dismissalHandler = { [weak self] in
-                self?.registerForKeyboard()
-            }
-        }
-         */
     }
     
     override func voDrawOptions(_ ctvovc: configTVObjVC) {
@@ -361,7 +388,7 @@ class voNumber: voState, UITextFieldDelegate {
         frame = ctvovc.configSwitch(
             frame,
             key: "ahsBtn",
-            state: vo.optDict["nahs"] == "1",
+            state: vo.optDict["ahksrc"] == "1",
             addsv: true)
 
         frame.origin.x = MARGIN
@@ -369,7 +396,7 @@ class voNumber: voState, UITextFieldDelegate {
         
         
         frame = ctvovc.configActionBtn(frame, key: "ahSelBtn", label: vo.optDict["ahSource"] ?? "Configure", target: self, action: #selector(configAppleHealthView))
-        ctvovc.switchUpdate(okey: "nahs", newState: vo.optDict["nahs"] == "1")
+        ctvovc.switchUpdate(okey: "ahksrc", newState: vo.optDict["ahksrc"] == "1")
         
         frame.origin.x = MARGIN
         frame.origin.y += MARGIN + frame.size.height

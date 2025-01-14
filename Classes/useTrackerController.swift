@@ -280,6 +280,13 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         if tracker!.loadTempTrackerData() {
             needSave = true
             showSaveBtn()
+        } else {
+            // otherwise see if can load data from healthkit
+            for vo in tracker!.valObjTable {
+                if vo.optDict["ahksrc"] ?? "0" != "0" {
+                    vo.vos?.loadHKdata()
+                }
+            }
         }
 
     }

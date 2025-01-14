@@ -88,7 +88,7 @@ let TBNIDFLT = true
 let TBHIDFLT = false
 let GRAPHDFLT = true
 let NSWLDFLT = false
-let NAHSDFLT = false
+let AHKSRCDFLT = false
 let GRAPHLASTDFLT = true
 let SETSTRACKERDATEDFLT = false
 
@@ -136,6 +136,7 @@ protocol voProtocol: AnyObject {
     func resetData()
     func mapValue2Csv() -> String?
     func mapCsv2Value(_ inCsv: String) -> String
+    func loadHKdata()
 }
 
 //extern const NSInteger kViewTag;

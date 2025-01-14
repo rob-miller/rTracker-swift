@@ -485,8 +485,8 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
             okey = "nswl"
             dfltState = NSWLDFLT
         } else if btn == (wDict["ahsBtn"] as? UIButton) {
-            okey = "nahs"
-            dfltState = NAHSDFLT
+            okey = "ahksrc"
+            dfltState = AHKSRCDFLT
         } else if btn == (wDict["srBtn"] as? UIButton) {
             okey = "savertn"
             dfltState = SAVERTNDFLT
@@ -587,7 +587,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
 
     // ui updates for switch changes
     func switchUpdate(okey: String, newState: Bool) {
-        if (okey == "nahs") {
+        if (okey == "ahksrc") {
             // number apple Health data source switch, enable config button depending on switch state
             if let button = scroll.subviews.first(where: { $0 is UIButton && $0.accessibilityIdentifier == "configtv_ahSelBtn" }) as? UIButton {
                 button.isEnabled = newState
@@ -653,8 +653,8 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
             okey = "nswl"
             dfltState = NSWLDFLT
         } else if sender == (wDict["ahsBtn"] as?  UISwitch) {
-            okey = "nahs"
-            dfltState = NAHSDFLT
+            okey = "ahksrc"
+            dfltState = AHKSRCDFLT
         } else if sender == (wDict["srBtn"] as?  UISwitch) {
             okey = "savertn"
             dfltState = SAVERTNDFLT

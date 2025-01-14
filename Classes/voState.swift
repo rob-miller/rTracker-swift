@@ -63,6 +63,9 @@ class voState: NSObject, voProtocol {
     func loadConfig() {
     }
 
+    func loadHKdata() {
+    }
+    
     func setOptDictDflts() {
 
         if nil == vo.optDict["graph"] {

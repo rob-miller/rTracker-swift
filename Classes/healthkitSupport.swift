@@ -79,10 +79,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
     func updateAuthorisations(completion: @escaping () -> Void) {
         let dispatchGroup = DispatchGroup()
 
-        //DispatchQueue.main.async {
-            DBGLog("updateAuthorisations enter")
-            dispatchGroup.enter()
-        //}
+        dispatchGroup.enter()
         
         requestHealthKitAuthorization(healthDataQueries: healthDataQueries) { success, error in
             if let error = error {
@@ -90,21 +87,16 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
             } else {
                 DBGLog("HealthKit authorization \(success ? "succeeded" : "failed").")
             }
-            DBGLog("updateAuthorisations leave")
-            //DispatchQueue.main.async { // Ensure leave is called on the main thread
-                dispatchGroup.leave()
-            //}
+
+            dispatchGroup.leave()
         }
-        DBGLog("updateAuthorisations after requestAuth")
-        
         
         // this notify section is waiting until until leave() corresponding to enter() above is triggered
         dispatchGroup.notify(queue: .main) { [self] in
-            DBGLog("updateAuthorisations after notify")
+
             let dispatchGroup3 = DispatchGroup()
             for query in healthDataQueries {
                 // Start a new group task for each query
-                DBGLog("enter processing healthDataQueries")
                 dispatchGroup3.enter()
                 
                 var status: HKAuthorizationStatus = .notDetermined
@@ -114,7 +106,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                     DispatchQueue.main.async {
                         DBGLog("\(query.identifier) \(query.displayName) data= \(dataExists)")
                         if status == .notDetermined {
-                            print("\(query.displayName): Not Determined")
+                            DBGLog("\(query.displayName): Not Determined")
                         } else if status == .sharingAuthorized && dataExists {  // fix disabled column if in db otherwise no entry default is use
                             let sql = "update rthealthkit set disabled = \(enableStatus.enabled.rawValue) where hkid = '\(query.identifier)';"
                             self.tl?.toExecSql(sql: sql)
@@ -136,7 +128,6 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                             self.tl?.toExecSql(sql: sql)
                             DBGLog("\(query.displayName): Sharing Denied (\(status))")
                         }
-                        DBGLog("leave processing healthDataQueries")
                         dispatchGroup3.leave() // Mark this task as completed
                     }
                 }
@@ -177,10 +168,9 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                 }
             }
 
-            DBGLog("updateAuthorisations after processed healthDataQueries")
             // Notify when all tasks are done
             dispatchGroup3.notify(queue: .main) {
-                print("updateAuthorisations All HealthKit queries completed.")
+                DBGLog("updateAuthorisations All HealthKit queries completed.")
                 let sql = "insert or ignore into rthealthkit (hkid, disabled) values ('placeholder',\(enableStatus.placeholder.rawValue))"
                 self.tl?.toExecSql(sql: sql)
                 self.dbInitialised = true
@@ -221,15 +211,12 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
     }
     
     func loadHealthKitConfigurations() {
-        DBGLog("load configs start")
         let dispatchGroup2 = DispatchGroup()
         
         if !dbInitialised {
-            DBGLog("enter dg2 lhkc")
             dispatchGroup2.enter()
             DBGLog("load configs not dbinit so updateAuths")
             updateAuthorisations(completion: {
-                DBGLog("leave dg2 lhkc")
                 dispatchGroup2.leave()
             })
             
@@ -237,7 +224,6 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
             //dispatchGroup2.wait()
         }
 
-        DBGLog("load configs past dbinit")
         dispatchGroup2.notify(queue: .main) { [self] in
             // Query user preferences
             let sql = """
@@ -250,8 +236,6 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
             for (k, u, d) in sqlConfig {
                 userPreferences[k] = (u, d)
             }
-            
-            DBGLog("load configs after db query \(userPreferences)")
             
             var localConfigurations: [HealthDataQuery] = []  // temporary storage
             
@@ -274,13 +258,86 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                 }
             }
             
-            DBGLog("load configs assign _configurations")
             // Assign to backing variable
             configurations = localConfigurations
         }
     }
 
+    // Define a struct to hold the results
+    struct HealthQueryResult {
+        let date: Date
+        let value: Double
+        let unit: String
+    }
 
+    func performHealthQuery(
+        displayName: String,
+        targetDate: Int,
+        specifiedUnit: HKUnit?,
+        completion: @escaping ([HealthQueryResult]) -> Void
+    ) {
+        guard let queryConfig = healthDataQueries.first(where: { $0.displayName == displayName }) else {
+            print("No query configuration found for displayName: \(displayName)")
+            completion([])
+            return
+        }
+        
+        let identifier = queryConfig.identifier
+        /*
+         guard let identifier = queryConfig.identifier else {
+            print("No identifier found for displayName: \(displayName)")
+            completion([])
+            return
+        }
+         */
+        
+        let startDate = Date(timeIntervalSince1970: TimeInterval(targetDate) - 4 * 3600) // Minus 4 hours
+        let endDate = Date(timeIntervalSince1970: TimeInterval(targetDate) + 4 * 3600)   // Plus 4 hours
+        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [])
+
+        // Determine the sample type
+        if let quantityType = HKObjectType.quantityType(forIdentifier: HKQuantityTypeIdentifier(rawValue: identifier)) {
+            // Query for HKQuantityType
+            let query = HKSampleQuery(sampleType: quantityType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { (_, samples, error) in
+                guard error == nil else {
+                    print("Error querying HealthKit: \(error!.localizedDescription)")
+                    completion([])
+                    return
+                }
+                
+                guard let quantitySamples = samples as? [HKQuantitySample] else {
+                    print("No quantity samples found.")
+                    completion([])
+                    return
+                }
+                
+                // Process results
+                let results: [HealthQueryResult] = quantitySamples.compactMap { sample in
+                    let value = specifiedUnit != nil
+                        ? sample.quantity.doubleValue(for: specifiedUnit!)
+                        : sample.quantity.doubleValue(for: queryConfig.unit ?? HKUnit.count())
+                    
+                    let unit = specifiedUnit != nil
+                        ? specifiedUnit!.unitString
+                        : (queryConfig.unit ?? HKUnit.count()).unitString
+                    
+                    return HealthQueryResult(date: sample.startDate, value: value, unit: unit)
+                }
+                
+                completion(results)
+            }
+            
+            // Execute the query
+            healthStore.execute(query)
+        } else {
+            print("Unsupported sample type for identifier: \(identifier)")
+            completion([])
+        }
+    }
+
+    
+    
+    
     func readBodyWeight() {
         guard let bodyMassType = HKObjectType.quantityType(forIdentifier: .bodyMass) else {
             // The body mass type is not available
@@ -306,10 +363,11 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
     
     func readBodyWeight(from startDate: Date, to endDate: Date) {
         guard let bodyMassType = HKObjectType.quantityType(forIdentifier: .bodyMass) else {
+            DBGLog(".bodyMass not available")
             // The body mass type is not available
             return
         }
-        
+        DBGLog("Reading body weight from \(startDate) to \(endDate)")
         // Create a date range predicate
         let datePredicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: .strictStartDate)
         
@@ -319,9 +377,13 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         let query = HKSampleQuery(sampleType: bodyMassType, predicate: datePredicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sortDescriptor]) { (query, results, error) in
             guard let samples = results as? [HKQuantitySample] else {
                 // Handle any errors or no results
+                DBGLog("no samples returned")
                 return
             }
             
+            if samples.count == 0 {
+                DBGLog("no results for \(startDate) to \(endDate)")
+            }
             for sample in samples {
                 let weight = sample.quantity.doubleValue(for: HKUnit.pound())
                 let sampleDate = sample.startDate // The date when this sample was taken
