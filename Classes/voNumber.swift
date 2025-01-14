@@ -273,58 +273,94 @@ class voNumber: voState, UITextFieldDelegate {
 
     override func loadHKdata(dispatchGroup: DispatchGroup?) {
         let to = vo.parentTracker
-        
-        let sql = """
-        SELECT trkrData.date
-        FROM trkrData
-        WHERE NOT EXISTS (
-            SELECT 1
-            FROM voData
-            WHERE voData.date = trkrData.date
-              AND voData.id = \(Int(vo.vid))
-        )
-        AND NOT EXISTS (
-            SELECT 1
-            FROM voHKfail
-            WHERE voHKfail.date = trkrData.date
-              AND voHKfail.id = \(Int(vo.vid))
-        );
-        """
-        
-        let dateSet = to.toQry2AryI(sql: sql)
+
         guard let srcName = vo.optDict["ahSource"] else {
             DBGErr("no ahSource specified for valueObj \(vo.valueName ?? "no name")")
             return
         }
-        
-        DBGLog("query complete, count is \(dateSet.count)")
-        for dat in dateSet {
-            dispatchGroup?.enter() // Enter the group for each query
+
+        // Create a separate DispatchGroup for getHealthKitDates processing
+        let hkDispatchGroup = DispatchGroup()
+
+        hkDispatchGroup.enter()
+        rthk.getHealthKitDates(for: srcName) { hkDates in
+            let existingDatesQuery = """
+            SELECT date
+            FROM trkrData
+            """
+            let existingDates = Set(to.toQry2AryI(sql: existingDatesQuery))
             
-            let targD = Date(timeIntervalSince1970: TimeInterval(dat))
-            rthk.performHealthQuery(
-                displayName: srcName,
-                targetDate: dat,
-                specifiedUnit: nil
-            ) { results in
-                if results.isEmpty {
-                    print("No results found for \(targD).")
-                    let sql = "insert into voHKfail (id, date) values (\(self.vo.vid), \(dat))"
-                    to.toExecSql(sql: sql)
-                } else {
-                    for result in results {
-                        print("target: \(targD) results - Date: \(result.date), Value: \(result.value), Unit: \(result.unit)")
-                    }
-                    let result = results.last!
-                    let sql = "insert into voData (id, date, val) values (\(self.vo.vid), \(dat), \(result.value))"
-                    to.toExecSql(sql: sql)
-                }
-                
-                dispatchGroup?.leave() // Leave the group after this query is processed
+            let fourHours: TimeInterval = 4 * 60 * 60
+
+            // Filter dates that don't match within ±4 hours of existing dates
+            let newDates = hkDates.filter { hkDate in
+                !existingDates.contains { abs(hkDate - Double($0)) <= fourHours }
             }
+            
+            // Insert the new dates into trkrData
+            for newDate in newDates {
+                let sql = "insert into trkrData (date, minpriv) values (\(Int(newDate)), 1)"
+                to.toExecSql(sql: sql)
+            }
+            
+            DBGLog("Inserted \(newDates.count) new dates into trkrData.")
+            hkDispatchGroup.leave() // Leave the group after insertion is complete
         }
-        DBGLog("done loadHKdata with \(dateSet.count) records.")
+
+        // Wait for getHealthKitDates processing to complete before proceeding
+        hkDispatchGroup.notify(queue: .main) { [self] in
+            DBGLog("HealthKit dates processed, continuing with loadHKdata.")
+
+            // Fetch dates from trkrData for processing
+            let sql = """
+            SELECT trkrData.date
+            FROM trkrData
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM voData
+                WHERE voData.date = trkrData.date
+                  AND voData.id = \(Int(vo.vid))
+            )
+            AND NOT EXISTS (
+                SELECT 1
+                FROM voHKfail
+                WHERE voHKfail.date = trkrData.date
+                  AND voHKfail.id = \(Int(vo.vid))
+            );
+            """
+            let dateSet = to.toQry2AryI(sql: sql)
+            
+            DBGLog("Query complete, count is \(dateSet.count)")
+
+            for dat in dateSet {
+                dispatchGroup?.enter() // Enter the group for each query
+
+                let targD = Date(timeIntervalSince1970: TimeInterval(dat))
+                rthk.performHealthQuery(
+                    displayName: srcName,
+                    targetDate: dat,
+                    specifiedUnit: nil
+                ) { results in
+                    if results.isEmpty {
+                        print("No results found for \(targD).")
+                        let sql = "insert into voHKfail (id, date) values (\(self.vo.vid), \(dat))"
+                        to.toExecSql(sql: sql)
+                    } else {
+                        for result in results {
+                            print("Target: \(targD) results - Date: \(result.date), Value: \(result.value), Unit: \(result.unit)")
+                        }
+                        let result = results.last!
+                        let sql = "insert into voData (id, date, val) values (\(self.vo.vid), \(dat), \(result.value))"
+                        to.toExecSql(sql: sql)
+                    }
+
+                    dispatchGroup?.leave() // Leave the group after this query is processed
+                }
+            }
+            DBGLog("Done loadHKdata with \(dateSet.count) records.")
+        }
     }
+
 
     
     @objc func configAppleHealthView() {

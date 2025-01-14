@@ -328,9 +328,39 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         }
     }
 
-    
-    
-    
+    func getHealthKitDates(for displayName: String, completion: @escaping ([TimeInterval]) -> Void) {
+        // Find the query configuration for the given displayName
+        guard let queryConfig = healthDataQueries.first(where: { $0.displayName == displayName }),
+              let hkObjectType = queryConfig.identifier.hasPrefix("HKQuantityTypeIdentifier") ?
+                HKObjectType.quantityType(forIdentifier: HKQuantityTypeIdentifier(rawValue: queryConfig.identifier)) :
+                HKObjectType.categoryType(forIdentifier: HKCategoryTypeIdentifier(rawValue: queryConfig.identifier)) else {
+            print("No HealthKit identifier found for display name: \(displayName)")
+            completion([])
+            return
+        }
+
+        // Predicate for all time
+        let predicate = HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: [])
+
+        // Create and execute a HealthKit query
+        let query = HKSampleQuery(sampleType: hkObjectType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { (_, samples, error) in
+            if let error = error {
+                print("Error fetching HealthKit data for \(displayName): \(error.localizedDescription)")
+                completion([])
+                return
+            }
+            
+            // Extract unique dates from the samples
+            let uniqueDates = (samples ?? [])
+                .map { $0.startDate.timeIntervalSince1970 } // Directly extract timeIntervalSince1970
+                .sorted()
+            
+            completion(uniqueDates)
+        }
+        
+        healthStore.execute(query)
+    }
+
     func readBodyWeight() {
         guard let bodyMassType = HKObjectType.quantityType(forIdentifier: .bodyMass) else {
             // The body mass type is not available

@@ -306,7 +306,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             
             // Load HealthKit data and wait for all async tasks to complete
             dispatchGroup.enter() // Mark the loadHKdata operation
-            let success = self.tracker!.loadHKdata(dispatchGroup: dispatchGroup)
+            _ = self.tracker!.loadHKdata(dispatchGroup: dispatchGroup)
             dispatchGroup.leave() // Only if loadHKdata returns synchronously (no async left to track)
             
             // Notify when all operations are completed
