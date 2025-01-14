@@ -1307,9 +1307,17 @@ class trackerObj: tObjBase {
                 var valobjType: Int = -1
                 let csvha: [String]? = csvHeaderDict[key]
                 if nil == csvha {
-                    let keyComponents = key.components(separatedBy: ":")
-                    (voName, voRank) = (keyComponents[0], Int(keyComponents[1]) ?? 0)
-                    
+                    //let keyComponents = key.components(separatedBy: ":")
+                    //(voName, voRank) = (keyComponents[0], Int(keyComponents[1]) ?? 0)
+                    if let lastColonRange = key.range(of: ":", options: .backwards) {
+                        voName = String(key[..<lastColonRange.lowerBound])
+                        voRank = Int(key[lastColonRange.upperBound...]) ?? 0
+                    } else {
+                        voName = key
+                        voRank = 0 // Default value if no colon is found
+                    }
+
+                        
                     sql = "select id, priv, type from voConfig where name='\(rTracker_resource.toSqlStr(voName) ?? "")';"
                     (valobjID, valobjPriv, valobjType) = toQry2IntIntInt(sql: sql)!
                     if its != 0 {  // if no timestamp this is config data, so do not put in csvHeaderDict yet
