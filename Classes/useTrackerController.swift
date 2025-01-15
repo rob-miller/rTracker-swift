@@ -297,13 +297,11 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             // Enter the dispatch group
             dispatchGroup.enter()
 
-            DispatchQueue.global(qos: .userInitiated).async {
-                // Load HealthKit data
-                self.hkDataSource = self.tracker!.loadHKdata(dispatchGroup: dispatchGroup)
-                
-                // Leave the dispatch group (if loadHKdata is not async, ensure it leaves properly inside loadHKdata)
-                dispatchGroup.leave()
-            }
+            // Load HealthKit data
+            self.hkDataSource = self.tracker!.loadHKdata(dispatchGroup: dispatchGroup)
+            
+            // Leave the dispatch group (if loadHKdata is not async, ensure it leaves properly inside loadHKdata)
+            dispatchGroup.leave()
 
             // Notify when all operations are completed
             dispatchGroup.notify(queue: .main) {
