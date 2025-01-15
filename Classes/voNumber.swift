@@ -279,6 +279,8 @@ class voNumber: voState, UITextFieldDelegate {
             return
         }
 
+        dispatchGroup?.enter()  // wait for getHealthkitDates processing overall
+        
         // Create a separate DispatchGroup for getHealthKitDates processing
         let hkDispatchGroup = DispatchGroup()
 
@@ -358,6 +360,7 @@ class voNumber: voState, UITextFieldDelegate {
                 }
             }
             DBGLog("Done loadHKdata with \(dateSet.count) records.")
+            dispatchGroup?.leave()  // done with enter before getHealthkitDates processing overall
         }
     }
 

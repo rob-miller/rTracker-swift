@@ -285,7 +285,36 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             showSaveBtn()
         } else {
             // otherwise see if can load data from healthkit
-            hkDataSource = tracker!.loadHKdata(dispatchGroup: nil)
+            //hkDataSource = tracker!.loadHKdata(dispatchGroup: nil)
+            let dispatchGroup = DispatchGroup()
+
+            // Show the spinner
+            let activityIndicator = UIActivityIndicatorView(style: .large)
+            activityIndicator.center = self.view.center
+            activityIndicator.startAnimating()
+            self.view.addSubview(activityIndicator)
+
+            // Enter the dispatch group
+            dispatchGroup.enter()
+
+            DispatchQueue.global(qos: .userInitiated).async {
+                // Load HealthKit data
+                self.hkDataSource = self.tracker!.loadHKdata(dispatchGroup: dispatchGroup)
+                
+                // Leave the dispatch group (if loadHKdata is not async, ensure it leaves properly inside loadHKdata)
+                dispatchGroup.leave()
+            }
+
+            // Notify when all operations are completed
+            dispatchGroup.notify(queue: .main) {
+                // Stop and remove the spinner
+                activityIndicator.stopAnimating()
+                activityIndicator.removeFromSuperview()
+
+                // Perform any UI updates after data loading
+                print("HealthKit data loaded.")
+                self.tableView?.reloadData()
+            }
         }
 
         if hkDataSource {
