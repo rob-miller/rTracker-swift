@@ -16,6 +16,7 @@ struct HealthDataQuery {
     let unit: HKUnit?                         // Default unit (optional)
     let aggregationStyle: HKQuantityAggregationStyle  // Discrete or cumulative
     let customProcessor: ((HKSample) -> Double)? // Optional custom logic
+    let aggregationTime: DateComponents?      // Optional time for aggregation (e.g., 24 hours before this time)
 }
 
 let healthDataQueries: [HealthDataQuery] = [
@@ -24,14 +25,26 @@ let healthDataQueries: [HealthDataQuery] = [
         displayName: "Height",
         unit: HKUnit.meter(),
         aggregationStyle: .discreteArithmetic,
-        customProcessor: nil
+        customProcessor: nil,
+        aggregationTime: nil
     ),
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierBodyMass",
         displayName: "Weight",
         unit: HKUnit.gramUnit(with: .kilo),
         aggregationStyle: .discreteArithmetic,
-        customProcessor: nil
+        customProcessor: nil,
+        aggregationTime: nil
+
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierBodyFatPercentage",
+        displayName: "% Body Fat",
+        unit: HKUnit.percent(), // still a fractional value so special case handling
+        aggregationStyle: .discreteArithmetic,
+        customProcessor: nil,
+        aggregationTime: nil
+
     ),
     HealthDataQuery(
         identifier: "HKCategoryTypeIdentifierSleepAnalysis",
@@ -44,8 +57,17 @@ let healthDataQueries: [HealthDataQuery] = [
                 return 0
             }
             return categorySample.endDate.timeIntervalSince(categorySample.startDate) / 60.0
-        }
-    )
+        },
+        aggregationTime: DateComponents(hour: 12, minute: 0) // 12:00 PM
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierActiveEnergyBurned",
+        displayName: "active energy",
+        unit: HKUnit.percent(), // still a fractional value so special case handling
+        aggregationStyle: .cumulative,
+        customProcessor: nil,
+        aggregationTime: DateComponents(hour: 00, minute: 0) // midnight
+    ),
 ]
 
 enum enableStatus: Int {
@@ -253,7 +275,8 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                         displayName: query.displayName,
                         unit: unit,
                         aggregationStyle: query.aggregationStyle,
-                        customProcessor: query.customProcessor
+                        customProcessor: query.customProcessor,
+                        aggregationTime: query.aggregationTime
                     ))
                 }
             }
@@ -287,10 +310,8 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         let startDate = Date(timeIntervalSince1970: TimeInterval(targetDate) - 4 * 3600) // Minus 4 hours
         let endDate = Date(timeIntervalSince1970: TimeInterval(targetDate) + 4 * 3600)   // Plus 4 hours
         let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [])
-
-        // Determine the sample type
+        
         if let quantityType = HKObjectType.quantityType(forIdentifier: HKQuantityTypeIdentifier(rawValue: identifier)) {
-            // Query for HKQuantityType
             let query = HKSampleQuery(sampleType: quantityType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { (_, samples, error) in
                 guard error == nil else {
                     print("Error querying HealthKit: \(error!.localizedDescription)")
@@ -304,17 +325,61 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                     return
                 }
                 
-                // Process results
-                let results: [HealthQueryResult] = quantitySamples.compactMap { sample in
-                    let value = specifiedUnit != nil
-                        ? sample.quantity.doubleValue(for: specifiedUnit!)
-                        : sample.quantity.doubleValue(for: queryConfig.unit ?? HKUnit.count())
+                var results: [HealthQueryResult] = []
+                
+                switch queryConfig.aggregationStyle {
+                case .discreteArithmetic:
+                    results = quantitySamples.compactMap { sample in
+                        let value = specifiedUnit != nil
+                            ? sample.quantity.doubleValue(for: specifiedUnit!)
+                            : sample.quantity.doubleValue(for: queryConfig.unit ?? HKUnit.count())
+                        
+                        let unit = specifiedUnit != nil
+                            ? specifiedUnit!.unitString
+                            : (queryConfig.unit ?? HKUnit.count()).unitString
+                        
+                        let adjustedValue = queryConfig.unit == HKUnit.percent() ? value * 100 : value
+                        
+                        // Apply custom processor if available
+                        let finalValue = queryConfig.customProcessor?(sample) ?? adjustedValue
+                        
+                        return HealthQueryResult(date: sample.startDate, value: finalValue, unit: unit)
+                    }
                     
-                    let unit = specifiedUnit != nil
-                        ? specifiedUnit!.unitString
-                        : (queryConfig.unit ?? HKUnit.count()).unitString
+                case .cumulative:
+                    // Sum all sample values
+                    let cumulativeValue = quantitySamples.reduce(0.0) { total, sample in
+                        let value = specifiedUnit != nil
+                            ? sample.quantity.doubleValue(for: specifiedUnit!)
+                            : sample.quantity.doubleValue(for: queryConfig.unit ?? HKUnit.count())
+                        
+                        let adjustedValue = queryConfig.unit == HKUnit.percent() ? value * 100 : value
+                        
+                        // Apply custom processor if available
+                        let processedValue = queryConfig.customProcessor?(sample) ?? adjustedValue
+                        
+                        return total + processedValue
+                    }
                     
-                    return HealthQueryResult(date: sample.startDate, value: value, unit: unit)
+                    if !quantitySamples.isEmpty {
+                        let unit = specifiedUnit != nil
+                            ? specifiedUnit!.unitString
+                            : (queryConfig.unit ?? HKUnit.count()).unitString
+                        
+                        results = [
+                            HealthQueryResult(
+                                date: quantitySamples.last?.startDate ?? startDate,
+                                value: cumulativeValue,
+                                unit: unit
+                            )
+                        ]
+                    }
+                case .discreteEquivalentContinuousLevel:
+                    fallthrough
+                case .discreteTemporallyWeighted:
+                    fallthrough
+                @unknown default:
+                    print("Unsupported aggregation style for \(displayName)")
                 }
                 
                 completion(results)
@@ -327,6 +392,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
             completion([])
         }
     }
+
 
     func getHealthKitDates(for displayName: String, completion: @escaping ([TimeInterval]) -> Void) {
         // Find the query configuration for the given displayName
@@ -349,18 +415,58 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                 completion([])
                 return
             }
-            
+
             // Extract unique dates from the samples
-            let uniqueDates = (samples ?? [])
-                .map { $0.startDate.timeIntervalSince1970 } // Directly extract timeIntervalSince1970
-                .sorted()
-            
-            completion(uniqueDates)
+            let timestamps = (samples ?? []).map { $0.startDate.timeIntervalSince1970 }.sorted()
+
+            // Handle aggregation time if specified
+            if let aggregationTime = queryConfig.aggregationTime {
+                let aggregationHour = aggregationTime.hour ?? 0
+                let aggregationMinute = aggregationTime.minute ?? 0
+
+                // Continue with the logic to determine the start of the aggregation window
+                let calendar = Calendar.current
+
+                var aggregatedDates: [TimeInterval] = []
+                var currentWindowStart: Date?
+                var currentWindowEnd: Date?
+
+                for timestamp in timestamps {
+                    let recordDate = Date(timeIntervalSince1970: timestamp)
+
+                    if let start = currentWindowStart, let end = currentWindowEnd, recordDate >= start && recordDate < end {
+                        // Within the same 24-hour window; continue
+                        continue
+                    }
+
+                    // Calculate the new 24-hour window
+                    let startOfDay = calendar.startOfDay(for: recordDate)
+                    currentWindowStart = startOfDay.addingTimeInterval(TimeInterval(aggregationHour * 3600 + aggregationMinute * 60 - 24 * 3600))
+                    currentWindowEnd = startOfDay.addingTimeInterval(TimeInterval(aggregationHour * 3600 + aggregationMinute * 60))
+
+                    // Find the most recent timestamp within the new window
+                    let windowTimestamps = timestamps.filter { ts in
+                        let tsDate = Date(timeIntervalSince1970: ts)
+                        return tsDate >= currentWindowStart! && tsDate < currentWindowEnd!
+                    }
+
+                    if let latestInWindow = windowTimestamps.last {
+                        aggregatedDates.append(latestInWindow)
+                    }
+                }
+
+                completion(aggregatedDates)
+            } else {
+                // No aggregation time; return all timestamps
+                completion(timestamps)
+            }
         }
-        
+
         healthStore.execute(query)
     }
 
+
+    /*
     func readBodyWeight() {
         guard let bodyMassType = HKObjectType.quantityType(forIdentifier: .bodyMass) else {
             // The body mass type is not available
@@ -417,6 +523,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         
         HKHealthStore().execute(query)
     }
+    */
     
     /*
     //----  extract xml from zip file

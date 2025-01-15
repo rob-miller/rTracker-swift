@@ -294,14 +294,11 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             activityIndicator.startAnimating()
             self.view.addSubview(activityIndicator)
 
-            // Enter the dispatch group
             dispatchGroup.enter()
-
             // Load HealthKit data
             self.hkDataSource = self.tracker!.loadHKdata(dispatchGroup: dispatchGroup)
-            
-            // Leave the dispatch group (if loadHKdata is not async, ensure it leaves properly inside loadHKdata)
             dispatchGroup.leave()
+
 
             // Notify when all operations are completed
             dispatchGroup.notify(queue: .main) {
