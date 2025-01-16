@@ -325,8 +325,12 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         let dispatchGroup = DispatchGroup()
         
         DispatchQueue.main.async {
-            let sql = "delete from voHKfail;"
-            self.tracker!.toExecSql(sql: sql)
+            //let sql = "delete from voHKfail where stat = \(hkStatus.noData);"
+            //self.tracker!.toExecSql(sql: sql)
+            
+            for vo in self.tracker!.valObjTable {
+                vo.vos?.clearHKdata()  // rtm really want this?  re-load all hk data
+            }
             
             // Load HealthKit data and wait for all async tasks to complete
             dispatchGroup.enter() // Mark the loadHKdata operation
@@ -337,7 +341,10 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             dispatchGroup.notify(queue: .main) {
                 print("All HealthKit data loaded and SQL inserts completed.")
                 self.tableView!.refreshControl?.endRefreshing()
+                rtm why wont view update????
+                self.updateTrackerTableView()
             }
+
         }
     }
     

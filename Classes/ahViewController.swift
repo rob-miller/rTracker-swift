@@ -29,7 +29,7 @@ struct ahViewController: View {
                     if rthk.configurations.isEmpty {
                         Text("Waiting for HealthKit data").tag("None") // Provide a single fallback choice
                     } else {
-                        ForEach(rthk.configurations, id: \.identifier) { config in
+                        ForEach(rthk.configurations, id: \.displayName) { config in
                             Text(config.displayName).tag(config.displayName)
                         }
                         //currentSelection = rthk.configurations.first?.displayName ?? "None"

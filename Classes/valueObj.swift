@@ -109,6 +109,11 @@ let INFOSAVEDFLT = false
 
 let NUMDDPDFLT = -1
 
+// healthKit status in table voHKstatus
+enum hkStatus: Int {
+    case noData = 0
+    case hkData = 1
+}
 
 protocol voProtocol: AnyObject {
     func getValCap() -> Int
@@ -137,6 +142,7 @@ protocol voProtocol: AnyObject {
     func mapValue2Csv() -> String?
     func mapCsv2Value(_ inCsv: String) -> String
     func loadHKdata(dispatchGroup: DispatchGroup?)
+    func clearHKdata()
 }
 
 //extern const NSInteger kViewTag;

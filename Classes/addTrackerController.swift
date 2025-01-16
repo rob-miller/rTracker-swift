@@ -326,6 +326,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         autoreleasepool {
             //[self.spinner performSelectorOnMainThread:@selector(startAnimating) withObject:nil waitUntilDone:NO];
 
+            // rtm nice if we could figure out that changed HK data source here and clearHKdata() for the relevant vo
             tempTrackerObj?.saveConfig()
 
             tlist?.add(toTopLayoutTable: tempTrackerObj!, nrank: ttoRank)

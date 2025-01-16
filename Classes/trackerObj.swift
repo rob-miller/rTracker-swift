@@ -175,7 +175,9 @@ class trackerObj: tObjBase {
         }
         
         // healthkit support added later
-        sql = "create table if not exists voHKfail (id int, date int, unique(id, date) on conflict ignore);"
+        sql = "create table if not exists voHKstatus (id int not null, date int not null, stat int not null, unique(id, date) on conflict replace);"
+        toExecSql(sql:sql)
+        sql = "create index if not exists vohkndx on voHKstatus (id, date);"
         toExecSql(sql:sql)
         
         //self.sql = nil;
@@ -1607,6 +1609,8 @@ class trackerObj: tObjBase {
         var sql = "delete from trkrData;"
         toExecSql(sql:sql)
         sql = "delete from voData;"
+        toExecSql(sql:sql)
+        sql = "delete from voHKstatus"
         toExecSql(sql:sql)
         //self.sql = nil;
     }

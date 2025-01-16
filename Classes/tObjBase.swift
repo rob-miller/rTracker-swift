@@ -443,6 +443,34 @@ class tObjBase: NSObject {
         }
     }
 
+    func toQry2ArySSSI(sql: String) -> [(String, String, String, Int)] {
+        tObjBase.performDatabaseOperation(toid: toid) { [self] in
+            
+            SQLDbg(String("toQry2ArySSSI: \(dbName!) => _\(sql)_"))
+            guard let tDb = tDb else {
+                dbgNSAssert(false, "toQry2ArySSSI called with no tDb")
+                return []
+            }
+            
+            var stmt: OpaquePointer?
+            if sqlite3_prepare_v2(tDb, sql, -1, &stmt, nil) == SQLITE_OK {
+                var results: [(String, String, String, Int)] = []
+                while sqlite3_step(stmt) == SQLITE_ROW {
+                    let s1 = String(cString: sqlite3_column_text(stmt, 0)!)
+                    let s2 = String(cString: sqlite3_column_text(stmt, 1)!)
+                    let s3 = String(cString: sqlite3_column_text(stmt, 2)!)
+                    let i1 = Int(sqlite3_column_int(stmt, 3))
+                    results.append((s1, s2, s3, i1))
+                    SQLDbg(String("  rslt: \(s1) \(s2) \(s3) \(i1)"))
+                }
+                sqlite3_finalize(stmt)
+                return results
+            } else {
+                tobPrepError(sql)
+                return []
+            }
+        }
+    }
     
     func toQry2AryIIS(sql: String) -> [(Int, Int, String)] {
         tObjBase.performDatabaseOperation(toid: toid) { [self] in

@@ -270,7 +270,7 @@ class voNumber: voState, UITextFieldDelegate {
         
         return super.cleanOptDictDflts(key)
     }
-
+    
     override func loadHKdata(dispatchGroup: DispatchGroup?) {
         let to = vo.parentTracker
 
@@ -285,7 +285,9 @@ class voNumber: voState, UITextFieldDelegate {
         let hkDispatchGroup = DispatchGroup()
 
         hkDispatchGroup.enter()
-        rthk.getHealthKitDates(for: srcName) { hkDates in
+        let sql = "select max(date) from voHKstatus where id = \(Int(vo.vid))"
+        let lastDate = to.toQry2Int(sql: sql)
+        rthk.getHealthKitDates(for: srcName, lastDate: lastDate) { hkDates in
             let existingDatesQuery = """
             SELECT date
             FROM trkrData
@@ -325,11 +327,11 @@ class voNumber: voState, UITextFieldDelegate {
             )
             AND NOT EXISTS (
                 SELECT 1
-                FROM voHKfail
-                WHERE voHKfail.date = trkrData.date
-                  AND voHKfail.id = \(Int(vo.vid))
+                FROM voHKstatus
+                WHERE voHKstatus.date = trkrData.date
+                  AND voHKstatus.id = \(Int(vo.vid))
             );
-            """
+            """  // voHKstatus may be fail or data already stored
             let dateSet = to.toQry2AryI(sql: sql)
             
             DBGLog("Query complete, count is \(dateSet.count)")
@@ -344,15 +346,20 @@ class voNumber: voState, UITextFieldDelegate {
                     specifiedUnit: nil
                 ) { results in
                     if results.isEmpty {
-                        print("No results found for \(targD).")
-                        let sql = "insert into voHKfail (id, date) values (\(self.vo.vid), \(dat))"
+                        DBGLog("No results found for \(targD).")
+                        let sql = "insert into voHKstatus (id, date, stat) values (\(self.vo.vid), \(dat), \(hkStatus.noData.rawValue))"
                         to.toExecSql(sql: sql)
                     } else {
                         for result in results {
-                            print("Target: \(targD) results - Date: \(result.date), Value: \(result.value), Unit: \(result.unit)")
+                            DBGLog("Target: \(targD) results - Date: \(result.date), Value: \(result.value), Unit: \(result.unit)")
+                        }
+                        if results.count > 1 {
+                            DBGWarn("\(self.vo.valueName!) multiple (\(results.count)) results for \(targD) can only use last")
                         }
                         let result = results.last!
-                        let sql = "insert into voData (id, date, val) values (\(self.vo.vid), \(dat), \(result.value))"
+                        var sql = "insert into voData (id, date, val) values (\(self.vo.vid), \(dat), \(result.value))"
+                        to.toExecSql(sql: sql)
+                        sql = "insert into voHKstatus (id, date, stat) values (\(self.vo.vid), \(dat), \(hkStatus.hkData.rawValue))"
                         to.toExecSql(sql: sql)
                     }
 
@@ -364,7 +371,13 @@ class voNumber: voState, UITextFieldDelegate {
         }
     }
 
-
+    override func clearHKdata() {
+        let to = vo.parentTracker
+        var sql = "delete from voData where (id, date) in (select id, date from voHKstatus where id = \(vo.vid) and stat = \(hkStatus.hkData.rawValue))"
+        to.toExecSql(sql: sql)
+        sql = "delete from voHKstatus where id = \(vo.vid)"
+        to.toExecSql(sql: sql)
+    }
     
     @objc func configAppleHealthView() {
         DBGLog("config Apple Health view")

@@ -11,12 +11,19 @@ import Foundation
 import HealthKit
 
 struct HealthDataQuery {
-    let identifier: String                    // Unique HK identifier (e.g., "HKQuantityTypeIdentifierHeight")
-    let displayName: String                   // User-friendly name for UI
-    let unit: HKUnit?                         // Default unit (optional)
-    let aggregationStyle: HKQuantityAggregationStyle  // Discrete or cumulative
-    let customProcessor: ((HKSample) -> Double)? // Optional custom logic
-    let aggregationTime: DateComponents?      // Optional time for aggregation (e.g., 24 hours before this time)
+    let identifier: String                     // Unique HK identifier
+    let displayName: String                    // User-friendly name for UI
+    let unit: HKUnit?                          // Default unit (optional)
+    let aggregationStyle: HKQuantityAggregationStyle // cumulative, discrete_options
+    let customProcessor: ((HKSample) -> Double)? // custom processing logic (sleep aggregation)
+    let aggregationType: AggregationType?       // custom grouping logic (night sleep)
+    let aggregationTime: DateComponents?       // Optional time for aggregation (e.g., start/end of day)
+
+    enum AggregationType {
+        //case discreteArithmetic     // Independent values
+        //case cumulativeDaily        // Daily aggregation (e.g., calories)
+        case groupedByNight         // Nightly grouping (e.g., sleep analysis)
+    }
 }
 
 let healthDataQueries: [HealthDataQuery] = [
@@ -26,6 +33,7 @@ let healthDataQueries: [HealthDataQuery] = [
         unit: HKUnit.meter(),
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
+        aggregationType: nil,
         aggregationTime: nil
     ),
     HealthDataQuery(
@@ -34,6 +42,7 @@ let healthDataQueries: [HealthDataQuery] = [
         unit: HKUnit.gramUnit(with: .kilo),
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
+        aggregationType: nil,
         aggregationTime: nil
 
     ),
@@ -43,13 +52,14 @@ let healthDataQueries: [HealthDataQuery] = [
         unit: HKUnit.percent(), // still a fractional value so special case handling
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
+        aggregationType: nil,
         aggregationTime: nil
 
     ),
     HealthDataQuery(
         identifier: "HKCategoryTypeIdentifierSleepAnalysis",
         displayName: "Deep Sleep (Minutes)",
-        unit: nil,
+        unit: HKUnit.minute(),
         aggregationStyle: .cumulative,
         customProcessor: { sample in
             guard let categorySample = sample as? HKCategorySample,
@@ -58,24 +68,75 @@ let healthDataQueries: [HealthDataQuery] = [
             }
             return categorySample.endDate.timeIntervalSince(categorySample.startDate) / 60.0
         },
+        aggregationType: .groupedByNight,
+        aggregationTime: DateComponents(hour: 12, minute: 0) // 12:00 PM
+    ),
+    HealthDataQuery(
+        identifier: "HKCategoryTypeIdentifierSleepAnalysis",
+        displayName: "Total Sleep (Minutes)",
+        unit: HKUnit.minute(),
+        aggregationStyle: .cumulative, // Aggregates sleep data across intervals
+        customProcessor: { sample in
+            guard let categorySample = sample as? HKCategorySample else {
+                return 0
+            }
+            // Include all sleep-related categories
+            if categorySample.value == HKCategoryValueSleepAnalysis.asleepDeep.rawValue ||
+               categorySample.value == HKCategoryValueSleepAnalysis.asleepREM.rawValue ||
+               categorySample.value == HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue {
+                return categorySample.endDate.timeIntervalSince(categorySample.startDate) / 60.0
+            }
+            return 0
+        },
+        aggregationType: .groupedByNight,
+        aggregationTime: DateComponents(hour: 12, minute: 0) // 12:00 PM
+    ),
+    HealthDataQuery(
+        identifier: "HKCategoryTypeIdentifierSleepAnalysis",
+        displayName: "In Bed (Minutes)",
+        unit: HKUnit.minute(),
+        aggregationStyle: .cumulative,
+        customProcessor: { sample in
+            guard let categorySample = sample as? HKCategorySample,
+                  categorySample.value == HKCategoryValueSleepAnalysis.inBed.rawValue else {
+                return 0
+            }
+            return categorySample.endDate.timeIntervalSince(categorySample.startDate) / 60.0
+        },
+        aggregationType: .groupedByNight,
+        aggregationTime: DateComponents(hour: 12, minute: 0) // 12:00 PM
+    ),
+    HealthDataQuery(
+        identifier: "HKCategoryTypeIdentifierSleepAnalysis",
+        displayName: "In Bed (hours)",
+        unit: HKUnit.minute(),
+        aggregationStyle: .cumulative,
+        customProcessor: { sample in
+            guard let categorySample = sample as? HKCategorySample,
+                  categorySample.value == HKCategoryValueSleepAnalysis.inBed.rawValue else {
+                return 0
+            }
+            return categorySample.endDate.timeIntervalSince(categorySample.startDate) / 3600.0
+        },
+        aggregationType: .groupedByNight,
         aggregationTime: DateComponents(hour: 12, minute: 0) // 12:00 PM
     ),
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierActiveEnergyBurned",
         displayName: "active energy",
-        unit: HKUnit.percent(), // still a fractional value so special case handling
+        unit: HKUnit.largeCalorie(),
         aggregationStyle: .cumulative,
         customProcessor: nil,
+        aggregationType: nil,
         aggregationTime: DateComponents(hour: 00, minute: 0) // midnight
     ),
 ]
 
 enum enableStatus: Int {
-    case enabled = 0
-    case notAuthorised = 1
-    case notPresent = 2
-    case hidden = 3
-    case placeholder = 4
+    case enabled = 1
+    case notAuthorised = 2
+    case notPresent = 3
+    case hidden = 4
 }
 
 class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
@@ -130,22 +191,26 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                         if status == .notDetermined {
                             DBGLog("\(query.displayName): Not Determined")
                         } else if status == .sharingAuthorized && dataExists {  // fix disabled column if in db otherwise no entry default is use
-                            let sql = "update rthealthkit set disabled = \(enableStatus.enabled.rawValue) where hkid = '\(query.identifier)';"
+                            let sql = """
+                            insert into rthealthkit (name, hkid, disabled) 
+                            values ('\(query.displayName)','\(query.identifier)', \(enableStatus.enabled.rawValue)) 
+                            on conflict(name) do update set disabled = \(enableStatus.enabled.rawValue);
+                            """
                             self.tl?.toExecSql(sql: sql)
                             DBGLog("\(query.displayName): Authorized and Data Available")
                         } else if status == .sharingAuthorized && !dataExists {
                             let sql = """
-                            insert into rthealthkit (hkid, disabled) 
-                            values ('\(query.identifier)', \(enableStatus.notPresent.rawValue)) 
-                            on conflict(hkid) do update set disabled = \(enableStatus.notPresent.rawValue);
+                            insert into rthealthkit (name, hkid, disabled) 
+                            values ('\(query.displayName)','\(query.identifier)', \(enableStatus.notPresent.rawValue)) 
+                            on conflict(name) do update set disabled = \(enableStatus.notPresent.rawValue);
                             """
                             self.tl?.toExecSql(sql: sql)
                             DBGLog("\(query.displayName): Authorized but No Data Present")
                         } else { // .sharingDenied
                             let sql = """
-                            insert into rthealthkit (hkid, disabled) 
-                            values ('\(query.identifier)', \(enableStatus.notAuthorised.rawValue)) 
-                            on conflict(hkid) do update set disabled = \(enableStatus.notAuthorised.rawValue);
+                            insert into rthealthkit (name, hkid, disabled) 
+                            values ('\(query.displayName)','\(query.identifier)', \(enableStatus.notAuthorised.rawValue)) 
+                            on conflict(name) do update set disabled = \(enableStatus.notAuthorised.rawValue);
                             """
                             self.tl?.toExecSql(sql: sql)
                             DBGLog("\(query.displayName): Sharing Denied (\(status))")
@@ -193,8 +258,6 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
             // Notify when all tasks are done
             dispatchGroup3.notify(queue: .main) {
                 DBGLog("updateAuthorisations All HealthKit queries completed.")
-                let sql = "insert or ignore into rthealthkit (hkid, disabled) values ('placeholder',\(enableStatus.placeholder.rawValue))"
-                self.tl?.toExecSql(sql: sql)
                 self.dbInitialised = true
                 completion() // Call the completion handler in loadHealthKitConfigurations
             }
@@ -249,14 +312,14 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         dispatchGroup2.notify(queue: .main) { [self] in
             // Query user preferences
             let sql = """
-            SELECT hkid, custom_unit, disabled
+            SELECT name, hkid, custom_unit, disabled
             FROM rthealthkit;
             """
-            let sqlConfig = tl!.toQry2ArySSI(sql: sql)
+            let sqlConfig = tl!.toQry2ArySSSI(sql: sql)
             
-            var userPreferences: [String: (customUnit: String?, disabled: Int)] = [:]
-            for (k, u, d) in sqlConfig {
-                userPreferences[k] = (u, d)
+            var userPreferences: [String: (hkid: String, customUnit: String?, disabled: Int)] = [:]
+            for (n, k, u, d) in sqlConfig {
+                userPreferences[n] = (k, u, d)
             }
             
             var localConfigurations: [HealthDataQuery] = []  // temporary storage
@@ -264,8 +327,8 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
             // Merge with hardcoded table
             for query in healthDataQueries {
                 var unit = query.unit
-                var disabled = enableStatus.enabled.rawValue
-                if let preference = userPreferences[query.identifier] {
+                var disabled = enableStatus.hidden.rawValue
+                if let preference = userPreferences[query.displayName] {
                     disabled = preference.disabled
                     unit = preference.customUnit != "" ? HKUnit(from: preference.customUnit!) : query.unit
                 }
@@ -276,6 +339,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                         unit: unit,
                         aggregationStyle: query.aggregationStyle,
                         customProcessor: query.customProcessor,
+                        aggregationType: query.aggregationType,
                         aggregationTime: query.aggregationTime
                     ))
                 }
@@ -293,6 +357,184 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         let unit: String
     }
 
+    // Updated performHealthQuery function with modular structure
+
+    private func handleSleepAnalysisQuery(
+        startDate: Date,
+        endDate: Date,
+        queryConfig: HealthDataQuery,
+        completion: @escaping ([HealthQueryResult]) -> Void
+    ) {
+        DBGLog("sleepAnalysisQuery startDate \(startDate)  endDate \(endDate) name \(queryConfig.displayName)")
+        guard let categoryType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
+            print("Unsupported sample type for sleep analysis.")
+            completion([])
+            return
+        }
+
+        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [])
+        let query = HKSampleQuery(sampleType: categoryType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { (_, samples, error) in
+            guard error == nil else {
+                print("Error querying HealthKit: \(error!.localizedDescription)")
+                completion([])
+                return
+            }
+
+            guard let categorySamples = samples else {
+                print("No category samples found.")
+                completion([])
+                return
+            }
+
+            var results: [HealthQueryResult] = []
+
+            switch queryConfig.aggregationStyle {
+            case .cumulative:
+                let totalValue = categorySamples.reduce(0.0) { total, sample in
+                    total + (queryConfig.customProcessor?(sample) ?? 0)
+                }
+                if totalValue > 0 {
+                    results.append(HealthQueryResult(date: startDate, value: totalValue, unit: "minutes"))
+                }
+
+            case .discreteArithmetic:
+                results = categorySamples.compactMap { sample in
+                    let processedValue = queryConfig.customProcessor?(sample) ?? 0
+                    return processedValue > 0 ? HealthQueryResult(date: sample.startDate, value: processedValue, unit: "minutes") : nil
+                }
+
+            case .discreteEquivalentContinuousLevel:
+                fallthrough
+            case .discreteTemporallyWeighted:
+                fallthrough
+            default:
+                DBGErr("aggregation Style \(queryConfig.aggregationStyle) not handled")
+            }
+
+            completion(results)
+        }
+
+        healthStore.execute(query)
+    }
+    
+    private func simpleSleepQuery(
+        startDate: Date,
+        endDate: Date,
+        completion: @escaping ([rtHealthKit.HealthQueryResult]) -> Void
+    ) {
+        guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
+            print("Sleep Analysis type not available.")
+            completion([])
+            return
+        }
+
+        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [])
+        let query = HKSampleQuery(sampleType: sleepType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, error in
+            guard let samples = samples as? [HKCategorySample], error == nil else {
+                print("Error fetching sleep samples: \(error?.localizedDescription ?? "Unknown error")")
+                completion([])
+                return
+            }
+
+            print("Retrieved \(samples.count) sleep samples.")
+            var results: [rtHealthKit.HealthQueryResult] = []
+
+            samples.forEach { sample in
+                print("Sample Start: \(sample.startDate), End: \(sample.endDate), Value: \(sample.value)")
+                // Add each sample as a result with duration as the value
+                let durationMinutes = sample.endDate.timeIntervalSince(sample.startDate) / 60.0
+                results.append(
+                    rtHealthKit.HealthQueryResult(
+                        date: sample.startDate,
+                        value: durationMinutes,
+                        unit: "minutes"
+                    )
+                )
+            }
+
+            completion(results)
+        }
+
+        HKHealthStore().execute(query)
+    }
+    
+    private func handleQuantityTypeQuery(
+        queryConfig: HealthDataQuery,
+        startDate: Date,
+        endDate: Date,
+        specifiedUnit: HKUnit?,
+        completion: @escaping ([HealthQueryResult]) -> Void
+    ) {
+        guard let quantityType = HKObjectType.quantityType(forIdentifier: HKQuantityTypeIdentifier(rawValue: queryConfig.identifier)) else {
+            print("Unsupported sample type for identifier: \(queryConfig.identifier)")
+            completion([])
+            return
+        }
+
+        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [])
+        let query = HKSampleQuery(sampleType: quantityType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { (_, samples, error) in
+            guard error == nil else {
+                print("Error querying HealthKit: \(error!.localizedDescription)")
+                completion([])
+                return
+            }
+
+            guard let quantitySamples = samples as? [HKQuantitySample] else {
+                print("No quantity samples found.")
+                completion([])
+                return
+            }
+
+            let results: [HealthQueryResult] = {
+                switch queryConfig.aggregationStyle {
+                case .discreteArithmetic:
+                    return quantitySamples.compactMap { sample in
+                        let value = specifiedUnit != nil
+                            ? sample.quantity.doubleValue(for: specifiedUnit!)
+                            : sample.quantity.doubleValue(for: queryConfig.unit ?? HKUnit.count())
+
+                        let unit = specifiedUnit != nil
+                            ? specifiedUnit!.unitString
+                            : (queryConfig.unit ?? HKUnit.count()).unitString
+
+                        let adjustedValue = queryConfig.unit == HKUnit.percent() ? value * 100 : value
+
+                        return HealthQueryResult(date: sample.startDate, value: adjustedValue, unit: unit)
+                    }
+
+                case .cumulative:
+                    let cumulativeValue = quantitySamples.reduce(0.0) { total, sample in
+                        let value = specifiedUnit != nil
+                            ? sample.quantity.doubleValue(for: specifiedUnit!)
+                            : sample.quantity.doubleValue(for: queryConfig.unit ?? HKUnit.count())
+                        return total + value
+                    }
+
+                    if !quantitySamples.isEmpty {
+                        let unit = specifiedUnit != nil
+                            ? specifiedUnit!.unitString
+                            : (queryConfig.unit ?? HKUnit.count()).unitString
+
+                        return [HealthQueryResult(
+                            date: quantitySamples.last?.startDate ?? startDate,
+                            value: cumulativeValue,
+                            unit: unit
+                        )]
+                    } else {
+                        return []
+                    }
+                default:
+                    print("Unsupported aggregation style for \(queryConfig.displayName)")
+                    return []
+                }
+            }()
+
+            completion(results)
+        }
+
+        healthStore.execute(query)
+    }
+
     func performHealthQuery(
         displayName: String,
         targetDate: Int,
@@ -304,97 +546,47 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
             completion([])
             return
         }
+
         
-        let identifier = queryConfig.identifier
-        
-        let startDate = Date(timeIntervalSince1970: TimeInterval(targetDate) - 4 * 3600) // Minus 4 hours
-        let endDate = Date(timeIntervalSince1970: TimeInterval(targetDate) + 4 * 3600)   // Plus 4 hours
-        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [])
-        
-        if let quantityType = HKObjectType.quantityType(forIdentifier: HKQuantityTypeIdentifier(rawValue: identifier)) {
-            let query = HKSampleQuery(sampleType: quantityType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { (_, samples, error) in
-                guard error == nil else {
-                    print("Error querying HealthKit: \(error!.localizedDescription)")
-                    completion([])
-                    return
-                }
-                
-                guard let quantitySamples = samples as? [HKQuantitySample] else {
-                    print("No quantity samples found.")
-                    completion([])
-                    return
-                }
-                
-                var results: [HealthQueryResult] = []
-                
-                switch queryConfig.aggregationStyle {
-                case .discreteArithmetic:
-                    results = quantitySamples.compactMap { sample in
-                        let value = specifiedUnit != nil
-                            ? sample.quantity.doubleValue(for: specifiedUnit!)
-                            : sample.quantity.doubleValue(for: queryConfig.unit ?? HKUnit.count())
-                        
-                        let unit = specifiedUnit != nil
-                            ? specifiedUnit!.unitString
-                            : (queryConfig.unit ?? HKUnit.count()).unitString
-                        
-                        let adjustedValue = queryConfig.unit == HKUnit.percent() ? value * 100 : value
-                        
-                        // Apply custom processor if available
-                        let finalValue = queryConfig.customProcessor?(sample) ?? adjustedValue
-                        
-                        return HealthQueryResult(date: sample.startDate, value: finalValue, unit: unit)
-                    }
-                    
-                case .cumulative:
-                    // Sum all sample values
-                    let cumulativeValue = quantitySamples.reduce(0.0) { total, sample in
-                        let value = specifiedUnit != nil
-                            ? sample.quantity.doubleValue(for: specifiedUnit!)
-                            : sample.quantity.doubleValue(for: queryConfig.unit ?? HKUnit.count())
-                        
-                        let adjustedValue = queryConfig.unit == HKUnit.percent() ? value * 100 : value
-                        
-                        // Apply custom processor if available
-                        let processedValue = queryConfig.customProcessor?(sample) ?? adjustedValue
-                        
-                        return total + processedValue
-                    }
-                    
-                    if !quantitySamples.isEmpty {
-                        let unit = specifiedUnit != nil
-                            ? specifiedUnit!.unitString
-                            : (queryConfig.unit ?? HKUnit.count()).unitString
-                        
-                        results = [
-                            HealthQueryResult(
-                                date: quantitySamples.last?.startDate ?? startDate,
-                                value: cumulativeValue,
-                                unit: unit
-                            )
-                        ]
-                    }
-                case .discreteEquivalentContinuousLevel:
-                    fallthrough
-                case .discreteTemporallyWeighted:
-                    fallthrough
-                @unknown default:
-                    print("Unsupported aggregation style for \(displayName)")
-                }
-                
-                completion(results)
-            }
-            
-            // Execute the query
-            healthStore.execute(query)
+        let calendar = Calendar.current
+
+        let startDate: Date
+        let endDate: Date
+
+        if let aggregationTime = queryConfig.aggregationTime {
+            // Define endDate as the targetDate's day at the aggregationTime
+            endDate = calendar.date(bySettingHour: aggregationTime.hour ?? 0,
+                                    minute: aggregationTime.minute ?? 0,
+                                    second: aggregationTime.second ?? 0,
+                                    of: Date(timeIntervalSince1970: TimeInterval(targetDate))) ??
+                     Date(timeIntervalSince1970: TimeInterval(targetDate))
+
+            // Define startDate as 1 day before the targetDate at the aggregationTime
+            startDate = calendar.date(byAdding: .day, value: -1, to: endDate) ??
+                        Date(timeIntervalSince1970: TimeInterval(targetDate) - 86400) // Default to one day earlier
         } else {
-            print("Unsupported sample type for identifier: \(identifier)")
-            completion([])
+            // Default time range: ±4 hours around the targetDate
+            startDate = Date(timeIntervalSince1970: TimeInterval(targetDate) - 4 * 3600)
+            endDate = Date(timeIntervalSince1970: TimeInterval(targetDate) + 4 * 3600)
+        }
+        
+        if queryConfig.identifier == "HKCategoryTypeIdentifierSleepAnalysis" {
+            handleSleepAnalysisQuery(startDate: startDate, endDate: endDate, queryConfig: queryConfig, completion: completion)
+            //simpleSleepQuery(startDate: startDate, endDate: endDate, completion: completion)
+        } else {
+
+            handleQuantityTypeQuery(queryConfig: queryConfig, startDate: startDate, endDate: endDate, specifiedUnit: specifiedUnit, completion: completion)
         }
     }
 
 
-    func getHealthKitDates(for displayName: String, completion: @escaping ([TimeInterval]) -> Void) {
+    func getHealthKitDates(
+        for displayName: String,
+        lastDate: Int?,
+        completion: @escaping ([TimeInterval]) -> Void
+    ) {
+        // gets dates with HK data for displayName query over all time, or since lastDate if lastDate > 0
+        
         // Find the query configuration for the given displayName
         guard let queryConfig = healthDataQueries.first(where: { $0.displayName == displayName }),
               let hkObjectType = queryConfig.identifier.hasPrefix("HKQuantityTypeIdentifier") ?
@@ -405,65 +597,103 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
             return
         }
 
+        // Debug
+
+        
+        let calendar = Calendar.current
+        let specificDate = calendar.date(from: DateComponents(year: 2024, month: 9, day: 19, hour: 0, minute: 0, second: 0))
         // Predicate for all time
-        let predicate = HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: [])
+        //let startDate = (lastDate > 0 ? Date(timeIntervalSince1970: Double(lastDate)) : Date.distantPast)
+        let startDate = (lastDate ?? 0 > 0 ? Date(timeIntervalSince1970: Double(lastDate ?? 0)) : specificDate)
+        //let predicate = HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: [])
+        
+        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: Date(), options: [])
 
-        // Create and execute a HealthKit query
-        let query = HKSampleQuery(sampleType: hkObjectType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { (_, samples, error) in
-            if let error = error {
-                print("Error fetching HealthKit data for \(displayName): \(error.localizedDescription)")
-                completion([])
-                return
-            }
-
-            // Extract unique dates from the samples
-            let timestamps = (samples ?? []).map { $0.startDate.timeIntervalSince1970 }.sorted()
-
-            // Handle aggregation time if specified
-            if let aggregationTime = queryConfig.aggregationTime {
-                let aggregationHour = aggregationTime.hour ?? 0
-                let aggregationMinute = aggregationTime.minute ?? 0
-
-                // Continue with the logic to determine the start of the aggregation window
-                let calendar = Calendar.current
-
-                var aggregatedDates: [TimeInterval] = []
-                var currentWindowStart: Date?
-                var currentWindowEnd: Date?
-
-                for timestamp in timestamps {
-                    let recordDate = Date(timeIntervalSince1970: timestamp)
-
-                    if let start = currentWindowStart, let end = currentWindowEnd, recordDate >= start && recordDate < end {
-                        // Within the same 24-hour window; continue
-                        continue
-                    }
-
-                    // Calculate the new 24-hour window
-                    let startOfDay = calendar.startOfDay(for: recordDate)
-                    currentWindowStart = startOfDay.addingTimeInterval(TimeInterval(aggregationHour * 3600 + aggregationMinute * 60 - 24 * 3600))
-                    currentWindowEnd = startOfDay.addingTimeInterval(TimeInterval(aggregationHour * 3600 + aggregationMinute * 60))
-
-                    // Find the most recent timestamp within the new window
-                    let windowTimestamps = timestamps.filter { ts in
-                        let tsDate = Date(timeIntervalSince1970: ts)
-                        return tsDate >= currentWindowStart! && tsDate < currentWindowEnd!
-                    }
-
-                    if let latestInWindow = windowTimestamps.last {
-                        aggregatedDates.append(latestInWindow)
-                    }
+        switch queryConfig.aggregationStyle {
+        case .discreteArithmetic:
+            // Fetch all individual timestamps
+            let query = HKSampleQuery(sampleType: hkObjectType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, error in
+                guard let samples = samples else {
+                    print("Error fetching samples: \(error?.localizedDescription ?? "Unknown error")")
+                    completion([])
+                    return
                 }
-
-                completion(aggregatedDates)
-            } else {
-                // No aggregation time; return all timestamps
+                let timestamps = samples.map { $0.startDate.timeIntervalSince1970 }
                 completion(timestamps)
             }
+            healthStore.execute(query)
+            
+        case .cumulative:
+            if queryConfig.aggregationType == nil {
+                // Use HKStatisticsCollectionQuery for daily aggregation
+                guard let quantityType = hkObjectType as? HKQuantityType else {
+                    print("Invalid quantity type for cumulative daily aggregation.")
+                    completion([])
+                    return
+                }
+                
+                let calendar = Calendar.current
+                let anchorDate = calendar.startOfDay(for: Date())
+                let interval = DateComponents(day: 1)
+                
+                let statsQuery = HKStatisticsCollectionQuery(
+                    quantityType: quantityType,
+                    quantitySamplePredicate: predicate,
+                    options: .cumulativeSum,
+                    anchorDate: anchorDate,
+                    intervalComponents: interval
+                )
+                
+                statsQuery.initialResultsHandler = { _, statisticsCollection, error in
+                    guard let statisticsCollection = statisticsCollection else {
+                        print("Error fetching statistics: \(error?.localizedDescription ?? "Unknown error")")
+                        completion([])
+                        return
+                    }
+                    
+                    let timestamps = statisticsCollection.statistics().map { $0.startDate.timeIntervalSince1970 }
+                    completion(timestamps)
+                }
+                
+                healthStore.execute(statsQuery)
+            } else if queryConfig.aggregationType == .groupedByNight {
+                // Group sleep data into nights
+                guard let categoryType = hkObjectType as? HKCategoryType else {
+                    print("Invalid category type for nightly grouping.")
+                    completion([])
+                    return
+                }
+                
+                let query = HKSampleQuery(sampleType: categoryType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, error in
+                    guard let samples = samples as? [HKCategorySample], error == nil else {
+                        print("Error fetching sleep samples: \(error?.localizedDescription ?? "Unknown error")")
+                        completion([])
+                        return
+                    }
+                    
+                    let calendar = Calendar.current
+                    let groupedByNight = Dictionary(grouping: samples) { sample -> Date in
+                        calendar.startOfDay(for: sample.startDate)
+                    }
+                    
+                    let timestamps = groupedByNight.keys.map { $0.timeIntervalSince1970 }
+                    completion(timestamps)
+                }
+                
+                healthStore.execute(query)
+                
+            } else {
+                DBGErr(".cumulative HealthDataQuery aggregationType \(queryConfig.aggregationType!) not handled")
+            }
+        case .discreteEquivalentContinuousLevel:
+            fallthrough
+        case .discreteTemporallyWeighted:
+            fallthrough
+        default:
+            DBGErr("aggregation Style \(queryConfig.aggregationStyle) not handled")
         }
-
-        healthStore.execute(query)
     }
+
 
 
     /*
