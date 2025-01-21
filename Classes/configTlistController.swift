@@ -46,6 +46,8 @@
 //
 
 import UIKit
+import ZIPFoundation
+
 
 let SegmentEdit = 0
 let SegmentCopy = 1
@@ -75,29 +77,161 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
     // MARK: -
     // MARK: view support
 
+    
+    // Helper to create a ZIP file
+    func createZipFile(at zipURL: URL, withFilesMatching pattern: String, in directory: URL) throws {
+        // Remove existing ZIP file if it exists
+        if FileManager.default.fileExists(atPath: zipURL.path) {
+            try FileManager.default.removeItem(at: zipURL)
+        }
+
+        // Create a ZIP archive with the throwing initializer
+        let archive: Archive
+        do {
+            archive = try Archive(url: zipURL, accessMode: .create)
+        } catch {
+            throw NSError(domain: "ZIPFoundationError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Unable to create archive: \(error.localizedDescription)"])
+        }
+
+        // Get matching files
+        let files = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
+            .filter { $0.lastPathComponent.hasSuffix("_out.csv") || $0.lastPathComponent.hasSuffix("_out.plist") || $0.lastPathComponent.hasSuffix("_out.rtcsv") }
+
+        // Add files to the ZIP archive
+        for file in files {
+            try archive.addEntry(with: file.lastPathComponent, fileURL: file)
+        }
+    }
+
+    
+    // Helper to present the file browser
+    func presentFileBrowser(for fileURL: URL) {
+        let documentPicker = UIDocumentPickerViewController(forExporting: [fileURL])
+        documentPicker.modalPresentationStyle = .formSheet
+        self.present(documentPicker, animated: true)
+    }
+    
     @objc func startExport() {
         autoreleasepool {
             tlist?.exportAll()
+            
             safeDispatchSync({ [self] in
                 rTracker_resource.finishProgressBar(view, navItem: navigationItem, disable: true)
             })
         }
     }
+    
+    @objc func startExportZip() {
+        guard let tlist = self.tlist else {
+            DBGLog("tlist is nil")
+            return
+        }
+        guard let zipOption = self.zipOption,
+               zipOption == .shareCsvZip || zipOption == .shareRtrkZip else {
+             DBGLog("Invalid or nil zipOption")
+             return
+        }
+        autoreleasepool {
+            // this part is tlist?.exportAll()
+            var ndx: Float = 1.0
+            jumpMaxPriv() // reasonable to do this now with default encryption enabled
 
+            let sql = "select id from toplevel" // ignore current (self) list because subject to privacy
+            let idSet = tlist.toQry2AryI(sql: sql)
+            let all = Float(idSet.count)
+
+            for tid in idSet {
+                let to = trackerObj(tid)
+                if zipOption == .shareCsvZip {
+                    _ = to.writeTmpCSV()
+                } else {
+                    _ = to.writeTmpRtrk(true)
+                }
+
+                rTracker_resource.setProgressVal(ndx / all)
+                ndx += 1.0
+            }
+
+            restorePriv()
+            
+            // this part generates the .zip file
+            let fpatho = rTracker_resource.ioFilePath(nil, access: false, tmp: true)
+            let fpathu = URL(fileURLWithPath: fpatho)
+            try? FileManager.default.createDirectory(atPath: fpatho, withIntermediateDirectories: false, attributes: nil)
+            let zipFileName, fpattern: String
+            if zipOption == .shareCsvZip {
+                zipFileName = "rTracker_exportAllCsv.zip"
+                fpattern = "*.csv"
+            } else {
+                zipFileName = "rTracker_exportAllRtrk.zip"
+                fpattern = "*.rtrk"
+            }
+
+            let zipFileURL = URL(fileURLWithPath: fpatho).appendingPathComponent(zipFileName)
+            
+            do {
+                try createZipFile(at: zipFileURL, withFilesMatching: fpattern, in: fpathu)
+                DBGLog("Zip file created at: \(zipFileURL)")
+            } catch {
+                DBGLog("Failed to create zip file: \(error.localizedDescription)")
+            }
+            
+            safeDispatchSync({ [self] in
+                rTracker_resource.finishProgressBar(view, navItem: navigationItem, disable: true)
+                
+                // Present the file browser for sharing
+                //presentFileBrowser(for: zipFileURL)
+                
+                let activityViewController = UIActivityViewController(activityItems: [zipFileURL], applicationActivities: nil)
+                activityViewController.completionWithItemsHandler = { activityType, completed, returnedItems, activityError in
+                    // Ensure temporary files are cleaned up
+                    do {
+                        // Get the contents of the temp directory
+                        let fileURLs = try FileManager.default.contentsOfDirectory(at: fpathu, includingPropertiesForKeys: nil)
+                        
+                        // Iterate and remove each file
+                        for fileURL in fileURLs {
+                            try FileManager.default.removeItem(at: fileURL)
+                        }
+                        
+                        DBGLog("All files in the temp directory have been removed.")
+                    } catch {
+                        DBGLog("Failed to clear temp directory: \(error.localizedDescription)")
+                    }
+                }
+                
+                self.present(activityViewController, animated: true)
+            })
+        }
+    }
+    
     @objc func btnExport() {
 
         DBGLog("export all")
         let navframe = navigationController?.navigationBar.frame
-        rTracker_resource.alert("exporting trackers", msg: "_out.csv and _out.plist files are being saved to the rTracker Documents directory on this device\(rTracker_resource.getRtcsvOutput() ? " in rtCSV format" : "").  Access them through iTunes/Finder on your PC/Mac, or with a program like iExplorer from Macroplant.com.  Import by changing the names to _in.csv and _in.plist, and read about .rtcsv file import capabilities in the help pages.\n\nNote: All private (hidden) data has been saved to output files.", vc: self)
+        
+        rTracker_resource.alert("exporting trackers",
+                                msg: "_out.csv and _out.plist files are being saved to the rTracker Documents directory on this device\(rTracker_resource.getRtcsvOutput() ? " in rtCSV format" : "").  Access them through iTunes/Finder on your PC/Mac, or with a program like iExplorer from Macroplant.com.  Import by changing the names to _in.csv and _in.plist, and read about .rtcsv file import capabilities in the help pages.\n\nNote: All private (hidden) data has been saved to output files.",
+                                vc: self) 
+         
         rTracker_resource.startProgressBar(view, navItem: navigationItem, disable: true, yloc: (navframe?.size.height ?? 0.0) + (navframe?.origin.y ?? 0.0))
 
         Thread.detachNewThreadSelector(#selector(startExport), toTarget: self, with: nil)
     }
 
-    func getExportBtn() -> UIBarButtonItem? {
+    func doExportZip() {
+        DBGLog("export zip")
+        let navframe = navigationController?.navigationBar.frame
+        rTracker_resource.startProgressBar(view, navItem: navigationItem, disable: true, yloc: (navframe?.size.height ?? 0.0) + (navframe?.origin.y ?? 0.0))
+
+        Thread.detachNewThreadSelector(#selector(startExportZip), toTarget: self, with: nil)
+    }
+    
+    /*
+    func getExportFilesBtn() -> UIBarButtonItem? {
         var exportBtn: UIBarButtonItem?
         exportBtn = UIBarButtonItem(
-            title: "Export all",
+            title: "Export all to app directory",
             style: .plain,
             target: self,
             action: #selector(btnExport))
@@ -107,7 +241,69 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
         exportBtn!.accessibilityHint = "tap to save all trackers in rTracker's Documents folder"
         return exportBtn
     }
+     */
 
+      // Menu options
+      enum MenuOption: String {
+          case exportAll = "Export all to App directory"
+          case shareCsvZip = "Share all .csv as .zip file"
+          case shareRtrkZip = "Share all .rtrk with data as .zip file"
+          case cancel = "Cancel"
+      }
+    
+    var zipOption: MenuOption? = nil
+    
+    func handleMenuOption(_ option: MenuOption) {
+        zipOption = option
+        switch option {
+        case .exportAll:
+            btnExport()
+        case .shareCsvZip:
+            fallthrough
+        case .shareRtrkZip:
+            doExportZip()
+        case .cancel:
+            break
+        }
+    }
+    
+    
+    
+    @objc func btnMenu() {
+        let alert = UIAlertController(title: "export all", message: nil, preferredStyle: .actionSheet)
+        
+        let options: [MenuOption] = [.shareCsvZip, .shareRtrkZip, .exportAll]
+        
+        
+        for option in options {
+            let action = UIAlertAction(title: option.rawValue, style: .default) { [self] _ in
+                handleMenuOption(option)
+            }
+            alert.addAction(action)
+        }
+        
+        alert.addAction(UIAlertAction(title: MenuOption.cancel.rawValue, style: .cancel, handler: nil))
+        
+        present(alert, animated: true)
+    }
+    
+    var _menuBtn: UIBarButtonItem?
+    var menuBtn: UIBarButtonItem {
+        if _menuBtn == nil {
+            _menuBtn = UIBarButtonItem(
+                barButtonSystemItem: .action,
+                target: self,
+                action: #selector(btnMenu))
+            
+            _menuBtn!.accessibilityLabel = "Share Menu"
+            _menuBtn!.accessibilityHint = "tap to show sharing options"
+            _menuBtn!.accessibilityIdentifier = "trkrListMenu"
+        }
+        
+        return _menuBtn!
+    }
+    
+    
     // Implement viewDidLoad to do additional setup after loading the view, typically from a nib.
     override func viewDidLoad() {
 
@@ -127,7 +323,7 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
         //NSArray *tbArray = [NSArray arrayWithObjects: exportBtn, nil];
         //self.toolbarItems = tbArray;
         navigationController?.setToolbarHidden(true, animated: false)
-        navigationItem.setRightBarButton(getExportBtn(), animated: false)
+        navigationItem.setRightBarButton(menuBtn, animated: false)
 
         // doesn't work? navigationItem.backBarButtonItem!.accessibilityIdentifier = "configTlistReturn"
         
@@ -408,11 +604,6 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
 
     // Override to support row selection in the table view.
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-
-        // Navigation logic may go here -- for example, create and push another view controller.
-        // AnotherViewController *anotherViewController = [[AnotherViewController alloc] initWithNibName:@"AnotherView" bundle:nil];
-        // [self.navigationController pushViewController:anotherViewController animated:YES];
-        // [anotherViewController release];
 
         let row = indexPath.row
         //DBGLog(@"configTList selected row %d : %@", row, [self.tlist.topLayoutNames objectAtIndex:row]);

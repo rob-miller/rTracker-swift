@@ -31,6 +31,8 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
     var pendingTid: NSNumber?
     var regNotifs: Bool = false
 
+    let rtr = rTracker_resource.shared
+    
     // MARK: -
     // MARK: Application lifecycle
 
@@ -192,10 +194,10 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
             UILocalNotification *notification = launchOptions[UIApplicationLaunchOptionsLocalNotificationKey];
             if (nil != notification) {
                 DBGLog(@"responding to local notification with msg : %@",notification.alertBody);
-                //[rTracker_resource alert:@"launched with locNotification" msg:notification.alertBody];
+                //[rtr alert:@"launched with locNotification" msg:notification.alertBody];
                 //NSUserDefaults *sud = [NSUserDefaults standardUserDefaults];
                 //[sud synchronize];
-                [rTracker_resource setToldAboutSwipe:[sud boolForKey:@"toldAboutSwipe"]];
+                [rtr setToldAboutSwipe:[sud boolForKey:@"toldAboutSwipe"]];
 
                 [rootController performSelectorOnMainThread:@selector(doOpenTrackerOC:) withObject:(notification.userInfo)[@"tid"] waitUntilDone:NO];
             }

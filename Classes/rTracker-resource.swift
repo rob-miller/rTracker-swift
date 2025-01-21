@@ -161,6 +161,15 @@ func systemAudioCallback(_ ssID: SystemSoundID, _ clientData: UnsafeMutableRawPo
 }
 
 class rTracker_resource: NSObject {
+    static let shared = rTracker_resource()
+    
+    private override init() {
+        super.init()
+        // Additional setup if needed
+    }
+    
+    var vhHKchange = false  // signify vo healthkit source changed and need to wipe data if saved later
+    
     //+ (void) safeDispatchSync:(dispatch_block_t) block ;
 
     //---------------------------

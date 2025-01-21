@@ -24,15 +24,12 @@
 import Foundation
 import UIKit
 import SwiftUI
+import HealthKit
 
 class voNumber: voState, UITextFieldDelegate {
-    /*{
-        UITextField *dtf;
-    }*/
-
 
     private var _dtf: UITextField?
-    var rthk = rtHealthKit.shared
+    lazy var rthk = rtHealthKit.shared
     
     var dtf: UITextField {
         //safeDispatchSync({ [self] in
@@ -302,8 +299,9 @@ class voNumber: voState, UITextFieldDelegate {
             }
             
             // Insert the new dates into trkrData
+            let priv = max(MINPRIV, self.vo.vpriv)  // priv needs to be at least minpriv if vpriv = 0
             for newDate in newDates {
-                let sql = "insert into trkrData (date, minpriv) values (\(Int(newDate)), 1)"
+                let sql = "insert into trkrData (date, minpriv) values (\(Int(newDate)), \(priv))" // rtm  \(self.vo.vpriv))"
                 to.toExecSql(sql: sql)
             }
             
@@ -316,7 +314,7 @@ class voNumber: voState, UITextFieldDelegate {
             DBGLog("HealthKit dates processed, continuing with loadHKdata.")
 
             // Fetch dates from trkrData for processing
-            let sql = """
+            var sql = """
             SELECT trkrData.date
             FROM trkrData
             WHERE NOT EXISTS (
@@ -340,10 +338,14 @@ class voNumber: voState, UITextFieldDelegate {
                 dispatchGroup?.enter() // Enter the group for each query
 
                 let targD = Date(timeIntervalSince1970: TimeInterval(dat))
+                var unit: HKUnit? = nil
+                if let unitString = vo.optDict["ahUnit"] {
+                    unit = HKUnit(from: unitString)
+                }
                 rthk.performHealthQuery(
                     displayName: srcName,
                     targetDate: dat,
-                    specifiedUnit: nil
+                    specifiedUnit: unit
                 ) { results in
                     if results.isEmpty {
                         DBGLog("No results found for \(targD).")
@@ -357,7 +359,19 @@ class voNumber: voState, UITextFieldDelegate {
                             DBGWarn("\(self.vo.valueName!) multiple (\(results.count)) results for \(targD) can only use last")
                         }
                         let result = results.last!
-                        var sql = "insert into voData (id, date, val) values (\(self.vo.vid), \(dat), \(result.value))"
+                        
+                        let formattedValue: String
+                        if result.value.truncatingRemainder(dividingBy: 1) == 0 {
+                            // If the value is a whole number, format as an integer
+                            formattedValue = String(format: "%.0f", result.value)
+                        } else {
+                            // Otherwise, format to two decimal places
+                            formattedValue = String(format: "%.2f", result.value)
+                        }
+
+                        var sql = "insert into voData (id, date, val) values (\(self.vo.vid), \(dat), \(formattedValue))"
+
+                        //var sql = "insert into voData (id, date, val) values (\(self.vo.vid), \(dat), \(result.value))"
                         to.toExecSql(sql: sql)
                         sql = "insert into voHKstatus (id, date, stat) values (\(self.vo.vid), \(dat), \(hkStatus.hkData.rawValue))"
                         to.toExecSql(sql: sql)
@@ -366,6 +380,21 @@ class voNumber: voState, UITextFieldDelegate {
                     dispatchGroup?.leave() // Leave the group after this query is processed
                 }
             }
+            
+            // wnsure trkrData has lowest priv if just added a lower privacy valuObj to a trkrData entry
+            let priv = max(MINPRIV, self.vo.vpriv)  // priv needs to be at least minpriv if vpriv = 0
+            sql = """
+            UPDATE trkrData
+            SET minpriv = \(priv)
+            WHERE minpriv > \(priv)
+              AND EXISTS (
+                SELECT 1
+                FROM voData
+                WHERE voData.date = trkrData.date
+                  AND voData.id = \(Int(vo.vid))
+              );
+            """
+            to.toExecSql(sql: sql)
             DBGLog("Done loadHKdata with \(dateSet.count) records.")
             dispatchGroup?.leave()  // done with enter before getHealthkitDates processing overall
         }
@@ -384,11 +413,13 @@ class voNumber: voState, UITextFieldDelegate {
         
         let hostingController = UIHostingController(
             rootView: ahViewController(
-                selectedChoice: vo.optDict["ahSource"] ?? "None",
-                onDismiss: { [self] updatedChoice in
-                    vo.optDict["ahSource"] = "None" == updatedChoice ? nil : updatedChoice
+                selectedChoice: vo.optDict["ahSource"],
+                selectedUnitString: vo.optDict["ahUnit"],
+                onDismiss: { [self] updatedChoice,updatedUnit  in
+                    vo.optDict["ahSource"] = updatedChoice
+                    vo.optDict["ahUnit"] = updatedUnit
                     if let button = ctvovcp?.scroll.subviews.first(where: { $0 is UIButton && $0.accessibilityIdentifier == "configtv_ahSelBtn" }) as? UIButton {
-                        print("ahSelect view returned: \(updatedChoice) optDict is \(vo.optDict["ahSource"] ?? "nil")")
+                        print("ahSelect view returned: \(updatedChoice ?? "nil") \(updatedUnit ?? "nil") optDict is \(vo.optDict["ahSource"] ?? "nil")  \(vo.optDict["ahUnit"] ?? "nil")")
                         DispatchQueue.main.async {
                             button.setTitle(self.vo.optDict["ahSource"] ?? "Configure", for: .normal)
                             button.sizeToFit()

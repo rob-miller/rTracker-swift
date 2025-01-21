@@ -13,7 +13,8 @@ import HealthKit
 struct HealthDataQuery {
     let identifier: String                     // Unique HK identifier
     let displayName: String                    // User-friendly name for UI
-    let unit: HKUnit?                          // Default unit (optional)
+    let unit: [HKUnit]?                          // unit choice (optional)
+    let needUnit: Bool                          // must specify unit or default to last saved
     let aggregationStyle: HKQuantityAggregationStyle // cumulative, discrete_options
     let customProcessor: ((HKSample) -> Double)? // custom processing logic (sleep aggregation)
     let aggregationType: AggregationType?       // custom grouping logic (night sleep)
@@ -28,18 +29,10 @@ struct HealthDataQuery {
 
 let healthDataQueries: [HealthDataQuery] = [
     HealthDataQuery(
-        identifier: "HKQuantityTypeIdentifierHeight",
-        displayName: "Height",
-        unit: HKUnit.meter(),
-        aggregationStyle: .discreteArithmetic,
-        customProcessor: nil,
-        aggregationType: nil,
-        aggregationTime: nil
-    ),
-    HealthDataQuery(
-        identifier: "HKQuantityTypeIdentifierBodyMass",
-        displayName: "Weight",
-        unit: HKUnit.gramUnit(with: .kilo),
+        identifier: "HKQuantityTypeIdentifierBodyFatPercentage",
+        displayName: "Body Fat %",
+        unit: nil, // still a fractional value so special case handling
+        needUnit: false,
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
         aggregationType: nil,
@@ -47,9 +40,53 @@ let healthDataQueries: [HealthDataQuery] = [
 
     ),
     HealthDataQuery(
-        identifier: "HKQuantityTypeIdentifierBodyFatPercentage",
-        displayName: "% Body Fat",
-        unit: HKUnit.percent(), // still a fractional value so special case handling
+        identifier: "HKQuantityTypeIdentifierHeight",
+        displayName: "Body Height",
+        unit: [HKUnit.meter(), HKUnit(from: "cm"), HKUnit.foot(), HKUnit.inch()],
+        needUnit: false,
+        aggregationStyle: .discreteArithmetic,
+        customProcessor: nil,
+        aggregationType: nil,
+        aggregationTime: nil
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierBodyMass",
+        displayName: "Body Weight",
+        unit: [HKUnit.gramUnit(with: .kilo), HKUnit.pound(), HKUnit.stone()],
+        needUnit: false,
+        aggregationStyle: .discreteArithmetic,
+        customProcessor: nil,
+        aggregationType: nil,
+        aggregationTime: nil
+
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierBodyMassIndex",
+        displayName: "Body Mass Index",
+        unit: nil,
+        needUnit: false,
+        aggregationStyle: .discreteArithmetic,
+        customProcessor: nil,
+        aggregationType: nil,
+        aggregationTime: nil
+
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierLeanBodyMass",
+        displayName: "Body Lean Mass",
+        unit: [HKUnit.gramUnit(with: .kilo), HKUnit.pound(), HKUnit.stone()],
+        needUnit: false,
+        aggregationStyle: .discreteArithmetic,
+        customProcessor: nil,
+        aggregationType: nil,
+        aggregationTime: nil
+
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierWaistCircumference",
+        displayName: "Body Waist Circumference",
+        unit: [HKUnit.meter(), HKUnit(from: "cm"), HKUnit.foot(), HKUnit.inch()],
+        needUnit: false,
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
         aggregationType: nil,
@@ -58,8 +95,41 @@ let healthDataQueries: [HealthDataQuery] = [
     ),
     HealthDataQuery(
         identifier: "HKCategoryTypeIdentifierSleepAnalysis",
-        displayName: "Deep Sleep (Minutes)",
-        unit: HKUnit.minute(),
+        displayName: "Sleep - Awake",
+        unit: [HKUnit.hour(), HKUnit.minute()],
+        needUnit: true,
+        aggregationStyle: .cumulative,
+        customProcessor: { sample in
+            guard let categorySample = sample as? HKCategorySample,
+                  categorySample.value == HKCategoryValueSleepAnalysis.awake.rawValue else {
+                return 0
+            }
+            return categorySample.endDate.timeIntervalSince(categorySample.startDate) / 60.0
+        },
+        aggregationType: .groupedByNight,
+        aggregationTime: DateComponents(hour: 12, minute: 0) // 12:00 PM
+    ),
+    HealthDataQuery(
+        identifier: "HKCategoryTypeIdentifierSleepAnalysis",
+        displayName: "Sleep - Core",
+        unit: [HKUnit.hour(), HKUnit.minute()],
+        needUnit: true,
+        aggregationStyle: .cumulative,
+        customProcessor: { sample in
+            guard let categorySample = sample as? HKCategorySample,
+                  categorySample.value == HKCategoryValueSleepAnalysis.asleepCore.rawValue else {
+                return 0
+            }
+            return categorySample.endDate.timeIntervalSince(categorySample.startDate) / 60.0
+        },
+        aggregationType: .groupedByNight,
+        aggregationTime: DateComponents(hour: 12, minute: 0) // 12:00 PM
+    ),
+    HealthDataQuery(
+        identifier: "HKCategoryTypeIdentifierSleepAnalysis",
+        displayName: "Sleep - Deep",
+        unit: [HKUnit.hour(), HKUnit.minute()],
+        needUnit: true,
         aggregationStyle: .cumulative,
         customProcessor: { sample in
             guard let categorySample = sample as? HKCategorySample,
@@ -73,8 +143,9 @@ let healthDataQueries: [HealthDataQuery] = [
     ),
     HealthDataQuery(
         identifier: "HKCategoryTypeIdentifierSleepAnalysis",
-        displayName: "Total Sleep (Minutes)",
-        unit: HKUnit.minute(),
+        displayName: "Sleep - Total",
+        unit: [HKUnit.hour(), HKUnit.minute()],
+        needUnit: true,
         aggregationStyle: .cumulative, // Aggregates sleep data across intervals
         customProcessor: { sample in
             guard let categorySample = sample as? HKCategorySample else {
@@ -82,8 +153,9 @@ let healthDataQueries: [HealthDataQuery] = [
             }
             // Include all sleep-related categories
             if categorySample.value == HKCategoryValueSleepAnalysis.asleepDeep.rawValue ||
-               categorySample.value == HKCategoryValueSleepAnalysis.asleepREM.rawValue ||
-               categorySample.value == HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue {
+                categorySample.value == HKCategoryValueSleepAnalysis.asleepREM.rawValue ||
+                categorySample.value == HKCategoryValueSleepAnalysis.asleepCore.rawValue ||
+                categorySample.value == HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue {
                 return categorySample.endDate.timeIntervalSince(categorySample.startDate) / 60.0
             }
             return 0
@@ -93,8 +165,9 @@ let healthDataQueries: [HealthDataQuery] = [
     ),
     HealthDataQuery(
         identifier: "HKCategoryTypeIdentifierSleepAnalysis",
-        displayName: "In Bed (Minutes)",
-        unit: HKUnit.minute(),
+        displayName: "Sleep - In Bed",
+        unit: [HKUnit.hour(), HKUnit.minute()],
+        needUnit: true,
         aggregationStyle: .cumulative,
         customProcessor: { sample in
             guard let categorySample = sample as? HKCategorySample,
@@ -107,28 +180,264 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationTime: DateComponents(hour: 12, minute: 0) // 12:00 PM
     ),
     HealthDataQuery(
-        identifier: "HKCategoryTypeIdentifierSleepAnalysis",
-        displayName: "In Bed (hours)",
-        unit: HKUnit.minute(),
-        aggregationStyle: .cumulative,
-        customProcessor: { sample in
-            guard let categorySample = sample as? HKCategorySample,
-                  categorySample.value == HKCategoryValueSleepAnalysis.inBed.rawValue else {
-                return 0
-            }
-            return categorySample.endDate.timeIntervalSince(categorySample.startDate) / 3600.0
-        },
-        aggregationType: .groupedByNight,
-        aggregationTime: DateComponents(hour: 12, minute: 0) // 12:00 PM
-    ),
-    HealthDataQuery(
-        identifier: "HKQuantityTypeIdentifierActiveEnergyBurned",
-        displayName: "active energy",
-        unit: HKUnit.largeCalorie(),
+        identifier: "HKQuantityTypeIdentifierHeartRate",
+        displayName: "Heart Rate",
+        unit: nil,
+        needUnit: false,
         aggregationStyle: .cumulative,
         customProcessor: nil,
         aggregationType: nil,
         aggregationTime: DateComponents(hour: 00, minute: 0) // midnight
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierHeartRateVariabilitySDNN",
+        displayName: "Heart Rate Variability SDNN",
+        unit: nil,
+        needUnit: false,
+        aggregationStyle: .discreteArithmetic,
+        customProcessor: nil,
+        aggregationType: nil,
+        aggregationTime: nil
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierRestingHeartRate",
+        displayName: "Resting Heart Rate",
+        unit: nil,
+        needUnit: false,
+        aggregationStyle: .discreteArithmetic,
+        customProcessor: nil,
+        aggregationType: nil,
+        aggregationTime: nil
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierHeartRateRecoveryOneMinute",
+        displayName: "Heart Rate Recovery - One Minute",
+        unit: nil,
+        needUnit: false,
+        aggregationStyle: .discreteArithmetic,
+        customProcessor: nil,
+        aggregationType: nil,
+        aggregationTime: nil
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierBloodGlucose",
+        displayName: "Blood Glucose",
+        unit: nil,
+        needUnit: false,
+        aggregationStyle: .discreteArithmetic,
+        customProcessor: nil,
+        aggregationType: nil,
+        aggregationTime: nil
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierOxygenSaturation",
+        displayName: "Oxygen Saturation",
+        unit: nil,
+        needUnit: false,
+        aggregationStyle: .discreteArithmetic,
+        customProcessor: nil,
+        aggregationType: nil,
+        aggregationTime: nil
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierBloodGlucose",
+        displayName: "Resting Heart Rate",
+        unit: nil,
+        needUnit: false,
+        aggregationStyle: .discreteArithmetic,
+        customProcessor: nil,
+        aggregationType: nil,
+        aggregationTime: nil
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierBodyTemperature",
+        displayName: "Basal Body Temperature",
+        unit: [HKUnit.degreeCelsius(), HKUnit.degreeFahrenheit()],
+        needUnit: false,
+        aggregationStyle: .discreteArithmetic,
+        customProcessor: nil,
+        aggregationType: nil,
+        aggregationTime: nil
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierBasalBodyTemperature",
+        displayName: "Body Temperature",
+        unit: [HKUnit.degreeCelsius(), HKUnit.degreeFahrenheit()],
+        needUnit: false,
+        aggregationStyle: .discreteArithmetic,
+        customProcessor: nil,
+        aggregationType: nil,
+        aggregationTime: nil
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierBloodPressureSystolic",
+        displayName: "Blood Pressure Systolic",
+        unit: nil,
+        needUnit: false,
+        aggregationStyle: .discreteArithmetic,
+        customProcessor: nil,
+        aggregationType: nil,
+        aggregationTime: nil
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierBloodPressureDiastolic",
+        displayName: "Blood Pressure Diastolic",
+        unit: nil,
+        needUnit: false,
+        aggregationStyle: .discreteArithmetic,
+        customProcessor: nil,
+        aggregationType: nil,
+        aggregationTime: nil
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierActiveEnergyBurned",
+        displayName: "Active Energy Burned",
+        unit: [HKUnit.largeCalorie()],
+        needUnit: false,
+        aggregationStyle: .cumulative,
+        customProcessor: nil,
+        aggregationType: nil,
+        aggregationTime: DateComponents(hour: 00, minute: 0) // midnight
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierBasalEnergyBurned",
+        displayName: "Basal Energy Burned",
+        unit: [HKUnit.largeCalorie()],
+        needUnit: false,
+        aggregationStyle: .cumulative,
+        customProcessor: nil,
+        aggregationType: nil,
+        aggregationTime: DateComponents(hour: 00, minute: 0) // midnight
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierStepCount",
+        displayName: "Step Count",
+        unit: nil,
+        needUnit: false,
+        aggregationStyle: .cumulative,
+        customProcessor: nil,
+        aggregationType: nil,
+        aggregationTime: DateComponents(hour: 00, minute: 0) // midnight
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierFlightsClimbed",
+        displayName: "Flights Climbed",
+        unit: nil,
+        needUnit: false,
+        aggregationStyle: .cumulative,
+        customProcessor: nil,
+        aggregationType: nil,
+        aggregationTime: DateComponents(hour: 00, minute: 0) // midnight
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierDistanceWalkingRunning",
+        displayName: "Distance Walking/Running",
+        unit: [HKUnit.meter(), HKUnit.foot(), HKUnit.yard()],
+        needUnit: false,
+        aggregationStyle: .cumulative,
+        customProcessor: nil,
+        aggregationType: nil,
+        aggregationTime: DateComponents(hour: 00, minute: 0) // midnight
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierDistanceCycling",
+        displayName: "Distance Cycling",
+        unit: [HKUnit.meter(), HKUnit.foot(), HKUnit.yard()],
+        needUnit: false,
+        aggregationStyle: .cumulative,
+        customProcessor: nil,
+        aggregationType: nil,
+        aggregationTime: DateComponents(hour: 00, minute: 0) // midnight
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierPhysicalEffort",
+        displayName: "Stair Ascent Speed",
+        unit: nil,
+        needUnit: false,
+        aggregationStyle: .discreteArithmetic,
+        customProcessor: nil,
+        aggregationType: nil,
+        aggregationTime: nil
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierWorkoutEffortScore",
+        displayName: "Workout Effort Score",
+        unit: nil,
+        needUnit: false,
+        aggregationStyle: .discreteArithmetic,
+        customProcessor: nil,
+        aggregationType: nil,
+        aggregationTime: nil
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierStairAscentSpeed",
+        displayName: "Stair Ascent Speed",
+        unit: nil,
+        needUnit: false,
+        aggregationStyle: .discreteArithmetic,
+        customProcessor: nil,
+        aggregationType: nil,
+        aggregationTime: nil
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierSixMinuteWalkTestDistance",
+        displayName: "Walk Test Distance - 6 minute",
+        unit: [HKUnit.meter(), HKUnit.foot(), HKUnit.yard()],
+        needUnit: false,
+        aggregationStyle: .discreteArithmetic,
+        customProcessor: nil,
+        aggregationType: nil,
+        aggregationTime: nil
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierWalkingSpeed",
+        displayName: "Walking Speed",
+        unit: nil,
+        needUnit: false,
+        aggregationStyle: .discreteArithmetic,
+        customProcessor: nil,
+        aggregationType: nil,
+        aggregationTime: nil
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierWalkingStepLength",
+        displayName: "Walking Step Length",
+        unit: nil,
+        needUnit: false,
+        aggregationStyle: .discreteArithmetic,
+        customProcessor: nil,
+        aggregationType: nil,
+        aggregationTime: nil
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierWalkingAsymmetryPercentage",
+        displayName: "Walking Asymmetry %",
+        unit: nil,
+        needUnit: false,
+        aggregationStyle: .discreteArithmetic,
+        customProcessor: nil,
+        aggregationType: nil,
+        aggregationTime: nil
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierStairAscentSpeed",
+        displayName: "Stair Ascent Speed",
+        unit: nil,
+        needUnit: false,
+        aggregationStyle: .discreteArithmetic,
+        customProcessor: nil,
+        aggregationType: nil,
+        aggregationTime: nil
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierStairDescentSpeed",
+        displayName: "Stair Descent Speed",
+        unit: nil,
+        needUnit: false,
+        aggregationStyle: .discreteArithmetic,
+        customProcessor: nil,
+        aggregationType: nil,
+        aggregationTime: nil
     ),
 ]
 
@@ -188,6 +497,9 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                 let processQueryResult: () -> Void = {
                     DispatchQueue.main.async {
                         DBGLog("\(query.identifier) \(query.displayName) data= \(dataExists)")
+                        if status == .sharingAuthorized && dataExists {
+                        }
+                        
                         if status == .notDetermined {
                             DBGLog("\(query.displayName): Not Determined")
                         } else if status == .sharingAuthorized && dataExists {  // fix disabled column if in db otherwise no entry default is use
@@ -241,7 +553,53 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                     
                     if (status == .sharingAuthorized || status == .sharingDenied) {
                         status = .sharingAuthorized
-                        let predicate = HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: [])
+                        var predicate = HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: [])
+                        
+                        if query.identifier == "HKCategoryTypeIdentifierSleepAnalysis" {  // filter on sleep sample types
+                            let displayName = query.displayName
+                            let components = displayName.split(separator: "-", maxSplits: 1, omittingEmptySubsequences: true)
+
+                            if components.count > 1 {
+                                let suffix = components[1].trimmingCharacters(in: .whitespaces) // Extract and trim the part after '-'
+
+                                switch suffix {
+                                case "In Bed":
+                                    predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                                HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.inBed.rawValue)
+                                            ])
+                                case "Deep":
+                                    predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                                HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepDeep.rawValue)
+                                            ])
+                                case "Total":  // assume core will always be present at some point for total sleep
+                                    fallthrough
+                                case "Core":
+                                    predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                                HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepCore.rawValue)
+                                            ])
+                                case "REM":
+                                    predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                                HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepREM.rawValue)
+                                            ])
+                                case "Awake":
+                                    predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                                HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.awake.rawValue)
+                                            ])
+                                default:
+                                    DBGErr("Unhandled display name suffix: \(suffix)")
+                                    // Handle other cases
+                                }
+                            } else {
+                                DBGErr("No suffix found in displayName: \(displayName)")
+                                // Handle cases where there is no '-'
+                            }
+                            
+                        }
                         let sampleQuery = HKSampleQuery(sampleType: categoryType, predicate: predicate, limit: 1, sortDescriptors: nil) { (_, samples, _) in
                             dataExists = (samples?.count ?? 0) > 0
                             processQueryResult()
@@ -330,13 +688,14 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                 var disabled = enableStatus.hidden.rawValue
                 if let preference = userPreferences[query.displayName] {
                     disabled = preference.disabled
-                    unit = preference.customUnit != "" ? HKUnit(from: preference.customUnit!) : query.unit
+                    unit = preference.customUnit != "" ? [HKUnit(from: preference.customUnit!)] : query.unit
                 }
-                if disabled == enableStatus.enabled.rawValue {
+                if disabled == enableStatus.enabled.rawValue {  // if the disabled field holds 'enabled'
                     localConfigurations.append(HealthDataQuery(
                         identifier: query.identifier,
                         displayName: query.displayName,
                         unit: unit,
+                        needUnit: query.needUnit,
                         aggregationStyle: query.aggregationStyle,
                         customProcessor: query.customProcessor,
                         aggregationType: query.aggregationType,
@@ -362,6 +721,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
     private func handleSleepAnalysisQuery(
         startDate: Date,
         endDate: Date,
+        specifiedUnit: HKUnit?,
         queryConfig: HealthDataQuery,
         completion: @escaping ([HealthQueryResult]) -> Void
     ) {
@@ -390,17 +750,23 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
 
             switch queryConfig.aggregationStyle {
             case .cumulative:
-                let totalValue = categorySamples.reduce(0.0) { total, sample in
+                var totalValue = categorySamples.reduce(0.0) { total, sample in
                     total + (queryConfig.customProcessor?(sample) ?? 0)
                 }
                 if totalValue > 0 {
-                    results.append(HealthQueryResult(date: startDate, value: totalValue, unit: "minutes"))
+                    if specifiedUnit == HKUnit.hour() {
+                        totalValue /= 60.0
+                    }
+                    results.append(HealthQueryResult(date: startDate, value: totalValue, unit: specifiedUnit?.unitString ?? "none"))
                 }
 
             case .discreteArithmetic:
                 results = categorySamples.compactMap { sample in
-                    let processedValue = queryConfig.customProcessor?(sample) ?? 0
-                    return processedValue > 0 ? HealthQueryResult(date: sample.startDate, value: processedValue, unit: "minutes") : nil
+                    var processedValue = queryConfig.customProcessor?(sample) ?? 0
+                    if specifiedUnit == HKUnit.hour() {
+                        processedValue /= 60.0
+                    }
+                    return processedValue > 0 ? HealthQueryResult(date: sample.startDate, value: processedValue, unit: specifiedUnit?.unitString ?? "none") : nil
                 }
 
             case .discreteEquivalentContinuousLevel:
@@ -491,13 +857,13 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                     return quantitySamples.compactMap { sample in
                         let value = specifiedUnit != nil
                             ? sample.quantity.doubleValue(for: specifiedUnit!)
-                            : sample.quantity.doubleValue(for: queryConfig.unit ?? HKUnit.count())
+                        : sample.quantity.doubleValue(for: queryConfig.unit?.first ?? HKUnit.count())
 
                         let unit = specifiedUnit != nil
                             ? specifiedUnit!.unitString
-                            : (queryConfig.unit ?? HKUnit.count()).unitString
+                        : (queryConfig.unit?.first ?? HKUnit.count()).unitString
 
-                        let adjustedValue = queryConfig.unit == HKUnit.percent() ? value * 100 : value
+                        let adjustedValue = queryConfig.unit?.first == HKUnit.percent() ? value * 100 : value
 
                         return HealthQueryResult(date: sample.startDate, value: adjustedValue, unit: unit)
                     }
@@ -506,14 +872,14 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                     let cumulativeValue = quantitySamples.reduce(0.0) { total, sample in
                         let value = specifiedUnit != nil
                             ? sample.quantity.doubleValue(for: specifiedUnit!)
-                            : sample.quantity.doubleValue(for: queryConfig.unit ?? HKUnit.count())
+                        : sample.quantity.doubleValue(for: queryConfig.unit?.first ?? HKUnit.count())
                         return total + value
                     }
 
                     if !quantitySamples.isEmpty {
                         let unit = specifiedUnit != nil
                             ? specifiedUnit!.unitString
-                            : (queryConfig.unit ?? HKUnit.count()).unitString
+                        : (queryConfig.unit?.first ?? HKUnit.count()).unitString
 
                         return [HealthQueryResult(
                             date: quantitySamples.last?.startDate ?? startDate,
@@ -571,7 +937,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         }
         
         if queryConfig.identifier == "HKCategoryTypeIdentifierSleepAnalysis" {
-            handleSleepAnalysisQuery(startDate: startDate, endDate: endDate, queryConfig: queryConfig, completion: completion)
+            handleSleepAnalysisQuery(startDate: startDate, endDate: endDate, specifiedUnit:specifiedUnit, queryConfig: queryConfig, completion: completion)
             //simpleSleepQuery(startDate: startDate, endDate: endDate, completion: completion)
         } else {
 

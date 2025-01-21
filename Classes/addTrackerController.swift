@@ -64,6 +64,8 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     var deleteVOs: [AnyHashable]? // VOs to be deleted on save
     var ttoRank: Int? = nil
 
+    var modifying: Bool = false
+    
     // MARK: -
     // MARK: core object methods and support
 
@@ -124,6 +126,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             tempTrackerObj?.toid = tlist!.getUnique()
             title = "Add tracker"
             toolbar.isHidden = true
+            modifying = false
         } else {
             //title = "Modify tracker"
             toolbar.isHidden = false
@@ -132,6 +135,8 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             titleLabel.accessibilityHint = "left widget to enable delete button, center to modify value, right widget to change order"
             navigationItem.titleView = titleLabel
 
+            modifying = true
+            
             //toolbar.leftBarButtonItem?.accessibilityHint = "leave without saving"
             //toolbar.leftBarButtonItem?
         }
@@ -320,13 +325,36 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         tempTrackerObj?.toExecSql(sql:sql)
         sql = String(format: "delete from voConfig where id=%ld;", vid)
         tempTrackerObj?.toExecSql(sql:sql)
+        sql = String(format: "delete from voHKstatus where id=%ld;", vid)
+        tempTrackerObj?.toExecSql(sql:sql)
     }
 
     @objc func btnSaveSlowPart() {
         autoreleasepool {
             //[self.spinner performSelectorOnMainThread:@selector(startAnimating) withObject:nil waitUntilDone:NO];
 
-            // rtm nice if we could figure out that changed HK data source here and clearHKdata() for the relevant vo
+            // figure out if have changed HK data source here and clearHKdata() for the relevant vo
+            if modifying {
+                let oldTracker = trackerObj(tempTrackerObj!.toid)
+                for ovo in oldTracker.valObjTable {
+                    let ood = ovo.optDict
+                    if let oaks = ood["ahksrc"] {
+                        let oahs = ood["ahSource"]
+                        let oahu = ood["ahUnit"]
+                        for nvo in tempTrackerObj!.valObjTable {
+                            if nvo.vid == ovo.vid {
+                                let nod = nvo.optDict
+                                let nahs = nod["ahSource"], nahu = nod["ahUnit"], naks = nod["ahksrc"]
+                                if (nahs != oahs || nahu != oahu || naks != oaks) {
+                                    ovo.vos?.clearHKdata()
+                                }
+                                break
+                            }
+                        }
+                    }
+                    
+                }
+            }
             tempTrackerObj?.saveConfig()
 
             tlist?.add(toTopLayoutTable: tempTrackerObj!, nrank: ttoRank)
