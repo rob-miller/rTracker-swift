@@ -89,6 +89,8 @@ let TBHIDFLT = false
 let GRAPHDFLT = true
 let NSWLDFLT = false
 let AHKSRCDFLT = false
+let AHAVGDFLT = true
+let AHPREVDDFLT = false
 let GRAPHLASTDFLT = true
 let SETSTRACKERDATEDFLT = false
 

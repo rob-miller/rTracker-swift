@@ -254,6 +254,8 @@ class voNumber: voState, UITextFieldDelegate {
 
         if ((key == "nswl") && (val == (NSWLDFLT ? "1" : "0")))
             || ((key == "ahksrc") && ((val == (AHKSRCDFLT ? "1" : "0") || (vo.optDict["ahSource"] == nil))))  // unspecified ahSource disallowed
+            || ((key == "ahAvg") && (val == (AHAVGDFLT ? "1" : "0")))
+            || ((key == "ahPrevD") && (val == (AHPREVDDFLT ? "1" : "0")))
             || ((key == "autoscale") && (val == (AUTOSCALEDFLT ? "1" : "0")))
             || ((key == "numddp") && (Int(val ?? "") ?? 0 == NUMDDPDFLT)) {
             vo.optDict.removeValue(forKey: key)
@@ -285,23 +287,59 @@ class voNumber: voState, UITextFieldDelegate {
         let sql = "select max(date) from voHKstatus where id = \(Int(vo.vid))"
         let lastDate = to.toQry2Int(sql: sql)
         rthk.getHealthKitDates(for: srcName, lastDate: lastDate) { hkDates in
+            DBGLog("hk dates for \(srcName), ahAvg is \(self.vo.optDict["ahAvg"] ?? "1")")
             let existingDatesQuery = """
             SELECT date
             FROM trkrData
             """
             let existingDates = Set(to.toQry2AryI(sql: existingDatesQuery))
             
+            /*
+             // Filter dates that don't match within ±4 hours of existing dates
             let fourHours: TimeInterval = 4 * 60 * 60
-
-            // Filter dates that don't match within ±4 hours of existing dates
             let newDates = hkDates.filter { hkDate in
                 !existingDates.contains { abs(hkDate - Double($0)) <= fourHours }
+            }
+            */
+            
+            let calendar = Calendar.current
+            var newDates: [TimeInterval]
+            if self.vo.optDict["ahAvg"] ?? "1" == "1" {
+                // Filter dates that are not on the same calendar day as any existing dates
+                newDates = hkDates.filter { hkDate in
+                    !existingDates.contains { existingDate in
+                        calendar.isDate(Date(timeIntervalSince1970: hkDate), inSameDayAs: Date(timeIntervalSince1970: Double(existingDate)))
+                    }
+                }
+                
+                // set all times to 12:00 noon
+                let adjustedDates = newDates.map { hkDate in
+                    var components = calendar.dateComponents([.year, .month, .day], from: Date(timeIntervalSince1970: hkDate))
+                    components.hour = 12
+                    components.minute = 0
+                    components.second = 0
+                    return calendar.date(from: components)?.timeIntervalSince1970 ?? hkDate
+                }
+                
+                
+                // restrict any times in future to now
+                let now = Date()
+                newDates = adjustedDates.map { timeInterval -> TimeInterval in
+                    let date = Date(timeIntervalSince1970: timeInterval)
+                    if date > now {
+                        return now.timeIntervalSince1970 // Change to the current time
+                    }
+                    // If not in the future, keep the original time
+                    return timeInterval
+                }
+            } else {
+                newDates = hkDates
             }
             
             // Insert the new dates into trkrData
             let priv = max(MINPRIV, self.vo.vpriv)  // priv needs to be at least minpriv if vpriv = 0
             for newDate in newDates {
-                let sql = "insert into trkrData (date, minpriv) values (\(Int(newDate)), \(priv))" // rtm  \(self.vo.vpriv))"
+                let sql = "insert into trkrData (date, minpriv) values (\(Int(newDate)), \(priv))"
                 to.toExecSql(sql: sql)
             }
             
@@ -333,8 +371,15 @@ class voNumber: voState, UITextFieldDelegate {
             let dateSet = to.toQry2AryI(sql: sql)
             
             DBGLog("Query complete, count is \(dateSet.count)")
-
+            let calendar = Calendar.current
             for dat in dateSet {
+                let date = Date(timeIntervalSince1970: TimeInterval(dat))
+                let components = calendar.dateComponents([.hour, .minute, .second], from: date)
+                
+                if vo.optDict["ahAvg"] ?? "1" == "1" && (components.hour != 12 || components.minute != 0 || components.second != 0) {
+                    continue // Skip to the next entry if ahAvg and the time is not 12:00:00 noon
+                }
+                            
                 dispatchGroup?.enter() // Enter the group for each query
 
                 let targD = Date(timeIntervalSince1970: TimeInterval(dat))
@@ -353,12 +398,32 @@ class voNumber: voState, UITextFieldDelegate {
                         to.toExecSql(sql: sql)
                     } else {
                         for result in results {
-                            DBGLog("Target: \(targD) results - Date: \(result.date), Value: \(result.value), Unit: \(result.unit)")
+                            DBGLog("\(results.count) entries - \(self.vo.valueName!) Target: \(targD) results - Date: \(result.date), Value: \(result.value), Unit: \(result.unit)")
+                            break
                         }
+                        
+                        var result = results.last!
+                        
                         if results.count > 1 {
-                            DBGWarn("\(self.vo.valueName!) multiple (\(results.count)) results for \(targD) can only use last")
+                            if self.vo.optDict["ahAvg"] ?? "1" == "1" {
+                                // Compute the average value
+                                let totalValue = results.reduce(0.0) { $0 + $1.value }
+                                let averageValue = totalValue / Double(results.count)
+                                
+                                // Get the last date and unit
+                                let lastResult = results.last!
+                                let lastDate = lastResult.date
+                                let lastUnit = lastResult.unit
+                                
+                                // Create the single element
+                                let combinedResult = rtHealthKit.HealthQueryResult(date: lastDate, value: averageValue, unit: lastUnit)
+                                
+                                // Replace all elements with the single element
+                                result = combinedResult
+                            } else {
+                                DBGWarn("\(self.vo.valueName!) multiple (\(results.count)) results for \(targD) no average can only use last")
+                            }
                         }
-                        let result = results.last!
                         
                         let formattedValue: String
                         if result.value.truncatingRemainder(dividingBy: 1) == 0 {
@@ -369,19 +434,41 @@ class voNumber: voState, UITextFieldDelegate {
                             formattedValue = String(format: "%.2f", result.value)
                         }
 
-                        var sql = "insert into voData (id, date, val) values (\(self.vo.vid), \(dat), \(formattedValue))"
-
-                        //var sql = "insert into voData (id, date, val) values (\(self.vo.vid), \(dat), \(result.value))"
-                        to.toExecSql(sql: sql)
-                        sql = "insert into voHKstatus (id, date, stat) values (\(self.vo.vid), \(dat), \(hkStatus.hkData.rawValue))"
-                        to.toExecSql(sql: sql)
+                        if self.vo.optDict["ahPrevD"] ?? "0" == "1" {  // if data is for previous day, set to next day, unless that is in future from today
+                            var date = Date(timeIntervalSince1970: TimeInterval(dat))
+                            if !calendar.isDateInToday(date) {
+                                date = calendar.date(byAdding: .day, value: 1, to: date)!
+                                let nextdat = Int(date.timeIntervalSince1970)
+                                
+                                var sql = "insert into voData (id, date, val) values (\(self.vo.vid), \(nextdat), \(formattedValue))"
+                                to.toExecSql(sql: sql)
+                                sql = "insert into voHKstatus (id, date, stat) values (\(self.vo.vid), \(nextdat), \(hkStatus.hkData.rawValue))"
+                                to.toExecSql(sql: sql)
+                                
+                                // as this is going into day+1, possibly day+1 inot in trkrdata but should be, and day-1 should be removed
+                                sql = "insert or ignore into trkrData (date, minpriv) values (\(nextdat), \(self.vo.vpriv))"
+                                to.toExecSql(sql: sql)
+                            }
+                            // no insert if ahPrevD and dat is in today
+                        } else {
+                            var sql = "insert into voData (id, date, val) values (\(self.vo.vid), \(dat), \(formattedValue))"
+                            to.toExecSql(sql: sql)
+                            sql = "insert into voHKstatus (id, date, stat) values (\(self.vo.vid), \(dat), \(hkStatus.hkData.rawValue))"
+                            to.toExecSql(sql: sql)
+                        }
                     }
 
                     dispatchGroup?.leave() // Leave the group after this query is processed
                 }
             }
             
-            // wnsure trkrData has lowest priv if just added a lower privacy valuObj to a trkrData entry
+            if self.vo.optDict["ahPrevD"] ?? "0" == "1" {
+                // possibly a day-1 entry should be removed
+                sql = "delete from trkrdata where date not in (select date from voData where voData.date = trkrdata.date)"
+                to.toExecSql(sql: sql)
+            }
+            
+            // ensure trkrData has lowest priv if just added a lower privacy valuObj to a trkrData entry
             let priv = max(MINPRIV, self.vo.vpriv)  // priv needs to be at least minpriv if vpriv = 0
             sql = """
             UPDATE trkrData
@@ -402,7 +489,8 @@ class voNumber: voState, UITextFieldDelegate {
 
     override func clearHKdata() {
         let to = vo.parentTracker
-        var sql = "delete from voData where (id, date) in (select id, date from voHKstatus where id = \(vo.vid) and stat = \(hkStatus.hkData.rawValue))"
+        //var sql = "delete from voData where (id, date) in (select id, date from voHKstatus where id = \(vo.vid) and stat = \(hkStatus.hkData.rawValue))"
+        var sql = "delete from voData where (id, date) in (select id, date from voHKstatus where id = \(vo.vid))"
         to.toExecSql(sql: sql)
         sql = "delete from voHKstatus where id = \(vo.vid)"
         to.toExecSql(sql: sql)
@@ -415,9 +503,13 @@ class voNumber: voState, UITextFieldDelegate {
             rootView: ahViewController(
                 selectedChoice: vo.optDict["ahSource"],
                 selectedUnitString: vo.optDict["ahUnit"],
-                onDismiss: { [self] updatedChoice,updatedUnit  in
+                ahAvg: vo.optDict["ahAvg"] ?? "1" == "1",
+                ahPrevD: vo.optDict["ahPrevD"] ?? "0" == "1",
+                onDismiss: { [self] updatedChoice,updatedUnit, updatedAhAvg, updatedAhPrevD  in
                     vo.optDict["ahSource"] = updatedChoice
                     vo.optDict["ahUnit"] = updatedUnit
+                    vo.optDict["ahAvg"] = updatedAhAvg ? "1" : "0"
+                    vo.optDict["ahPrevD"] = updatedAhPrevD ? "1" : "0"
                     if let button = ctvovcp?.scroll.subviews.first(where: { $0 is UIButton && $0.accessibilityIdentifier == "configtv_ahSelBtn" }) as? UIButton {
                         print("ahSelect view returned: \(updatedChoice ?? "nil") \(updatedUnit ?? "nil") optDict is \(vo.optDict["ahSource"] ?? "nil")  \(vo.optDict["ahUnit"] ?? "nil")")
                         DispatchQueue.main.async {

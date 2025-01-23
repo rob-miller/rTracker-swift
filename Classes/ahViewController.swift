@@ -10,15 +10,16 @@ import SwiftUI
 import HealthKit
 
 struct ahViewController: View {
-    var onDismiss: (String?, String?) -> Void
+    var onDismiss: (String?, String?, Bool, Bool) -> Void
     @Environment(\.dismiss) var dismiss // For the Back/Exit button
     @State private var currentSelection: String? // Stores the datasource selection
     @State private var currentUnit: HKUnit? // Tracks the selected unit
-    @State private var isFilePickerPresented = false
-    
+    @State private var avgDataSwitch: Bool  // Tracks avg value switch
+    @State private var prevDateSwitch: Bool  // Tracks previous date switch
+
     @ObservedObject var rthk = rtHealthKit.shared
-    
-    init(selectedChoice: String?, selectedUnitString: String?, onDismiss: @escaping (String?, String?) -> Void) {
+
+    init(selectedChoice: String?, selectedUnitString: String?, ahAvg: Bool, ahPrevD: Bool, onDismiss: @escaping (String?, String?, Bool, Bool) -> Void) {
         self.onDismiss = onDismiss
         self._currentSelection = State(initialValue: selectedChoice)
         if let unitString = selectedUnitString {
@@ -26,8 +27,10 @@ struct ahViewController: View {
         } else {
             self._currentUnit = State(initialValue: nil)
         }
+        avgDataSwitch = ahAvg
+        prevDateSwitch = ahPrevD
     }
-    
+
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
@@ -39,7 +42,6 @@ struct ahViewController: View {
                         ForEach(rthk.configurations, id: \.displayName) { config in
                             Text(config.displayName).tag(config.displayName)
                         }
-                        //currentSelection = rthk.configurations.first?.displayName ?? "None"
                     }
                 }
                 .pickerStyle(WheelPickerStyle()) // Wheel picker style
@@ -58,18 +60,58 @@ struct ahViewController: View {
                         if selectedConfig.unit != nil {
                             UnitSegmentedControl(selectedConfig: selectedConfig, currentUnit: $currentUnit)
                                 .onChange(of: selectedConfig.identifier) { newIdentifier in
-                                if let config = rthk.configurations.first(where: { $0.identifier == newIdentifier }),
-                                   config.needUnit && currentUnit == nil {
-                                    currentUnit = config.unit?.first
+                                    if let config = rthk.configurations.first(where: { $0.identifier == newIdentifier }),
+                                       config.needUnit && currentUnit == nil {
+                                        currentUnit = config.unit?.first
+                                    }
                                 }
-                            }
                         }
                     } else {
                         Color.clear // Placeholder to maintain the height
                     }
                 }
                 .frame(height: 60) // Fixed height for the segmented control area
+
+                // Switch for average multiple results
+                ZStack {
+                    if let selectedConfig = rthk.configurations.first(where: { $0.displayName == currentSelection }) {
+                        if selectedConfig.aggregationStyle == .discreteArithmetic {
+                            HStack {
+                                Text("Average daily results at 12:00")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.primary)
+                                Spacer()
+                                Toggle("", isOn: $avgDataSwitch)
+                                    .labelsHidden()
+                            }
+                            .padding()
+                        }
+                    } else {
+                        Color.clear
+                    }
+                }
+                .frame(height: 30)
                 
+                // Switch for average multiple results
+                ZStack {
+                    if let selectedConfig = rthk.configurations.first(where: { $0.displayName == currentSelection }) {
+                        if selectedConfig.aggregationStyle == .discreteArithmetic && avgDataSwitch {
+                            HStack {
+                                Text("for previous day")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.primary)
+                                Spacer()
+                                Toggle("", isOn: $prevDateSwitch)
+                                    .labelsHidden()
+                            }
+                            .padding()
+                        }
+                    } else {
+                        Color.clear
+                    }
+                }
+                .frame(height: 30)
+
             }
             .padding()
             .navigationTitle("Choose source")
@@ -77,10 +119,10 @@ struct ahViewController: View {
                 ToolbarItem(placement: .bottomBar) {
                     HStack {
                         Button(action: {
-                            //if currentSelection == nil {
-                            //    currentSelection = rthk.configurations.first?.displayName ?? "None"
-                            //}
-                            onDismiss(currentSelection, currentUnit?.unitString)
+                            if currentSelection == nil {
+                                currentSelection = rthk.configurations.first?.displayName
+                            }
+                            onDismiss(currentSelection, currentUnit?.unitString, avgDataSwitch, prevDateSwitch)
                             dismiss()
                         }) {
                             Text("\u{2611}") // Ballot box with check

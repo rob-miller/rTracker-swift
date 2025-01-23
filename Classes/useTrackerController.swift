@@ -328,10 +328,13 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             //let sql = "delete from voHKfail where stat = \(hkStatus.noData);"
             //self.tracker!.toExecSql(sql: sql)
             
+            // delete all voData sourced from HealthKit
             for vo in self.tracker!.valObjTable {
                 vo.vos?.clearHKdata()  // rtm really want this?  re-load all hk data
             }
-
+            // delete trkrData entries which no longer have associated voData
+            let sql = "delete from trkrdata where date not in (select 1 from voData where voData.date = trkrdata.date)"
+            self.tracker?.toExecSql(sql: sql)
             
             // Load HealthKit data and wait for all async tasks to complete
             dispatchGroup.enter() // Mark the loadHKdata operation
@@ -340,7 +343,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             
             // Notify when all operations are completed
             dispatchGroup.notify(queue: .main) {
-                print("All HealthKit data loaded and SQL inserts completed.")
+                DBGLog("All HealthKit data loaded and SQL inserts completed.")
                 self.tableView!.refreshControl?.endRefreshing()
                 _ = self.tracker!.loadData(Int(self.tracker!.trackerDate!.timeIntervalSince1970))
                 self.updateTrackerTableView()

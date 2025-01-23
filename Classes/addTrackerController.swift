@@ -336,23 +336,28 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             // figure out if have changed HK data source here and clearHKdata() for the relevant vo
             if modifying {
                 let oldTracker = trackerObj(tempTrackerObj!.toid)
+                var ahUpdated = false
                 for ovo in oldTracker.valObjTable {
                     let ood = ovo.optDict
                     if let oaks = ood["ahksrc"] {
-                        let oahs = ood["ahSource"]
-                        let oahu = ood["ahUnit"]
+                        let oahs = ood["ahSource"], oahu = ood["ahUnit"], oaha = ood["ahAvg"], oahpd = ood["ahPrevD"]
                         for nvo in tempTrackerObj!.valObjTable {
                             if nvo.vid == ovo.vid {
                                 let nod = nvo.optDict
-                                let nahs = nod["ahSource"], nahu = nod["ahUnit"], naks = nod["ahksrc"]
-                                if (nahs != oahs || nahu != oahu || naks != oaks) {
+                                let nahs = nod["ahSource"], nahu = nod["ahUnit"], naks = nod["ahksrc"], naha = nod["ahAvg"], nahpd = nod["ahPrevD"]
+                                if (nahs != oahs || nahu != oahu || naks != oaks || naha != oaha || nahpd != oahpd) {
                                     ovo.vos?.clearHKdata()
+                                    ahUpdated = true
                                 }
-                                break
+                                break  // break out of finding valObj in newTracker, still checking oldTracker
                             }
                         }
                     }
-                    
+                }
+                if ahUpdated {
+                    // delete trkrData entries which no longer have associated voData
+                    let sql = "delete from trkrdata where date not in (select date from voData where voData.date = trkrdata.date)"
+                    oldTracker.toExecSql(sql: sql)
                 }
             }
             tempTrackerObj?.saveConfig()
