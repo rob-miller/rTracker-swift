@@ -168,8 +168,9 @@ class voNumber: voState, UITextFieldDelegate {
 
         //if (![self.vo.value isEqualToString:dtf.text]) {
 
+        var targD = Date()
         if vo.value == "" {
-            if (vo.optDict["nswl"] == "1") /* && ![to hasData] */ {
+            if (vo.optDict["nswl"] == "1") /* && ![to hasData] */ {  // nswl = number start with last
                 // only if new entry
                 let to = vo.parentTracker
                 var sql = String(format: "select count(*) from voData where id=%ld and date<%d", Int(vo.vid), Int(to.trackerDate!.timeIntervalSince1970))
@@ -182,6 +183,62 @@ class voNumber: voState, UITextFieldDelegate {
                     dtf.text = r
                 }
                 //sql = nil;
+            } else if vo.optDict["ahksrc"] == "1" && (2.0 > abs(targD.timeIntervalSince(self.MyTracker.trackerDate!))){
+                // apple healthkit source and trackerDate is now (not historical)
+                if vo.optDict["ahPrevD"] ?? "0" == "1" {
+                    let calendar = Calendar.current
+                    targD = calendar.date(byAdding: .day, value: -1, to: targD) ?? targD
+                }
+                var unit: HKUnit? = nil
+                if let unitString = vo.optDict["ahUnit"] {
+                    unit = HKUnit(from: unitString)
+                }
+                rthk.performHealthQuery(
+                    displayName: vo.optDict["ahSource"]!,
+                    targetDate: Int(targD.timeIntervalSince1970),
+                    specifiedUnit: unit
+                ) { results in
+                    if results.isEmpty {
+                        DispatchQueue.main.async {
+                            self.dtf.text = ""
+                        }
+                    } else {
+                        var result = results.last!
+                        
+                        if results.count > 1 {
+                            if self.vo.optDict["ahAvg"] ?? "1" == "1" {
+                                // Compute the average value
+                                let totalValue = results.reduce(0.0) { $0 + $1.value }
+                                let averageValue = totalValue / Double(results.count)
+                                
+                                // Get the last date and unit
+                                let lastResult = results.last!
+                                let lastDate = lastResult.date
+                                let lastUnit = lastResult.unit
+                                
+                                // Create the single element
+                                let combinedResult = rtHealthKit.HealthQueryResult(date: lastDate, value: averageValue, unit: lastUnit)
+                                
+                                // Replace all elements with the single element
+                                result = combinedResult
+                            } else {
+                                DBGWarn("\(self.vo.valueName!) multiple (\(results.count)) results for \(targD) no average can only use last")
+                            }
+                        }
+                        
+                        let formattedValue: String
+                        if result.value.truncatingRemainder(dividingBy: 1) == 0 {
+                            // If the value is a whole number, format as an integer
+                            formattedValue = String(format: "%.0f", result.value)
+                        } else {
+                            // Otherwise, format to two decimal places
+                            formattedValue = String(format: "%.2f", result.value)
+                        }
+                        DispatchQueue.main.async {
+                            self.dtf.text = "\(formattedValue)"
+                        }
+                    }
+                }
             } else {
                 dtf.text = ""
                 //DBGLog(@"reset dtf.txt to empty");
@@ -445,7 +502,7 @@ class voNumber: voState, UITextFieldDelegate {
                                 sql = "insert into voHKstatus (id, date, stat) values (\(self.vo.vid), \(nextdat), \(hkStatus.hkData.rawValue))"
                                 to.toExecSql(sql: sql)
                                 
-                                // as this is going into day+1, possibly day+1 inot in trkrdata but should be, and day-1 should be removed
+                                // as this is going into day+1, possibly day+1 not in trkrdata but should be, and day-1 should be removed
                                 sql = "insert or ignore into trkrData (date, minpriv) values (\(nextdat), \(self.vo.vpriv))"
                                 to.toExecSql(sql: sql)
                             }
