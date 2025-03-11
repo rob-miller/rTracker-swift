@@ -1,7 +1,14 @@
+//
+//  voNumber.swift
+//  rTracker
+//
+//  Created by Robert Miller on 01/11/2010.
+//  Copyright 2010 Robert T. Miller. All rights reserved.
+//
 //  Converted to Swift 5.7.2 by Swiftify v5.7.25331 - https://swiftify.com/
 ///************
 /// voNumber.swift
-/// Copyright 2010-2021 Robert T. Miller
+/// Copyright 2010-2025 Robert T. Miller
 /// Licensed under the Apache License, Version 2.0 (the "License");
 /// you may not use this file except in compliance with the License.
 /// You may obtain a copy of the License at
@@ -13,13 +20,6 @@
 /// limitations under the License.
 ///***************
 
-//
-//  voNumber.swift
-//  rTracker
-//
-//  Created by Robert Miller on 01/11/2010.
-//  Copyright 2010 Robert T. Miller. All rights reserved.
-//
 
 import Foundation
 import UIKit
@@ -32,74 +32,77 @@ class voNumber: voState, UITextFieldDelegate {
     lazy var rthk = rtHealthKit.shared
     
     var dtf: UITextField {
-        //safeDispatchSync({ [self] in
         if _dtf?.frame.size.width != vosFrame.size.width {
             _dtf = nil // first time around thinks size is 320, handle larger devices
         }
-        //})
         
         if nil == _dtf {
-            DBGLog(String("init \(vo.valueName) : x=\(vosFrame.origin.x) y=\(vosFrame.origin.y) w=\(vosFrame.size.width) h=\(vosFrame.size.height)"))
-            _dtf = UITextField(frame: vosFrame)
-            
-
-            _dtf?.textColor = .label
-            _dtf?.backgroundColor = .secondarySystemBackground
-
-            
-            _dtf?.borderStyle = .roundedRect //Bezel;
-            _dtf?.font = PrefBodyFont // [UIFont systemFontOfSize:17.0];
-            _dtf?.autocorrectionType = .no // no auto correction support
-            
-            _dtf?.placeholder = "<enter number>"
-            _dtf?.textAlignment = .right // ios6 UITextAlignmentRight;
-            //[dtf addTarget:self action:@selector(numTextFieldClose:) forControlEvents:UIControlEventTouchUpOutside];
-            
-            
-            //_dtf.keyboardType = UIKeyboardTypeNumbersAndPunctuation;	// use the number input only -- need decimal point
-            
-            _dtf?.keyboardType = .decimalPad //number pad with decimal point but no done button 	// use the number input only
-            // no done button for number pad // _dtf.returnKeyType = UIReturnKeyDone;
-            // need this from http://stackoverflow.com/questions/584538/how-to-show-done-button-on-iphone-number-pad Michael Laszlo
-            // .applicationFrame deprecated ios9
-            let appWidth = Float(UIScreen.main.bounds.width)
-            let accessoryView = UIToolbar(
-                frame: CGRect(x: 0, y: 0, width: CGFloat(appWidth), height: CGFloat(0.1 * appWidth)))
-            let space = UIBarButtonItem(
-                barButtonSystemItem: .flexibleSpace,
-                target: nil,
-                action: nil)
-            let done = UIBarButtonItem(
-                barButtonSystemItem: .done,
-                target: self,
-                action: #selector(selectDoneButton))
-            let minus = UIBarButtonItem(
-                title: "-",
-                style: .plain,
-                target: self,
-                action: #selector(selectMinusButton))
-            
-            accessoryView.items = [space, done, space, minus, space]
-            _dtf?.inputAccessoryView = accessoryView
-            
-            
-            
-            _dtf?.clearButtonMode = .whileEditing // has a clear 'x' button to the right
-            
-            //dtf.tag = kViewTag;		// tag this control so we can remove it later for recycled cells
-            _dtf?.delegate = self // let us be the delegate so we know when the keyboard's "Done" button is pressed
-            
-            // Add an accessibility label that describes what the text field is for.
-            _dtf?.accessibilityHint = NSLocalizedString("enter a number", comment: "")
-            _dtf?.text = ""
-            _dtf?.accessibilityIdentifier = "\(self.tvn())_numberfield"
-            _dtf?.addTarget(self, action: #selector(textFieldDidChange(_:)), for: .editingChanged)
+            _dtf = createTextField()
         }
-        //DBGLog(@"num dtf rc= %d",[dtf retainCount]);
-    
         return _dtf!
     }
     
+    private func createTextField() -> UITextField {
+        DBGLog(String("init \(vo.valueName) : x=\(vosFrame.origin.x) y=\(vosFrame.origin.y) w=\(vosFrame.size.width) h=\(vosFrame.size.height)"))
+
+        let textField = UITextField(frame: vosFrame)
+        
+        textField.textColor = .label
+        textField.backgroundColor = .secondarySystemBackground
+        
+        textField.borderStyle = .roundedRect //Bezel;
+        textField.font = PrefBodyFont // [UIFont systemFontOfSize:17.0];
+        textField.autocorrectionType = .no // no auto correction support
+        
+        textField.placeholder = "<enter number>"
+        textField.textAlignment = .right // ios6 UITextAlignmentRight;
+        //[dtf addTarget:self action:@selector(numTextFieldClose:) forControlEvents:UIControlEventTouchUpOutside];
+        
+        
+        textField.keyboardType = .decimalPad //number pad with decimal point but no done button     // use the number input only
+        // no done button for number pad // _dtf.returnKeyType = UIReturnKeyDone;
+        // need this from http://stackoverflow.com/questions/584538/how-to-show-done-button-on-iphone-number-pad Michael Laszlo
+        // .applicationFrame deprecated ios9
+        //let appWidth = Float(UIScreen.main.bounds.width)
+        let accessoryView = createInputAccessoryView()
+        
+        textField.inputAccessoryView = accessoryView
+        
+        textField.clearButtonMode = .whileEditing // has a clear 'x' button to the right
+        
+        //dtf.tag = kViewTag;        // tag this control so we can remove it later for recycled cells
+        textField.delegate = self // let us be the delegate so we know when the keyboard's "Done" button is pressed
+        
+        // Add an accessibility label that describes what the text field is for.
+        textField.accessibilityHint = NSLocalizedString("enter a number", comment: "")
+        textField.text = ""
+        textField.accessibilityIdentifier = "\(self.tvn())_numberfield"
+        textField.addTarget(self, action: #selector(textFieldDidChange(_:)), for: .editingChanged)
+        
+        return textField
+    }
+    
+    private func createInputAccessoryView() -> UIToolbar {
+        let appWidth = Float(UIScreen.main.bounds.width)
+        let accessoryView = UIToolbar(
+            frame: CGRect(x: 0, y: 0, width: CGFloat(appWidth), height: CGFloat(0.1 * appWidth)))
+        let space = UIBarButtonItem(
+            barButtonSystemItem: .flexibleSpace,
+            target: nil,
+            action: nil)
+        let done = UIBarButtonItem(
+            barButtonSystemItem: .done,
+            target: self,
+            action: #selector(selectDoneButton))
+        let minus = UIBarButtonItem(
+            title: "-",
+            style: .plain,
+            target: self,
+            action: #selector(selectMinusButton))
+        
+        accessoryView.items = [space, done, space, minus, space]
+        return accessoryView
+    }
     
     var startStr: String?
     var ctvovcp: configTVObjVC?
@@ -184,7 +187,7 @@ class voNumber: voState, UITextFieldDelegate {
                 }
                 //sql = nil;
             } else if vo.optDict["ahksrc"] == "1" && (2.0 > abs(targD.timeIntervalSince(self.MyTracker.trackerDate!))){
-                // apple healthkit source and trackerDate is now (not historical)
+                // apple healthkit source and trackerDate is now within 2 seconds (not historical)
                 if vo.optDict["ahPrevD"] ?? "0" == "1" {
                     let calendar = Calendar.current
                     targD = calendar.date(byAdding: .day, value: -1, to: targD) ?? targD
