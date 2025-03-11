@@ -224,8 +224,10 @@ class trackerList: tObjBase {
     func reorderDbFromTLT() {
         //DBGTLIST(self);
         
+        // get dbDict of id-> rank for all trackers
         var dbDict = toQry2DictII(sql:"select id, rank from toplevel")  // all trackers even private ones
         
+        // update rank in dbDict for all in TLT (not private trackers, so may have some duplicated ranks)
         var nrank = 1
         for tid in topLayoutIDs {  // update rank for non-private in TLT
             //let orank = dbDict[tid]
@@ -233,17 +235,17 @@ class trackerList: tObjBase {
             nrank += 1
         }
         
-        // with help from gpt4
-        let sortedValues = Array(dbDict.values).sorted()
-        var valueMapping = [Int: Int]()
-        for (newVal, oldVal) in sortedValues.enumerated() {
-            valueMapping[oldVal] = newVal + 1
+        let pairs = dbDict.map { ($0.key, $0.value) }
+        let sortedPairs = pairs.sorted { $0.1 < $1.1 }
+        var r=1
+        for (k, v) in sortedPairs {
+            dbDict[k] = r;
+            r = r+1
         }
 
-        for (tid, orank) in dbDict {
-            let sql = "update toplevel set rank = \(valueMapping[orank]!) where id = \"\(tid)\";"
+        for (tid, rank) in dbDict {
+            let sql = "update toplevel set rank = \(rank) where id = \"\(tid)\";"
             toExecSql(sql:sql) // better if used bind vars, but this keeps access in tObjBase
-            DBGLog(String(" db \(tid) from rank \(orank) to rank \(valueMapping[orank]!)"));
         }
         DBGLog("reorder db done")
         //DBGTLIST(self);

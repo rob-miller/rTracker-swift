@@ -791,12 +791,13 @@ class trackerObj: tObjBase {
             for vo in valObjTable {
                 //DBGLog(@"  vo %@  id %ld", vo.valueName, (long)vo.vid);
                 let priv: Int = Int(vo.optDict["privacy"] ?? "") ?? PRIVDFLT
-                let sql = String(format: "insert or replace into voConfig (id, rank, type, name, color, graphtype,priv) values (%ld, %d, %ld, '%@', %ld, %ld, %d);", vo.vid, i, vo.vtype, rTracker_resource.toSqlStr(vo.valueName)!, vo.vcolor, vo.vGraphType, priv)
+                let sql = String(format: "insert or replace into voConfig (id, rank, type, name, color, graphtype, priv) values (%ld, %d, %ld, '%@', %ld, %ld, %d);", vo.vid, i, vo.vtype, rTracker_resource.toSqlStr(vo.valueName)!, vo.vcolor, vo.vGraphType, priv)
                 toExecSql(sql:sql)
 
                 saveVoOptdict(vo)
+                i += 1
             }
-            i += 1
+            
 
             reminders2db()
             setReminders()
