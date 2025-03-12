@@ -101,11 +101,23 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
     }
     */
 
+    // For UIKit-based apps
+    func getSafeAreaInsets() -> UIEdgeInsets {
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first {
+            return window.safeAreaInsets
+        }
+        return .zero
+    }
+    
     func buildView() {
         //self.shakeLock = 0;
         //if (0 != self.shakeLock) return;
         //if (self.tracker.recalcFnLock) return;
 
+        let insets = getSafeAreaInsets()
+        DBGLog("safe insets= Top: \(insets.top), Left: \(insets.left), Bottom: \(insets.bottom), Right: \(insets.right)")
+        
         view.backgroundColor = .black
         //[[self view] setBackgroundColor:[UIColor redColor]];
 
@@ -149,10 +161,8 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
         var rect: CGRect = CGRect.zero
         rect.origin.y = 0.0
         rect.size.height = labelHeight
-        //rect.origin.x = 60.0f;  // this works
-        //rect.origin.x = 0.0f;
-        rect.origin.x = G_TITLE_OFFSET // avoid pre-iOS 8.1.1 bleed through of status bar
-        rect.size.width = srect.size.width - G_TITLE_OFFSET // /2.0f;
+        rect.origin.x = insets.left  // avoid dynamic island
+        rect.size.width = srect.size.width - insets.left
 
         let ttv = gtTitleV(frame: rect)
         titleView = ttv
@@ -179,24 +189,19 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
 
         let tyav = gtYAxV(frame: rect)
         yAV = tyav
-        //self.yAV.vogd = (vogd*) self.currVO.vogd;  // do below, not valid yet
         yAV?.myFont = myFont
-        //self.yAV.backgroundColor = [UIColor yellowColor];  //debug;
-        //[self.yAV setBackgroundColor:[UIColor yellowColor]];
 
         yAV?.scaleOriginY = 0.0
         yAV?.parentGTVC = self
-        //[self.yAV release];  // rtm 05 feb 2012 +1 alloc +1 self.retain
-        //[[self view] addSubview:self.yAV];  // do after set vogd
 
         gtvRect.origin.x = rect.size.width
-        gtvRect.size.width = srect.size.width - gtvRect.origin.x
+        gtvRect.size.width = srect.size.width - gtvRect.origin.x - insets.right
 
         // view for x axis labels
-        rect.origin.y = srect.size.height - ((2 * labelHeight) + (3 * SPACE) + TICKLEN)
+        rect.origin.y = srect.size.height - ((2 * labelHeight) + (3 * SPACE) + TICKLEN) - insets.bottom
         rect.size.height = srect.size.height - rect.origin.y //BORDER - rect.size.width;
         rect.origin.x = rect.size.width
-        rect.size.width = srect.size.width - rect.size.width - 10
+        rect.size.width = gtvRect.size.width  // srect.size.width - rect.size.width - 10
 
         DBGLog(String("gtvc xax rect: \(rect.origin.x) \(rect.origin.y) \(rect.size.width) \(rect.size.height)"))
 
@@ -205,12 +210,9 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
         let txav = gtXAxV(frame: rect)
         xAV = txav
         xAV?.myFont = myFont
-        // self.xAV.togd = self.tracker.togd;   // not valid yet
-        //self.xAV.backgroundColor = [UIColor redColor];  //debug;
+
         xAV?.scaleOriginX = 0.0
         xAV?.scaleWidthX = rect.size.width // x scale area is full length of subview
-        //[self.xAV release];  // rtm 05 feb 2012 +1 alloc +1 self.retain
-        // [[self view] addSubview:self.xAV];  // wait for togd
 
         gtvRect.size.height = rect.origin.y - gtvRect.origin.y
 
