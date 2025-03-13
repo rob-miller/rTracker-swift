@@ -327,6 +327,8 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         tempTrackerObj?.toExecSql(sql:sql)
         sql = String(format: "delete from voHKstatus where id=%ld;", vid)
         tempTrackerObj?.toExecSql(sql:sql)
+        sql = String(format: "delete from voOTstatus where id=%ld;", vid)
+        tempTrackerObj?.toExecSql(sql:sql)
     }
 
     @objc func btnSaveSlowPart() {

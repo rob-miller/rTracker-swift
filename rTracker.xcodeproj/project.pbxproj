@@ -35,6 +35,7 @@
 		D417E3142A2121570093564A /* TSQCalendarRowCell.m in Sources */ = {isa = PBXBuildFile; fileRef = D417E30E2A2121570093564A /* TSQCalendarRowCell.m */; };
 		D417E3152A2121570093564A /* changes.rtm in Resources */ = {isa = PBXBuildFile; fileRef = D417E30F2A2121570093564A /* changes.rtm */; };
 		D41AA9032D26CDD6001393C8 /* healthkitSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D41AA9022D26CDD5001393C8 /* healthkitSupport.swift */; };
+		D424D06A2D81E84D0027C9E6 /* otViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D424D0692D81E8370027C9E6 /* otViewController.swift */; };
 		D427446A1438B8090011EFE6 /* iTunesArtwork in Resources */ = {isa = PBXBuildFile; fileRef = D42744691438B8090011EFE6 /* iTunesArtwork */; };
 		D43216B225F2444100B2E582 /* ContactsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D43216B025F2444100B2E582 /* ContactsUI.framework */; };
 		D43216B325F2444100B2E582 /* Contacts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D43216B125F2444100B2E582 /* Contacts.framework */; };
@@ -188,6 +189,7 @@
 		D417E30F2A2121570093564A /* changes.rtm */ = {isa = PBXFileReference; lastKnownFileType = text; name = changes.rtm; path = Classes/TimesSquare/changes.rtm; sourceTree = SOURCE_ROOT; };
 		D41AA9012D26CA62001393C8 /* rTrackerDebug no-log.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = "rTrackerDebug no-log.entitlements"; path = "rTracker/rTrackerDebug no-log.entitlements"; sourceTree = "<group>"; };
 		D41AA9022D26CDD5001393C8 /* healthkitSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = healthkitSupport.swift; sourceTree = "<group>"; };
+		D424D0692D81E8370027C9E6 /* otViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = otViewController.swift; sourceTree = "<group>"; };
 		D42744691438B8090011EFE6 /* iTunesArtwork */ = {isa = PBXFileReference; lastKnownFileType = file; name = iTunesArtwork; path = Resources/png/iTunesArtwork; sourceTree = "<group>"; };
 		D427FD3F126C78D100A8ED9A /* rTracker-constants.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = "rTracker-constants.swift"; path = "Classes/rTracker-constants.swift"; sourceTree = "<group>"; };
 		D43216B025F2444100B2E582 /* ContactsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ContactsUI.framework; path = System/Library/Frameworks/ContactsUI.framework; sourceTree = SDKROOT; };
@@ -600,6 +602,7 @@
 				D47B564419411739002B0CCA /* trackerCalViewController.swift */,
 				D4B634B617B1C3B500E96BC1 /* notifyReminderViewController.swift */,
 				D4CA92BA2D2B115400554F55 /* ahViewController.swift */,
+				D424D0692D81E8370027C9E6 /* otViewController.swift */,
 				D4B634B717B1C3B500E96BC1 /* notifyReminderViewController.xib */,
 				D47D169019028FBE006563B9 /* notifyReminderVC2.swift */,
 				D47D168D19028F2C006563B9 /* notifyReminderVC2.xib */,
@@ -875,6 +878,7 @@
 				D4A700D01379928E005E0E23 /* vogd.swift in Sources */,
 				D4F02398137BFF7F0097AC16 /* gtTitleV.swift in Sources */,
 				D4F0239B137BFFA10097AC16 /* gtXAxV.swift in Sources */,
+				D424D06A2D81E84D0027C9E6 /* otViewController.swift in Sources */,
 				D4F0239E137BFFB40097AC16 /* gtYAxV.swift in Sources */,
 				D47B564519411739002B0CCA /* trackerCalViewController.swift in Sources */,
 				D4F023A1137BFFD80097AC16 /* gtVONameV.swift in Sources */,

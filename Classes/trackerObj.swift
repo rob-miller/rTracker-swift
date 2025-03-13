@@ -180,6 +180,12 @@ class trackerObj: tObjBase {
         sql = "create index if not exists vohkndx on voHKstatus (id, date);"
         toExecSql(sql:sql)
         
+        // otherTracker support added later
+        sql = "create table if not exists voOTstatus (id int not null, date int not null, stat int not null, unique(id, date) on conflict replace);"
+        toExecSql(sql:sql)
+        sql = "create index if not exists vootndx on voHKstatus (id, date);"
+        toExecSql(sql:sql)
+        
         //self.sql = nil;
     }
 
@@ -256,6 +262,16 @@ class trackerObj: tObjBase {
         return rslt
     }
 
+    func loadOTdata(dispatchGroup: DispatchGroup?) -> Bool {
+        var rslt = false
+        for vo in valObjTable {
+            if vo.optDict["otsrc"] ?? "0" != "0" {
+                vo.vos?.loadOTdata(dispatchGroup: dispatchGroup)
+                rslt = true
+            }
+        }
+        return rslt
+    }
 
     func sortVoTable(byArray arr: [AnyHashable]?) {
         var dict: [AnyHashable : Any] = [:]
@@ -1613,6 +1629,8 @@ class trackerObj: tObjBase {
         toExecSql(sql:sql)
         sql = "delete from voHKstatus"
         toExecSql(sql:sql)
+        sql = "delete from voOTstatus"
+        toExecSql(sql:sql)
         //self.sql = nil;
     }
 
@@ -1622,7 +1640,10 @@ class trackerObj: tObjBase {
         toExecSql(sql:sql)
         sql = "delete from voData where date = \(eDate);"
         toExecSql(sql:sql)
-
+        sql = "delete from voHKstatus where date = \(eDate);"
+        toExecSql(sql:sql)
+        sql = "delete from voOTstatus where date = \(eDate);"
+        toExecSql(sql:sql)
         //self.sql = nil;
     }
 

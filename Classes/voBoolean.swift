@@ -38,6 +38,7 @@ class voBoolean: voState {
         return _bSwitch
     }
 
+    private var localCtvovc: configTVObjVC?
 
     @objc func boolBtnAction(_ bSwitch: UIButton?) {
         // default is unchecked or nil // 25.i.14 use assigned val // was "so only certain is if =1" ?
@@ -64,6 +65,32 @@ class voBoolean: voState {
     override func voDisplay(_ bounds: CGRect) -> UIView {
         vosFrame = bounds
 
+        if vo.optDict["otsrc"] == "1" {
+            let xtName = vo.optDict["otTracker"] ?? ""
+            let xvName = vo.optDict["otValue"] ?? ""
+            let xcd = vo.optDict["otCurrent"] == "1"
+            if (!xtName.isEmpty && !xvName.isEmpty) {
+                let xto = trackerObj(tlist.getTIDfromNameDb(xtName)[0])
+                if let xvid = xto.toQry2Int(sql: "select id from voConfig where name = '\(xvName)'") {
+                    let to = vo.parentTracker
+                    let td = to.trackerDate!.timeIntervalSince1970
+                    var rslt = ""
+                    if xcd {
+                        let pd = to.prevDate()
+                        if pd != 0 {
+                            let sql = "select val from voData where id = \(xvid) and date <= \(td) and date >= \(pd)"
+                            rslt = xto.toQry2Str(sql: sql) ?? ""
+                        }
+                    } else {
+                        let sql = "select val from voData where id = \(xvid) and date <= \(td)"
+                        rslt = xto.toQry2Str(sql: sql) ?? ""
+                    }
+                    if rslt != "" {
+                        vo.value = rslt
+                    }
+                }
+            }
+        }
         if vo.value == "" {
             rTracker_resource.clrSwitch(bSwitch!, colr: .tertiarySystemBackground)
         } else {
@@ -138,12 +165,18 @@ class voBoolean: voState {
         vo.optDict["btnColr"] = String(format: "%ld", col)
         btn?.backgroundColor = rTracker_resource.colorSet()[col]
     }
-
+    
+    @objc func forwardToConfigOtherTrackerSrcView() {
+        localCtvovc?.configOtherTrackerSrcView()
+    }
+    
     override func voDrawOptions(_ ctvovc: configTVObjVC) {
         var frame = CGRect(x: MARGIN, y: ctvovc.lasty, width: 0.0, height: 0.0)
 
         var labframe = ctvovc.configLabel("stored value:", frame: frame, key: "bvLab", addsv: true)
 
+        localCtvovc = ctvovc
+        
         frame.origin.x = labframe.size.width + MARGIN + SPACE
         let tfWidth = "9999999999".size(withAttributes: [
             NSAttributedString.Key.font: PrefBodyFont
@@ -206,9 +239,35 @@ class voBoolean: voState {
         ctvovc.scroll.addSubview(btn)
 
 
-        //-----
+        frame.origin.x = MARGIN
+        frame.origin.y += MARGIN + frame.size.height
+        
+        labframe = ctvovc.configLabel("Other Tracker source: ", frame: frame, key: "otsLab", addsv: true)
+        frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
 
-        ctvovc.lasty = frame.origin.y + labframe.size.height + MARGIN + SPACE
+        frame = ctvovc.configSwitch(
+            frame,
+            key: "otsBtn",
+            state: vo.optDict["otsrc"] == "1",
+            addsv: true)
+
+        frame.origin.x = MARGIN
+        frame.origin.y += MARGIN + frame.size.height
+        
+        let source = self.vo.optDict["otTracker"] ?? ""
+        let value = self.vo.optDict["otValue"] ?? ""
+        let str = (!source.isEmpty && !value.isEmpty) ? "\(source):\(value)" : "Configure"
+        
+        frame = ctvovc.configActionBtn(frame, key: "otSelBtn", label: str, target: self, action: #selector(forwardToConfigOtherTrackerSrcView))
+        ctvovc.switchUpdate(okey: "otsrc", newState: vo.optDict["otsrc"] == "1")
+        
+        frame.origin.x = MARGIN
+        frame.origin.y += MARGIN + frame.size.height
+        
+        
+        labframe = ctvovc.configLabel("Other options:", frame: frame, key: "noLab", addsv: true)
+
+        ctvovc.lasty = frame.origin.y + labframe.size.height + MARGIN
 
         super.voDrawOptions(ctvovc)
     }

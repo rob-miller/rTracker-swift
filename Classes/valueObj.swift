@@ -91,6 +91,8 @@ let NSWLDFLT = false
 let AHKSRCDFLT = false
 let AHAVGDFLT = true
 let AHPREVDDFLT = false
+let OTSRCDFLT = false
+let OTCURRDFLT = false
 let GRAPHLASTDFLT = true
 let SETSTRACKERDATEDFLT = false
 
@@ -115,6 +117,12 @@ let NUMDDPDFLT = -1
 enum hkStatus: Int {
     case noData = 0
     case hkData = 1
+}
+
+// otherTracker status in table voOTstatus
+enum otStatus: Int {
+    case noData = 0
+    case otData = 1
 }
 
 protocol voProtocol: AnyObject {

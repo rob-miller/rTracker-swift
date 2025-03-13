@@ -66,6 +66,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     var tableView: UITableView?
     
     var hkDataSource = false
+    var otDataSource = false
     
     /*
     var prevDateBtn: UIBarButtonItem?
@@ -297,6 +298,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             dispatchGroup.enter()
             // Load HealthKit data
             self.hkDataSource = self.tracker!.loadHKdata(dispatchGroup: dispatchGroup)
+            self.otDataSource = self.tracker!.loadOTdata(dispatchGroup: dispatchGroup)
             dispatchGroup.leave()
 
 
@@ -307,12 +309,12 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 activityIndicator.removeFromSuperview()
 
                 // Perform any UI updates after data loading
-                print("HealthKit data loaded.")
+                DBGLog("HealthKit and Othertracker data loaded.")
                 self.tableView?.reloadData()
             }
         }
 
-        if hkDataSource {
+        if hkDataSource || otDataSource {
             let refreshControl = UIRefreshControl()
             refreshControl.addTarget(self, action: #selector(handlePullDownAction), for: .valueChanged)
             tableView!.refreshControl = refreshControl
@@ -328,17 +330,19 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             //let sql = "delete from voHKfail where stat = \(hkStatus.noData);"
             //self.tracker!.toExecSql(sql: sql)
             
-            // delete all voData sourced from HealthKit
+            // delete all voData sourced from HealthKit and other trackers
             for vo in self.tracker!.valObjTable {
                 vo.vos?.clearHKdata()  // rtm really want this?  re-load all hk data
+                vo.vos?.clearOTdata()
             }
             // delete trkrData entries which no longer have associated voData
-            let sql = "delete from trkrdata where date not in (select 1 from voData where voData.date = trkrdata.date)"
+            let sql = "delete from trkrdata where date not in (select date from voData where voData.date = trkrdata.date)"
             self.tracker?.toExecSql(sql: sql)
             
             // Load HealthKit data and wait for all async tasks to complete
             dispatchGroup.enter() // Mark the loadHKdata operation
             _ = self.tracker!.loadHKdata(dispatchGroup: dispatchGroup)
+            _ = self.tracker!.loadOTdata(dispatchGroup: dispatchGroup)
             dispatchGroup.leave() // Only if loadHKdata returns synchronously (no async left to track)
             
             // Notify when all operations are completed

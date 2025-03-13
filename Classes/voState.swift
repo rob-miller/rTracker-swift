@@ -71,6 +71,81 @@ class voState: NSObject, voProtocol {
     func clearHKdata() {
     }
     
+    func loadOTdata(dispatchGroup: DispatchGroup?) {
+        let to = vo.parentTracker
+
+        guard let xtName = vo.optDict["otTracker"] else {
+            DBGErr("no otTracker specified for valueObj \(vo.valueName ?? "no name")")
+            return
+        }
+
+        guard let xvName = vo.optDict["otValue"] else {
+            DBGErr("no otValue specified for valueObj \(vo.valueName ?? "no name")")
+            return
+        }
+        
+        //let mytlist = trackerList()
+        let xto = trackerObj(tlist.getTIDfromNameDb(xtName)[0])
+        guard let xvid = xto.toQry2Int(sql: "select id from voConfig where name = '\(xvName)'") else {
+            DBGErr("no xvid for other tracker \(xtName) valueObj \(xvName)")
+            return
+        }
+        
+        dispatchGroup?.enter()  // wait for processing all OT data
+        
+        let xcd = vo.optDict["otCurrent"] == "1"
+
+        var sql = "select max(date) from voOTstatus where id = \(Int(vo.vid))"
+        let lastDate = to.toQry2Int(sql: sql) ?? 0
+        
+        
+        let myDates = to.toQry2AryI(sql:"select date from trkrData where date > \(lastDate) order by date asc")
+        var prevDate = lastDate
+        
+        for md in myDates {
+            if xcd {
+                sql = "select val from voData where id = \(xvid) and date <= \(md) and date >= \(prevDate)"
+            } else {
+                sql = "select val from voData where id = \(xvid) and date <= \(md)"
+            }
+            if let xval = xto.toQry2Str(sql: sql) {
+                sql = "insert into voData (id, date, val) values (\(self.vo.vid), \(md), '\(xval)')"
+                to.toExecSql(sql: sql)
+                sql = "insert into voOTstatus (id, date, stat) values (\(self.vo.vid), \(md), \(otStatus.otData.rawValue))"
+                to.toExecSql(sql: sql)
+            }
+            
+            prevDate = md
+        }
+        
+            
+        // ensure trkrData has lowest priv if just added a lower privacy valuObj to a trkrData entry
+        let priv = max(MINPRIV, self.vo.vpriv)  // priv needs to be at least minpriv if vpriv = 0
+        sql = """
+        UPDATE trkrData
+        SET minpriv = \(priv)
+        WHERE minpriv > \(priv)
+          AND EXISTS (
+            SELECT 1
+            FROM voData
+            WHERE voData.date = trkrData.date
+              AND voData.id = \(Int(vo.vid))
+          );
+        """
+        to.toExecSql(sql: sql)
+        DBGLog("Done loadOTdata with \(myDates.count) records.")
+        dispatchGroup?.leave()  // done with enter before getHealthkitDates processing overall
+        
+    }
+
+    func clearOTdata() {
+        let to = vo.parentTracker
+        var sql = "delete from voData where (id, date) in (select id, date from voOTstatus where id = \(vo.vid))"
+        to.toExecSql(sql: sql)
+        sql = "delete from voOTstatus where id = \(vo.vid)"
+        to.toExecSql(sql: sql)
+    }
+    
     func setOptDictDflts() {
 
         if nil == vo.optDict["graph"] {
@@ -83,7 +158,9 @@ class voState: NSObject, voProtocol {
             vo.optDict["longTitle"] = ""
         }
 
-
+        if nil == vo.optDict["otsrc"] {
+            vo.optDict["otsrc"] = OTSRCDFLT ? "1" : "0"
+        }
 
 
     }
@@ -95,7 +172,10 @@ class voState: NSObject, voProtocol {
             return true
         }
 
-        if ((key == "graph") && (val == (GRAPHDFLT ? "1" : "0"))) || ((key == "privacy") && (Int(val ?? "") ?? 0 == PRIVDFLT)) || ((key == "longTitle") && (val == "")) {
+        if ((key == "graph") && (val == (GRAPHDFLT ? "1" : "0")))
+            || ((key == "privacy") && (Int(val ?? "") ?? 0 == PRIVDFLT))
+            || ((key == "otCurrent") && (val == (OTCURRDFLT ? "1" : "0")))
+            || ((key == "longTitle") && (val == "")) {
             vo.optDict.removeValue(forKey: key)
             return true
         }

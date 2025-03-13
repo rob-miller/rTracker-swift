@@ -340,6 +340,9 @@ class voNumber: voState, UITextFieldDelegate {
 
         dispatchGroup?.enter()  // wait for getHealthkitDates processing overall
         
+        
+        // 1st determine if hk has date entries this tracker does not, if so identify and add them
+        
         // Create a separate DispatchGroup for getHealthKitDates processing
         let hkDispatchGroup = DispatchGroup()
 
@@ -407,6 +410,8 @@ class voNumber: voState, UITextFieldDelegate {
             hkDispatchGroup.leave() // Leave the group after insertion is complete
         }
 
+        // 2nd log hk data entries for each date in voData and hkStatus
+        
         // Wait for getHealthKitDates processing to complete before proceeding
         hkDispatchGroup.notify(queue: .main) { [self] in
             DBGLog("HealthKit dates processed, continuing with loadHKdata.")

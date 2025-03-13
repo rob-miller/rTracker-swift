@@ -48,6 +48,7 @@
 //
 
 import UIKit
+import SwiftUI
 
 extension UIView {
     func viewWithAccessibilityIdentifier(_ identifier: String) -> UIView? {
@@ -487,6 +488,9 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         } else if btn == (wDict["ahsBtn"] as? UIButton) {
             okey = "ahksrc"
             dfltState = AHKSRCDFLT
+        } else if btn == (wDict["otsBtn"] as? UIButton) {
+            okey = "otsrc"
+            dfltState = OTSRCDFLT
         } else if btn == (wDict["srBtn"] as? UIButton) {
             okey = "savertn"
             dfltState = SAVERTNDFLT
@@ -556,6 +560,38 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         return frame
     }
 
+    @objc func configOtherTrackerSrcView() {
+        DBGLog("config other tracker view")
+        
+        let hostingController = UIHostingController(
+            rootView: otViewController(
+                selectedTracker: vo?.optDict["otTracker"],
+                selectedValue: vo?.optDict["otValue"],
+                otCurrent: vo?.optDict["otCurrent"] ?? "0" == "1",
+                callerTrackerName: to?.trackerName, // Pass the caller's tracker name
+                onDismiss: { [self] updatedTracker, updatedValue, updatedOtCurrent in
+                    vo?.optDict["otTracker"] = updatedTracker
+                    vo?.optDict["otValue"] = updatedValue
+                    vo?.optDict["otCurrent"] = updatedOtCurrent ? "1" : "0"
+                    if let button = scroll.subviews.first(where: { $0 is UIButton && $0.accessibilityIdentifier == "configtv_otSelBtn" }) as? UIButton {
+                        print("otSelect view returned: \(updatedTracker ?? "nil") \(updatedValue ?? "nil") optDict is \(vo?.optDict["otTracker"] ?? "nil")  \(vo?.optDict["otValue"] ?? "nil")")
+                        DispatchQueue.main.async {
+                            let source = self.vo?.optDict["otTracker"] ?? ""
+                            let value = self.vo?.optDict["otValue"] ?? ""
+                            let str = (!source.isEmpty && !value.isEmpty) ? "\(source):\(value)" : "Configure"
+                            button.setTitle(str, for: .normal)
+                            button.sizeToFit()
+                        }
+                    }
+                }
+            )
+        )
+        hostingController.modalTransitionStyle = .flipHorizontal
+        hostingController.modalPresentationStyle = .automatic
+        
+        // Present the hosting controller
+        present(hostingController, animated: true)
+    }
     
     func configSwitch(_ frame: CGRect, key: String, state: Bool, addsv: Bool) -> CGRect {
         // Switch control
@@ -590,6 +626,11 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         if (okey == "ahksrc") {
             // number apple Health data source switch, enable config button depending on switch state
             if let button = scroll.subviews.first(where: { $0 is UIButton && $0.accessibilityIdentifier == "configtv_ahSelBtn" }) as? UIButton {
+                button.isEnabled = newState
+            }
+        } else if (okey == "otsrc") {
+            // other tracker data source switch, enable config button depending on switch state
+            if let button = scroll.subviews.first(where: { $0 is UIButton && $0.accessibilityIdentifier == "configtv_otSelBtn" }) as? UIButton {
                 button.isEnabled = newState
             }
         }
@@ -655,6 +696,9 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         } else if sender == (wDict["ahsBtn"] as?  UISwitch) {
             okey = "ahksrc"
             dfltState = AHKSRCDFLT
+        } else if sender == (wDict["otsBtn"] as?  UISwitch) {
+            okey = "otsrc"
+            dfltState = OTSRCDFLT
         } else if sender == (wDict["srBtn"] as?  UISwitch) {
             okey = "savertn"
             dfltState = SAVERTNDFLT

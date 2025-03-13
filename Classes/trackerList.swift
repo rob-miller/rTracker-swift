@@ -238,7 +238,7 @@ class trackerList: tObjBase {
         let pairs = dbDict.map { ($0.key, $0.value) }
         let sortedPairs = pairs.sorted { $0.1 < $1.1 }
         var r=1
-        for (k, v) in sortedPairs {
+        for (k, _) in sortedPairs {
             dbDict[k] = r;
             r = r+1
         }
@@ -303,7 +303,7 @@ class trackerList: tObjBase {
     }
 
     // return aaray of TIDs which match name, order by rank
-    func getTIDFromNameDb(_ str: String?) -> [Int] {
+    func getTIDfromNameDb(_ str: String?) -> [Int] {
         let sql = "select id from toplevel where name=\"\(rTracker_resource.toSqlStr(str) ?? "")\" order by rank"
         return toQry2AryI(sql: sql)
     }
