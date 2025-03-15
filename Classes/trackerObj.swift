@@ -856,6 +856,25 @@ class trackerObj: tObjBase {
         return rvo
     }
 
+    func getValObjByName(_ qName: String) -> valueObj? {
+        var rvo: valueObj? = nil
+
+        //NSEnumerator *e = [self.valObjTable objectEnumerator];
+        //valueObj *vo;
+        //while (vo = (valueObj *) [e nextObject]) {
+        for vo in valObjTable {
+            if vo.valueName == qName {
+                rvo = vo
+                break
+            }
+        }
+
+        if rvo == nil {
+            DBGLog(String("tObj getValObj failed to find vname \(qName)"))
+        }
+        return rvo
+    }
+    
     func loadData(_ iDate: Int) -> Bool {
 
         let qDate = Date(timeIntervalSince1970: TimeInterval(iDate))
