@@ -16,9 +16,10 @@ struct ahViewController: View {
     @State private var currentUnit: HKUnit? // Tracks the selected unit
     @State private var avgDataSwitch: Bool  // Tracks avg value switch
     @State private var prevDateSwitch: Bool  // Tracks previous date switch
-
+    @State private var showingAvgInfo = false // For average info popup
+    @State private var showingPrevDayInfo = false // For previous day info popup
     @ObservedObject var rthk = rtHealthKit.shared
-
+    
     init(selectedChoice: String?, selectedUnitString: String?, ahAvg: Bool, ahPrevD: Bool, onDismiss: @escaping (String?, String?, Bool, Bool) -> Void) {
         self.onDismiss = onDismiss
         self._currentSelection = State(initialValue: selectedChoice)
@@ -30,7 +31,7 @@ struct ahViewController: View {
         avgDataSwitch = ahAvg
         prevDateSwitch = ahPrevD
     }
-
+    
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
@@ -53,7 +54,7 @@ struct ahViewController: View {
                         }
                     }
                 }
-
+                
                 // Fixed space for segmented control
                 ZStack {
                     if let selectedConfig = rthk.configurations.first(where: { $0.displayName == currentSelection }) {
@@ -71,7 +72,7 @@ struct ahViewController: View {
                     }
                 }
                 .frame(height: 60) // Fixed height for the segmented control area
-
+                
                 // Switch for average multiple results
                 ZStack {
                     if let selectedConfig = rthk.configurations.first(where: { $0.displayName == currentSelection }) {
@@ -80,6 +81,15 @@ struct ahViewController: View {
                                 Text("Average daily results at 12:00")
                                     .font(.system(size: 16))
                                     .foregroundColor(.primary)
+                                
+                                Button(action: {
+                                    showingAvgInfo = true
+                                }) {
+                                    Image(systemName: "info.circle")
+                                        .foregroundColor(.blue)
+                                }
+                                .accessibilityLabel("Daily Average Information")
+                                
                                 Spacer()
                                 Toggle("", isOn: $avgDataSwitch)
                                     .labelsHidden()
@@ -91,15 +101,48 @@ struct ahViewController: View {
                     }
                 }
                 .frame(height: 30)
+                .sheet(isPresented: $showingAvgInfo) {
+                    VStack(alignment: .leading, spacing: 20) {
+                        Text("Daily Average")
+                            .font(.headline)
+                        
+                        Text("ON: Combines all readings from a single day (midnight to midnight) into one average value recorded at 12:00 noon. Ideal for metrics like weight or blood pressure where you want a single daily summary.")
+                           .padding(.bottom, 5)
+
+                        Text("OFF: Uses individual readings with their original timestamps. If multiple readings exist for the same time period, only the most recent one will be used. Better for tracking specific events throughout the day.")
+                        
+                        Spacer()
+                        
+                        Button("Dismiss") {
+                            showingAvgInfo = false
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                    }
+                    .padding()
+                    .presentationDetents([.medium])
+                }
                 
-                // Switch for average multiple results
+                // Switch for previous day
                 ZStack {
                     if let selectedConfig = rthk.configurations.first(where: { $0.displayName == currentSelection }) {
                         if selectedConfig.aggregationStyle == .discreteArithmetic && avgDataSwitch {
                             HStack {
-                                Text("for previous day")
+                                Text("For previous day")
                                     .font(.system(size: 16))
                                     .foregroundColor(.primary)
+                                
+                                Button(action: {
+                                    showingPrevDayInfo = true
+                                }) {
+                                    Image(systemName: "info.circle")
+                                        .foregroundColor(.blue)
+                                }
+                                .accessibilityLabel("Previous Day Information")
+                                
                                 Spacer()
                                 Toggle("", isOn: $prevDateSwitch)
                                     .labelsHidden()
@@ -111,7 +154,30 @@ struct ahViewController: View {
                     }
                 }
                 .frame(height: 30)
-
+                .sheet(isPresented: $showingPrevDayInfo) {
+                    VStack(alignment: .leading, spacing: 20) {
+                        Text("For Previous Day")
+                            .font(.headline)
+                        
+                        Text("ON: Assigns the data to the following day. Perfect for metrics like sleep tracking, where data collected overnight (e.g., from 10 PM to 6 AM) belongs conceptually to the next morning.")
+                            .padding(.bottom, 5)
+                        
+                        Text("OFF: Keeps data assigned to the day it was collected. Best for most metrics like steps, exercise, or calorie intake where the data belongs to the day of activity.")
+                        
+                        Spacer()
+                        
+                        Button("Dismiss") {
+                            showingPrevDayInfo = false
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                    }
+                    .padding()
+                    .presentationDetents([.medium])
+                }
             }
             .padding()
             .navigationTitle("Choose source")
@@ -146,7 +212,7 @@ struct ahViewController: View {
 struct UnitSegmentedControl: View {
     let selectedConfig: HealthDataQuery
     @Binding var currentUnit: HKUnit?
-
+    
     var body: some View {
         HStack {
             ForEach(selectedConfig.unit ?? [], id: \.self) { unit in
@@ -176,6 +242,3 @@ struct UnitSegmentedControl: View {
         }
     }
 }
-
-
-

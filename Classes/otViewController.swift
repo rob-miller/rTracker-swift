@@ -22,6 +22,8 @@ struct otViewController: View {
     @State private var currentValue: String?
     @State private var currentSwitch: Bool
     @State private var selectedSegment = 0
+    @State private var showingInfoPopover = false
+    
     var callerTrackerName: String? // Add this to store the caller's tracker name
     
     init(selectedTracker: String?, selectedValue: String?, otCurrent: Bool, callerTrackerName: String?, onDismiss: @escaping (String?, String?, Bool) -> Void) {
@@ -56,8 +58,44 @@ struct otViewController: View {
                 }
                 
                 // "Only Current Data" Toggle Switch
-                Toggle("Only Current Data", isOn: $currentSwitch)
+                // "Only Current Data" Toggle Switch with Info Button
+                HStack {
+                    Toggle("Recent Only", isOn: $currentSwitch)
+                    
+                    Button(action: {
+                        // This will be handled by the sheet or alert
+                        showingInfoPopover = true
+                    }) {
+                        Image(systemName: "info.circle")
+                            .foregroundColor(.blue)
+                    }
+                    .accessibilityLabel("Recent Only Information")
+                }
+                .padding()
+                .sheet(isPresented: $showingInfoPopover) {
+                    VStack(alignment: .leading, spacing: 20) {
+                        Text("Recent Only")
+                            .font(.headline)
+                        
+                        Text("OFF: Always use the other tracker's most recent value, regardless of when it was recorded. Best for relatively stable measurements like height, weight, or blood type.")
+                            .padding(.bottom, 5)
+                        
+                        Text("ON: Only use the other tracker's value if it was recorded after your previous entry in this tracker. Ideal for tracking correlations between events, like whether you exercised before sleeping or if medication affected your symptoms.")
+                        
+                        Spacer()
+                        
+                        Button("Dismiss") {
+                            showingInfoPopover = false
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                    }
                     .padding()
+                    .presentationDetents([.medium])
+                }
                 
                 Spacer()
             }
