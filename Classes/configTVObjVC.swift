@@ -583,6 +583,32 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
                             button.sizeToFit()
                         }
                     }
+                    // Update privacy level based on the other tracker's privacy settings
+                    if let xtName = updatedTracker, !xtName.isEmpty,
+                       let xvName = updatedValue, !xvName.isEmpty {
+                        // Get the other tracker's privacy level
+                        let xto = trackerObj(tlist.getTIDfromNameDb(xtName)[0])
+                        let xtpriv = xto.getPrivacyValue()
+                        
+                        // Get the other value's privacy level
+                        let xvo = xto.getValObjByName(xvName)
+                        let xvprivStr = xvo?.optDict["privacy"] as? String ?? "\(MINPRIV)"
+                        let xvpriv = Int(xvprivStr) ?? MINPRIV
+                        
+                        // Use the higher privacy level
+                        let newPrivacyLevel = max(xtpriv, xvpriv)
+                        
+                        // Update the privacy text field
+                        if let privTextField = wDict["gpTF"] as? UITextField {
+                            privTextField.text = "\(newPrivacyLevel)"
+                            
+                            // Trigger text field's editing changed event to ensure it recognizes the change
+                            privTextField.sendActions(for: .editingChanged)
+                            
+                            // If you need to explicitly mark it as needing to be saved, you might need to
+                            // add some additional code or a custom method here
+                        }
+                    }
                 }
             )
         )
