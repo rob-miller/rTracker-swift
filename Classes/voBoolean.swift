@@ -66,30 +66,22 @@ class voBoolean: voState {
         vosFrame = bounds
 
         if vo.optDict["otsrc"] == "1" {
-            let xtName = vo.optDict["otTracker"] ?? ""
-            let xvName = vo.optDict["otValue"] ?? ""
-            let xcd = vo.optDict["otCurrent"] == "1"
-            if (!xtName.isEmpty && !xvName.isEmpty) {
-                let xto = trackerObj(tlist.getTIDfromNameDb(xtName)[0])
-                if let xvid = xto.toQry2Int(sql: "select id from voConfig where name = '\(xvName)'") {
-                    let to = vo.parentTracker
-                    let td = to.trackerDate!.timeIntervalSince1970
-                    var rslt = ""
-                    if xcd {
-                        let pd = to.prevDate()
-                        if pd != 0 {
-                            let sql = "select val from voData where id = \(xvid) and date <= \(td) and date >= \(pd)"
-                            rslt = xto.toQry2Str(sql: sql) ?? ""
-                        }
-                    } else {
-                        let sql = "select val from voData where id = \(xvid) and date <= \(td)"
-                        rslt = xto.toQry2Str(sql: sql) ?? ""
-                    }
-                    if rslt != "" {
-                        vo.value = rslt
-                    }
+            if let xrslt = vo.vos?.getOTrslt() {
+                if xrslt.isEmpty {  // Empty string
+                    vo.value = ""
+                } else if let numericValue = Double(xrslt) { // It's a number in string form
+                    vo.value = numericValue < 0.5 ? "" : "1"
+                } else { // It's a non-empty text string that's not a number
+                    vo.value = "1"
                 }
+            } else {  // xrslt is nil
+                vo.value = ""
             }
+            bSwitch!.isEnabled = false
+            // Switches look quite visible even when disabled, but you can add a border
+            bSwitch!.layer.borderWidth = 1.0
+            bSwitch!.layer.borderColor = UIColor.systemBlue.cgColor
+            bSwitch!.layer.cornerRadius = bSwitch!.frame.height / 2
         }
         if vo.value == "" {
             rTracker_resource.clrSwitch(bSwitch!, colr: .tertiarySystemBackground)

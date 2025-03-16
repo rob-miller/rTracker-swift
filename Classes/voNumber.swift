@@ -239,8 +239,20 @@ class voNumber: voState, UITextFieldDelegate {
                         }
                         DispatchQueue.main.async {
                             self.dtf.text = "\(formattedValue)"
+                            self.dtf.isEnabled = false
+                            self.dtf.textColor = UIColor.black // Much darker than default disabled color
+                            self.dtf.backgroundColor = UIColor(white: 0.95, alpha: 1.0) // Light gray background
                         }
                     }
+                }
+            } else if vo.optDict["otsrc"] == "1" {
+                if let xrslt = vo.vos?.getOTrslt() {
+                    self.dtf.text = xrslt
+                    self.dtf.isEnabled = false
+                    self.dtf.textColor = UIColor.black // Much darker than default disabled color
+                    self.dtf.backgroundColor = UIColor(white: 0.95, alpha: 1.0) // Light gray background
+                } else {
+                    self.dtf.text = ""
                 }
             } else {
                 dtf.text = ""

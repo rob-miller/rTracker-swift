@@ -194,6 +194,16 @@ class voChoice: voState {
 
         vosFrame = bounds
 
+        if vo.optDict["otsrc"] == "1" {
+            if let xrslt = vo.vos?.getOTrslt() {
+                vo.value = xrslt
+            } else {
+                vo.value = ""
+            }
+            segmentedControl?.isEnabled = false
+            // Customize selected segment appearance
+            segmentedControl?.setTitleTextAttributes([.foregroundColor: UIColor.black], for: .disabled)
+        }
         // set displayed segment from self.vo.value
 
         if vo.value == "" {

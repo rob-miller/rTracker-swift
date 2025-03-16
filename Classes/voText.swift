@@ -128,6 +128,17 @@ class voText: voState, UITextFieldDelegate {
     override func voDisplay(_ bounds: CGRect) -> UIView {
         vosFrame = bounds
 
+        if vo.optDict["otsrc"] == "1" {
+            if let xrslt = vo.vos?.getOTrslt() {
+                vo.value = xrslt
+            } else {
+                vo.value = ""
+            }
+            dtf.isEnabled = false
+            dtf.textColor = UIColor.black // Much darker than default disabled color
+            dtf.backgroundColor = UIColor(white: 0.95, alpha: 1.0) // Light gray background
+
+        }
         if vo.value != dtf.text {
             safeDispatchSync({ [self] in
                 dtf.text = vo.value

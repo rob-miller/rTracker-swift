@@ -148,6 +148,18 @@ class voSlider: voState {
         #endif
 
         //DBGLog(@"parent tracker date= %@",pto.trackerDate);
+        
+        if vo.optDict["otsrc"] == "1" {
+            if let xrslt = vo.vos?.getOTrslt() {
+                vo.value = xrslt
+            } else {
+                vo.value = ""
+            }
+            sliderCtl?.isEnabled = false
+            sliderCtl?.thumbTintColor = UIColor.systemBlue.withAlphaComponent(0.7) // More visible thumb
+            sliderCtl?.minimumTrackTintColor = UIColor.systemBlue.withAlphaComponent(0.7) // More visible track
+        }
+        
         if vo.value == "" {
             if vo.optDict["slidrswlb"] == "1" {
                 let to = vo.parentTracker

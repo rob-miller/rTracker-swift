@@ -898,6 +898,25 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
     override func voDisplay(_ bounds: CGRect) -> UIView {
         vosFrame = bounds
 
+        if vo.optDict["otsrc"] == "1" {
+            if let xrslt = vo.vos?.getOTrslt() {
+                vo.value = xrslt
+            } else {
+                vo.value = ""
+            }
+            tbButton?.isEnabled = false
+            // Keep text color visible (instead of faded gray)
+            tbButton?.setTitleColor(UIColor.systemBlue.withAlphaComponent(0.8), for: .disabled)
+            
+            // Add a border to make it stand out
+            tbButton?.layer.borderWidth = 1.0
+            tbButton?.layer.borderColor = UIColor.systemBlue.cgColor
+            tbButton?.layer.cornerRadius = 6.0
+            
+            // You could also adjust the background color if needed
+            tbButton?.backgroundColor = UIColor(white: 0.95, alpha: 1.0)
+        }
+        
         if vo.value == "" {
             tbButton?.setTitle("<add text>", for: .normal)
         } else {

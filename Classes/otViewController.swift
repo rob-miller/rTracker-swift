@@ -133,7 +133,7 @@ struct otViewController: View {
         // Get all trackers
         let allTrackers = tlist.toQry2AryS(sql: "select name from toplevel where priv <= \(privacyValue)")
         // Filter out the caller's tracker
-        let filteredTrackers = allTrackers.filter { $0 != callerTrackerName }
+        let filteredTrackers = allTrackers  // .filter { $0 != callerTrackerName }
         
         return VStack {
             Text("Select Tracker")
@@ -158,7 +158,19 @@ struct otViewController: View {
             if let trackerName = currentTracker {
                 let tid = tlist.getTIDfromNameDb(trackerName)[0]
                 let to = trackerObj(tid)
-                return to.toQry2AryS(sql: "select name from voConfig")
+                
+                // Get all value names
+                let allValues = to.toQry2AryS(sql: "select name from voConfig")
+                
+                // Filter out values that have a recursive reference to the current tracker
+                return allValues.filter { valueName in
+                    let vo = to.getValObjByName(valueName)
+                    let otTrackerName = vo?.optDict["otTracker"]
+                    
+                    // Keep the value if it doesn't have an otTracker reference or if the reference
+                    // isn't to the current tracker (preventing circular references)
+                    return otTrackerName == nil || otTrackerName != callerTrackerName
+                }
             } else {
                 return []
             }
@@ -173,6 +185,10 @@ struct otViewController: View {
                 Text("Please select a tracker first")
                     .foregroundColor(.gray)
                     .padding()
+            } else if valueSet.isEmpty {
+                Text("No eligible values available")
+                    .foregroundColor(.gray)
+                    .padding()
             } else {
                 Picker("Choose value", selection: $currentValue) {
                     ForEach(valueSet, id: \.self) { valueName in
@@ -184,6 +200,9 @@ struct otViewController: View {
                     // Set the first value if currentValue is nil and values are available
                     if currentValue == nil && !valueSet.isEmpty {
                         currentValue = valueSet[0]
+                    } else if !valueSet.contains(where: { $0 == currentValue }) {
+                        // Reset currentValue if it's no longer in the filtered list
+                        currentValue = valueSet.first
                     }
                 }
             }
