@@ -399,27 +399,64 @@ class trackerList: tObjBase {
         topLayoutReminderCount.insert(tRC, at: toRow)
     }
 
-    func copy(toConfig srcTO: trackerObj?) -> trackerObj? {
+    func fixFns(srcTO: trackerObj, dstTO: trackerObj) {
+        // Step 1: Create a mapping from source vid to destination vid
+        var vidMapping: [Int: Int] = [:]
+        
+        // Loop through all value objects in the source tracker
+        for srcVO in srcTO.valObjTable {
+            // Find the corresponding value object in the destination tracker by matching valueName
+            if let dstVO = dstTO.valObjTable.first(where: { $0.valueName == srcVO.valueName }) {
+                // Add to mapping: source vid → destination vid
+                vidMapping[Int(srcVO.vid)] = Int(dstVO.vid)
+            }
+        }
+        
+        // Step 2: Update function strings in the destination tracker
+        for dstVO in dstTO.valObjTable {
+            // Only process function value objects
+            if dstVO.vtype == VOT_FUNC,
+               let funcString = dstVO.optDict["func"] {
+                
+                // Split the function string into components
+                let components = funcString.components(separatedBy: " ")
+                
+                // Process each component - replace vids with their mapped values
+                let updatedComponents = components.map { component -> String in
+                    // Check if this component is a positive number (a vid)
+                    if let num = Int(component), num > 0 {
+                        // If we have a mapping for this vid, use it
+                        if let mappedVid = vidMapping[num] {
+                            return String(mappedVid)
+                        }
+                    }
+                    // Return the component unchanged if it's an operation or unmapped vid
+                    return component
+                }
+                
+                // Reassemble the function string
+                let updatedFuncString = updatedComponents.joined(separator: " ")
+                
+                // Update the function string in the destination value object
+                dstVO.optDict["func"] = updatedFuncString
+            }
+        }
+    }
+    
+    func copy(toConfig srcTO: trackerObj) -> trackerObj {
         //DBGLog(@"copyToConfig: src id= %d %@",srcTO.toid,srcTO.trackerName);
         let newTO = trackerObj(getUnique())
-        //newTO.toid = getUnique()
-        //newTO = newTO.init()
 
-        let oTN = srcTO?.trackerName
-        //NSString *nTN = [[NSString alloc] initWithString:oTN];
-        //newTO.trackerName = nTN;
-        // release as well
+        let oTN = srcTO.trackerName
         newTO.trackerName = oTN
 
-        //NSEnumerator *enumer = [srcTO.valObjTable objectEnumerator];
-        //valueObj *vo;
-        //while (vo = (valueObj *) [enumer nextObject]) {
-        for vo in srcTO?.valObjTable ?? [] {
+        for vo in srcTO.valObjTable {
             let newVO = newTO.copyVoConfig(vo)
             newTO.addValObj(newVO)
         }
-
+        fixFns(srcTO: srcTO, dstTO: newTO)
         newTO.saveConfig()
+        
         //DBGLog(@"copyToConfig: copy id= %d %@",newTO.toid,newTO.trackerName);
 
         return newTO

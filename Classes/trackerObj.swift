@@ -794,7 +794,6 @@ class trackerObj: tObjBase {
         // remove previous data - input rtrk may renumber and then some vids become obsolete -- if reading rtrk have done jumpMaxPriv
         var sql = "delete from voConfig where priv <=\(privacyValue) and id not in (\(vids.joined(separator: ",")))" // 18.i.2014 don't wipe all in case user quits before we finish
 
-
         toExecSql(sql:sql)
 
         sql = "delete from voInfo where id not in (select id from voConfig)" // 10.xii.2013 don't delete info for hidden items
@@ -2305,11 +2304,9 @@ class trackerObj: tObjBase {
 
         let newVO = valueObj(parentOnly: srcVO.parentTracker)
         newVO.vid = getUnique()
-        //newVO.parentTracker = srcVO.parentTracker
+
         newVO.vtype = srcVO.vtype
         newVO.valueName = srcVO.valueName
-        //newVO.valueName = [[NSString alloc] initWithString:srcVO.valueName];  
-        //[newVO.valueName release];
 
         for (key, val) in srcVO.optDict {
             newVO.optDict[key] = val
