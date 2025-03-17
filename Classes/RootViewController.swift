@@ -235,7 +235,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         
         loadingCsvFiles = true
         let localFileManager = FileManager.default
-        var newRtcsvTracker = false
+        //var newRtcsvTracker = false
         
         // Collect all files to process
         var filesToProcess: [URL] = []

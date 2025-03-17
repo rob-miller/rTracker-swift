@@ -602,6 +602,9 @@ class voNumber: voState, UITextFieldDelegate {
         // Present the hosting controller
         ctvovcp?.present(hostingController, animated: true)
     }
+    @objc func forwardToConfigOtherTrackerSrcView() {
+        ctvovcp?.configOtherTrackerSrcView()
+    }
     
     override func voDrawOptions(_ ctvovc: configTVObjVC) {
         ctvovcp = ctvovc  // save reference so can display config gui
@@ -667,6 +670,27 @@ class voNumber: voState, UITextFieldDelegate {
         frame.origin.x = MARGIN
         frame.origin.y += MARGIN + frame.size.height
         
+        labframe = ctvovc.configLabel("Other Tracker source: ", frame: frame, key: "otsLab", addsv: true)
+        frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
+
+        frame = ctvovc.configSwitch(
+            frame,
+            key: "otsBtn",
+            state: vo.optDict["otsrc"] == "1",
+            addsv: true)
+
+        frame.origin.x = MARGIN
+        frame.origin.y += MARGIN + frame.size.height
+        
+        let source = self.vo.optDict["otTracker"] ?? ""
+        let value = self.vo.optDict["otValue"] ?? ""
+        let str = (!source.isEmpty && !value.isEmpty) ? "\(source):\(value)" : "Configure"
+        
+        frame = ctvovc.configActionBtn(frame, key: "otSelBtn", label: str, target: self, action: #selector(forwardToConfigOtherTrackerSrcView))
+        ctvovc.switchUpdate(okey: "otsrc", newState: vo.optDict["otsrc"] == "1")
+        
+        frame.origin.x = MARGIN
+        frame.origin.y += MARGIN + frame.size.height
         
         labframe = ctvovc.configLabel("Other options:", frame: frame, key: "noLab", addsv: true)
 

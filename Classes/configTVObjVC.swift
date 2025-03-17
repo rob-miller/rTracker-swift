@@ -669,6 +669,25 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         // Update your model or perform an action based on the switch's state
         DBGLog("Switch for \(key ?? "") is now \(sender.isOn ? "ON" : "OFF")")
         
+        // If turning on Apple Health, turn off Other Tracker
+        if sender == (wDict["ahsBtn"] as? UISwitch) && sender.isOn {
+            if let otSwitch = wDict["otsBtn"] as? UISwitch, otSwitch.isOn {
+                // Simply turn off the other tracker switch
+                // Its switchAction will be called automatically and update everything
+                otSwitch.isOn = false
+                switchAction(otSwitch)
+            }
+        }
+        // If turning on Other Tracker, turn off Apple Health
+        else if sender == (wDict["otsBtn"] as? UISwitch) && sender.isOn {
+            if let ahSwitch = wDict["ahsBtn"] as? UISwitch, ahSwitch.isOn {
+                // Simply turn off the Apple Health switch
+                // Its switchAction will be called automatically and update everything
+                ahSwitch.isOn = false
+                switchAction(ahSwitch)
+            }
+        }
+        
         var okey: String?
         var dflt: String?
         var ndflt: String?
@@ -802,6 +821,8 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         return frame
     }
 
+    
+    
     @objc func tfDone(_ tf: UITextField?) {
         if true == processingTfDone {
             return
