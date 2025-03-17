@@ -227,133 +227,176 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         }
     }
     
-    func loadTrackerCsvFiles() {
+    func loadTrackerCsvFiles(completion: @escaping () -> Void) {
+        if loadingCsvFiles {
+            completion()
+            return
+        }
+        
+        loadingCsvFiles = true
         let localFileManager = FileManager.default
         var newRtcsvTracker = false
         
+        // Collect all files to process
+        var filesToProcess: [URL] = []
+        
+        // Check main Documents directory
         var docsDir = rTracker_resource.ioFilePath(nil, access: true)
         var directoryURL = URL(fileURLWithPath: docsDir)
-        var enumerator = localFileManager.enumerator(at: directoryURL, includingPropertiesForKeys: [.isDirectoryKey], options: [])
-        
-        var files: [URL] = []
-        while let url = enumerator?.nextObject() as? URL {
-            files.append(url)
+        if let enumerator = localFileManager.enumerator(at: directoryURL, includingPropertiesForKeys: [.isDirectoryKey], options: []) {
+            while let url = enumerator.nextObject() as? URL {
+                filesToProcess.append(url)
+            }
         }
         
+        // Check Inbox directory
         docsDir = rTracker_resource.ioFilePath("Inbox", access: true)
         directoryURL = URL(fileURLWithPath: docsDir)
-        enumerator = localFileManager.enumerator(at: directoryURL, includingPropertiesForKeys: [.isDirectoryKey], options: [])
-        while let url = enumerator?.nextObject() as? URL {
-            files.append(url)
+        if let enumerator = localFileManager.enumerator(at: directoryURL, includingPropertiesForKeys: [.isDirectoryKey], options: []) {
+            while let url = enumerator.nextObject() as? URL {
+                filesToProcess.append(url)
+            }
         }
         
         safeDispatchSync { [self] in
             jumpMaxPriv()
             tlist.loadTopLayoutTable()  // runs on main queue
-            DispatchQueue.global(qos: .userInitiated).async { [self] in  // all this in background queue
-                
-                for fileUrl in files {
-                    //let fullPath = URL(fileURLWithPath: docsDir).appendingPathComponent(fileName)
-                    var to: trackerObj? = nil
-                    let fname = fileUrl.lastPathComponent
-                    var tname: String? = nil
-                    var validMatch = false
-                    var loadObj: String?
-                    
-                    switch fileUrl.pathExtension {
-                    case "csv":
-                        if fname.hasSuffix("_in.csv") {
-                            loadObj = "_in.csv"
-                            validMatch = true
-                        } else if fileUrl.pathComponents.contains("Inbox") {
-                            loadObj = ".csv"
-                            validMatch = true
-                        }
-                    case "rtcsv":
-                        if fname.hasSuffix("_in.rtcsv") {
-                            loadObj = "_in.rtcsv"
-                            validMatch = true
-                        } else {
-                            loadObj = ".rtcsv"  // accept _in above, already know it has .rtcsv extension
-                            validMatch = true
-                        }
-                    default:
-                        continue
-                    }
-                    
-                    if validMatch {
-                        tname = String(fname.dropLast(loadObj!.count))
-                        let tid = tlist.getTIDfromName(tname)
-                        let isRtcsv = is_rtcsv(fileUrl)
-                        if tid != 0 {
-                            to = trackerObj(tid)
-                            DBGLog("found existing tracker tid \(tid) with matching name for _in.[rt]csv file")
-                        } else if isRtcsv {
-                            to = trackerObj()
-                            to?.trackerName = tname
-                            to?.toid = tlist.getUnique()
-                            to?.saveConfig()
-                            tlist.add(toTopLayoutTable: to!)
-                            newRtcsvTracker = true
-                            DBGLog("created new tracker for rtcsv, id= \(to!.toid)")
-                        } else {
-                            rTracker_resource.alert("No matching tracker", msg: "No 'tname' tracker found for \(fname), and the file does not conform to rtCSV format.", vc: self)
-                            _ = rTracker_resource.deleteFile(atPath: fileUrl.path)
-                        }
-                        
-                        if let to = to {
-                            safeDispatchSync { [self] in
-                                rTracker_resource.startActivityIndicator(self.view, navItem: nil, disable: false, str: "loading \(tname ?? "")...")
-                                UIApplication.shared.isIdleTimerDisabled = true
-                                //print("activity indicator \(tname ?? "tname nil")")
-                            }
-                            do {
-                                
-                                let csvString = try String(contentsOfFile: fileUrl.path, encoding: .utf8)
-                                //jumpMaxPriv()  just needed to get in tracker list above
-                                self.doCSVLoad(csvString, to: to, fname: fname)
-                                //print("back from csv load \(tname ?? "tname nil")")
-                                //restorePriv()
-                                
-                                do {
-                                    let fm = FileManager.default  // Swift 6 needs more local filemanager here 
-                                    try fm.removeItem(at: fileUrl)
-                                } catch {
-                                    DBGWarn("Error deleting file \(fname): \(error)")
-                                }
-                                DispatchQueue.main.async { [self] in
-
-                                    UIApplication.shared.isIdleTimerDisabled = false
-                                    // Stop activity indicator and any other UI updates
-                                    rTracker_resource.finishActivityIndicator(view, navItem: nil, disable: false)
-                                    //print("stop activity indicator \(tname ?? "tname nil")")
-                                }
-                            } catch {
-                                DispatchQueue.main.async {
-                                    UIApplication.shared.isIdleTimerDisabled = false
-                                    DBGWarn("Error processing file \(fname): \(error)")
-                                    rTracker_resource.finishActivityIndicator(self.view, navItem: nil, disable: false)
-                                    //print("error stop activity indicator \(tname ?? "tname nil")")
-                                }
-                            }
-                        }
-                    }
-                }
-                // still on background queue
+            
+            // Process files sequentially with completion handlers
+            processNextCsvFile(files: filesToProcess, index: 0, createdNewTracker: false) { createdNewTracker in
+                // All files processed
                 restorePriv()
-                tlist.loadTopLayoutTable()  // runs on main queue
-                safeDispatchSync {
-                    refreshToolBar(true)
-                }
+                self.tlist.loadTopLayoutTable()
                 
-            }  // end of background queue
-        }  // end of main queue
-
-        if newRtcsvTracker {
-            refreshViewPart2()
+                DispatchQueue.main.async {
+                    self.refreshToolBar(true)
+                    
+                    if createdNewTracker {
+                        self.refreshViewPart2()
+                    }
+                    
+                    // Signal completion
+                    completion()
+                }
+            }
         }
     }
 
+    // Process CSV files one by one with completion handlers
+    func processNextCsvFile(files: [URL], index: Int, createdNewTracker: Bool, completion: @escaping (Bool) -> Void) {
+        // Base case: no more files to process
+        if index >= files.count {
+            completion(createdNewTracker)
+            return
+        }
+        
+        let fileUrl = files[index]
+        let fname = fileUrl.lastPathComponent
+        var to: trackerObj? = nil
+        var tname: String? = nil
+        var validMatch = false
+        var loadObj: String?
+        var newRtcsvTracker = createdNewTracker
+        
+        // Check if file is a CSV we should process
+        switch fileUrl.pathExtension {
+        case "csv":
+            if fname.hasSuffix("_in.csv") {
+                loadObj = "_in.csv"
+                validMatch = true
+            } else if fileUrl.pathComponents.contains("Inbox") {
+                loadObj = ".csv"
+                validMatch = true
+            }
+        case "rtcsv":
+            if fname.hasSuffix("_in.rtcsv") {
+                loadObj = "_in.rtcsv"
+                validMatch = true
+            } else {
+                loadObj = ".rtcsv"
+                validMatch = true
+            }
+        default:
+            // Not a CSV we care about, skip to next file
+            processNextCsvFile(files: files, index: index + 1, createdNewTracker: newRtcsvTracker, completion: completion)
+            return
+        }
+        
+        if validMatch {
+            tname = String(fname.dropLast(loadObj!.count))
+            let tid = tlist.getTIDfromName(tname)
+            let isRtcsv = is_rtcsv(fileUrl)
+            
+            if tid != 0 {
+                to = trackerObj(tid)
+                DBGLog("found existing tracker tid \(tid) with matching name for _in.[rt]csv file")
+            } else if isRtcsv {
+                to = trackerObj()
+                to?.trackerName = tname
+                to?.toid = tlist.getUnique()
+                to?.saveConfig()
+                tlist.add(toTopLayoutTable: to!)
+                newRtcsvTracker = true
+                DBGLog("created new tracker for rtcsv, id= \(to!.toid)")
+            } else {
+                rTracker_resource.alert("No matching tracker", msg: "No '\(tname ?? "")' tracker found for \(fname), and the file does not conform to rtCSV format.", vc: self)
+                _ = rTracker_resource.deleteFile(atPath: fileUrl.path)
+                
+                // Continue with next file
+                processNextCsvFile(files: files, index: index + 1, createdNewTracker: newRtcsvTracker, completion: completion)
+                return
+            }
+            
+            if let to = to {
+                // Show activity indicator on main thread
+                DispatchQueue.main.async { [weak self] in
+                    guard let self = self else { return }
+                    rTracker_resource.startActivityIndicator(self.view, navItem: nil, disable: false, str: "loading \(tname ?? "")...")
+                    UIApplication.shared.isIdleTimerDisabled = true
+                }
+                
+                // Process the CSV file
+                do {
+                    let csvString = try String(contentsOfFile: fileUrl.path, encoding: .utf8)
+                    doCSVLoad(csvString, to: to, fname: fname)
+                    
+                    do {
+                        let fm = FileManager.default
+                        try fm.removeItem(at: fileUrl)
+                    } catch {
+                        DBGWarn("Error deleting file \(fname): \(error)")
+                    }
+                    
+                    // Stop activity indicator on main thread
+                    DispatchQueue.main.async { [weak self] in
+                        guard let self = self else { return }
+                        UIApplication.shared.isIdleTimerDisabled = false
+                        rTracker_resource.finishActivityIndicator(self.view, navItem: nil, disable: false)
+                        
+                        // Process next file
+                        self.processNextCsvFile(files: files, index: index + 1, createdNewTracker: newRtcsvTracker, completion: completion)
+                    }
+                } catch {
+                    // Handle error and continue processing
+                    DispatchQueue.main.async { [weak self] in
+                        guard let self = self else { return }
+                        UIApplication.shared.isIdleTimerDisabled = false
+                        DBGWarn("Error processing file \(fname): \(error)")
+                        rTracker_resource.finishActivityIndicator(self.view, navItem: nil, disable: false)
+                        
+                        // Continue with next file despite error
+                        self.processNextCsvFile(files: files, index: index + 1, createdNewTracker: newRtcsvTracker, completion: completion)
+                    }
+                }
+            } else {
+                // Continue with next file if no tracker could be created/found
+                processNextCsvFile(files: files, index: index + 1, createdNewTracker: newRtcsvTracker, completion: completion)
+            }
+        } else {
+            // Continue with next file if not a valid match
+            processNextCsvFile(files: files, index: index + 1, createdNewTracker: newRtcsvTracker, completion: completion)
+        }
+    }
 
     // load a tracker from NSDictionary generated by trackerObj:dictFromTO()
     //    [consists of tid, optDict and valObjTable]
@@ -370,465 +413,594 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     //
     //  added nov 2012
     //
+    /*
     func loadTrackerDict(_ tdict: [String : Any], tname: String?) -> Int {
-
+            // get input tid
+            let newTID = tdict["tid"] as! Int  // rejectable if not there, better than crash but still wrong
+            DBGLog(String("load input: \(tname) tid \(newTID)"))
+            let newTIDi = newTID
+            var matchTID = -1
+            let tida = tlist.getTIDfromNameDb(tname)
+            // find tracker with same name and tid, or just same name
+            for tid in tida {
+                if (-1 == matchTID) || (tid == newTID) {
+                    matchTID = tid
+                }
+            }
+            DBGLog(String("matchTID= \(matchTID)"))
+            var inputTO: trackerObj?
+            if -1 != matchTID {
+                // found tracker with same name and maybe same tid
+                if !loadingDemos {
+                    rTracker_resource.stashTracker(matchTID) // make copy of current tracker so can reject newTID later
+                    tldStashedTID = matchTID
+                }
+                tlist.updateTID(matchTID, new: newTIDi) // change existing tracker tid to match new (restore if we discard later)
+                inputTO = trackerObj(newTIDi) // load up existing tracker config
+                inputTO?.confirmTOdict(tdict) // merge valObjs
+                inputTO?.prevTID = matchTID
+                inputTO?.saveConfig() // write to db -- probably redundant as confirmTOdict writes to db as well
+                DBGLog(String("updated \(tname)"))
+                //DBGLog(@"skip load plist file as already have %@",tname);
+            } else {
+                // new tracker coming in
+                tlist.fixDictTID(tdict) // move any existing TIDs out of way
+                inputTO = trackerObj(dict: tdict) // create new tracker with input data
+                inputTO?.prevTID = matchTID
+                inputTO?.saveConfig() // write to db
+                tlist.add(toTopLayoutTable: inputTO!) // insert in top list
+                DBGLog(String("loaded new \(tname)"))
+                tldStashedTID = -1
+            }
+            return newTIDi
+        }
+     */
+    
+    func loadTrackerDict(_ tdict: [String: Any], tname: String?, completion: @escaping (Int) -> Void) {
         // get input tid
-        let newTID = tdict["tid"] as! Int  // rejectable if not there, better than crash but still wrong
+        let newTID = tdict["tid"] as! Int
         DBGLog(String("load input: \(tname) tid \(newTID)"))
-
-        let newTIDi = newTID
         var matchTID = -1
         let tida = tlist.getTIDfromNameDb(tname)
-
         // find tracker with same name and tid, or just same name
         for tid in tida {
             if (-1 == matchTID) || (tid == newTID) {
                 matchTID = tid
             }
         }
-
         DBGLog(String("matchTID= \(matchTID)"))
-
-        var inputTO: trackerObj?
-        if -1 != matchTID {
-            // found tracker with same name and maybe same tid
-            if !loadingDemos {
-                rTracker_resource.stashTracker(matchTID) // make copy of current tracker so can reject newTID later
-                tldStashedTID = matchTID
+        
+        // Check if we found a matching tracker name
+        if matchTID != -1 {
+            // If loading demos, just merge without asking
+            if loadingDemos {
+                processMergeTracker(matchTID: matchTID, newTID: newTID, tdict: tdict, tname: tname)
+                completion(newTID)
+                return
             }
-            tlist.updateTID(matchTID, new: newTIDi) // change existing tracker tid to match new (restore if we discard later)
-
-            inputTO = trackerObj(newTIDi) // load up existing tracker config
-
-            inputTO?.confirmTOdict(tdict) // merge valObjs
-            inputTO?.prevTID = matchTID
-            inputTO?.saveConfig() // write to db -- probably redundant as confirmTOdict writes to db as well
-
-            DBGLog(String("updated \(tname)"))
-
-            //DBGLog(@"skip load plist file as already have %@",tname);
+            
+            // Present a choice to the user
+            let alertController = UIAlertController(
+                title: "Tracker Already Exists",
+                message: "A tracker named '\(tname ?? "")' already exists. Would you like to merge with it or create a new tracker?",
+                preferredStyle: .alert
+            )
+            
+            // Option to merge (original behavior)
+            alertController.addAction(UIAlertAction(title: "Merge", style: .default) { [weak self] _ in
+                self?.processMergeTracker(matchTID: matchTID, newTID: newTID, tdict: tdict, tname: tname)
+                completion(newTID)
+            })
+            
+            // Option to create new
+            alertController.addAction(UIAlertAction(title: "Create New", style: .cancel) { [weak self] _ in
+                self?.processNewTracker(tdict: tdict, tname: tname)
+                completion(newTID)
+            })
+            
+            // Show the alert on the main thread using the modern scene-aware approach
+            DispatchQueue.main.async {
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                   let topVC = windowScene.windows.first?.rootViewController?.presentedViewController ?? windowScene.windows.first?.rootViewController {
+                    topVC.present(alertController, animated: true)
+                }
+            }
         } else {
-            // new tracker coming in
-            tlist.fixDictTID(tdict) // move any existing TIDs out of way
-            inputTO = trackerObj(dict: tdict) // create new tracker with input data
-            inputTO?.prevTID = matchTID
-            inputTO?.saveConfig() // write to db
-            tlist.add(toTopLayoutTable: inputTO!) // insert in top list
-            DBGLog(String("loaded new \(tname)"))
-            tldStashedTID = -1
+            // No match found, proceed with creating a new tracker
+            processNewTracker(tdict: tdict, tname: tname)
+            completion(newTID)
         }
-
-
-        return newTIDi
     }
+
+    // Helper method to handle the merge case
+    private func processMergeTracker(matchTID: Int, newTID: Int, tdict: [String: Any], tname: String?) {
+        if !loadingDemos {
+            rTracker_resource.stashTracker(matchTID) // make copy of current tracker so can reject newTID later
+            tldStashedTID = matchTID
+        }
+        tlist.updateTID(matchTID, new: newTID) // change existing tracker tid to match new (restore if we discard later)
+        let inputTO = trackerObj(newTID) // load up existing tracker config
+        inputTO.confirmTOdict(tdict) // merge valObjs
+        inputTO.prevTID = matchTID
+        inputTO.saveConfig() // write to db -- probably redundant as confirmTOdict writes to db as well
+        DBGLog(String("updated \(tname)"))
+    }
+
+    // Helper method to handle the create new case
+    private func processNewTracker(tdict: [String: Any], tname: String?) {
+        // Create a mutable copy of the dictionary
+        var newDict = tdict
+        let nameClash = tlist.getTIDfromNameDb(tname) != [] // redundant but need to know if have name clash
+        
+        // Append "-new" to the tracker name
+        if let trackerName = tname {
+            if !loadingDemos && nameClash {
+                let newName = "\(trackerName)-new"
+                
+                // Update the name in the dictionary if there's an optDict with a name key
+                if var optDict = newDict["optDict"] as? [String: Any] {
+                    optDict["name"] = newName
+                    newDict["optDict"] = optDict
+                }
+            }
+        }
+        
+        tlist.fixDictTID(newDict) // move any existing TIDs out of way
+        let inputTO = trackerObj(dict: newDict) // create new tracker with input data
+        inputTO.prevTID = -1
+        inputTO.saveConfig() // write to db
+        tlist.add(toTopLayoutTable: inputTO) // insert in top list
+        DBGLog(String("loaded new \(tname)-new"))
+        tldStashedTID = -1
+    }
+    
 
     // MARK: -
     // MARK: load .plists and .rtrks for input trackers
 
-    func handleOpenFileURL(_ url: URL, tname: String?) -> Int {
+    func handleOpenFileURL(_ url: URL, tname: String?, completion: @escaping (Int) -> Void) {
         var tname = tname
-        var tdict: [String : Any] = [:]
-        var dataDict: [String : [String : String]]? = nil
-        var tid: Int
-
+        var tdict: [String: Any] = [:]
+        var dataDict: [String: [String: String]]? = nil
+        
         DBGLog(String("open url \(url)"))
-
         jumpMaxPriv()
+        
         if nil != tname {
             // if tname set it is just a plist
-            tdict = (NSDictionary(contentsOf: url) as Dictionary? as! [String : Any])
+            tdict = (NSDictionary(contentsOf: url) as Dictionary? as! [String: Any])
         } else {
             // else is an rtrk
-            var rtdict: [String : Any] = [:]
-
-            rtdict = NSDictionary(contentsOf: url) as Dictionary? as! [String : Any]
-            /*
-             "trackerName" : String
-             "dataDict" : [String : [String : String] ]
-             "tid" : String
-             "configDict" :
-                ["reminders: : []],
-                ["tid" : int],
-                ["optDict", Any] =>
-                    ["height" : Double]
-                    ["graphMaxDays" : String]
-                    ["rt_version" : String]
-                    ["prevTID" : String]
-                    ["privacy" : String]
-                    ["rt_build" : String]
-                    ["rtdb_version" : String]
-                    ["savertn" : String]
-                    ["width : Double]
-                    ["name" : String]
-                ["valObjTable" : Any] =>
-                    ["vcolor" : Int]
-                    ["vGraphType" : Int]
-                    ["vpriv" : Int]
-                    ["valueName" : String]
-                    ["vid" : Int]
-                    ["vtype" : Int]
-                    ["optDict" : [String : String]
-             */
+            var rtdict: [String: Any] = [:]
+            rtdict = NSDictionary(contentsOf: url) as Dictionary? as! [String: Any]
 
             tname = rtdict["trackerName"] as? String
-            tdict = (rtdict["configDict"] ?? [:]) as! [String : Any]
-            dataDict = rtdict["dataDict"] as? [String : [String : String]]
-            //let ttid: Int? = Int(tdict["tid"] as? String ?? "")
+            tdict = (rtdict["configDict"] ?? [:]) as! [String: Any]
+            dataDict = rtdict["dataDict"] as? [String: [String: String]]
+            
             let ttid = tdict["tid"] as! Int
             if loadingDemos {
                 tlist.deleteTrackerAllTID(ttid, name: tname) // wipe old demo tracker otherwise starts to look ugly
             }
         }
-
-        //DBGLog(@"ltd enter dict= %lu",(unsigned long)[tdict count]);
-        tid = loadTrackerDict(tdict, tname: tname)
-
-        if nil != dataDict {
-            let to = trackerObj(tid)
-
-            to.loadDataDict(dataDict!) // vids ok because confirmTOdict updated as needed
-            to.goRecalculate = true
-            to.recalculateFns() // updates fn vals in database
-            to.goRecalculate = false
-            to.saveChoiceConfigs() // in case input data had unrecognised choices
-
-            DBGLog("datadict loaded for open file url:")
-            #if DEBUGLOG
-            to.describe()
-            #endif
-        }
-
-        DBGLog("ltd/ldd finish")
-
-        restorePriv()
-        DBGLog(String("removing file \(url.path)"))
-        _ = rTracker_resource.deleteFile(atPath: url.path)
-
-        return tid
-    }
-    
-    func loadTrackerPlistFiles() -> Bool {
-        DBGLog("loadTrackerPlistFiles")
-        var rtrkTid = 0
-
-        let docsDir = rTracker_resource.ioFilePath(nil, access: true)
-        let localFileManager = FileManager.default
-
-        var filesToProcess: [URL] = []
-
-        let directoryURL = URL(fileURLWithPath: docsDir)
-        let enumerator = FileManager.default.enumerator(at: directoryURL, includingPropertiesForKeys: [.isDirectoryKey], options: [])
-
-        while let url = enumerator?.nextObject() as? URL {
-            do {
-                let resourceValues = try url.resourceValues(forKeys: [.isDirectoryKey])
-                if !resourceValues.isDirectory! {
-                    if url.lastPathComponent.hasSuffix("_in.plist") {
-                        filesToProcess.append(url)
-                    } else if url.pathExtension == "rtrk" {
-                        filesToProcess.append(url)
-                    }
-                }
-            } catch {
-                DBGLog("Error retrieving resource values for file: \(url.path), error: \(error)")
-            }
-        }
-
-        for file in filesToProcess {
-            let fname = file.lastPathComponent
-            DBGLog("process input: \(fname)")
-
-            let newTarget = (file.path + "_reading").replacingOccurrences(of: "Documents/Inbox/", with: "Documents/")
-            DBGLog("newTarget= \(newTarget)")
-            do {
-                try localFileManager.moveItem(atPath: file.path, toPath: newTarget)
-            } catch {
-                DBGErr("Error on move \(file) to \(newTarget): \(error)")
-            }
-
-            readingFile = true
-
-            safeDispatchSync { [self] in
-                UIApplication.shared.isIdleTimerDisabled = true
-
-                if fname.hasSuffix("_in.plist") {
-                    rtrkTid = handleOpenFileURL(URL(fileURLWithPath: newTarget), tname: String(fname.prefix(fname.count - 9)))
-                    rTracker_resource.rmStashedTracker(tldStashedTID)  // if there was name match, we stashed it as rejectable, so dump the stash copy now because they said to load the file
-                    tldStashedTID = -1
-                } else {
-                    rtrkTid = handleOpenFileURL(URL(fileURLWithPath: newTarget), tname: nil)
-                    stashedTIDs.append(NSNumber(value: rtrkTid))
-                }
-
-                UIApplication.shared.isIdleTimerDisabled = false
-            }
-
-            /*
-            if fname.hasSuffix("_in.plist") {
-                rTracker_resource.rmStashedTracker(0)
-            } else {
-                stashedTIDs.append(NSNumber(value: rtrkTid))
-            }
-             */
-            readingFile = false
-            rTracker_resource.setProgressVal(Float(plistReadCount) / Float(plistLoadCount))
-            plistReadCount += 1
-        }
-
-        return (rtrkTid != 0)
-    }
-
-    @objc func doLoadCsvFiles() {
-        if loadingCsvFiles {
-            return
-        }
-        loadingCsvFiles = true
-        autoreleasepool {
-
-            loadTrackerCsvFiles()
-            safeDispatchSync({ [self] in
-                // csv file load done, close activity indicators
-                rTracker_resource.finishProgressBar(view, navItem: navigationItem, disable: true)
-                rTracker_resource.finishActivityIndicator(view, navItem: navigationItem, disable: false)
-            })
-            
-            // rtmx reorderDbFromTLT here ?
-
-            // give up lock
-            //refreshLock = false
-            DBGLog("release atomic loadFilesLock")
-            _ = loadFilesLock.testAndSet(newValue: false)
-            loadingCsvFiles = false
-            DispatchQueue.main.async(execute: { [self] in
-                refreshToolBar(true)
-            })
-            DBGLog(String("csv data loaded, UI enabled, CSV lock off stashedTIDs= \(stashedTIDs)"))
-
-            if 0 < stashedTIDs.count {
-                doRejectableTracker()
-            }
-        }
-
-        // thread finished
-    }
-
-    func refreshViewPart2() {
-        //DBGLog(@"entry");
-        // rtmx 
-        tlist.confirmToplevelTIDs()
-        tlist.loadTopLayoutTable()
-        DispatchQueue.main.async(execute: { [self] in
-            tableView!.reloadData()
-            refreshEditBtn()
-            refreshToolBar(true)
-            view.setNeedsDisplay()
-        })
-        // no effect [self.tableView setNeedsDisplay];
-    }
-
-    @objc func doLoadInputfiles() {
-        if loadingInputFiles {
-            return
-        }
-        if loadingCsvFiles {
-            return
-        }
-        loadingInputFiles = true
-        autoreleasepool {
-
-            if InstallDemos {
-                _ = loadDemos(true)
-                InstallDemos = false
-            }
-
-            if InstallSamples {
-                _ = loadSamples(true)
-                InstallSamples = false
-            }
-
-            if loadTrackerPlistFiles() {
-                // this thread now completes updating rvc display of trackerList as next step is load csv data and trackerlist won't change (unless rtrk files)
-                tlist.loadTopLayoutTable() // called again in refreshviewpart2, but need for re-order to set ranks
-                tlist.reorderDbFromTLT()
-            }
-
-            safeDispatchSync({ [self] in
-                //[rTracker_resource finishProgressBar:self.view navItem:self.navigationItem disable:YES];
-                if csvLoadCount != 0 {
-                    rTracker_resource.finishActivityIndicator(view, navItem: nil, disable: false) // finish 'loading trackers' spinner
-                    //[rTracker_resource startActivityIndicator:self.view navItem:nil disable:NO str:@"loading data..."];
-                }
-            })
-            refreshViewPart2()
-
-            Thread.detachNewThreadSelector(#selector(doLoadCsvFiles), toTarget: self, with: nil)
-
-            loadingInputFiles = false
-            DBGLog("load plist thread finished, lock off, UI enabled, dispatched CSV load")
-        }
-        // end of this thread, refreshLock still on, userInteraction disabled, activityIndicator still spinning and doLoadCsvFiles is in charge
-    }
-
-    func countInputFiles(_ targ_ext: String?, Inbox: Bool = false) -> Int {
-        var retval = 0
-
-        var docsDir = rTracker_resource.ioFilePath(nil, access: true)
-        if Inbox {
-            docsDir = rTracker_resource.ioFilePath("Inbox", access: true)
-        }
-        let localFileManager = FileManager.default
-
-
-        //let files = try localFileManager.contentsOfDirectory(atPath: docsDir)
-        let directoryURL = URL(fileURLWithPath: docsDir)
-        let enumerator = localFileManager.enumerator(at: directoryURL, includingPropertiesForKeys: [.isDirectoryKey], options: [])
         
-        var files: [String] = []
-        while let url = enumerator?.nextObject() as? URL {
-            files.append(url.lastPathComponent)
+        // Call the asynchronous loadTrackerDict with a completion handler
+        loadTrackerDict(tdict, tname: tname) { tid in
+            if let dataDict = dataDict {
+                let to = trackerObj(tid)
+                to.loadDataDict(dataDict) // vids ok because confirmTOdict updated as needed
+                to.goRecalculate = true
+                to.recalculateFns() // updates fn vals in database
+                to.goRecalculate = false
+                to.saveChoiceConfigs() // in case input data had unrecognised choices
+                DBGLog("datadict loaded for open file url:")
+                #if DEBUGLOG
+                to.describe()
+                #endif
+            }
+            
+            DBGLog("ltd/ldd finish")
+            restorePriv()
+            DBGLog(String("removing file \(url.path)"))
+            _ = rTracker_resource.deleteFile(atPath: url.path)
+            
+            // Pass the tid to the completion handler
+            completion(tid)
         }
-        for file in files {
-            if file.hasSuffix(targ_ext ?? "") {
-                DBGLog("existsInputFiles: match on \(file)")
+    }
+
+    
+    // MARK: - File Loading System
+
+    // Count input files matching a specific extension
+    func countInputFiles(_ targ_ext: String?, inbox: Bool = false) -> Int {
+        var retval = 0
+        let docsDir = inbox ? rTracker_resource.ioFilePath("Inbox", access: true) : rTracker_resource.ioFilePath(nil, access: true)
+        let directoryURL = URL(fileURLWithPath: docsDir)
+        
+        guard let enumerator = FileManager.default.enumerator(at: directoryURL, includingPropertiesForKeys: [.isDirectoryKey], options: []) else {
+            return 0
+        }
+        
+        while let url = enumerator.nextObject() as? URL {
+            if url.lastPathComponent.hasSuffix(targ_ext ?? "") {
+                DBGLog("countInputFiles: match on \(url.lastPathComponent)")
                 retval += 1
             }
         }
-
-
+        
         return retval
     }
 
-
+    // Main entry point for loading all input files
     func loadInputFiles() {
         DBGLog("loadInputFiles")
-        if loadingInputFiles {
+        
+        // Check if already processing files
+        if loadingInputFiles || loadingCsvFiles || !loadFilesLock.testAndSet(newValue: true) {
             return
         }
-        if loadingCsvFiles {
-            return
-        }
-        //if (!self.openUrlLock) {
-        csvLoadCount = countInputFiles("_in.csv")
+        
+        // Count files to load
+        csvLoadCount = countInputFiles("_in.csv") + countInputFiles(".rtcsv")
         plistLoadCount = countInputFiles("_in.plist")
-        var rtrkLoadCount = countInputFiles(".rtrk")
-        csvLoadCount += countInputFiles(".rtcsv")
-        rtrkLoadCount += countInputFiles(".rtrk", Inbox: true)
-        csvLoadCount += countInputFiles(".csv", Inbox: true)
-        csvLoadCount += countInputFiles(".rtcsv", Inbox: true)
-
-        // handle rtrks as plist + csv, just faster if only has data or only has tracker def
+        
+        let rtrkLoadCount = countInputFiles(".rtrk") + countInputFiles(".rtrk", inbox: true)
+        csvLoadCount += countInputFiles(".csv", inbox: true) + countInputFiles(".rtcsv", inbox: true)
+        
+        // Handle rtrks as plist + csv
         csvLoadCount += rtrkLoadCount
         plistLoadCount += rtrkLoadCount
-
-        if InstallSamples {
-            plistLoadCount += loadSamples(false)
+        
+        // Count demos and samples asynchronously, then proceed with loading
+        countDemosAndSamples { [weak self] in
+            guard let self = self else { return }
+            
+            // Reset counters for progress bars
+            self.csvReadCount = 1
+            self.plistReadCount = 1
+            
+            // Check if there are any files to load
+            if self.plistLoadCount + self.csvLoadCount > 0 {
+                // Show UI indicators
+                DispatchQueue.main.async {
+                    self.tableView?.scrollRectToVisible(CGRect(x: 0, y: 0, width: 1, height: 1), animated: true)
+                    rTracker_resource.startActivityIndicator(self.view, navItem: nil, disable: false, str: "loading trackers...")
+                    rTracker_resource.startProgressBar(self.view, navItem: self.navigationItem, disable: true, yloc: 0.0)
+                }
+                
+                // Start the loading process asynchronously
+                self.loadTrackerFiles()
+                
+                DBGLog("Started async loading process, UI showing activity")
+                return
+            }
+            
+            // No files to load, just refresh the view
+            self.refreshViewPart2()
+            _ = self.loadFilesLock.testAndSet(newValue: false)
+            DBGLog("No files to load - lock released")
         }
-        if InstallDemos {
-            plistLoadCount += loadDemos(false)
-        }
-
-        // set rvc:static numerators for progress bars
-        csvReadCount = 1
-        plistReadCount = 1
-
-        if 0 < (plistLoadCount + csvLoadCount) {
-            tableView!.scrollRectToVisible(CGRect(x: 0, y: 0, width: 1, height: 1), animated: true) // ScrollToTop so can see bars
-            rTracker_resource.startActivityIndicator(view, navItem: nil, disable: false, str: "loading trackers...")
-            rTracker_resource.startProgressBar(view, navItem: navigationItem, disable: true, yloc: 0.0)
-
-            Thread.detachNewThreadSelector(#selector(doLoadInputfiles), toTarget: self, with: nil)
-            // lock stays on, userInteraction disabled, activityIndicator spinning,   give up and doLoadInputFiles() is in charge
-
-            DBGLog("returning main thread, lock on, UI disabled, activity spinning,  files to load")
-            return
-        }
-        //}
-
-        // if here (did not return above), no files to load, this thread set the lock and refresh is done now
-
-        refreshViewPart2()
-        //refreshLock = false
-        DBGLog("release atomic loadFilesLock")
-        _ = loadFilesLock.testAndSet(newValue: false)
-        DBGLog("finished, no files to load - lock off")
-
-        return
     }
 
+    // Helper to count demos and samples
+    func countDemosAndSamples(completion: @escaping () -> Void) {
+        let group = DispatchGroup()
+        
+        if InstallSamples {
+            group.enter()
+            _ = loadSamples(false) { [weak self] count in
+                self?.plistLoadCount += count
+                group.leave()
+            }
+        }
+        
+        if InstallDemos {
+            group.enter()
+            loadDemos(false) { [weak self] count in
+                self?.plistLoadCount += count
+                group.leave()
+            }
+        }
+        
+        // When both counts are done
+        group.notify(queue: .main) {
+            completion()
+        }
+    }
+
+    // Primary loading function - processes tracker definition files first, then data files
+    func loadTrackerFiles() {
+        loadingInputFiles = true
+        
+        // Step 1: Load demos and samples if requested
+        loadInitialFiles { [weak self] loadedSomething in
+            guard let self = self else { return }
+            
+            // Step 2: Load tracker definitions (plist files and rtrk files)
+            self.loadTrackerPlistFiles { loadedTrackers in
+                let totalLoadedSomething = loadedSomething || loadedTrackers
+                
+                // Update the tracker list if we loaded any trackers
+                if totalLoadedSomething {
+                    self.tlist.loadTopLayoutTable()
+                    self.tlist.reorderDbFromTLT()
+                }
+                
+                // Update UI to show we're done loading trackers
+                DispatchQueue.main.async {
+                    if self.csvLoadCount != 0 {
+                        rTracker_resource.finishActivityIndicator(self.view, navItem: nil, disable: false)
+                    }
+                    
+                    // Refresh the view
+                    self.refreshViewPart2()
+                }
+                
+                // Step 3: Load CSV data files
+                self.loadingInputFiles = false
+                self.loadTrackerCsvFiles { [weak self] in
+                    guard let self = self else { return }
+                    
+                    // All loading completed
+                    DispatchQueue.main.async {
+                        // Clean up UI
+                        rTracker_resource.finishProgressBar(self.view, navItem: self.navigationItem, disable: true)
+                        rTracker_resource.finishActivityIndicator(self.view, navItem: self.navigationItem, disable: false)
+                        
+                        // Release lock
+                        _ = self.loadFilesLock.testAndSet(newValue: false)
+                        self.loadingCsvFiles = false
+                        
+                        // Final UI refresh
+                        self.refreshToolBar(true)
+                        
+                        // Handle any rejectable trackers
+                        if self.stashedTIDs.count > 0 {
+                            self.doRejectableTracker()
+                        }
+                        
+                        DBGLog("All files loaded - loading complete, lock released")
+                    }
+                }
+            }
+        }
+    }
+
+    // Helper to load demos and samples
+    func loadInitialFiles(completion: @escaping (Bool) -> Void) {
+        var loadedSomething = false
+        let group = DispatchGroup()
+        
+        if InstallDemos {
+            group.enter()
+            loadDemos(true) { count in
+                loadedSomething = (count > 0) || loadedSomething
+                self.InstallDemos = false
+                group.leave()
+            }
+        }
+        
+        if InstallSamples {
+            group.enter()
+            _ = loadSamples(true) { count in
+                loadedSomething = (count > 0) || loadedSomething
+                self.InstallSamples = false
+                group.leave()
+            }
+        }
+        
+        // When both loading operations are complete
+        group.notify(queue: .main) {
+            completion(loadedSomething)
+        }
+    }
+
+    // Load tracker definition files (plist and rtrk)
+    func loadTrackerPlistFiles(completion: @escaping (Bool) -> Void) {
+        DBGLog("loadTrackerPlistFiles")
+        
+        var loadedTrackers = false
+        let docsDir = rTracker_resource.ioFilePath(nil, access: true)
+        let directoryURL = URL(fileURLWithPath: docsDir)
+        
+        // Find all files to process
+        var filesToProcess: [URL] = []
+        if let enumerator = FileManager.default.enumerator(at: directoryURL, includingPropertiesForKeys: [.isDirectoryKey], options: []) {
+            while let url = enumerator.nextObject() as? URL {
+                do {
+                    let resourceValues = try url.resourceValues(forKeys: [.isDirectoryKey])
+                    if resourceValues.isDirectory == false {
+                        if url.lastPathComponent.hasSuffix("_in.plist") || url.pathExtension == "rtrk" {
+                            filesToProcess.append(url)
+                        }
+                    }
+                } catch {
+                    DBGLog("Error retrieving resource values for file: \(url.path), error: \(error)")
+                }
+            }
+        }
+        
+        // Process files sequentially with completion handlers
+        processNextFile(files: filesToProcess, index: 0) { success in
+            loadedTrackers = loadedTrackers || success
+            completion(loadedTrackers)
+        }
+    }
+
+    // Process files one by one with completion handlers
+    func processNextFile(files: [URL], index: Int, completion: @escaping (Bool) -> Void) {
+        // Base case: no more files to process
+        if index >= files.count {
+            completion(false)
+            return
+        }
+        
+        let file = files[index]
+        let fname = file.lastPathComponent
+        DBGLog("process input: \(fname)")
+        
+        // Prepare file for reading
+        let newTarget = (file.path + "_reading").replacingOccurrences(of: "Documents/Inbox/", with: "Documents/")
+        DBGLog("newTarget= \(newTarget)")
+        
+        do {
+            try FileManager.default.moveItem(atPath: file.path, toPath: newTarget)
+        } catch {
+            DBGErr("Error on move \(file) to \(newTarget): \(error)")
+            // Continue with next file
+            processNextFile(files: files, index: index + 1, completion: completion)
+            return
+        }
+        
+        readingFile = true
+        UIApplication.shared.isIdleTimerDisabled = true
+        
+        // Process the file - plist or rtrk
+        let processFile = {
+            var rtrkTid = 0
+            
+            if fname.hasSuffix("_in.plist") {
+                self.handleOpenFileURL(URL(fileURLWithPath: newTarget), tname: String(fname.prefix(fname.count - 9))) { tid in
+                    rtrkTid = tid
+                    rTracker_resource.rmStashedTracker(self.tldStashedTID)
+                    self.tldStashedTID = -1
+                    
+                    self.readingFile = false
+                    UIApplication.shared.isIdleTimerDisabled = false
+                    
+                    // Update progress and continue with next file
+                    rTracker_resource.setProgressVal(Float(self.plistReadCount) / Float(self.plistLoadCount))
+                    self.plistReadCount += 1
+                    
+                    self.processNextFile(files: files, index: index + 1, completion: completion)
+                }
+            } else {
+                self.handleOpenFileURL(URL(fileURLWithPath: newTarget), tname: nil) { tid in
+                    rtrkTid = tid
+                    self.stashedTIDs.append(NSNumber(value: rtrkTid))
+                    
+                    self.readingFile = false
+                    UIApplication.shared.isIdleTimerDisabled = false
+                    
+                    // Update progress and continue with next file
+                    rTracker_resource.setProgressVal(Float(self.plistReadCount) / Float(self.plistLoadCount))
+                    self.plistReadCount += 1
+                    
+                    self.processNextFile(files: files, index: index + 1, completion: { success in
+                        completion(true) // We processed at least one rtrk file
+                    })
+                }
+            }
+        }
+        
+        // Ensure UI operations are on main thread
+        DispatchQueue.main.async {
+            processFile()
+        }
+    }
+
+
+    // Refresh the view - called after loading files
+    func refreshViewPart2() {
+        tlist.confirmToplevelTIDs()
+        tlist.loadTopLayoutTable()
+        
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            self.tableView?.reloadData()
+            self.refreshEditBtn()
+            self.refreshToolBar(true)
+            self.view.setNeedsDisplay()
+        }
+    }
     let SUPPLY_DEMOS = 0
     let SUPPLY_SAMPLES = 1
 
-    func loadSuppliedTrackers(_ doLoad: Bool, set: Int) -> Int {
-        // loads sample tracker plist files which are slurped in as dicts.  demo tracker is .rtrk (rtcsv) file and loaded differently
+    // Load supplied trackers with completion handler
+    func loadSuppliedTrackers(_ doLoad: Bool, set: Int, completion: ((Int) -> Void)? = nil) -> Int {
         let bundle = Bundle.main
-        var paths: [AnyHashable]?
+        var paths: [String]?
+        
         if SUPPLY_DEMOS == set {
             paths = bundle.paths(forResourcesOfType: "plist", inDirectory: "demoTrackers")
         } else {
             paths = bundle.paths(forResourcesOfType: "plist", inDirectory: "sampleTrackers")
         }
-        var count = 0
-
-        /* copy plists over version
-             NSString *docsDir = [rTracker_resource ioFilePath:nil access:YES];
-             NSFileManager *dfltManager = [NSFileManager defaultManager];
-             */
-
-        //DBGLog(@"paths %@",paths  );
-
-
-        for p in paths ?? [] {
-            guard let p = p as? String else {
-                continue
-            }
-
-            if doLoad {
-                // load now into trackerObj - needs progressBar
-                let tdict = NSDictionary(contentsOfFile: p) as Dictionary? as! [String : Any]
-                tlist.fixDictTID(tdict)
-                let newTracker = trackerObj(dict: tdict)
-
-                tlist.deConflict(newTracker) // add _n to trackerName so we don't overwrite user's existing if any .. could just merge now?
-
-                newTracker.saveConfig()
-                tlist.add(toTopLayoutTable: newTracker)
-
-                rTracker_resource.setProgressVal((Float(plistReadCount)) / (Float(plistLoadCount)))
-                plistReadCount += 1
-
-                DBGLog(String("finished loadSample on \(p)"))
-            }
-            count += 1
+        
+        let count = paths?.count ?? 0
+        
+        if !doLoad {
+            // If just counting, return the count immediately
+            completion?(count)
+            return count
         }
+        
+        // Process each tracker plist file sequentially
+        processNextSuppliedTracker(paths: paths ?? [], index: 0, set: set) { finalCount in
+            completion?(finalCount)
+        }
+        
+        return count // Return the count for synchronous calls
+    }
 
-        if doLoad {
-            var sql: String
+    // Helper function to process supplied trackers one by one
+    func processNextSuppliedTracker(paths: [String], index: Int, set: Int, completion: @escaping (Int) -> Void) {
+        // Base case: all trackers processed
+        if index >= paths.count {
+            // All trackers loaded, update version
+            let sql: String
             if SUPPLY_DEMOS == set {
                 sql = String(format: "insert or replace into info (val, name) values (%i,'demos_version')", DEMOS_VERSION)
             } else {
                 sql = String(format: "insert or replace into info (val, name) values (%i,'samples_version')", SAMPLES_VERSION)
             }
-            tlist.toExecSql(sql:sql)
+            tlist.toExecSql(sql: sql)
+            
+            // Return the count
+            completion(paths.count)
+            return
         }
-
-        return count
-
+        
+        let p = paths[index]
+        
+        // Load the tracker plist
+        let tdict = NSDictionary(contentsOfFile: p) as Dictionary? as! [String: Any]
+        tlist.fixDictTID(tdict)
+        let newTracker = trackerObj(dict: tdict)
+        tlist.deConflict(newTracker) // add _n to trackerName to avoid conflicts
+        newTracker.saveConfig()
+        tlist.add(toTopLayoutTable: newTracker)
+        
+        // Update progress
+        rTracker_resource.setProgressVal((Float(plistReadCount)) / (Float(plistLoadCount)))
+        plistReadCount += 1
+        
+        DBGLog(String("finished loading supplied tracker from \(p)"))
+        
+        // Process the next tracker
+        processNextSuppliedTracker(paths: paths, index: index + 1, set: set, completion: completion)
     }
 
-    func loadSamples(_ doLoad: Bool) -> Int {
-        // called when handlePrefs decides is needed, copies plist files to documents dir
-        // also called with doLoad=NO to just count
-        // returns count
-
-        let count = loadSuppliedTrackers(doLoad, set: SUPPLY_SAMPLES)
-
+    // Load sample trackers with completion handler
+    func loadSamples(_ doLoad: Bool, completion: ((Int) -> Void)? = nil) -> Int {
+        if !doLoad {
+            // If just counting, call loadSuppliedTrackers synchronously
+            let count = loadSuppliedTrackers(doLoad, set: SUPPLY_SAMPLES)
+            completion?(count)
+            return count
+        }
+        
+        // Otherwise, use the asynchronous version
+        let count = loadSuppliedTrackers(doLoad, set: SUPPLY_SAMPLES) { count in
+            completion?(count)
+        }
         return count
     }
 
-    func loadDemos(_ doLoad: Bool) -> Int {
-
-        //return [self loadSuppliedTrackers:doLoad set:SUPPLY_DEMOS];
-        //var newp: String?
+    // Load demo trackers with completion handler
+    func loadDemos(_ doLoad: Bool, completion: ((Int) -> Void)? = nil) {
         let bundle = Bundle.main
         let paths = bundle.paths(forResourcesOfType: "rtrk", inDirectory: "demoTrackers")
         let urls = paths.map { URL(fileURLWithPath: $0) }
@@ -836,37 +1008,56 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         let fm = FileManager.default
         let documentsURL = fm.urls(for: .documentDirectory, in: .userDomainMask).first!
         
-        var count = 0
-
+        if !doLoad {
+            // If just counting, return the count immediately
+            completion?(urls.count)
+            return
+        }
+        
         loadingDemos = true
-        for p in urls {
-            if doLoad {
-                let file = p.lastPathComponent
-                //newp = [rTracker_resource ioFilePath:[NSString stringWithFormat:@"Inbox/%@",file] access:YES];
-                //newp = rTracker_resource.ioFilePath("\(file)", access: true)
-
-                let destinationURL = documentsURL.appendingPathComponent(file)
-
-                do {
-                    try fm.copyItem(atPath: p.path, toPath: destinationURL.path)  // FileManager.default.copyItem(atPath: p.absoluteString, toPath: newp ?? "")
-
-                    _ = handleOpenFileURL(URL(fileURLWithPath: destinationURL.path), tname: nil)
-                    //DBGLog(@"stashedTIDs= %@",self.stashedTIDs);
-                } catch let err {
-                    DBGErr(String("Error copying file: \(p.path) to \(destinationURL.path) error: \(err)"))
-                    count -= 1
-                }
+        
+        // Process each demo file sequentially
+        processNextDemoTracker(urls: urls, index: 0, documentsURL: documentsURL) { count in
+            if count > 0 {
+                let sql = String(format: "insert or replace into info (val, name) values (%i,'demos_version')", DEMOS_VERSION)
+                self.tlist.toExecSql(sql: sql)
             }
-            count += 1
+            
+            loadingDemos = false
+            completion?(count)
         }
-        if doLoad && count != 0 {
-            let sql = String(format: "insert or replace into info (val, name) values (%i,'demos_version')", DEMOS_VERSION)
-            tlist.toExecSql(sql:sql)
-        }
-        loadingDemos = false
-        return count
     }
 
+    // Helper function to process demo trackers one by one
+    func processNextDemoTracker(urls: [URL], index: Int, documentsURL: URL, completion: @escaping (Int) -> Void) {
+        // Base case: all demos processed
+        if index >= urls.count {
+            completion(urls.count)
+            return
+        }
+        
+        let p = urls[index]
+        let file = p.lastPathComponent
+        let destinationURL = documentsURL.appendingPathComponent(file)
+        
+        do {
+            try FileManager.default.copyItem(atPath: p.path, toPath: destinationURL.path)
+            
+            // Handle the file with a completion handler
+            handleOpenFileURL(URL(fileURLWithPath: destinationURL.path), tname: nil) { _ in
+                // Process the next demo
+                self.processNextDemoTracker(urls: urls, index: index + 1, documentsURL: documentsURL, completion: completion)
+            }
+        } catch let err {
+            DBGErr(String("Error copying file: \(p.path) to \(destinationURL.path) error: \(err)"))
+            
+            // Continue with the next demo despite error
+            processNextDemoTracker(urls: urls, index: index + 1, documentsURL: documentsURL) { count in
+                // Subtract 1 from count for the failed file
+                completion(count - 1)
+            }
+        }
+    }
     // MARK: -
     // MARK: view support
 
