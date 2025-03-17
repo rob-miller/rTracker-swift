@@ -88,6 +88,7 @@ class voChoice: voState {
         _segmentedControl?.accessibilityIdentifier = "\(self.tvn())_choices"
         return _segmentedControl
     }
+    private var localCtvovc: configTVObjVC?
     var processingTfDone = false
     var processingTfvDone = false
 
@@ -196,13 +197,12 @@ class voChoice: voState {
 
         if vo.optDict["otsrc"] == "1" {
             if let xrslt = vo.vos?.getOTrslt() {
+                vo.useVO = true
                 vo.value = xrslt
             } else {
                 vo.value = ""
             }
-            segmentedControl?.isEnabled = false
-            // Customize selected segment appearance
-            segmentedControl?.setTitleTextAttributes([.foregroundColor: UIColor.black], for: .disabled)
+            addExternalSourceOverlay(to: segmentedControl!)  // no taps
         }
         // set displayed segment from self.vo.value
 
@@ -373,12 +373,17 @@ class voChoice: voState {
         return super.cleanOptDictDflts(key)
     }
 
+    @objc func forwardToConfigOtherTrackerSrcView() {
+        localCtvovc?.configOtherTrackerSrcView()
+    }
+    
     override func voDrawOptions(_ ctvovc: configTVObjVC) {
         ctvovcp = ctvovc
         var frame = CGRect(x: MARGIN, y: ctvovc.lasty, width: 0.0, height: 0.0)
 
         var labframe = ctvovc.configLabel("Choices:", frame: frame, key: "coLab", addsv: true)
-
+        localCtvovc = ctvovc
+        
         frame.origin.x = MARGIN
         frame.origin.y += labframe.size.height + MARGIN
 
@@ -485,7 +490,33 @@ class voChoice: voState {
             addsv: true)
 
 
+        frame.origin.x = MARGIN
+        frame.origin.y += MARGIN + frame.size.height
+        
+        labframe = ctvovc.configLabel("Other Tracker source: ", frame: frame, key: "otsLab", addsv: true)
+        frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
 
+        frame = ctvovc.configSwitch(
+            frame,
+            key: "otsBtn",
+            state: vo.optDict["otsrc"] == "1",
+            addsv: true)
+
+        frame.origin.x = MARGIN
+        frame.origin.y += MARGIN + frame.size.height
+        
+        let source = self.vo.optDict["otTracker"] ?? ""
+        let value = self.vo.optDict["otValue"] ?? ""
+        let str = (!source.isEmpty && !value.isEmpty) ? "\(source):\(value)" : "Configure"
+        
+        frame = ctvovc.configActionBtn(frame, key: "otSelBtn", label: str, target: self, action: #selector(forwardToConfigOtherTrackerSrcView))
+        ctvovc.switchUpdate(okey: "otsrc", newState: vo.optDict["otsrc"] == "1")
+        
+        frame.origin.x = MARGIN
+        frame.origin.y += MARGIN + frame.size.height
+        
+        
+        labframe = ctvovc.configLabel("Other options:", frame: frame, key: "noLab", addsv: true)
         ctvovc.lasty = frame.origin.y + frame.size.height + MARGIN
         ctvovc.lastx = (ctvovc.lastx < frame.origin.x + frame.size.width + MARGIN ? frame.origin.x + frame.size.width + MARGIN : ctvovc.lastx)
 

@@ -353,7 +353,29 @@ class voState: NSObject, voProtocol {
         }
         return ""
     }
-            
+
+    func addExternalSourceOverlay(to control: UIView) {
+        // Create a clear overlay that matches the control's bounds
+        let overlayView = UIView(frame: control.bounds)
+        overlayView.backgroundColor = .clear
+        overlayView.isUserInteractionEnabled = true
+        
+        // Make sure the overlay resizes with the control
+        overlayView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        
+        // Add a tap gesture that does nothing but capture the tap
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleExternalSourceTap(_:)))
+        overlayView.addGestureRecognizer(tapGesture)
+        
+        // Add overlay directly to the control
+        control.addSubview(overlayView)
+    }
+
+    @objc func handleExternalSourceTap(_ gesture: UITapGestureRecognizer) {
+        // This function simply captures taps and does nothing else
+        // This prevents the tap from reaching the control underneath
+    }
+    
     let LMARGIN = 60.0
     let RMARGIN = 10.0
     let BMARGIN = 7.0

@@ -181,6 +181,8 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         }
         return _tbButton
     }
+    private var localCtvovc: configTVObjVC?
+    
     var textView: UITextView?
     var cav: CustomAccessoryView!
     
@@ -904,17 +906,8 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
             } else {
                 vo.value = ""
             }
-            tbButton?.isEnabled = false
-            // Keep text color visible (instead of faded gray)
-            tbButton?.setTitleColor(UIColor.systemBlue.withAlphaComponent(0.8), for: .disabled)
-            
-            // Add a border to make it stand out
-            tbButton?.layer.borderWidth = 1.0
-            tbButton?.layer.borderColor = UIColor.systemBlue.cgColor
-            tbButton?.layer.cornerRadius = 6.0
-            
-            // You could also adjust the background color if needed
-            tbButton?.backgroundColor = UIColor(white: 0.95, alpha: 1.0)
+            // if disable taps cannot see text
+            // addExternalSourceOverlay(to: tbButton!)  // no taps
         }
         
         if vo.value == "" {
@@ -974,9 +967,16 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         return super.cleanOptDictDflts(key)
     }
 
+    @objc func forwardToConfigOtherTrackerSrcView() {
+        localCtvovc?.configOtherTrackerSrcView()
+    }
+    
     override func voDrawOptions(_ ctvovc: configTVObjVC) {
         var frame = CGRect(x: MARGIN, y: ctvovc.lasty , width: 0.0, height: 0.0)
         var labframe = ctvovc.configLabel("Text box options:", frame: frame, key: "tboLab", addsv: true)
+        
+        localCtvovc = ctvovc
+        
         frame.origin.y += labframe.size.height + MARGIN
         labframe = ctvovc.configLabel("Use number of lines for graph value:", frame: frame, key: "tbnlLab", addsv: true) // can't do cleanly for function value (can't get linecount in sql and still use for other vtypes)
         frame = CGRect(x:labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
@@ -1008,6 +1008,34 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
             state: (vo.optDict["tbhi"] == "1") /* default:0 */,
             addsv: true)
 
+        frame.origin.x = MARGIN
+        frame.origin.y += MARGIN + frame.size.height
+        
+        labframe = ctvovc.configLabel("Other Tracker source: ", frame: frame, key: "otsLab", addsv: true)
+        frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
+
+        frame = ctvovc.configSwitch(
+            frame,
+            key: "otsBtn",
+            state: vo.optDict["otsrc"] == "1",
+            addsv: true)
+
+        frame.origin.x = MARGIN
+        frame.origin.y += MARGIN + frame.size.height
+        
+        let source = self.vo.optDict["otTracker"] ?? ""
+        let value = self.vo.optDict["otValue"] ?? ""
+        let str = (!source.isEmpty && !value.isEmpty) ? "\(source):\(value)" : "Configure"
+        
+        frame = ctvovc.configActionBtn(frame, key: "otSelBtn", label: str, target: self, action: #selector(forwardToConfigOtherTrackerSrcView))
+        ctvovc.switchUpdate(okey: "otsrc", newState: vo.optDict["otsrc"] == "1")
+        
+        frame.origin.x = MARGIN
+        frame.origin.y += MARGIN + frame.size.height
+        
+        
+        labframe = ctvovc.configLabel("Other options:", frame: frame, key: "noLab", addsv: true)
+        
         //*/
 
         //	frame.origin.x = MARGIN;

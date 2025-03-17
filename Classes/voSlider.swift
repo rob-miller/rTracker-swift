@@ -69,6 +69,7 @@ class voSlider: voState {
         return _sliderCtl
     }
 
+    private var localCtvovc: configTVObjVC?
     override init(vo valo: valueObj) {
         super.init(vo: valo)
         vo.useVO = false
@@ -147,19 +148,16 @@ class voSlider: voState {
         DBGLog(String("voDisplay slider \(vo.valueName ?? "") vals= \(vals) valf= \(valf) -> slider.valf= \(sliderCtl?.value ?? 0.0)"))
         #endif
 
-        //DBGLog(@"parent tracker date= %@",pto.trackerDate);
-        
         if vo.optDict["otsrc"] == "1" {
             if let xrslt = vo.vos?.getOTrslt() {
+                vo.useVO = true
                 vo.value = xrslt
             } else {
                 vo.value = ""
             }
-            sliderCtl?.isEnabled = false
-            sliderCtl?.thumbTintColor = UIColor.systemBlue.withAlphaComponent(0.7) // More visible thumb
-            sliderCtl?.minimumTrackTintColor = UIColor.systemBlue.withAlphaComponent(0.7) // More visible track
+            addExternalSourceOverlay(to: sliderCtl!)  // no taps
         }
-        
+
         if vo.value == "" {
             if vo.optDict["slidrswlb"] == "1" {
                 let to = vo.parentTracker
@@ -283,11 +281,16 @@ class voSlider: voState {
         return super.cleanOptDictDflts(key)
     }
 
+    @objc func forwardToConfigOtherTrackerSrcView() {
+        localCtvovc?.configOtherTrackerSrcView()
+    }
+    
     override func voDrawOptions(_ ctvovc: configTVObjVC) {
         var frame = CGRect(x: MARGIN, y: ctvovc.lasty, width: 0.0, height: 0.0)
 
         var labframe = ctvovc.configLabel("Slider range:", frame: frame, key: "srLab", addsv: true)
-
+        localCtvovc = ctvovc
+        
         frame.origin.x = MARGIN
         frame.origin.y += labframe.size.height + MARGIN
 
@@ -346,6 +349,28 @@ class voSlider: voState {
             text: vo.optDict["sdflt"],
             addsv: true)
 
+        frame.origin.x = MARGIN
+        frame.origin.y += MARGIN + frame.size.height
+        
+        labframe = ctvovc.configLabel("Other Tracker source: ", frame: frame, key: "otsLab", addsv: true)
+        frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
+
+        frame = ctvovc.configSwitch(
+            frame,
+            key: "otsBtn",
+            state: vo.optDict["otsrc"] == "1",
+            addsv: true)
+
+        frame.origin.x = MARGIN
+        frame.origin.y += MARGIN + frame.size.height
+        
+        let source = self.vo.optDict["otTracker"] ?? ""
+        let value = self.vo.optDict["otValue"] ?? ""
+        let str = (!source.isEmpty && !value.isEmpty) ? "\(source):\(value)" : "Configure"
+        
+        frame = ctvovc.configActionBtn(frame, key: "otSelBtn", label: str, target: self, action: #selector(forwardToConfigOtherTrackerSrcView))
+        ctvovc.switchUpdate(okey: "otsrc", newState: vo.optDict["otsrc"] == "1")
+        
         frame.origin.y += frame.size.height + MARGIN
         frame.origin.x = MARGIN
         //-- title label

@@ -1650,6 +1650,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         case shareTracker = "Share Tracker"
         case shareTrackerData = "Share Tracker+Data"
         case saveToPC = "Save to app directory"
+        case saveRecord = "Save unchanged record"
         case duplicateEntry = "Duplicate Entry to Now"
         case cancel = "Cancel"
     }
@@ -1658,7 +1659,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     @IBAction func btnMenu() {
         let alert = UIAlertController(title: tracker?.trackerName ?? "", message: nil, preferredStyle: .actionSheet)
         
-        var options: [MenuOption] = [.shareCSV, .shareTracker, .shareTrackerData, .saveToPC]
+        var options: [MenuOption] = [.shareCSV, .shareTracker, .shareTrackerData, .saveToPC, .saveRecord]
         
         let postD = tracker!.postDate()
         let lastD = tracker!.lastDate()
@@ -1692,6 +1693,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             fileURL = tracker.writeTmpRtrk(option == .shareTrackerData)
         case .saveToPC:
             iTunesExport()
+        case .saveRecord:
+            saveActions()
         case .duplicateEntry:
             duplicateEntry()
         case .cancel:

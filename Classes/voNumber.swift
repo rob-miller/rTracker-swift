@@ -239,9 +239,7 @@ class voNumber: voState, UITextFieldDelegate {
                         }
                         DispatchQueue.main.async {
                             self.dtf.text = "\(formattedValue)"
-                            self.dtf.isEnabled = false
-                            self.dtf.textColor = UIColor.black // Much darker than default disabled color
-                            self.dtf.backgroundColor = UIColor(white: 0.95, alpha: 1.0) // Light gray background
+                            self.vo.vos?.addExternalSourceOverlay(to: self.dtf)  // no taps
                         }
                     }
                 }

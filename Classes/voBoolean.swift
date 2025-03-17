@@ -77,11 +77,8 @@ class voBoolean: voState {
             } else {  // xrslt is nil
                 vo.value = ""
             }
-            bSwitch!.isEnabled = false
-            // Switches look quite visible even when disabled, but you can add a border
-            bSwitch!.layer.borderWidth = 1.0
-            bSwitch!.layer.borderColor = UIColor.systemBlue.cgColor
-            bSwitch!.layer.cornerRadius = bSwitch!.frame.height / 2
+            
+            addExternalSourceOverlay(to: bSwitch!)  // no taps
         }
         if vo.value == "" {
             rTracker_resource.clrSwitch(bSwitch!, colr: .tertiarySystemBackground)

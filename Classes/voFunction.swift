@@ -751,7 +751,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
 
         return epDate
     }
-     
+     /*
     func calcFunctionValue(_ datePair: [AnyHashable]?) -> NSNumber? {
         // TODO: finish this -- not used
         if datePair == nil {
@@ -810,7 +810,8 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         return NSNumber(value: result)
 
     }
-
+      */
+    
     // supplied with previous endpoint (endpoint 0), calculate function to current tracker
     func calcFunctionValue(withCurrent epd0: Int, fn2op: Bool = false) -> NSNumber? {
 

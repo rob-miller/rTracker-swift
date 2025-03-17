@@ -227,7 +227,9 @@ class voDataEdit: UIViewController, UITextViewDelegate {
     @objc func saveAction(_ sender: Any?) {
         DBGLog("save me")
         //[self.saveClass performSelector:self.saveSelector withObject:@"FOOOO" afterDelay:(NSTimeInterval)0];
-        saveClass!.perform(saveSelector!, with: textView?.text, afterDelay: TimeInterval(0))
+        if self.vo?.optDict["otsrc"] ?? "0" != "1" {
+            saveClass!.perform(saveSelector!, with: textView?.text, afterDelay: TimeInterval(0))
+        }
         dismiss(animated: true)
     }
 
