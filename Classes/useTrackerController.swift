@@ -323,7 +323,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     }
 
     @objc func handlePullDownAction() {
-        print("Refresh initiated")
+        DBGLog("Refresh initiated")
         let dispatchGroup = DispatchGroup()
         
         DispatchQueue.main.async {
