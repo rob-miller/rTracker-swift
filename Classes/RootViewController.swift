@@ -624,8 +624,10 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         
         while let url = enumerator.nextObject() as? URL {
             if url.lastPathComponent.hasSuffix(targ_ext ?? "") {
-                DBGLog("countInputFiles: match on \(url.lastPathComponent)")
+                DBGLog("countInputFiles: match on \(url.lastPathComponent) url is \(url)")
                 retval += 1
+            //} else {
+               // DBGLog("cif: url \(url.lastPathComponent) no match for \(targ_ext ?? "")")
             }
         }
         

@@ -217,7 +217,7 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
-
+    /*
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
        guard let bdn = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String else { return false }
        
@@ -265,7 +265,102 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
        
         return true
     }
-
+     */
+    
+    func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
+        // Start accessing the security-scoped resource
+        let didStartAccessing = url.startAccessingSecurityScopedResource()
+        
+        defer {
+            // Make sure to release the security-scoped resource when done
+            if didStartAccessing {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+        
+        do {
+            let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            let destinationURL = documentsURL.appendingPathComponent(url.lastPathComponent)
+            
+            // Remove any existing file
+            if FileManager.default.fileExists(atPath: destinationURL.path) {
+                try FileManager.default.removeItem(at: destinationURL)
+            }
+            
+            // Read the data directly instead of trying to copy the file
+            let data = try Data(contentsOf: url)
+            
+            // Write to your app's documents directory
+            try data.write(to: destinationURL)
+            
+            DBGLog("File successfully saved to: \(destinationURL.path)")
+            
+            // Get the root view controller
+            var rootVC: RootViewController?
+            
+            if #available(iOS 15.0, *) {
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                   let window = windowScene.windows.first,
+                   let viewController = window.rootViewController as? RootViewController {
+                    rootVC = viewController
+                }
+            } else {
+                if let viewController = UIApplication.shared.windows.first?.rootViewController as? RootViewController {
+                    rootVC = viewController
+                }
+            }
+            
+            // Trigger file loading
+            rootVC?.loadInputFiles()
+            
+            return true
+        } catch {
+            DBGErr("Error handling incoming file: \(error.localizedDescription)")
+            return false
+        }
+    }
+    
+    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        guard let urlContext = URLContexts.first else { return }
+        let url = urlContext.url
+        
+        // Start accessing the security-scoped resource
+        let didStartAccessing = url.startAccessingSecurityScopedResource()
+        
+        defer {
+            // Make sure to release the security-scoped resource when done
+            if didStartAccessing {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+        
+        do {
+            let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            let destinationURL = documentsURL.appendingPathComponent(url.lastPathComponent)
+            
+            // Remove any existing file
+            if FileManager.default.fileExists(atPath: destinationURL.path) {
+                try FileManager.default.removeItem(at: destinationURL)
+            }
+            
+            // Read the data directly instead of trying to copy the file
+            let data = try Data(contentsOf: url)
+            
+            // Write to your app's documents directory
+            try data.write(to: destinationURL)
+            
+            DBGLog("File successfully saved to: \(destinationURL.path)")
+            
+            // Get the root view controller
+            if let windowScene = scene as? UIWindowScene,
+               let rootVC = windowScene.windows.first?.rootViewController as? RootViewController {
+                rootVC.loadInputFiles()
+            }
+        } catch {
+            DBGErr("Error handling incoming file in scene: \(error.localizedDescription)")
+        }
+    }
+    
     func quickAlert(_ title: String?, msg: String?) -> UIAlertController? {
         let alert = UIAlertController(
             title: title,

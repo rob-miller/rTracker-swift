@@ -85,7 +85,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>8004</string>
+	<string>8011</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
@@ -93,7 +93,7 @@
 	<key>NSContactsUsageDescription</key>
 	<string>$(PRODUCT_NAME) can use your contact names in trackers.</string>
 	<key>NSDocumentsFolderUsageDescription</key>
-	<string>Enable user to load Healthkit identifiers</string>
+	<string>Access is needed to import and export tracker data</string>
 	<key>NSFileProviderUsageDescription</key>
 	<string>Enable user to load HealthKit identifiers</string>
 	<key>NSHealthShareUsageDescription</key>
@@ -128,7 +128,7 @@
 				<string>public.data</string>
 			</array>
 			<key>UTTypeDescription</key>
-			<string>rTracker Document</string>
+			<string>rTracker rtrk Document</string>
 			<key>UTTypeIdentifier</key>
 			<string>com.realidata.rTracker.rtrk</string>
 			<key>UTTypeSize320IconFile</key>
