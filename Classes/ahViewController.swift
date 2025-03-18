@@ -8,7 +8,6 @@
 
 import SwiftUI
 import HealthKit
-
 struct ahViewController: View {
     var onDismiss: (String?, String?, Bool, Bool) -> Void
     @Environment(\.dismiss) var dismiss // For the Back/Exit button
@@ -18,6 +17,7 @@ struct ahViewController: View {
     @State private var prevDateSwitch: Bool  // Tracks previous date switch
     @State private var showingAvgInfo = false // For average info popup
     @State private var showingPrevDayInfo = false // For previous day info popup
+    @State private var showingConfigInfo = false // For selected config info popup
     @ObservedObject var rthk = rtHealthKit.shared
     
     init(selectedChoice: String?, selectedUnitString: String?, ahAvg: Bool, ahPrevD: Bool, onDismiss: @escaping (String?, String?, Bool, Bool) -> Void) {
@@ -35,177 +35,233 @@ struct ahViewController: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
+                // Extract the info button section to a separate view
+                configInfoSection
+                
                 // Picker (Choice Wheel)
-                Picker("Choose data source", selection: $currentSelection) {
-                    if rthk.configurations.isEmpty {
-                        Text("Waiting for HealthKit data").tag("None") // Provide a single fallback choice
-                    } else {
-                        ForEach(rthk.configurations, id: \.displayName) { config in
-                            Text(config.displayName).tag(config.displayName)
-                        }
-                    }
-                }
-                .pickerStyle(WheelPickerStyle()) // Wheel picker style
-                .onChange(of: currentSelection) { newSelection in
-                    currentUnit = nil
-                    if let selectedConfig = rthk.configurations.first(where: { $0.displayName == newSelection }) {
-                        if selectedConfig.unit != nil && selectedConfig.needUnit {
-                            currentUnit = selectedConfig.unit?.first
-                        }
-                    }
-                }
+                dataSourcePicker
                 
-                // Fixed space for segmented control
-                ZStack {
-                    if let selectedConfig = rthk.configurations.first(where: { $0.displayName == currentSelection }) {
-                        if selectedConfig.unit != nil {
-                            UnitSegmentedControl(selectedConfig: selectedConfig, currentUnit: $currentUnit)
-                                .onChange(of: selectedConfig.identifier) { newIdentifier in
-                                    if let config = rthk.configurations.first(where: { $0.identifier == newIdentifier }),
-                                       config.needUnit && currentUnit == nil {
-                                        currentUnit = config.unit?.first
-                                    }
-                                }
-                        }
-                    } else {
-                        Color.clear // Placeholder to maintain the height
-                    }
-                }
-                .frame(height: 60) // Fixed height for the segmented control area
+                // Unit selection control
+                unitSelectionArea
                 
-                // Switch for average multiple results
-                ZStack {
-                    if let selectedConfig = rthk.configurations.first(where: { $0.displayName == currentSelection }) {
-                        if selectedConfig.aggregationStyle == .discreteArithmetic {
-                            HStack {
-                                Text("Average daily results at 12:00")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.primary)
-                                
-                                Button(action: {
-                                    showingAvgInfo = true
-                                }) {
-                                    Image(systemName: "info.circle")
-                                        .foregroundColor(.blue)
-                                }
-                                .accessibilityLabel("Daily Average Information")
-                                
-                                Spacer()
-                                Toggle("", isOn: $avgDataSwitch)
-                                    .labelsHidden()
-                            }
-                            .padding()
-                        }
-                    } else {
-                        Color.clear
-                    }
-                }
-                .frame(height: 30)
-                .sheet(isPresented: $showingAvgInfo) {
-                    VStack(alignment: .leading, spacing: 20) {
-                        Text("Daily Average")
-                            .font(.headline)
-                        
-                        Text("ON: Combines all readings from a single day (midnight to midnight) into one average value recorded at 12:00 noon. Ideal for metrics like weight or blood pressure where you want a single daily summary.")
-                           .padding(.bottom, 5)
-
-                        Text("OFF: Uses individual readings with their original timestamps. If multiple readings exist for the same time period, only the most recent one will be used. Better for tracking specific events throughout the day.")
-                        
-                        Spacer()
-                        
-                        Button("Dismiss") {
-                            showingAvgInfo = false
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
-                    }
-                    .padding()
-                    .presentationDetents([.medium])
-                }
+                // Average data switch
+                averageDataSection
                 
-                // Switch for previous day
-                ZStack {
-                    if let selectedConfig = rthk.configurations.first(where: { $0.displayName == currentSelection }) {
-                        if selectedConfig.aggregationStyle == .discreteArithmetic && avgDataSwitch {
-                            HStack {
-                                Text("For previous day")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.primary)
-                                
-                                Button(action: {
-                                    showingPrevDayInfo = true
-                                }) {
-                                    Image(systemName: "info.circle")
-                                        .foregroundColor(.blue)
-                                }
-                                .accessibilityLabel("Previous Day Information")
-                                
-                                Spacer()
-                                Toggle("", isOn: $prevDateSwitch)
-                                    .labelsHidden()
-                            }
-                            .padding()
-                        }
-                    } else {
-                        Color.clear
-                    }
-                }
-                .frame(height: 30)
-                .sheet(isPresented: $showingPrevDayInfo) {
-                    VStack(alignment: .leading, spacing: 20) {
-                        Text("For Previous Day")
-                            .font(.headline)
-                        
-                        Text("ON: Assigns the data to the following day. Perfect for metrics like sleep tracking, where data collected overnight (e.g., from 10 PM to 6 AM) belongs conceptually to the next morning.")
-                            .padding(.bottom, 5)
-                        
-                        Text("OFF: Keeps data assigned to the day it was collected. Best for most metrics like steps, exercise, or calorie intake where the data belongs to the day of activity.")
-                        
-                        Spacer()
-                        
-                        Button("Dismiss") {
-                            showingPrevDayInfo = false
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
-                    }
-                    .padding()
-                    .presentationDetents([.medium])
-                }
+                // Previous day switch
+                previousDaySection
             }
             .padding()
             .navigationTitle("Choose source")
             .toolbar {
                 ToolbarItem(placement: .bottomBar) {
-                    HStack {
-                        Button(action: {
-                            if currentSelection == nil {
-                                currentSelection = rthk.configurations.first?.displayName
-                            }
-                            onDismiss(currentSelection, currentUnit?.unitString, avgDataSwitch, prevDateSwitch)
-                            dismiss()
-                        }) {
-                            Text("\u{2611}") // Ballot box with check
-                                .font(.system(size: 28))
-                                .foregroundColor(.blue)
-                        }
-                        .accessibilityLabel("Done")
-                        .accessibilityIdentifier("confighk_done")
-                        Spacer() // Pushes content to the left
-                        Button("Update HealthKit Choices") {
-                            rthk.dbInitialised = false
-                            rthk.loadHealthKitConfigurations()
-                        }
-                    }
+                    bottomToolbar
                 }
             }
         }
+    }
+    
+    // Extract complex sections into computed properties
+    private var configInfoSection: some View {
+        Group {
+            if let selectedConfig = selectedConfiguration(),
+               let info = selectedConfig.info,
+               !info.isEmpty {
+                HStack {
+                    Text("Choose data source")
+                        .font(.headline)
+                    
+                    Button(action: {
+                        showingConfigInfo = true
+                    }) {
+                        Image(systemName: "info.circle")
+                            .foregroundColor(.blue)
+                    }
+                    .accessibilityLabel("Source Information")
+                    
+                    Spacer()
+                }
+                .padding(.horizontal)
+                .sheet(isPresented: $showingConfigInfo) {
+                    infoSheet(title: selectedConfig.displayName, content: info)
+                }
+            }
+        }
+    }
+    
+    private var dataSourcePicker: some View {
+        Picker("Choose data source", selection: $currentSelection) {
+            if rthk.configurations.isEmpty {
+                Text("Waiting for HealthKit data").tag("None")
+            } else {
+                ForEach(rthk.configurations, id: \.displayName) { config in
+                    HStack {
+                        Text(config.displayName)
+                        
+                        // Show info indicator if needed
+                        if let info = config.info, !info.isEmpty {
+                            Image(systemName: "info.circle.fill")
+                                .font(.system(size: 10))
+                                .foregroundColor(.blue)
+                        }
+                    }
+                    .tag(config.displayName)
+                }
+            }
+        }
+        .pickerStyle(WheelPickerStyle())
+        .onChange(of: currentSelection) { newSelection in
+            currentUnit = nil
+            if let selectedConfig = selectedConfiguration() {
+                if selectedConfig.unit != nil && selectedConfig.needUnit {
+                    currentUnit = selectedConfig.unit?.first
+                }
+            }
+        }
+    }
+    
+    private var unitSelectionArea: some View {
+        ZStack {
+            if let selectedConfig = selectedConfiguration(),
+               selectedConfig.unit != nil {
+                UnitSegmentedControl(selectedConfig: selectedConfig, currentUnit: $currentUnit)
+                    .onChange(of: selectedConfig.identifier) { newIdentifier in
+                        if let config = rthk.configurations.first(where: { $0.identifier == newIdentifier }),
+                           config.needUnit && currentUnit == nil {
+                            currentUnit = config.unit?.first
+                        }
+                    }
+            } else {
+                Color.clear
+            }
+        }
+        .frame(height: 60)
+    }
+    
+    private var averageDataSection: some View {
+        ZStack {
+            if let selectedConfig = selectedConfiguration(),
+               selectedConfig.aggregationStyle == .discreteArithmetic {
+                HStack {
+                    Text("Average daily results at 12:00")
+                        .font(.system(size: 16))
+                        .foregroundColor(.primary)
+                    
+                    Button(action: {
+                        showingAvgInfo = true
+                    }) {
+                        Image(systemName: "info.circle")
+                            .foregroundColor(.blue)
+                    }
+                    .accessibilityLabel("Daily Average Information")
+                    
+                    Spacer()
+                    Toggle("", isOn: $avgDataSwitch)
+                        .labelsHidden()
+                }
+                .padding()
+            } else {
+                Color.clear
+            }
+        }
+        .frame(height: 30)
+        .sheet(isPresented: $showingAvgInfo) {
+            infoSheet(
+                title: "Daily Average",
+                content: "ON: Combines all readings from a single day (midnight to midnight) into one average value recorded at 12:00 noon. Ideal for metrics like weight or blood pressure where you want a single daily summary.\n\nOFF: Uses individual readings with their original timestamps. If multiple readings exist for the same time period, only the most recent one will be used. Better for tracking specific events throughout the day."
+            )
+        }
+    }
+    
+    private var previousDaySection: some View {
+        ZStack {
+            if let selectedConfig = selectedConfiguration(),
+               selectedConfig.aggregationStyle == .discreteArithmetic && avgDataSwitch {
+                HStack {
+                    Text("For previous day")
+                        .font(.system(size: 16))
+                        .foregroundColor(.primary)
+                    
+                    Button(action: {
+                        showingPrevDayInfo = true
+                    }) {
+                        Image(systemName: "info.circle")
+                            .foregroundColor(.blue)
+                    }
+                    .accessibilityLabel("Previous Day Information")
+                    
+                    Spacer()
+                    Toggle("", isOn: $prevDateSwitch)
+                        .labelsHidden()
+                }
+                .padding()
+            } else {
+                Color.clear
+            }
+        }
+        .frame(height: 30)
+        .sheet(isPresented: $showingPrevDayInfo) {
+            infoSheet(
+                title: "For Previous Day",
+                content: "ON: Assigns the data to the following day. Perfect for metrics like sleep tracking, where data collected overnight (e.g., from 10 PM to 6 AM) belongs conceptually to the next morning.\n\nOFF: Keeps data assigned to the day it was collected. Best for most metrics like steps, exercise, or calorie intake where the data belongs to the day of activity."
+            )
+        }
+    }
+    
+    private var bottomToolbar: some View {
+        HStack {
+            Button(action: {
+                if currentSelection == nil {
+                    currentSelection = rthk.configurations.first?.displayName
+                }
+                onDismiss(currentSelection, currentUnit?.unitString, avgDataSwitch, prevDateSwitch)
+                dismiss()
+            }) {
+                Text("\u{2611}")
+                    .font(.system(size: 28))
+                    .foregroundColor(.blue)
+            }
+            .accessibilityLabel("Done")
+            .accessibilityIdentifier("confighk_done")
+            
+            Spacer()
+            
+            Button("Update HealthKit Choices") {
+                rthk.dbInitialised = false
+                rthk.loadHealthKitConfigurations()
+            }
+        }
+    }
+    
+    // Helper function to find the selected configuration
+    private func selectedConfiguration() -> HealthDataQuery? {
+        return rthk.configurations.first { $0.displayName == currentSelection }
+    }
+    
+    // Reusable info sheet view
+    private func infoSheet(title: String, content: String) -> some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text(title)
+                .font(.headline)
+            
+            Text(content)
+                .padding(.bottom, 5)
+            
+            Spacer()
+            
+            Button("Dismiss") {
+                // This will close whichever sheet is open
+                showingAvgInfo = false
+                showingPrevDayInfo = false
+                showingConfigInfo = false
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(Color.blue)
+            .foregroundColor(.white)
+            .cornerRadius(8)
+        }
+        .padding()
+        .presentationDetents([.medium])
     }
 }
 

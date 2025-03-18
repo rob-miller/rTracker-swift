@@ -19,13 +19,17 @@ struct HealthDataQuery {
     let customProcessor: ((HKSample) -> Double)? // custom processing logic (sleep aggregation)
     let aggregationType: AggregationType?       // custom grouping logic (night sleep)
     let aggregationTime: DateComponents?       // Optional time for aggregation (e.g., start/end of day)
-
+    let info: String?
+    
     enum AggregationType {
         //case discreteArithmetic     // Independent values
         //case cumulativeDaily        // Daily aggregation (e.g., calories)
         case groupedByNight         // Nightly grouping (e.g., sleep analysis)
     }
 }
+
+let MINSLEEPSEGMENTDURATION = 3
+let MAXSLEEPSEGMENTGAP = 12
 
 let healthDataQueries: [HealthDataQuery] = [
     HealthDataQuery(
@@ -36,7 +40,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: nil
+        aggregationTime: nil,
+        info: nil
 
     ),
     HealthDataQuery(
@@ -47,7 +52,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: nil
+        aggregationTime: nil,
+        info: nil
     ),
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierBodyMass",
@@ -57,7 +63,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: nil
+        aggregationTime: nil,
+        info: nil
 
     ),
     HealthDataQuery(
@@ -68,7 +75,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: nil
+        aggregationTime: nil,
+        info: nil
 
     ),
     HealthDataQuery(
@@ -79,7 +87,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: nil
+        aggregationTime: nil,
+        info: nil
 
     ),
     HealthDataQuery(
@@ -90,7 +99,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: nil
+        aggregationTime: nil,
+        info: nil
 
     ),
     HealthDataQuery(
@@ -107,7 +117,8 @@ let healthDataQueries: [HealthDataQuery] = [
             return categorySample.endDate.timeIntervalSince(categorySample.startDate) / 60.0
         },
         aggregationType: .groupedByNight,
-        aggregationTime: DateComponents(hour: 12, minute: 0) // 12:00 PM
+        aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
+        info: "This is the total time awake"
     ),
     HealthDataQuery(
         identifier: "HKCategoryTypeIdentifierSleepAnalysis",
@@ -123,7 +134,25 @@ let healthDataQueries: [HealthDataQuery] = [
             return categorySample.endDate.timeIntervalSince(categorySample.startDate) / 60.0
         },
         aggregationType: .groupedByNight,
-        aggregationTime: DateComponents(hour: 12, minute: 0) // 12:00 PM
+        aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
+        info: nil
+    ),
+    HealthDataQuery(
+        identifier: "HKCategoryTypeIdentifierSleepAnalysis",
+        displayName: "Sleep - REM",
+        unit: [HKUnit.hour(), HKUnit.minute()],
+        needUnit: true,
+        aggregationStyle: .cumulative,
+        customProcessor: { sample in
+            guard let categorySample = sample as? HKCategorySample,
+                  categorySample.value == HKCategoryValueSleepAnalysis.asleepREM.rawValue else {
+                return 0
+            }
+            return categorySample.endDate.timeIntervalSince(categorySample.startDate) / 60.0
+        },
+        aggregationType: .groupedByNight,
+        aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
+        info: nil
     ),
     HealthDataQuery(
         identifier: "HKCategoryTypeIdentifierSleepAnalysis",
@@ -139,7 +168,8 @@ let healthDataQueries: [HealthDataQuery] = [
             return categorySample.endDate.timeIntervalSince(categorySample.startDate) / 60.0
         },
         aggregationType: .groupedByNight,
-        aggregationTime: DateComponents(hour: 12, minute: 0) // 12:00 PM
+        aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
+        info: nil
     ),
     HealthDataQuery(
         identifier: "HKCategoryTypeIdentifierSleepAnalysis",
@@ -154,14 +184,17 @@ let healthDataQueries: [HealthDataQuery] = [
             // Include all sleep-related categories
             if categorySample.value == HKCategoryValueSleepAnalysis.asleepDeep.rawValue ||
                 categorySample.value == HKCategoryValueSleepAnalysis.asleepREM.rawValue ||
-                categorySample.value == HKCategoryValueSleepAnalysis.asleepCore.rawValue ||
-                categorySample.value == HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue {
+                categorySample.value == HKCategoryValueSleepAnalysis.asleepCore.rawValue
+                // ||
+                // categorySample.value == HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue
+            {
                 return categorySample.endDate.timeIntervalSince(categorySample.startDate) / 60.0
             }
             return 0
         },
         aggregationType: .groupedByNight,
-        aggregationTime: DateComponents(hour: 12, minute: 0) // 12:00 PM
+        aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
+        info: nil
     ),
     HealthDataQuery(
         identifier: "HKCategoryTypeIdentifierSleepAnalysis",
@@ -177,8 +210,81 @@ let healthDataQueries: [HealthDataQuery] = [
             return categorySample.endDate.timeIntervalSince(categorySample.startDate) / 60.0
         },
         aggregationType: .groupedByNight,
-        aggregationTime: DateComponents(hour: 12, minute: 0) // 12:00 PM
+        aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
+        info: nil
     ),
+    // For counting Deep sleep segments
+    HealthDataQuery(
+        identifier: "HKCategoryTypeIdentifierSleepAnalysis",
+        displayName: "Sleep - Deep Segments",
+        unit: [HKUnit.count()],
+        needUnit: true,
+        aggregationStyle: .cumulative,
+        customProcessor: { sample in
+            guard let categorySample = sample as? HKCategorySample,
+                  categorySample.value == HKCategoryValueSleepAnalysis.asleepDeep.rawValue else {
+                return 0
+            }
+            // The actual segment calculation will happen in a specialized processor
+            return 1 // Return 1 to collect all Deep sleep samples for processing
+        },
+        aggregationType: .groupedByNight,
+        aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
+        info: "Counts the number of Deep sleep segments during the night. Short gaps (up to 12 minutes) of Core sleep within a Deep sleep period are still counted as a single segment."
+    ),
+
+    // For counting REM sleep segments
+    HealthDataQuery(
+        identifier: "HKCategoryTypeIdentifierSleepAnalysis",
+        displayName: "Sleep - REM Segments",
+        unit: [HKUnit.count()],
+        needUnit: true,
+        aggregationStyle: .cumulative,
+        customProcessor: { sample in
+            guard let categorySample = sample as? HKCategorySample,
+                  categorySample.value == HKCategoryValueSleepAnalysis.asleepREM.rawValue else {
+                return 0
+            }
+            // The actual segment calculation will happen in a specialized processor
+            return 1 // Return 1 to collect all REM sleep samples for processing
+        },
+        aggregationType: .groupedByNight,
+        aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
+        info: "Counts the number of REM sleep segments during the night. Short gaps (up to 12 minutes) of Core sleep within a REM sleep period are still counted as a single segment."
+    ),
+
+    // For counting sleep cycles (Deep followed by REM)
+    HealthDataQuery(
+        identifier: "HKCategoryTypeIdentifierSleepAnalysis",
+        displayName: "Sleep - Cycles",
+        unit: [HKUnit.count()],
+        needUnit: true,
+        aggregationStyle: .cumulative,
+        customProcessor: { sample in
+            // This is a placeholder - actual cycle detection needs all samples
+            return 0
+        },
+        aggregationType: .groupedByNight,
+        aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
+        info: "Counts complete sleep cycles, defined as a Deep sleep segment (at least 10 minutes) followed by a REM segment (at least 10 minutes). Short gaps of Core sleep (up to 12 minutes) are allowed within each segment."
+    ),
+
+    // For counting sleep transitions
+    HealthDataQuery(
+        identifier: "HKCategoryTypeIdentifierSleepAnalysis",
+        displayName: "Sleep - Transitions",
+        unit: [HKUnit.count()],
+        needUnit: true,
+        aggregationStyle: .cumulative,
+        customProcessor: { sample in
+            // This is a placeholder - actual transition counting needs all samples
+            return 0
+        },
+        aggregationType: .groupedByNight,
+        aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
+        info: "Counts the number of transitions between different sleep stages (Core/Deep/REM/Awake) from sleep onset to waking up."
+    ),
+    
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierHeartRate",
         displayName: "Heart Rate",
@@ -187,7 +293,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: nil
+        aggregationTime: nil,
+        info: nil
     ),
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierHeartRateVariabilitySDNN",
@@ -197,7 +304,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: nil
+        aggregationTime: nil,
+        info: nil
     ),
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierRestingHeartRate",
@@ -207,7 +315,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: nil
+        aggregationTime: nil,
+        info: nil
     ),
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierHeartRateRecoveryOneMinute",
@@ -217,7 +326,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: nil
+        aggregationTime: nil,
+        info: nil
     ),
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierBloodGlucose",
@@ -227,7 +337,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: nil
+        aggregationTime: nil,
+        info: nil
     ),
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierOxygenSaturation",
@@ -237,7 +348,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: nil
+        aggregationTime: nil,
+        info: nil
     ),
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierBloodGlucose",
@@ -247,7 +359,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: nil
+        aggregationTime: nil,
+        info: nil
     ),
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierBodyTemperature",
@@ -257,7 +370,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: nil
+        aggregationTime: nil,
+        info: nil
     ),
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierBasalBodyTemperature",
@@ -267,7 +381,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: nil
+        aggregationTime: nil,
+        info: nil
     ),
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierBloodPressureSystolic",
@@ -277,7 +392,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: nil
+        aggregationTime: nil,
+        info: nil
     ),
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierBloodPressureDiastolic",
@@ -287,7 +403,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: nil
+        aggregationTime: nil,
+        info: nil
     ),
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierActiveEnergyBurned",
@@ -297,7 +414,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .cumulative,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: DateComponents(hour: 00, minute: 0) // midnight
+        aggregationTime: DateComponents(hour: 00, minute: 0), // midnight
+        info: nil
     ),
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierBasalEnergyBurned",
@@ -307,7 +425,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .cumulative,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: DateComponents(hour: 00, minute: 0) // midnight
+        aggregationTime: DateComponents(hour: 00, minute: 0), // midnight
+        info: nil
     ),
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierStepCount",
@@ -317,7 +436,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .cumulative,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: DateComponents(hour: 00, minute: 0) // midnight
+        aggregationTime: DateComponents(hour: 00, minute: 0), // midnight
+        info: nil
     ),
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierFlightsClimbed",
@@ -327,7 +447,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .cumulative,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: DateComponents(hour: 00, minute: 0) // midnight
+        aggregationTime: DateComponents(hour: 00, minute: 0), // midnight
+        info: nil
     ),
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierDistanceWalkingRunning",
@@ -337,7 +458,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .cumulative,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: DateComponents(hour: 00, minute: 0) // midnight
+        aggregationTime: DateComponents(hour: 00, minute: 0), // midnight
+        info: nil
     ),
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierDistanceCycling",
@@ -347,7 +469,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .cumulative,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: DateComponents(hour: 00, minute: 0) // midnight
+        aggregationTime: DateComponents(hour: 00, minute: 0), // midnight
+        info: nil
     ),
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierPhysicalEffort",
@@ -357,7 +480,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: nil
+        aggregationTime: nil,
+        info: nil
     ),
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierWorkoutEffortScore",
@@ -367,7 +491,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: nil
+        aggregationTime: nil,
+        info: nil
     ),
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierStairAscentSpeed",
@@ -377,7 +502,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: nil
+        aggregationTime: nil,
+        info: nil
     ),
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierSixMinuteWalkTestDistance",
@@ -387,7 +513,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: nil
+        aggregationTime: nil,
+        info: nil
     ),
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierWalkingSpeed",
@@ -397,7 +524,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: nil
+        aggregationTime: nil,
+        info: nil
     ),
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierWalkingStepLength",
@@ -407,7 +535,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: nil
+        aggregationTime: nil,
+        info: nil
     ),
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierWalkingAsymmetryPercentage",
@@ -417,7 +546,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: nil
+        aggregationTime: nil,
+        info: nil
     ),
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierStairAscentSpeed",
@@ -427,7 +557,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: nil
+        aggregationTime: nil,
+        info: nil
     ),
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierStairDescentSpeed",
@@ -437,7 +568,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: nil
+        aggregationTime: nil,
+        info: nil
     ),
 ]
 
@@ -469,159 +601,192 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
 
 
     func updateAuthorisations(completion: @escaping () -> Void) {
-        let dispatchGroup = DispatchGroup()
-
-        dispatchGroup.enter()
-        
-        requestHealthKitAuthorization(healthDataQueries: healthDataQueries) { success, error in
-            if let error = error {
-                DBGLog("HealthKit authorization failed with error: \(error.localizedDescription)")
-            } else {
-                DBGLog("HealthKit authorization \(success ? "succeeded" : "failed").")
-            }
-
-            dispatchGroup.leave()
-        }
-        
-        // this notify section is waiting until until leave() corresponding to enter() above is triggered
-        dispatchGroup.notify(queue: .main) { [self] in
-
-            let dispatchGroup3 = DispatchGroup()
-            for query in healthDataQueries {
-                // Start a new group task for each query
-                dispatchGroup3.enter()
-                
-                var status: HKAuthorizationStatus = .notDetermined
-                var dataExists = false
-                
-                let processQueryResult: () -> Void = {
-                    DispatchQueue.main.async {
-                        DBGLog("\(query.identifier) \(query.displayName) data= \(dataExists)")
-                        if status == .sharingAuthorized && dataExists {
-                        }
-                        
-                        if status == .notDetermined {
-                            DBGLog("\(query.displayName): Not Determined")
-                        } else if status == .sharingAuthorized && dataExists {  // fix disabled column if in db otherwise no entry default is use
-                            let sql = """
-                            insert into rthealthkit (name, hkid, disabled) 
-                            values ('\(query.displayName)','\(query.identifier)', \(enableStatus.enabled.rawValue)) 
-                            on conflict(name) do update set disabled = \(enableStatus.enabled.rawValue);
-                            """
-                            self.tl?.toExecSql(sql: sql)
-                            DBGLog("\(query.displayName): Authorized and Data Available")
-                        } else if status == .sharingAuthorized && !dataExists {
-                            let sql = """
-                            insert into rthealthkit (name, hkid, disabled) 
-                            values ('\(query.displayName)','\(query.identifier)', \(enableStatus.notPresent.rawValue)) 
-                            on conflict(name) do update set disabled = \(enableStatus.notPresent.rawValue);
-                            """
-                            self.tl?.toExecSql(sql: sql)
-                            DBGLog("\(query.displayName): Authorized but No Data Present")
-                        } else { // .sharingDenied
-                            let sql = """
-                            insert into rthealthkit (name, hkid, disabled) 
-                            values ('\(query.displayName)','\(query.identifier)', \(enableStatus.notAuthorised.rawValue)) 
-                            on conflict(name) do update set disabled = \(enableStatus.notAuthorised.rawValue);
-                            """
-                            self.tl?.toExecSql(sql: sql)
-                            DBGLog("\(query.displayName): Sharing Denied (\(status))")
-                        }
-                        dispatchGroup3.leave() // Mark this task as completed
-                    }
+            let dispatchGroup = DispatchGroup()
+            dispatchGroup.enter()
+            
+            requestHealthKitAuthorization(healthDataQueries: healthDataQueries) { success, error in
+                if let error = error {
+                    DBGLog("HealthKit authorization failed with error: \(error.localizedDescription)")
+                } else {
+                    DBGLog("HealthKit authorization \(success ? "succeeded" : "failed").")
                 }
-
-                if query.identifier.hasPrefix("HKQuantityTypeIdentifier"),
-                   let quantityType = HKObjectType.quantityType(forIdentifier: HKQuantityTypeIdentifier(rawValue: query.identifier)) {
-                    status = healthStore.authorizationStatus(for: quantityType)  // only checks write access, cannot query read access
+                dispatchGroup.leave()
+            }
+            
+            // this notify section is waiting until until leave() corresponding to enter() above is triggered
+            dispatchGroup.notify(queue: .main) { [self] in
+                let dispatchGroup3 = DispatchGroup()
+                for query in healthDataQueries {
+                    // Start a new group task for each query
+                    dispatchGroup3.enter()
                     
-                    if (status == .sharingAuthorized || status == .sharingDenied) {  // reading denied same as reading no data present
-                        status = .sharingAuthorized
-                        let predicate = HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: [])
-                        let sampleQuery = HKSampleQuery(sampleType: quantityType, predicate: predicate, limit: 1, sortDescriptors: nil) { (_, samples, _) in
-                            DBGLog("\(query.identifier) \(query.displayName) \(samples?.count ?? -1)")
-                            dataExists = (samples?.count ?? 0) > 0
-                            processQueryResult()
-                        }
-                        healthStore.execute(sampleQuery)
-                    } else {
-                        processQueryResult()
-                    }
-                } else if query.identifier.hasPrefix("HKCategoryTypeIdentifier"),
-                          let categoryType = HKObjectType.categoryType(forIdentifier: HKCategoryTypeIdentifier(rawValue: query.identifier)) {
-                    status = healthStore.authorizationStatus(for: categoryType)
+                    var status: HKAuthorizationStatus = .notDetermined
+                    var dataExists = false
                     
-                    if (status == .sharingAuthorized || status == .sharingDenied) {
-                        status = .sharingAuthorized
-                        var predicate = HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: [])
-                        
-                        if query.identifier == "HKCategoryTypeIdentifierSleepAnalysis" {  // filter on sleep sample types
-                            let displayName = query.displayName
-                            let components = displayName.split(separator: "-", maxSplits: 1, omittingEmptySubsequences: true)
-
-                            if components.count > 1 {
-                                let suffix = components[1].trimmingCharacters(in: .whitespaces) // Extract and trim the part after '-'
-
-                                switch suffix {
-                                case "In Bed":
-                                    predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-                                                HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
-                                                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.inBed.rawValue)
-                                            ])
-                                case "Deep":
-                                    predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-                                                HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
-                                                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepDeep.rawValue)
-                                            ])
-                                case "Total":  // assume core will always be present at some point for total sleep
-                                    fallthrough
-                                case "Core":
-                                    predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-                                                HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
-                                                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepCore.rawValue)
-                                            ])
-                                case "REM":
-                                    predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-                                                HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
-                                                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepREM.rawValue)
-                                            ])
-                                case "Awake":
-                                    predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-                                                HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
-                                                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.awake.rawValue)
-                                            ])
-                                default:
-                                    DBGErr("Unhandled display name suffix: \(suffix)")
-                                    // Handle other cases
-                                }
-                            } else {
-                                DBGErr("No suffix found in displayName: \(displayName)")
-                                // Handle cases where there is no '-'
+                    let processQueryResult: () -> Void = {
+                        DispatchQueue.main.async {
+                            DBGLog("\(query.identifier) \(query.displayName) data= \(dataExists)")
+                            if status == .sharingAuthorized && dataExists {
                             }
                             
+                            if status == .notDetermined {
+                                DBGLog("\(query.displayName): Not Determined")
+                            } else if status == .sharingAuthorized && dataExists {  // fix disabled column if in db otherwise no entry default is use
+                                let sql = """
+                                insert into rthealthkit (name, hkid, disabled) 
+                                values ('\(query.displayName)','\(query.identifier)', \(enableStatus.enabled.rawValue)) 
+                                on conflict(name) do update set disabled = \(enableStatus.enabled.rawValue);
+                                """
+                                self.tl?.toExecSql(sql: sql)
+                                DBGLog("\(query.displayName): Authorized and Data Available")
+                            } else if status == .sharingAuthorized && !dataExists {
+                                let sql = """
+                                insert into rthealthkit (name, hkid, disabled) 
+                                values ('\(query.displayName)','\(query.identifier)', \(enableStatus.notPresent.rawValue)) 
+                                on conflict(name) do update set disabled = \(enableStatus.notPresent.rawValue);
+                                """
+                                self.tl?.toExecSql(sql: sql)
+                                DBGLog("\(query.displayName): Authorized but No Data Present")
+                            } else { // .sharingDenied
+                                let sql = """
+                                insert into rthealthkit (name, hkid, disabled) 
+                                values ('\(query.displayName)','\(query.identifier)', \(enableStatus.notAuthorised.rawValue)) 
+                                on conflict(name) do update set disabled = \(enableStatus.notAuthorised.rawValue);
+                                """
+                                self.tl?.toExecSql(sql: sql)
+                                DBGLog("\(query.displayName): Sharing Denied (\(status))")
+                            }
+                            dispatchGroup3.leave() // Mark this task as completed
                         }
-                        let sampleQuery = HKSampleQuery(sampleType: categoryType, predicate: predicate, limit: 1, sortDescriptors: nil) { (_, samples, _) in
-                            dataExists = (samples?.count ?? 0) > 0
+                    }
+                    if query.identifier.hasPrefix("HKQuantityTypeIdentifier"),
+                       let quantityType = HKObjectType.quantityType(forIdentifier: HKQuantityTypeIdentifier(rawValue: query.identifier)) {
+                        status = healthStore.authorizationStatus(for: quantityType)  // only checks write access, cannot query read access
+                        
+                        if (status == .sharingAuthorized || status == .sharingDenied) {  // reading denied same as reading no data present
+                            status = .sharingAuthorized
+                            let predicate = HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: [])
+                            let sampleQuery = HKSampleQuery(sampleType: quantityType, predicate: predicate, limit: 1, sortDescriptors: nil) { (_, samples, _) in
+                                DBGLog("\(query.identifier) \(query.displayName) \(samples?.count ?? -1)")
+                                dataExists = (samples?.count ?? 0) > 0
+                                processQueryResult()
+                            }
+                            healthStore.execute(sampleQuery)
+                        } else {
                             processQueryResult()
                         }
-                        healthStore.execute(sampleQuery)
+                    } else if query.identifier.hasPrefix("HKCategoryTypeIdentifier"),
+                              let categoryType = HKObjectType.categoryType(forIdentifier: HKCategoryTypeIdentifier(rawValue: query.identifier)) {
+                        status = healthStore.authorizationStatus(for: categoryType)
+                        
+                        if (status == .sharingAuthorized || status == .sharingDenied) {
+                            status = .sharingAuthorized
+                            var predicate = HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: [])
+                            
+                            if query.identifier == "HKCategoryTypeIdentifierSleepAnalysis" {  // filter on sleep sample types
+                                let displayName = query.displayName
+                                let components = displayName.split(separator: "-", maxSplits: 1, omittingEmptySubsequences: true)
+                                if components.count > 1 {
+                                    let suffix = components[1].trimmingCharacters(in: .whitespaces) // Extract and trim the part after '-'
+                                    switch suffix {
+                                    case "In Bed":
+                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                                    HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                                    NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.inBed.rawValue)
+                                                ])
+                                    case "Deep":
+                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                                    HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                                    NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepDeep.rawValue)
+                                                ])
+                                    case "Total":  // assume core will always be present at some point for total sleep
+                                        fallthrough
+                                    case "Core":
+                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                                    HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                                    NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepCore.rawValue)
+                                                ])
+                                    case "REM":
+                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                                    HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                                    NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepREM.rawValue)
+                                                ])
+                                    case "Awake":
+                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                                    HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                                    NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.awake.rawValue)
+                                                ])
+                                    // Add cases for the new sleep metrics
+                                    case "Deep Segments":
+                                        // For Deep Segments, check if any Deep sleep data exists
+                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                                    HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                                    NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepDeep.rawValue)
+                                                ])
+                                    case "REM Segments":
+                                        // For REM Segments, check if any REM sleep data exists
+                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                                    HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                                    NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepREM.rawValue)
+                                                ])
+                                    case "Cycles":
+                                        // For Sleep Cycles, check if both Deep and REM sleep data exist
+                                        // Since we need both, let's check for Deep sleep here (simplification)
+                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                                    HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                                    NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepDeep.rawValue)
+                                                ])
+                                    case "Transitions":
+                                        // For Transitions, we'll just check if any sleep data exists
+                                        // This is a simplified approach - ideally we'd check for multiple stages
+                                        predicate = HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: [])
+                                    default:
+                                        DBGErr("Unhandled display name suffix: \(suffix)")
+                                        // Handle other cases
+                                    }
+                                } else {
+                                    DBGErr("No suffix found in displayName: \(displayName)")
+                                    // Handle cases where there is no '-'
+                                }
+                                
+                            }
+                            let sampleQuery = HKSampleQuery(sampleType: categoryType, predicate: predicate, limit: 1, sortDescriptors: nil) { (_, samples, _) in
+                                dataExists = (samples?.count ?? 0) > 0
+                                
+                                // Special handling for "Sleep - Cycles" which needs both Deep and REM
+                                if query.displayName == "Sleep - Cycles" && dataExists {
+                                    // We checked for Deep sleep above, now check for REM
+                                    let remPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                        HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                        NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepREM.rawValue)
+                                    ])
+                                    
+                                    let remQuery = HKSampleQuery(sampleType: categoryType, predicate: remPredicate, limit: 1, sortDescriptors: nil) { (_, remSamples, _) in
+                                        // Data exists only if both Deep and REM sleep data exist
+                                        dataExists = dataExists && (remSamples?.count ?? 0) > 0
+                                        processQueryResult()
+                                    }
+                                    self.healthStore.execute(remQuery)
+                                } else {
+                                    processQueryResult()
+                                }
+                            }
+                            healthStore.execute(sampleQuery)
+                        } else {
+                            processQueryResult()
+                        }
                     } else {
                         processQueryResult()
                     }
-                } else {
-                    processQueryResult()
+                }
+                // Notify when all tasks are done
+                dispatchGroup3.notify(queue: .main) {
+                    DBGLog("updateAuthorisations All HealthKit queries completed.")
+                    self.dbInitialised = true
+                    completion() // Call the completion handler in loadHealthKitConfigurations
                 }
             }
-
-            // Notify when all tasks are done
-            dispatchGroup3.notify(queue: .main) {
-                DBGLog("updateAuthorisations All HealthKit queries completed.")
-                self.dbInitialised = true
-                completion() // Call the completion handler in loadHealthKitConfigurations
-            }
         }
-    }
-
 
     func requestHealthKitAuthorization(healthDataQueries: [HealthDataQuery], completion: @escaping (Bool, Error?) -> Void) {
         // Ensure HealthKit is available
@@ -699,7 +864,8 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                         aggregationStyle: query.aggregationStyle,
                         customProcessor: query.customProcessor,
                         aggregationType: query.aggregationType,
-                        aggregationTime: query.aggregationTime
+                        aggregationTime: query.aggregationTime,
+                        info: query.info
                     ))
                 }
             }
@@ -716,8 +882,6 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         let unit: HKUnit
     }
 
-    // Updated performHealthQuery function with modular structure
-
     private func handleSleepAnalysisQuery(
         startDate: Date,
         endDate: Date,
@@ -725,7 +889,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         queryConfig: HealthDataQuery,
         completion: @escaping ([HealthQueryResult]) -> Void
     ) {
-        DBGLog("sleepAnalysisQuery startDate \(startDate)  endDate \(endDate) name \(queryConfig.displayName)")
+        DBGLog("sleepAnalysisQuery startDate \(startDate) endDate \(endDate) name \(queryConfig.displayName)")
         guard let categoryType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
             DBGLog("Unsupported sample type for sleep analysis.")
             completion([])
@@ -733,95 +897,525 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         }
 
         let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [])
-        let query = HKSampleQuery(sampleType: categoryType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { (_, samples, error) in
+        let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
+        
+        let query = HKSampleQuery(sampleType: categoryType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sortDescriptor]) { (_, samples, error) in
             guard error == nil else {
                 DBGLog("Error querying HealthKit: \(error!.localizedDescription)")
                 completion([])
                 return
             }
-
-            guard let categorySamples = samples else {
+            
+            guard let categorySamples = samples as? [HKCategorySample] else {
                 DBGLog("No category samples found.")
                 completion([])
                 return
             }
-
+            
             var results: [HealthQueryResult] = []
-
-            switch queryConfig.aggregationStyle {
-            case .cumulative:
-                var totalValue = categorySamples.reduce(0.0) { total, sample in
-                    total + (queryConfig.customProcessor?(sample) ?? 0)
-                }
-                if totalValue > 0 {
-                    if specifiedUnit == HKUnit.hour() {
-                        totalValue /= 60.0
-                    }
-                    results.append(HealthQueryResult(date: startDate, value: totalValue, unit: specifiedUnit))
-                }
-
-            case .discreteArithmetic:
-                results = categorySamples.compactMap { sample in
-                    var processedValue = queryConfig.customProcessor?(sample) ?? 0
-                    if specifiedUnit == HKUnit.hour() {
-                        processedValue /= 60.0
-                    }
-                    return processedValue > 0 ? HealthQueryResult(date: sample.startDate, value: processedValue, unit: specifiedUnit) : nil
-                }
-
-            case .discreteEquivalentContinuousLevel:
-                fallthrough
-            case .discreteTemporallyWeighted:
-                fallthrough
+            
+            // Handle specialized sleep metrics
+            switch queryConfig.displayName {
+            case "Sleep - Deep Segments":
+                let segmentCount = self.countSleepSegments(
+                    samples: categorySamples,
+                    targetValue: HKCategoryValueSleepAnalysis.asleepDeep.rawValue,
+                    allowedGapValues: [ HKCategoryValueSleepAnalysis.asleepCore.rawValue: TimeInterval(MAXSLEEPSEGMENTGAP * 60)],  // 12 minutes of Core sleep
+                    maxGapMinutes: MAXSLEEPSEGMENTGAP,
+                    minDurationMinutes: MINSLEEPSEGMENTDURATION
+                )
+                results.append(HealthQueryResult(
+                    date: startDate,
+                    value: Double(segmentCount),
+                    unit: specifiedUnit
+                ))
+                
+            case "Sleep - REM Segments":
+                let segmentCount = self.countSleepSegments(
+                    samples: categorySamples,
+                    targetValue: HKCategoryValueSleepAnalysis.asleepREM.rawValue,
+                    allowedGapValues: [
+                        HKCategoryValueSleepAnalysis.asleepCore.rawValue: TimeInterval(MAXSLEEPSEGMENTGAP * 60),  // 12 minutes of Core sleep
+                        HKCategoryValueSleepAnalysis.awake.rawValue: TimeInterval(2 * 60)          // 2 minutes of Awake
+                    ],
+                    maxGapMinutes: MAXSLEEPSEGMENTGAP,  // For backward compatibility
+                    minDurationMinutes: MINSLEEPSEGMENTDURATION
+                )
+                results.append(HealthQueryResult(
+                    date: startDate,
+                    value: Double(segmentCount),
+                    unit: specifiedUnit
+                ))
+                
+            case "Sleep - Cycles":
+                let cycleCount = self.countSleepCycles(
+                    samples: categorySamples,
+                    minSegmentMinutes: MINSLEEPSEGMENTDURATION
+                )
+                results.append(HealthQueryResult(
+                    date: startDate,
+                    value: Double(cycleCount),
+                    unit: specifiedUnit
+                ))
+                
+            case "Sleep - Transitions":
+                let transitionCount = self.countSleepTransitions(samples: categorySamples)
+                results.append(HealthQueryResult(
+                    date: startDate,
+                    value: Double(transitionCount),
+                    unit: specifiedUnit
+                ))
+                
             default:
-                DBGErr("aggregation Style \(queryConfig.aggregationStyle) not handled")
+                // Handle regular sleep analysis metrics (using original code)
+                switch queryConfig.aggregationStyle {
+                case .cumulative:
+                    var totalValue = categorySamples.reduce(0.0) { total, sample in
+                        total + (queryConfig.customProcessor?(sample) ?? 0)
+                    }
+                    if totalValue > 0 {
+                        if specifiedUnit == HKUnit.hour() {
+                            totalValue /= 60.0
+                        }
+                        results.append(HealthQueryResult(date: startDate, value: totalValue, unit: specifiedUnit))
+                    }
+                case .discreteArithmetic:
+                    results = categorySamples.compactMap { sample in
+                        var processedValue = queryConfig.customProcessor?(sample) ?? 0
+                        if specifiedUnit == HKUnit.hour() {
+                            processedValue /= 60.0
+                        }
+                        return processedValue > 0 ? HealthQueryResult(date: sample.startDate, value: processedValue, unit: specifiedUnit) : nil
+                    }
+                case .discreteEquivalentContinuousLevel:
+                    fallthrough
+                case .discreteTemporallyWeighted:
+                    fallthrough
+                default:
+                    DBGErr("aggregation Style \(queryConfig.aggregationStyle) not handled")
+                }
             }
-
+            
             completion(results)
         }
-
+        
         healthStore.execute(query)
     }
+
+    // Helper method to count sleep cycles (Deep followed by REM)
+    private func countSleepCycles(samples: [HKCategorySample], minSegmentMinutes: Int) -> Int {
+        guard !samples.isEmpty else {
+            return 0
+        }
+        
+        // Identify Deep and REM segments
+        let deepSegments = identifySleepSegments(
+            samples: samples,
+            targetValue: HKCategoryValueSleepAnalysis.asleepDeep.rawValue,
+            allowedGapValues: [
+                HKCategoryValueSleepAnalysis.asleepCore.rawValue: TimeInterval(MAXSLEEPSEGMENTGAP * 60)  // 12 minutes of Core sleep
+            ],
+            minDurationMinutes: minSegmentMinutes
+        )
+        
+        let remSegments = identifySleepSegments(
+            samples: samples,
+            targetValue: HKCategoryValueSleepAnalysis.asleepREM.rawValue,
+            allowedGapValues: [
+                HKCategoryValueSleepAnalysis.asleepCore.rawValue: TimeInterval(MAXSLEEPSEGMENTGAP * 60),  // 12 minutes of Core sleep
+                HKCategoryValueSleepAnalysis.awake.rawValue: TimeInterval(2 * 60)          // 2 minutes of Awake
+            ],
+            minDurationMinutes: minSegmentMinutes
+        )
+        
+        // Identify Awake segments of at least 2 minutes
+        let awakeSegments = identifySleepSegments(
+            samples: samples,
+            targetValue: HKCategoryValueSleepAnalysis.awake.rawValue,
+            allowedGapValues: [:], // No gaps allowed in awake segments
+            minDurationMinutes: 2  // Only consider awake periods of 2+ minutes
+        )
+        
+        // Create a combined list of all segment types
+        enum SegmentType { case deep, rem, awake }
+        
+        struct TypedSegment {
+            let segment: SleepSegment
+            let type: SegmentType
+            let index: Int
+        }
+        
+        var combinedSegments: [TypedSegment] = []
+        
+        for (index, segment) in deepSegments.enumerated() {
+            combinedSegments.append(TypedSegment(segment: segment, type: .deep, index: index))
+        }
+        
+        for (index, segment) in remSegments.enumerated() {
+            combinedSegments.append(TypedSegment(segment: segment, type: .rem, index: index))
+        }
+        
+        for (index, segment) in awakeSegments.enumerated() {
+            combinedSegments.append(TypedSegment(segment: segment, type: .awake, index: index))
+        }
+        
+        // Sort the combined list by start time
+        combinedSegments.sort { $0.segment.start < $1.segment.start }
+        
+        // Count Deep→REM transitions (no Awake segments between them)
+        var cycleCount = 0
+        
+        for i in 0..<(combinedSegments.count - 1) {
+            let current = combinedSegments[i]
+            
+            // Only consider Deep segments as potential cycle starts
+            if current.type == .deep {
+                // Look at the next segment
+                let next = combinedSegments[i + 1]
+                
+                if next.type == .rem {
+                    // Found a direct Deep→REM transition
+                    cycleCount += 1
+                }
+            }
+        }
+        
+        return cycleCount
+    }
     
-    private func simpleSleepQuery(
-        startDate: Date,
-        endDate: Date,
-        completion: @escaping ([rtHealthKit.HealthQueryResult]) -> Void
-    ) {
-        guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
-            DBGLog("Sleep Analysis type not available.")
-            completion([])
-            return
+    
+
+    // Helper struct to represent a sleep segment
+    private struct SleepSegment {
+        let start: Date
+        let end: Date
+        let duration: TimeInterval
+        
+        var durationMinutes: Double {
+            return duration / 60.0
         }
+    }
 
-        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [])
-        let query = HKSampleQuery(sampleType: sleepType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, error in
-            guard let samples = samples as? [HKCategorySample], error == nil else {
-                DBGLog("Error fetching sleep samples: \(error?.localizedDescription ?? "Unknown error")")
-                completion([])
-                return
+    // Helper method to identify sleep segments of a particular stage
+    
+     private func identifySleepSegments(
+        samples: [HKCategorySample],
+        targetValue: Int,
+        allowedGapValues: [Int: TimeInterval], // Map of sleep stage values to maximum allowed gap durations
+        minDurationMinutes: Int
+    ) -> [SleepSegment] {
+        guard !samples.isEmpty else { return [] }
+        
+        // Sort samples by start time
+        let sortedSamples = samples.sorted { $0.startDate < $1.startDate }
+        
+        var segments: [SleepSegment] = []
+        var currentSegmentStart: Date?
+        var currentSegmentEnd: Date?
+        //var lastTargetSampleEndDate: Date?
+        var cumulativeGapDuration: TimeInterval = 0
+        var lastSampleEndDate: Date?
+        
+        for sample in sortedSamples {
+            if sample.value == targetValue {
+                // Found a target sleep stage sample
+                if currentSegmentStart == nil {
+                    // This is the start of a new segment
+                    currentSegmentStart = sample.startDate
+                }
+                currentSegmentEnd = sample.endDate
+                //lastTargetSampleEndDate = sample.endDate
+                lastSampleEndDate = sample.endDate
+                cumulativeGapDuration = 0 // Reset cumulative gap since we found a target sample
+            } else if currentSegmentStart != nil, let maxGapDuration = allowedGapValues[sample.value] {
+                // This is a gap of an allowed sleep stage
+                let thisSampleDuration = sample.endDate.timeIntervalSince(sample.startDate)
+                
+                // Check if there's no time gap between this sample and the previous sample
+                let hasNoPrecedingGap = lastSampleEndDate != nil &&
+                                        sample.startDate.timeIntervalSince(lastSampleEndDate!) <= 1 // Allow 1 second tolerance
+                
+                // Calculate the updated cumulative gap if we add this sample
+                let updatedGapDuration = hasNoPrecedingGap ? cumulativeGapDuration + thisSampleDuration : thisSampleDuration
+                
+                // Check if the individual sample and cumulative gap are within limits
+                //let maxGapMinutes = maxGapDuration / 60.0 // Convert to minutes for consistency
+                let isIndividualGapValid = thisSampleDuration <= maxGapDuration
+                let isCumulativeGapValid = updatedGapDuration <= maxGapDuration
+                
+                if isIndividualGapValid && isCumulativeGapValid {
+                    // This is an acceptable gap, continue the current segment
+                    cumulativeGapDuration = updatedGapDuration
+                } else {
+                    // Gap is too long, end the current segment
+                    if let start = currentSegmentStart, let end = currentSegmentEnd {
+                        let duration = end.timeIntervalSince(start)
+                        if duration / 60.0 >= Double(minDurationMinutes) {
+                            segments.append(SleepSegment(start: start, end: end, duration: duration))
+                        }
+                    }
+                    currentSegmentStart = nil
+                    currentSegmentEnd = nil
+                    cumulativeGapDuration = 0
+                }
+                
+                lastSampleEndDate = sample.endDate
+            } else {
+                // This is a different sleep stage, end the current segment
+                if let start = currentSegmentStart, let end = currentSegmentEnd {
+                    let duration = end.timeIntervalSince(start)
+                    if duration / 60.0 >= Double(minDurationMinutes) {
+                        segments.append(SleepSegment(start: start, end: end, duration: duration))
+                    }
+                }
+                currentSegmentStart = nil
+                currentSegmentEnd = nil
+                cumulativeGapDuration = 0
             }
-
-            DBGLog("Retrieved \(samples.count) sleep samples.")
-            var results: [rtHealthKit.HealthQueryResult] = []
-
-            samples.forEach { sample in
-                DBGLog("Sample Start: \(sample.startDate), End: \(sample.endDate), Value: \(sample.value)")
-                // Add each sample as a result with duration as the value
-                let durationMinutes = sample.endDate.timeIntervalSince(sample.startDate) / 60.0
-                results.append(
-                    rtHealthKit.HealthQueryResult(
-                        date: sample.startDate,
-                        value: durationMinutes,
-                        unit: HKUnit.minute()
-                    )
-                )
-            }
-
-            completion(results)
         }
-
-        HKHealthStore().execute(query)
+        
+        // Don't forget to add the last segment if it's still open
+        if let start = currentSegmentStart, let end = currentSegmentEnd {
+            let duration = end.timeIntervalSince(start)
+            if duration / 60.0 >= Double(minDurationMinutes) {
+                segments.append(SleepSegment(start: start, end: end, duration: duration))
+            }
+        }
+        
+        return segments
+    }
+     
+    /*
+    //-----
+    
+    private func identifySleepSegments(
+        samples: [HKCategorySample],
+        targetValue: Int,
+        allowedGapValues: [Int: TimeInterval], // Map of sleep stage values to maximum allowed gap durations
+        minDurationMinutes: Int
+    ) -> [SleepSegment] {
+        guard !samples.isEmpty else {
+            DBGLog("identifySleepSegments: No samples provided for target value \(targetValue)")
+            return []
+        }
+        
+        // Check for Mar 1-2 night for debugging
+        if let firstSample = samples.first {
+            let calendar = Calendar.current
+            let sampleDay = calendar.component(.day, from: firstSample.startDate)
+            let sampleMonth = calendar.component(.month, from: firstSample.startDate)
+            let sampleYear = calendar.component(.year, from: firstSample.startDate)
+            
+            if ((sampleDay == 1 && sampleMonth == 3) || (sampleDay == 2 && sampleMonth == 3)) && sampleYear == 2025 {
+                DBGLog("⚠️ BREAKPOINT: Mar 1-2, 2025 data - examining \(samples.count) samples for target value \(targetValue) ⚠️")
+                // Set breakpoint here
+            }
+        }
+        
+        // Sort samples by start time
+        let sortedSamples = samples.sorted { $0.startDate < $1.startDate }
+        
+        DBGLog("identifySleepSegments: Processing \(sortedSamples.count) samples for target value \(targetValue)")
+        DBGLog("identifySleepSegments: Min duration requirement: \(minDurationMinutes) minutes")
+        DBGLog("identifySleepSegments: Allowed gap values: \(allowedGapValues.map { "[\($0): \(Int($1/60)) min]" }.joined(separator: ", "))")
+        
+        // Map sleep stage values to descriptive names for logging
+        let stageDescriptions: [Int: String] = [
+            HKCategoryValueSleepAnalysis.asleepCore.rawValue: "Core",
+            HKCategoryValueSleepAnalysis.asleepDeep.rawValue: "Deep",
+            HKCategoryValueSleepAnalysis.asleepREM.rawValue: "REM",
+            HKCategoryValueSleepAnalysis.awake.rawValue: "Awake",
+            HKCategoryValueSleepAnalysis.inBed.rawValue: "InBed"
+        ]
+        
+        // Log first 5 and last 5 samples to understand data boundaries
+        if sortedSamples.count > 0 {
+            DBGLog("identifySleepSegments: Time range - \(sortedSamples.first!.startDate) to \(sortedSamples.last!.endDate)")
+            
+            let samplesToLog = min(5, sortedSamples.count)
+            DBGLog("identifySleepSegments: First \(samplesToLog) samples:")
+            for i in 0..<samplesToLog {
+                let sample = sortedSamples[i]
+                let stageName = stageDescriptions[sample.value] ?? "Unknown(\(sample.value))"
+                let durationMin = sample.endDate.timeIntervalSince(sample.startDate) / 60.0
+                DBGLog("  [\(i+1)] \(stageName): \(sample.startDate) to \(sample.endDate) (\(String(format: "%.1f", durationMin)) min)")
+            }
+            
+            if sortedSamples.count > 10 {
+                DBGLog("identifySleepSegments: Last \(samplesToLog) samples:")
+                for i in (sortedSamples.count - samplesToLog)..<sortedSamples.count {
+                    let sample = sortedSamples[i]
+                    let stageName = stageDescriptions[sample.value] ?? "Unknown(\(sample.value))"
+                    let durationMin = sample.endDate.timeIntervalSince(sample.startDate) / 60.0
+                    DBGLog("  [\(i+1)] \(stageName): \(sample.startDate) to \(sample.endDate) (\(String(format: "%.1f", durationMin)) min)")
+                }
+            }
+        }
+        
+        let targetStageName = stageDescriptions[targetValue] ?? "Unknown(\(targetValue))"
+        DBGLog("identifySleepSegments: Identifying \(targetStageName) segments...")
+        
+        var segments: [SleepSegment] = []
+        var currentSegmentStart: Date?
+        var currentSegmentEnd: Date?
+        var cumulativeGapDuration: TimeInterval = 0
+        var lastSampleEndDate: Date?
+        var segmentNumber = 0
+        
+        for (index, sample) in sortedSamples.enumerated() {
+            let stageName = stageDescriptions[sample.value] ?? "Unknown(\(sample.value))"
+            let durationMin = sample.endDate.timeIntervalSince(sample.startDate) / 60.0
+            
+            if sample.value == targetValue {
+                // Found a target sleep stage sample
+                if currentSegmentStart == nil {
+                    // This is the start of a new segment
+                    currentSegmentStart = sample.startDate
+                    segmentNumber += 1
+                    DBGLog("  [\(index+1)] Starting new \(targetStageName) segment #\(segmentNumber) at \(sample.startDate)")
+                } else {
+                    DBGLog("  [\(index+1)] Continuing \(targetStageName) segment #\(segmentNumber) with sample: \(sample.startDate) to \(sample.endDate) (\(String(format: "%.1f", durationMin)) min)")
+                }
+                
+                currentSegmentEnd = sample.endDate
+                lastSampleEndDate = sample.endDate
+                
+                if cumulativeGapDuration > 0 {
+                    DBGLog("    Resetting cumulative gap (was \(String(format: "%.1f", cumulativeGapDuration/60)) min) - found target sample")
+                    cumulativeGapDuration = 0
+                }
+            } else if currentSegmentStart != nil, let maxGapDuration = allowedGapValues[sample.value] {
+                // This is a gap of an allowed sleep stage
+                let thisSampleDuration = sample.endDate.timeIntervalSince(sample.startDate)
+                
+                // Check if there's no time gap between this sample and the previous sample
+                let hasNoPrecedingGap = lastSampleEndDate != nil &&
+                                       sample.startDate.timeIntervalSince(lastSampleEndDate!) <= 1 // Allow 1 second tolerance
+                
+                // Calculate the updated cumulative gap if we add this sample
+                let updatedGapDuration = hasNoPrecedingGap ? cumulativeGapDuration + thisSampleDuration : thisSampleDuration
+                
+                // Check if the individual sample and cumulative gap are within limits
+                let isIndividualGapValid = thisSampleDuration <= maxGapDuration
+                let isCumulativeGapValid = updatedGapDuration <= maxGapDuration
+                
+                DBGLog("  [\(index+1)] Checking \(stageName) gap: \(sample.startDate) to \(sample.endDate) (\(String(format: "%.1f", durationMin)) min)")
+                DBGLog("    Gap follows previous sample: \(hasNoPrecedingGap)")
+                DBGLog("    Individual gap duration: \(String(format: "%.1f", thisSampleDuration/60)) min (max allowed: \(String(format: "%.1f", maxGapDuration/60)) min) - Valid: \(isIndividualGapValid)")
+                DBGLog("    Cumulative gap duration would be: \(String(format: "%.1f", updatedGapDuration/60)) min (max allowed: \(String(format: "%.1f", maxGapDuration/60)) min) - Valid: \(isCumulativeGapValid)")
+                
+                if isIndividualGapValid && isCumulativeGapValid {
+                    // This is an acceptable gap, continue the current segment
+                    cumulativeGapDuration = updatedGapDuration
+                    DBGLog("    ✓ Gap accepted - segment #\(segmentNumber) continues, cumulative gap now \(String(format: "%.1f", cumulativeGapDuration/60)) min")
+                } else {
+                    // Gap is too long, end the current segment
+                    if let start = currentSegmentStart, let end = currentSegmentEnd {
+                        let duration = end.timeIntervalSince(start)
+                        let durationMin = duration / 60.0
+                        
+                        if durationMin >= Double(minDurationMinutes) {
+                            segments.append(SleepSegment(start: start, end: end, duration: duration))
+                            DBGLog("    ✓ Segment #\(segmentNumber) ended and SAVED: \(start) to \(end) (\(String(format: "%.1f", durationMin)) min)")
+                        } else {
+                            DBGLog("    ✗ Segment #\(segmentNumber) too short: \(String(format: "%.1f", durationMin)) min < minimum \(minDurationMinutes) min - DISCARDED")
+                        }
+                    }
+                    
+                    currentSegmentStart = nil
+                    currentSegmentEnd = nil
+                    cumulativeGapDuration = 0
+                    DBGLog("    ✗ Gap too long - segment ended")
+                }
+                
+                lastSampleEndDate = sample.endDate
+            } else {
+                // This is a different, non-allowed sleep stage
+                if currentSegmentStart != nil {
+                    DBGLog("  [\(index+1)] Found non-allowed stage (\(stageName)) - ending current segment #\(segmentNumber)")
+                    
+                    if let start = currentSegmentStart, let end = currentSegmentEnd {
+                        let duration = end.timeIntervalSince(start)
+                        let durationMin = duration / 60.0
+                        
+                        if durationMin >= Double(minDurationMinutes) {
+                            segments.append(SleepSegment(start: start, end: end, duration: duration))
+                            DBGLog("    ✓ Segment #\(segmentNumber) ended and SAVED: \(start) to \(end) (\(String(format: "%.1f", durationMin)) min)")
+                        } else {
+                            DBGLog("    ✗ Segment #\(segmentNumber) too short: \(String(format: "%.1f", durationMin)) min < minimum \(minDurationMinutes) min - DISCARDED")
+                        }
+                    }
+                    
+                    currentSegmentStart = nil
+                    currentSegmentEnd = nil
+                    cumulativeGapDuration = 0
+                } else {
+                    DBGLog("  [\(index+1)] Skipping non-target, non-allowed stage: \(stageName)")
+                }
+            }
+        }
+        
+        // Don't forget to add the last segment if it's still open
+        if let start = currentSegmentStart, let end = currentSegmentEnd {
+            let duration = end.timeIntervalSince(start)
+            let durationMin = duration / 60.0
+            
+            if durationMin >= Double(minDurationMinutes) {
+                segments.append(SleepSegment(start: start, end: end, duration: duration))
+                DBGLog("  ✓ Final segment #\(segmentNumber) SAVED: \(start) to \(end) (\(String(format: "%.1f", durationMin)) min)")
+            } else {
+                DBGLog("  ✗ Final segment #\(segmentNumber) too short: \(String(format: "%.1f", durationMin)) min < minimum \(minDurationMinutes) min - DISCARDED")
+            }
+        }
+        
+        DBGLog("identifySleepSegments: Found \(segments.count) valid \(targetStageName) segments")
+        for (index, segment) in segments.enumerated() {
+            let durationMin = segment.duration / 60.0
+            DBGLog("  Segment #\(index+1): \(segment.start) to \(segment.end) (\(String(format: "%.1f", durationMin)) min)")
+        }
+        
+        return segments
+    }
+    
+    //-----
+     */
+    
+    // Helper method to count segments of a particular sleep stage
+    private func countSleepSegments(
+        samples: [HKCategorySample],
+        targetValue: Int,
+        allowedGapValues: [Int: TimeInterval],
+        maxGapMinutes: Int,
+        minDurationMinutes: Int = 0 // Default to 0 to maintain backward compatibility
+    ) -> Int {
+        // Now simply use identifySleepSegments and count the resulting segments
+        let segments = identifySleepSegments(
+            samples: samples,
+            targetValue: targetValue,
+            allowedGapValues: allowedGapValues,
+            minDurationMinutes: minDurationMinutes
+        )
+        
+        return segments.count
+    }
+    // Helper method to count transitions between sleep stages
+    private func countSleepTransitions(samples: [HKCategorySample]) -> Int {
+        guard samples.count > 1 else { return 0 }
+        
+        // Sort samples by start time
+        let sortedSamples = samples.sorted { $0.startDate < $1.startDate }
+        
+        var transitions = 0
+        var lastValue: Int?
+        
+        for sample in sortedSamples {
+            if let lastVal = lastValue, lastVal != sample.value {
+                transitions += 1
+            }
+            lastValue = sample.value
+        }
+        
+        return transitions
     }
     
     private func handleQuantityTypeQuery(
@@ -928,7 +1522,6 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         if queryConfig.identifier == "HKCategoryTypeIdentifierSleepAnalysis" {
             let unit = specifiedUnit ?? queryConfig.unit?.first ?? HKUnit.hour()
             handleSleepAnalysisQuery(startDate: startDate, endDate: endDate, specifiedUnit:unit, queryConfig: queryConfig, completion: completion)
-            //simpleSleepQuery(startDate: startDate, endDate: endDate, completion: completion)
         } else {
             handleQuantityTypeQuery(queryConfig: queryConfig, startDate: startDate, endDate: endDate, specifiedUnit: specifiedUnit, completion: completion)
         }
@@ -1074,7 +1667,49 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
     }
 
 
+/*
+ 
+ private func simpleSleepQuery(
+     startDate: Date,
+     endDate: Date,
+     completion: @escaping ([rtHealthKit.HealthQueryResult]) -> Void
+ ) {
+     guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
+         DBGLog("Sleep Analysis type not available.")
+         completion([])
+         return
+     }
 
+     let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [])
+     let query = HKSampleQuery(sampleType: sleepType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, error in
+         guard let samples = samples as? [HKCategorySample], error == nil else {
+             DBGLog("Error fetching sleep samples: \(error?.localizedDescription ?? "Unknown error")")
+             completion([])
+             return
+         }
+
+         DBGLog("Retrieved \(samples.count) sleep samples.")
+         var results: [rtHealthKit.HealthQueryResult] = []
+
+         samples.forEach { sample in
+             DBGLog("Sample Start: \(sample.startDate), End: \(sample.endDate), Value: \(sample.value)")
+             // Add each sample as a result with duration as the value
+             let durationMinutes = sample.endDate.timeIntervalSince(sample.startDate) / 60.0
+             results.append(
+                 rtHealthKit.HealthQueryResult(
+                     date: sample.startDate,
+                     value: durationMinutes,
+                     unit: HKUnit.minute()
+                 )
+             )
+         }
+
+         completion(results)
+     }
+
+     HKHealthStore().execute(query)
+ }
+ */
     /*
     func readBodyWeight() {
         guard let bodyMassType = HKObjectType.quantityType(forIdentifier: .bodyMass) else {
