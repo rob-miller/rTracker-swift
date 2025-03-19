@@ -64,7 +64,9 @@ class voBoolean: voState {
 
     override func voDisplay(_ bounds: CGRect) -> UIView {
         vosFrame = bounds
-
+        // Force recreation of switch for each cell to ensure proper rendering
+        _bSwitch = nil
+        
         if vo.optDict["otsrc"] == "1" {
             if let xrslt = vo.vos?.getOTrslt() {
                 if xrslt.isEmpty {  // Empty string

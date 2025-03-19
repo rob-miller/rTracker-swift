@@ -900,6 +900,8 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
     override func voDisplay(_ bounds: CGRect) -> UIView {
         vosFrame = bounds
 
+        _tbButton = nil  // force recreate
+        
         if vo.optDict["otsrc"] == "1" {
             if let xrslt = vo.vos?.getOTrslt() {
                 vo.value = xrslt

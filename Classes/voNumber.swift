@@ -168,7 +168,9 @@ class voNumber: voState, UITextFieldDelegate {
 
     override func voDisplay(_ bounds: CGRect) -> UIView {
         vosFrame = bounds
-
+        // force recreate
+        _dtf = nil
+        
         //if (![self.vo.value isEqualToString:dtf.text]) {
 
         var targD = Date()

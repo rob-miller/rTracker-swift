@@ -139,7 +139,7 @@ class voSlider: voState {
 
     override func voDisplay(_ bounds: CGRect) -> UIView {
         vosFrame = bounds
-
+        _sliderCtl = nil  // force redisplay
         #if DEBUGLOG
         let vals = vo.value
         let valf = CGFloat(Float(vo.value) ?? 0.0)
