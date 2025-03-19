@@ -561,12 +561,14 @@ class voState: NSObject, voProtocol {
         }
         
         // Set cell background based on source
+         // not good with darkmode
         let isExternalSource = vo.optDict["otsrc"] == "1" || vo.optDict["ahksrc"] == "1"
-        if isExternalSource {
-            cell?.backgroundColor = UIColor(red: 0.95, green: 0.95, blue: 1.0, alpha: 0.8) // Very light blue
-        } else {
+        //if isExternalSource {
+        //    cell?.backgroundColor = UIColor(red: 0.95, green: 0.95, blue: 1.0, alpha: 0.8) // Very light blue
+        //} else {
+         
             cell?.backgroundColor = .clear
-        }
+        //}
         
         // Configure main label bounds
         bounds.origin.x = MARGIN
