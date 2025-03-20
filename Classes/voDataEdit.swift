@@ -160,14 +160,14 @@ class voDataEdit: UIViewController, UITextViewDelegate {
 
     class func getInitTVF(_ vc: UIViewController) -> CGRect {
         var frame = vc.view.frame
+        
         let frame2 = vc.navigationController!.navigationBar.frame
         DBGLog(String("nvb rect: \(frame2)"))
         let frame3 = vc.navigationController!.toolbar.frame
         DBGLog(String("tb rect: \(frame3))"))
-
-        frame.origin.y += frame2.size.height  + frame2.origin.y 
+        
+        frame.origin.y += frame2.size.height  + frame2.origin.y
         frame.size.height -= frame.origin.y + frame3.size.height
-
         DBGLog(String("initTVF rect: \(frame.origin.x) \(frame.origin.y) \(frame.size.width) \(frame.size.height)"))
         return frame
     }

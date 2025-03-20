@@ -85,7 +85,7 @@ class voSlider: voState {
 
     override func voTVCellHeight() -> CGFloat {
         //return CELL_HEIGHT_TALL;
-        DBGLog(String("\(sliderCtl!.frame.size.height) \(3 * MARGIN) \(vo.getLabelSize().height) \(vo.getLongTitleSize().height)"))
+        //DBGLog(String("\(sliderCtl!.frame.size.height) \(3 * MARGIN) \(vo.getLabelSize().height) \(vo.getLongTitleSize().height)"))
         return sliderCtl!.frame.size.height + (3 * MARGIN) + vo.getLabelSize().height + vo.getLongTitleSize().height
     }
 

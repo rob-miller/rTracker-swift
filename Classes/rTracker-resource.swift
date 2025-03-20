@@ -174,6 +174,15 @@ class rTracker_resource: NSObject {
 
     //---------------------------
 
+    // For UIKit-based apps
+    class func getSafeAreaInsets() -> UIEdgeInsets {
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first {
+            return window.safeAreaInsets
+        }
+        return .zero
+    }
+    
     class func ioFilePath(_ fname: String?, access: Bool, tmp: Bool = false) -> String {
         var pathURL: URL
         
@@ -1071,9 +1080,12 @@ class rTracker_resource: NSObject {
         return bottomLeftPointInWindowCoordinates.y
     }
 
-    @objc class func willShowKeyboard(_ n: Notification?, vwTarg: UIView, vwScroll: UIView? = nil) {
+    @objc class func willShowKeyboard(_ n: Notification?, vwTarg: UIView?, vwScroll: UIView? = nil) {
         //var n = n
 
+        guard let vwTarg = vwTarg else {
+            return
+        }
         if keyboardIsShown {
             // need bit more logic to handle additional scrolling for another textfield
             return

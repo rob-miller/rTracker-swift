@@ -18,7 +18,7 @@ struct HealthDataQuery {
     let aggregationStyle: HKQuantityAggregationStyle // cumulative, discrete_options
     let customProcessor: ((HKSample) -> Double)? // custom processing logic (sleep aggregation)
     let aggregationType: AggregationType?       // custom grouping logic (night sleep)
-    let aggregationTime: DateComponents?       // Optional time for aggregation (e.g., start/end of day)
+    let aggregationTime: DateComponents?       // Optional time for aggregation (e.g., start/end of day). if specified, aggregate over previous day at this time to current day at this time.  if not specified, aggregate over supplied targDate +/- 10 hours
     let info: String?
     
     enum AggregationType {
@@ -106,7 +106,7 @@ let healthDataQueries: [HealthDataQuery] = [
     HealthDataQuery(
         identifier: "HKCategoryTypeIdentifierSleepAnalysis",
         displayName: "Sleep - Awake",
-        unit: [HKUnit.hour(), HKUnit.minute()],
+        unit: [HKUnit.minute(), HKUnit.hour()],
         needUnit: true,
         aggregationStyle: .cumulative,
         customProcessor: { sample in
@@ -123,7 +123,7 @@ let healthDataQueries: [HealthDataQuery] = [
     HealthDataQuery(
         identifier: "HKCategoryTypeIdentifierSleepAnalysis",
         displayName: "Sleep - Core",
-        unit: [HKUnit.hour(), HKUnit.minute()],
+        unit: [HKUnit.minute(), HKUnit.hour()],
         needUnit: true,
         aggregationStyle: .cumulative,
         customProcessor: { sample in
@@ -140,7 +140,7 @@ let healthDataQueries: [HealthDataQuery] = [
     HealthDataQuery(
         identifier: "HKCategoryTypeIdentifierSleepAnalysis",
         displayName: "Sleep - REM",
-        unit: [HKUnit.hour(), HKUnit.minute()],
+        unit: [HKUnit.minute(), HKUnit.hour()],
         needUnit: true,
         aggregationStyle: .cumulative,
         customProcessor: { sample in
@@ -157,7 +157,7 @@ let healthDataQueries: [HealthDataQuery] = [
     HealthDataQuery(
         identifier: "HKCategoryTypeIdentifierSleepAnalysis",
         displayName: "Sleep - Deep",
-        unit: [HKUnit.hour(), HKUnit.minute()],
+        unit: [HKUnit.minute(), HKUnit.hour()],
         needUnit: true,
         aggregationStyle: .cumulative,
         customProcessor: { sample in
@@ -174,7 +174,7 @@ let healthDataQueries: [HealthDataQuery] = [
     HealthDataQuery(
         identifier: "HKCategoryTypeIdentifierSleepAnalysis",
         displayName: "Sleep - Total",
-        unit: [HKUnit.hour(), HKUnit.minute()],
+        unit: [HKUnit.minute(), HKUnit.hour()],
         needUnit: true,
         aggregationStyle: .cumulative, // Aggregates sleep data across intervals
         customProcessor: { sample in
@@ -194,12 +194,12 @@ let healthDataQueries: [HealthDataQuery] = [
         },
         aggregationType: .groupedByNight,
         aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
-        info: nil
+        info: "Defined as core sleep plus REM sleep plus deep sleep."
     ),
     HealthDataQuery(
         identifier: "HKCategoryTypeIdentifierSleepAnalysis",
         displayName: "Sleep - In Bed",
-        unit: [HKUnit.hour(), HKUnit.minute()],
+        unit: [HKUnit.minute(), HKUnit.hour()],
         needUnit: true,
         aggregationStyle: .cumulative,
         customProcessor: { sample in
@@ -230,7 +230,7 @@ let healthDataQueries: [HealthDataQuery] = [
         },
         aggregationType: .groupedByNight,
         aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
-        info: "Counts the number of Deep sleep segments during the night. Short gaps (up to 12 minutes) of Core sleep within a Deep sleep period are still counted as a single segment."
+        info: "Counts the number of Deep sleep segments during the night. Short gaps (up to \(MAXSLEEPSEGMENTGAP) minutes) of Core sleep within a Deep sleep period are still counted as a single segment."
     ),
 
     // For counting REM sleep segments
@@ -250,7 +250,7 @@ let healthDataQueries: [HealthDataQuery] = [
         },
         aggregationType: .groupedByNight,
         aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
-        info: "Counts the number of REM sleep segments during the night. Short gaps (up to 12 minutes) of Core sleep within a REM sleep period are still counted as a single segment."
+        info: "Counts the number of REM sleep segments during the night. Short gaps (up to \(MAXSLEEPSEGMENTGAP) minutes) of Core sleep within a REM sleep period are still counted as a single segment."
     ),
 
     // For counting sleep cycles (Deep followed by REM)
@@ -266,7 +266,7 @@ let healthDataQueries: [HealthDataQuery] = [
         },
         aggregationType: .groupedByNight,
         aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
-        info: "Counts complete sleep cycles, defined as a Deep sleep segment (at least 10 minutes) followed by a REM segment (at least 10 minutes). Short gaps of Core sleep (up to 12 minutes) are allowed within each segment."
+        info: "Counts complete sleep cycles, defined as a Deep sleep segment minutes) followed by a REM segment (both at least \(MINSLEEPSEGMENTDURATION) minutes)."
     ),
 
     // For counting sleep transitions
@@ -1097,7 +1097,6 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
     }
 
     // Helper method to identify sleep segments of a particular stage
-    
      private func identifySleepSegments(
         samples: [HKCategorySample],
         targetValue: Int,
@@ -1514,9 +1513,9 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
             startDate = calendar.date(byAdding: .day, value: -1, to: endDate) ??
                         Date(timeIntervalSince1970: TimeInterval(targetDate) - 86400) // Default to one day earlier
         } else {
-            // Default time range: ±4 hours around the targetDate
-            startDate = Date(timeIntervalSince1970: TimeInterval(targetDate) - 4 * 3600)
-            endDate = Date(timeIntervalSince1970: TimeInterval(targetDate) + 4 * 3600)
+            // Default time range: ±10 hours around the targetDate
+            startDate = Date(timeIntervalSince1970: TimeInterval(targetDate) - 10 * 3600)
+            endDate = Date(timeIntervalSince1970: TimeInterval(targetDate) + 10 * 3600)
         }
         
         if queryConfig.identifier == "HKCategoryTypeIdentifierSleepAnalysis" {

@@ -140,7 +140,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         var n = 0
 
         for vo in tracker!.valObjTable {
-            if VOT_FUNC == vo.vtype {
+            if VOT_FUNC == vo.vtype || vo.optDict["otTracker"] ?? "" == tracker?.trackerName {
                 vo.display = nil // always redisplay
                 iparr.append(IndexPath(index: 0).appending(n))
             } else if (inVO?.vid == vo.vid) && (nil == vo.display) {

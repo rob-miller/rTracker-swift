@@ -342,12 +342,12 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 for ovo in oldTracker.valObjTable {
                     let ood = ovo.optDict
                     if let oaks = ood["ahksrc"] {
-                        let oahs = ood["ahSource"], oahu = ood["ahUnit"], oaha = ood["ahAvg"], oahpd = ood["ahPrevD"]
+                        let oahs = ood["ahSource"], oahu = ood["ahUnit"], oaha = ood["ahAvg"], oahpd = ood["ahPrevD"], oahhm = ood["hrsmins"]
                         for nvo in tempTrackerObj!.valObjTable {
                             if nvo.vid == ovo.vid {
                                 let nod = nvo.optDict
-                                let nahs = nod["ahSource"], nahu = nod["ahUnit"], naks = nod["ahksrc"], naha = nod["ahAvg"], nahpd = nod["ahPrevD"]
-                                if (nahs != oahs || nahu != oahu || naks != oaks || naha != oaha || nahpd != oahpd) {
+                                let nahs = nod["ahSource"], nahu = nod["ahUnit"], naks = nod["ahksrc"], naha = nod["ahAvg"], nahpd = nod["ahPrevD"], nahhm = nod["hrsmins"]
+                                if (nahs != oahs || nahu != oahu || naks != oaks || naha != oaha || nahpd != oahpd || nahhm != oahhm) {
                                     ovo.vos?.clearHKdata()
                                     ahUpdated = true
                                 }
@@ -537,10 +537,9 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         var cell: UITableViewCell?
-
         let section = indexPath.section
-
         if section == 0 {
+            // Name field section - code unchanged
             cell = tableView.dequeueReusableCell(withIdentifier: addTrackerController.tableViewNameCellID)
             if cell == nil {
                 cell = UITableViewCell(
@@ -549,24 +548,14 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 cell?.backgroundColor = nil
             } else {
                 // the cell is being recycled, remove old embedded controls
-                //var viewToRemove: UIView? = nil
                 while let viewToRemove = cell?.contentView.viewWithTag(kViewTag) {
                     viewToRemove.removeFromSuperview()
                 }
             }
-
-            //NSInteger row = [indexPath row];
-            //if (row == 0) {
-
-            //self.nameField = nil;
-            //[_nameField release];
-            //self.nameField = [[UITextField alloc] initWithFrame:CGRectMake(10,10,250,25) ];
+            
             var rect = cell?.contentView.frame
             rect?.size.width = rTracker_resource.getKeyWindowWidth() // because ios 7.1 gets different width for cell
-            #if !RELEASE
-            // debug layout:
-            //cell.backgroundColor = [UIColor orangeColor];
-            #endif
+            
             nameField = UITextField(frame: CGRect(x: 10, y: 5, width: (rect?.size.width ?? 0.0) - 20, height: (rect?.size.height ?? 0.0) - 10))
             nameField.clearsOnBeginEditing = false
             nameField.delegate = self
@@ -576,15 +565,12 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 action: #selector(nameFieldDone(_:)),
                 for: .editingDidEndOnExit)
             nameField.tag = kViewTag
-            //nameField.accessibilityLabel = "tracker name"
             nameField.accessibilityIdentifier = "addTrkrName"
             
             cell?.contentView.addSubview(nameField)
-
             cell?.selectionStyle = .none
             nameField.font = PrefBodyFont
             nameField.text = tempTrackerObj?.trackerName
-
             nameField.textColor = .label
             nameField.attributedPlaceholder = NSAttributedString(string: "Name this Tracker", attributes: [
                 .foregroundColor: UIColor.label
@@ -592,7 +578,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             nameField.backgroundColor = .secondarySystemBackground
             
             view.bringSubviewToFront(nameField)
- 
+     
         } else {
             cell = tableView.dequeueReusableCell(withIdentifier: addTrackerController.tableViewValCellID)
             if cell == nil {
@@ -600,6 +586,10 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                     style: .subtitle,
                     reuseIdentifier: addTrackerController.tableViewValCellID)
             }
+            
+            // Remove any existing icon to prevent duplication
+            cell?.contentView.viewWithTag(kViewTag + 1)?.removeFromSuperview()
+            
             let row = indexPath.row
             if row == (tempTrackerObj?.valObjTable.count ?? 0) {
                 if 0 == row {
@@ -608,21 +598,44 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                     cell?.detailTextLabel?.text = "add another thing to track"
                 }
                 cell?.accessibilityIdentifier = "trkrAddValue"
-                
                 cell?.textLabel?.text = ""
             } else {
                 let vo = (tempTrackerObj?.valObjTable)?[row] as? valueObj
-                //DBGLog(@"starting section 1 cell for %@",vo.valueName);
+                
+                // Check for external source
+                let isOtSource = vo?.optDict["otsrc"] == "1"
+                let isAhkSource = vo?.optDict["ahksrc"] == "1"
+                let isExternalSource = isOtSource || isAhkSource
+                
+                // Use standard text labeling
                 cell?.textLabel?.text = vo?.valueName
+                
+                // For external sources, add a small icon to the left of the text
+                if isExternalSource {
+                    // Create a small icon to the left of the text
+                    let iconName = isOtSource ? "link" : "heart.text.square"
+                    let sourceIndicator = UIImageView(image: UIImage(systemName: iconName))
+                    sourceIndicator.tag = kViewTag + 1
+                    sourceIndicator.tintColor = .systemBlue
+                    sourceIndicator.contentMode = .scaleAspectFit
+                    
+                    // Make the icon smaller (12x12) and position it better
+                    sourceIndicator.frame = CGRect(x: 0, y: 0, width: 12, height: 12)
+                    
+                    // Position the icon in the left margin of the cell
+                    let cellIndentation: CGFloat = 15  // Standard cell indentation
+                    sourceIndicator.frame.origin.x = cellIndentation - 14  // Position before text
+                    sourceIndicator.center.y = (cell?.contentView.bounds.height ?? 0) * 0.35  // Align with main text, slightly above center
+                    
+                    cell?.contentView.addSubview(sourceIndicator)
+                    
+                    // Indent the main text slightly to avoid overlapping with the icon
+                    cell?.textLabel?.frame.origin.x += 2
+                }
+                
                 cell?.accessibilityIdentifier = "\(vo?.parentTracker.trackerName ?? "tNull")_\(vo?.valueName ?? "vNull")"
                 cell?.accessoryType = .detailDisclosureButton
-                //cell.detailTextLabel.text = [self.tempTrackerObj.votArray objectAtIndex:vo.vtype];
-                /*
-                            DBGLog(@"vtype %@",[rTracker_resource vtypeNames][vo.vtype]);
-                            DBGLog(@"gtype %@",(vo.vos.voGraphSet)[vo.vGraphType]);
-                            DBGLog(@"color %@",[rTracker_resource colorNames][vo.vcolor]);
-                            */
-
+                
                 if "0" == vo!.optDict["graph"] {
                     let vtypeNames = rTracker_resource.vtypeNames()[vo!.vtype]
                     cell?.detailTextLabel?.text = "\(vtypeNames) - no graph"
@@ -641,19 +654,15 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                     cell?.detailTextLabel?.text = "\(vtypeNames) - \(voGraphSet!) - \(colorNames)"
                 }
             }
-
             cell?.backgroundColor = .clear
             if #available(iOS 13.0, *) {
                 cell?.textLabel?.textColor = .label
                 cell?.detailTextLabel?.textColor = .label
             }
-
-            //DBGLog(@"loaded section 1 row %i : .%@. : .%@.",row, cell.textLabel.text, cell.detailTextLabel.text);
         }
-
         return cell!
     }
-
+    
     func tableView(_ tableview: UITableView, canMoveRowAt indexPath: IndexPath) -> Bool {
         let section = indexPath.section
         if section == 0 {

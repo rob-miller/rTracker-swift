@@ -753,7 +753,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
     }
      /*
     func calcFunctionValue(_ datePair: [AnyHashable]?) -> NSNumber? {
-        // TODO: finish this -- not used
+        // finish this -- not used
         if datePair == nil {
             return nil
         }

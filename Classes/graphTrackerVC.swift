@@ -100,22 +100,13 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
 
     }
     */
-
-    // For UIKit-based apps
-    func getSafeAreaInsets() -> UIEdgeInsets {
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = windowScene.windows.first {
-            return window.safeAreaInsets
-        }
-        return .zero
-    }
     
     func buildView() {
         //self.shakeLock = 0;
         //if (0 != self.shakeLock) return;
         //if (self.tracker.recalcFnLock) return;
 
-        let insets = getSafeAreaInsets()
+        let insets = rTracker_resource.getSafeAreaInsets()
         DBGLog("safe insets= Top: \(insets.top), Left: \(insets.left), Bottom: \(insets.bottom), Right: \(insets.right)")
         
         view.backgroundColor = .black

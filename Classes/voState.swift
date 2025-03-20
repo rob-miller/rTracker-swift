@@ -162,7 +162,9 @@ class voState: NSObject, voProtocol {
             vo.optDict["otsrc"] = OTSRCDFLT ? "1" : "0"
         }
 
-
+        if nil == vo.optDict["hrsmins"] {
+            vo.optDict["hrsmins"] = HRSMINSDFLT ? "1" : "0"
+        }
     }
 
     func cleanOptDictDflts(_ key: String) -> Bool {
@@ -175,6 +177,7 @@ class voState: NSObject, voProtocol {
         if ((key == "graph") && (val == (GRAPHDFLT ? "1" : "0")))
             || ((key == "privacy") && (Int(val ?? "") ?? 0 == PRIVDFLT))
             || ((key == "otCurrent") && (val == (OTCURRDFLT ? "1" : "0")))
+            || ((key == "otsrc") && (val == (OTSRCDFLT ? "1" : "0")))
             || ((key == "longTitle") && (val == "")) {
             vo.optDict.removeValue(forKey: key)
             return true
@@ -333,22 +336,28 @@ class voState: NSObject, voProtocol {
         let xvName = vo.optDict["otValue"] ?? ""
         let xcd = vo.optDict["otCurrent"] == "1"
         if (!xtName.isEmpty && !xvName.isEmpty) {
-            let xto = trackerObj(tlist.getTIDfromNameDb(xtName)[0])
-            if let xvid = xto.toQry2Int(sql: "select id from voConfig where name = '\(xvName)'") {
-                let to = vo.parentTracker
-                let td = to.trackerDate!.timeIntervalSince1970
-                var rslt = ""
-                if xcd {
-                    let pd = to.prevDate()
-                    if pd != 0 {
-                        let sql = "select val from voData where id = \(xvid) and date <= \(td) and date >= \(pd)"
+            if xtName == MyTracker.trackerName {
+                DBGLog("hello")
+                let xvo = MyTracker.getValObjByName(xvName)
+                return xvo?.value ?? ""
+            } else {
+                let xto = trackerObj(tlist.getTIDfromNameDb(xtName)[0])
+                if let xvid = xto.toQry2Int(sql: "select id from voConfig where name = '\(xvName)'") {
+                    let to = vo.parentTracker
+                    let td = to.trackerDate!.timeIntervalSince1970
+                    var rslt = ""
+                    if xcd {
+                        let pd = to.prevDate()
+                        if pd != 0 {
+                            let sql = "select val from voData where id = \(xvid) and date <= \(td) and date >= \(pd)"
+                            rslt = xto.toQry2Str(sql: sql) ?? ""
+                        }
+                    } else {
+                        let sql = "select val from voData where id = \(xvid) and date <= \(td)"
                         rslt = xto.toQry2Str(sql: sql) ?? ""
                     }
-                } else {
-                    let sql = "select val from voData where id = \(xvid) and date <= \(td)"
-                    rslt = xto.toQry2Str(sql: sql) ?? ""
+                    return rslt
                 }
-                return rslt
             }
         }
         return ""
@@ -388,7 +397,7 @@ class voState: NSObject, voProtocol {
         var bounds: CGRect = CGRect.zero
         var cell: UITableViewCell?
         let maxLabel = vo.parentTracker.maxLabel
-        DBGLog(String("votvenabledcell maxLabel= w= \(maxLabel.width) h= \(maxLabel.height)"))
+        //DBGLog(String("votvenabledcell maxLabel= w= \(maxLabel.width) h= \(maxLabel.height)"))
 
         cell = tableView?.dequeueReusableCell(withIdentifier: voState.voTVEnabledCellCellIdentifier)
         if cell == nil {

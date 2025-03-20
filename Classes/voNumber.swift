@@ -232,7 +232,10 @@ class voNumber: voState, UITextFieldDelegate {
                         }
                         
                         let formattedValue: String
-                        if result.value.truncatingRemainder(dividingBy: 1) == 0 {
+                        
+                        if self.vo.optDict["hrsmins"] ?? "0" == "1" {
+                            formattedValue = String(format: "%d:%02d", Int(result.value)/60, Int(result.value) % 60)
+                        } else if result.value.truncatingRemainder(dividingBy: 1) == 0 {
                             // If the value is a whole number, format as an integer
                             formattedValue = String(format: "%.0f", result.value)
                         } else {
@@ -262,7 +265,12 @@ class voNumber: voState, UITextFieldDelegate {
             DispatchQueue.main.async { [self] in
                 dtf.backgroundColor = .secondarySystemBackground
                 dtf.textColor = .label
-                dtf.text = vo.value
+                if vo.optDict["hrsmins"] ?? "0" == "1", let result = Double(vo.value) {
+                    let formattedValue = String(format: "%d:%02d", Int(result)/60, Int(result) % 60)
+                    dtf.text = formattedValue
+                } else {
+                    dtf.text = vo.value
+                }
             }
         }
 
@@ -306,6 +314,9 @@ class voNumber: voState, UITextFieldDelegate {
             vo.optDict["ahksrc"] = AHKSRCDFLT ? "1" : "0"
         }
         
+        if nil == vo.optDict["hrsmins"] {
+            vo.optDict["hrsmins"] = HRSMINSDFLT ? "1" : "0"
+        }
         if nil == vo.optDict["autoscale"] {
             vo.optDict["autoscale"] = AUTOSCALEDFLT ? "1" : "0"
         }
@@ -327,6 +338,7 @@ class voNumber: voState, UITextFieldDelegate {
         if ((key == "nswl") && (val == (NSWLDFLT ? "1" : "0")))
             || ((key == "ahksrc") && ((val == (AHKSRCDFLT ? "1" : "0") || (vo.optDict["ahSource"] == nil))))  // unspecified ahSource disallowed
             || ((key == "ahAvg") && (val == (AHAVGDFLT ? "1" : "0")))
+            || ((key == "hrsmins") && (val == (HRSMINSDFLT ? "1" : "0")))
             || ((key == "ahPrevD") && (val == (AHPREVDDFLT ? "1" : "0")))
             || ((key == "autoscale") && (val == (AUTOSCALEDFLT ? "1" : "0")))
             || ((key == "numddp") && (Int(val ?? "") ?? 0 == NUMDDPDFLT)) {
@@ -380,7 +392,7 @@ class voNumber: voState, UITextFieldDelegate {
             let calendar = Calendar.current
             var newDates: [TimeInterval]
             if self.vo.optDict["ahAvg"] ?? "1" == "1" {
-                // Filter dates that are not on the same calendar day as any existing dates
+                // find dates that are not on the same calendar day as any existing dates
                 newDates = hkDates.filter { hkDate in
                     !existingDates.contains { existingDate in
                         calendar.isDate(Date(timeIntervalSince1970: hkDate), inSameDayAs: Date(timeIntervalSince1970: Double(existingDate)))
@@ -582,11 +594,13 @@ class voNumber: voState, UITextFieldDelegate {
                 selectedUnitString: vo.optDict["ahUnit"],
                 ahAvg: vo.optDict["ahAvg"] ?? "1" == "1",
                 ahPrevD: vo.optDict["ahPrevD"] ?? "0" == "1",
-                onDismiss: { [self] updatedChoice,updatedUnit, updatedAhAvg, updatedAhPrevD  in
+                ahHrsMin: vo.optDict["hrsmins"] ?? "0" == "1",
+                onDismiss: { [self] updatedChoice,updatedUnit, updatedAhAvg, updatedAhPrevD, updatedAhHrsMin  in
                     vo.optDict["ahSource"] = updatedChoice
                     vo.optDict["ahUnit"] = updatedUnit
                     vo.optDict["ahAvg"] = updatedAhAvg ? "1" : "0"
                     vo.optDict["ahPrevD"] = updatedAhPrevD ? "1" : "0"
+                    vo.optDict["hrsmins"] = updatedAhHrsMin ? "1" : "0"
                     if let button = ctvovcp?.scroll.subviews.first(where: { $0 is UIButton && $0.accessibilityIdentifier == "configtv_ahSelBtn" }) as? UIButton {
                         print("ahSelect view returned: \(updatedChoice ?? "nil") \(updatedUnit ?? "nil") optDict is \(vo.optDict["ahSource"] ?? "nil")  \(vo.optDict["ahUnit"] ?? "nil")")
                         DispatchQueue.main.async {

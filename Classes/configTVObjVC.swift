@@ -392,7 +392,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
     // MARK: keyboard notifications
 
     @objc func keyboardWillShow(_ n: Notification?) {
-        rTracker_resource.willShowKeyboard(n, vwTarg: activeField!, vwScroll: scroll)
+        rTracker_resource.willShowKeyboard(n, vwTarg: activeField, vwScroll: scroll)
     }
 
     @objc func keyboardWillHide(_ n: Notification?) {
