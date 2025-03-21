@@ -79,6 +79,8 @@ let FN1ARGELAPSEDDAYS = FN1ARGELAPSEDWEEKS - 1
 let FN1ARGELAPSEDHOURS = FN1ARGELAPSEDDAYS - 1
 let FN1ARGELAPSEDMINS = FN1ARGELAPSEDHOURS - 1
 let FN1ARGELAPSEDSECS = FN1ARGELAPSEDMINS - 1
+let FN1ARGDELAY = FN1ARGELAPSEDSECS - 1
+let FN1ARGROUND = FN1ARGDELAY - 1
 
 let FNNEW1ARGLAST = FNNEW1ARGFIRST - 100
 
@@ -115,25 +117,25 @@ func isFn(_ i: Int) -> Bool {
 let FNCONSTANT_TITLE = "constant"
 
 
-let ARG1FNS = [FN1ARGDELTA,FN1ARGSUM,FN1ARGPOSTSUM,FN1ARGPRESUM,FN1ARGAVG,FN1ARGMIN,FN1ARGMAX,FN1ARGCOUNT,FN1ARGONRATIO,FN1ARGNORATIO,FN1ARGELAPSEDWEEKS,FN1ARGELAPSEDDAYS,FN1ARGELAPSEDHOURS,FN1ARGELAPSEDMINS,FN1ARGELAPSEDSECS]
-let ARG1STRS = ["change_in","sum","post-sum","pre-sum","avg","min","max","count","old/new","new/old","elapsed_weeks","elapsed_days","elapsed_hrs","elapsed_mins","elapsed_secs"]
-let ARG1CNT = 15
+let ARG1FNS = [FN1ARGDELTA,FN1ARGSUM,FN1ARGPOSTSUM,FN1ARGPRESUM,FN1ARGAVG,FN1ARGMIN,FN1ARGMAX,FN1ARGCOUNT,FN1ARGONRATIO,FN1ARGNORATIO,FN1ARGELAPSEDWEEKS,FN1ARGELAPSEDDAYS,FN1ARGELAPSEDHOURS,FN1ARGELAPSEDMINS,FN1ARGELAPSEDSECS,FN1ARGDELAY, FN1ARGROUND]
+let ARG1STRS = ["change_in","sum","post-sum","pre-sum","avg","min","max","count","old/new","new/old","elapsed_weeks","elapsed_days","elapsed_hrs","elapsed_mins","elapsed_secs", "delay", "round"]
+let ARG1CNT = ARG1FNS.count
 
 let ARG2FNS = [FN2ARGPLUS,FN2ARGMINUS,FN2ARGTIMES,FN2ARGDIVIDE]
 let ARG2STRS = ["+","-","*","/"]
-let ARG2CNT = 4
+let ARG2CNT = ARG2FNS.count
 
 let PARENFNS = [FNPARENOPEN, FNPARENCLOSE]
 let PARENSTRS = ["(", ")"]
-let PARENCNT = 2
+let PARENCNT = PARENFNS.count
 
 let TIMEFNS = [FNTIMEWEEKS,FNTIMEDAYS,FNTIMEHRS,FNTIMEMINS,FNTIMESECS]
 let TIMESTRS = ["weeks","days","hours","minutes","seconds"]
-let TIMECNT = 5
+let TIMECNT = TIMEFNS.count
 
 let OTHERFNS = [FNCONSTANT]
 let OTHERSTRS = [FNCONSTANT_TITLE]
-let OTHERCNT = 1
+let OTHERCNT = OTHERFNS.count
 
 let TOTFNCNT = ARG1CNT + ARG2CNT + PARENCNT + TIMECNT + OTHERCNT
 
@@ -204,28 +206,6 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             for tok in fnTokArr {
                 fnTokNSNarr.append(NSNumber(value:tok))
             }
-            /*
-            var j = 0
-            for i in 0..<ARG1CNT {
-                fnTokNSNarr[j] = NSNumber(value:fn1args[i])
-                j += 1
-            }
-            for i in 0..<ARG2CNT {
-                fnTokNSNarr[j] = NSNumber(value:fn2args[i])
-                j += 1
-            }
-            for i in 0..<TIMECNT {
-                fnTokNSNarr[j] = NSNumber(value:fnTimeOps[i])
-                j += 1
-            }
-            for i in 0..<(PARENCNT + OTHERCNT) {
-                fnTokNSNarr[j] = NSNumber(value:fnTokArr[i])
-                j += 1
-            }
-             */
-            //fnStrDict = [NSDictionary dictionaryWithObjects:fnStrArr forKeys:fnTokNSNarr count:TOTFNCNT];
-            //_fnStrDict = NSDictionary(objects:fnStrArr as [String], forKeys:fnTokNSNarr as [NSCopying], count: TOTFNCNT) as Dictionary
-            //_fnStrDict = Dictionary(uniqueKeysWithValues: zip(fnStrArr, fnTokNSNarr))
             _fnStrDict = Dictionary(uniqueKeysWithValues: zip(fnTokNSNarr, fnStrArr))
         }
         return _fnStrDict!
@@ -235,17 +215,6 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
     var fn1args: [Int] {
         if nil == _fn1args {
             _fn1args = Array(ARG1FNS[..<ARG1CNT]) // copyItems: true
-            /*
-            //let fn1argToks = ARG1FNS
-            var fn1argsArr: [Int] = []
-            var i: Int
-            for i in 0..<ARG1CNT {
-                fn1argsArr[i] = ARG1FNS[i]
-            }
-            if let fn1argsArr {
-                _fn1args = Array(fn1argsArr[..<ARG1CNT]) // copyItems: true
-            }
-             */
         }
         return _fn1args!
     }
@@ -254,16 +223,6 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
     var fn2args: [Int] {
         if nil == _fn2args {
             _fn2args = Array(ARG2FNS[..<ARG2CNT]) // copyItems: true
-            /*
-            let fn2argToks = [ARG2FNS]
-            let fn2argsArr: [NSNumber]? = nil
-            var i: Int
-            for i in 0..<ARG2CNT {
-                fn2argsArr?[i] = NSNumber(value: fn2argToks[i])
-            }
-            if let fn2argsArr {
-                _fn2args = Array(fn2argsArr[..<ARG2CNT]) // copyItems: true
-            } */
         }
 
         return _fn2args!
@@ -273,16 +232,6 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
     var fnTimeOps: [Int] {
         if nil == _fnTimeOps {
             _fnTimeOps = Array(TIMEFNS[..<TIMECNT]) // copyItems: true
-            /*
-            let fnTimeOpToks = [TIMEFNS]
-            let fnTimeOpsArr: [NSNumber]? = nil
-            var i: Int
-            for i in 0..<TIMECNT {
-                fnTimeOpsArr?[i] = NSNumber(value: fnTimeOpToks[i])
-            }
-            if let fnTimeOpsArr {
-                _fnTimeOps = Array(fnTimeOpsArr[..<TIMECNT]) // copyItems: true
-            }*/
         }
         return _fnTimeOps!
     }
@@ -350,21 +299,14 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
     private var _votWoSelf: [valueObj]?
     var votWoSelf: [valueObj] {
         if nil == _votWoSelf {
-            //if (0 > self.vo.vid) {  // temporary vo waiting for save so not included in tracker's vo table
-            //  -> no, could be editinging an already existing entry
-            //    votWoSelf = [NSArray arrayWithArray:MyTracker.valObjTable];
-            //} else {
-            //_votWoSelf = []
             var tvot: [valueObj] = [] // (repeating: 0, count: MyTracker?.valObjTable?.count ?? 0)
             for tvo in MyTracker.valObjTable {
                 if tvo.vid != vo.vid {
                     tvot.append(tvo as valueObj)
                 }
             }
-            //votWoSelf = [NSArray arrayWithArray:tvot];
+
             _votWoSelf = tvot
-            // not needed? [tvot release];
-            //}
             /*
                     DBGLog(@"instantiate votWoSelf:");
                     DBGLog(@"self.vo vid=%d  name= %@",self.vo.vid,self.vo.valueName);
@@ -382,7 +324,6 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         // note this converts NSNumbers to NSStrings
         // works because NSNumber returns an NSString for [description]
 
-        //[self.vo.optDict setObject:[self.fnArray componentsJoinedByString:@" "] forKey:@"func"];
         // don't save an empty string
         let fnas = fnArray.map { String(describing: $0) }
         let ts = fnas.joined(separator: " ")
@@ -470,121 +411,6 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             dateStyle: .short,
             timeStyle: .short)
     }
-    
-    /*
-     can't find to in scope????
-     
-     
-    // import Foundation
-    // gpt-4 rewrite:
-    func getEpDate(_ ndx: Int, maxdate: TimeInterval) -> TimeInterval {
-        let key = String(format: "frep%d", ndx)
-        var ep: Int?
-        let nep = vo.optDict[key]
-        ep = (nep != nil ? Int(nep!) : nil)
-        var epDate: TimeInterval = 0
-        var sql: String = ""
-        if nep == nil || ep == FREPENTRY {
-            // also FREPDFLT  -- no value specified
-            // use last entry            sql = String(format: "select date from trkrData where date < %ld order by date desc limit 1;", maxdate)
-            epDate = to.toQry2Int(sql: sql)!
-        } else if ep! >= 0 {
-            sql = String(format: "select date from voData where id=%ld and date < %ld and val <> 0 and val <> '' order by date desc limit 1;", ep!, maxdate)
-            epDate = to.toQry2Int(sql: sql)!
-        } else {
-            // ep is (offset * -1)+1 into epTitles, with optDict:frv0 multiplier
-            let vkey = String(format: "frv%d", ndx)
-            var ival = Int(vo.optDict[vkey]!)! * (ndx != 0 ? 1 : -1) // negative offset if ep0
-            var gregorian = Calendar(identifier: .gregorian)
-            gregorian.locale = Locale.current
-            var offsetComponents = DateComponents()
-            
-            switch ep {
-            case FREPNONE :
-                break
-            case FREPHOURS :
-                offsetComponents.hour = ival
-            case FREPCDAYS :
-                ival += (ndx != 0 ? 0 : 1)  // for -1 calendar day, we want offset -0 day and normalize to previous midnight below
-                offsetComponents.day = ival
-            case FREPDAYS :
-                offsetComponents.day = ival
-            case FREPCWEEKS :
-                ival += (ndx != 0 ? 0 : 1)
-                offsetComponents.weekOfYear = ival
-            case FREPWEEKS :
-                offsetComponents.weekOfYear = ival
-            case FREPCMONTHS :
-                ival += (ndx != 0 ? 0 : 1)
-                offsetComponents.month = ival
-            case FREPMONTHS :
-                offsetComponents.month = ival
-            case FREPCYEARS :
-                ival += (ndx != 0 ? 0 : 1)
-                offsetComponents.year = ival
-            case FREPYEARS :
-                offsetComponents.year = ival
-            default:
-                dbgNSAssert(false, "getEpDate: failed to identify ep \(ep!)")
-            }
-            
-            if let targ = gregorian.date(byAdding: offsetComponents, to: Date(timeIntervalSince1970: maxdate)) {
-                var unitFlags = Set<Calendar.Component>()
-                
-                switch ep {
-                    // if calendar week, we need to get to beginning of week as per calendar
-                case FREPCWEEKS :
-                    if let beginOfWeek = gregorian.dateInterval(of: .weekOfYear, for: targ)?.start {
-                        let tz = TimeZone.current
-                        var targ = beginOfWeek.addingTimeInterval(TimeInterval(tz.secondsFromGMT(for: beginOfWeek)))
-                    }
-                    fallthrough
-                case FREPCDAYS :
-                    unitFlags.insert(.day)
-                    fallthrough
-                case FREPCMONTHS :
-                    unitFlags.insert(.month)
-                    fallthrough
-                case FREPCYEARS :
-                    unitFlags.insert(.year)
-                    let components = gregorian.dateComponents(unitFlags, from: targ)
-                    if let targ = gregorian.date(from: components) {
-                        epDate = targ.timeIntervalSince1970
-                    }
-                default:
-                    break
-                }
-            }
-        }
-        return epDate
-    }
-    */
-    /*
-     also this gpt-4 code for start of week:
-     
-     import Foundation
-
-     var calendar = Calendar.current
-     calendar.timeZone = TimeZone.current  // Use the current TimeZone
-     let targ = Date() // Replace with your actual date
-
-     // Get the DateComponents for the targ date.
-     var components = calendar.dateComponents([.year, .month, .weekOfYear, .weekday], from: targ)
-
-     // Set the weekday to the first day of the week.
-     // In many Western calendars, Sunday is considered the first day of the week.
-     components.weekday = calendar.firstWeekday
-
-     // Get the date for the start of the week.
-     if let startOfWeek = calendar.date(from: components) {
-         // Reset to the start of the day.
-         let startOfDay = calendar.startOfDay(for: startOfWeek)
-         print("Start of the week: \(startOfDay)")
-     } else {
-         print("Could not find the start of the week.")
-     }
-     
-     */
     
     func getEpDate(_ ndx: Int, maxdate: Int) -> Int {
         let key = "frep\(ndx)"
@@ -675,46 +501,6 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             case FREPCWEEKS:
                 DBGLog(String("first day of week= \(gregorian.firstWeekday) targ= \(targ)"))
                 targ = gregorian.dateComponents([.calendar, .yearForWeekOfYear, .weekOfYear], from: targ!).date
-                /*
-                let localBeginningOfWeek = gregorian.firstWeekday
-                var beginOfWeek: Date?
-                var interval: TimeInterval = 0
-
-                _ = gregorian.dateInterval(of: .weekOfYear, start: &beginOfWeek, interval: &interval, for: targ)
-
-                let shiftedBeginningOfWeek = gregorian.date(bySetting: .weekday, value: localBeginningOfWeek, of: beginOfWeek!)!
-
-                var beginOfWeek: Date? = nil
-                /*
-                                 // ios8 deprecation of NSWeekCalendarUnit -- WeekOfMonth and WeekOfYear below give same result; NSCalendarUnitWeekday does not respect locale preferences
-                                 // note dbg messages time given in GMT but we fall through cases below and wipe the time component
-                                 // so we need to get the begin of week date utc time 00:00:00 to be the date in the local time zone
-                                 BOOL rslt = [gregorian rangeOfUnit:NSWeekCalendarUnit startDate:&beginOfWeek interval:NULL forDate: targ];
-                                 DBGLog(@"NSWeekCalendarUnit (iOS7) %d %@ ",rslt,beginOfWeek);
-                                 rslt = [gregorian rangeOfUnit:NSCalendarUnitWeekOfMonth startDate:&beginOfWeek interval:NULL forDate: targ];
-                                 DBGLog(@"NSCalendarUnitWeekOfMonth (iOS8) %d %@ ",rslt,beginOfWeek);
-                                 rslt = [gregorian rangeOfUnit:NSCalendarUnitWeekday startDate:&beginOfWeek interval:NULL forDate: targ];
-                                 DBGLog(@"NSCalendarUnitWeekday (iOS8) %d %@ %",rslt,beginOfWeek);
-                                 */
-
-                var rslt = false
-                if let targ {
-                    if let rangeOfWeek = gregorian.range(of: .weekOfYear, in:.year, for: targ) {
-                        beginOfWeek = rangeOfWeek.lowerBound
-                        rslt = gregorian.range(of: .weekOfYear, start: &beginOfWeek, interval: nil, for: targ) ?? false
-                    }
-                }
-
-                DBGLog(String("NSCalendarUnitWeekOfYear \(rslt) \(beginOfWeek)"))
-
-                if rslt {
-                    // need to shift date with 00:00:00 UTC ( = 21:00 day before in tz ) to local timezone so day component is correct 
-                    let tz = NSTimeZone.default as NSTimeZone
-                    if let beginOfWeek {
-                        targ = beginOfWeek?!.addingTimeInterval(TimeInterval(tz.secondsFromGMT(for: beginOfWeek)))
-                    }
-                 }
-                 */
                 
                 DBGLog(String("targ= \(targ)"))
 
@@ -751,66 +537,6 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
 
         return epDate
     }
-     /*
-    func calcFunctionValue(_ datePair: [AnyHashable]?) -> NSNumber? {
-        // finish this -- not used
-        if datePair == nil {
-            return nil
-        }
-        var sql: String
-
-        let epd0 = (datePair?[0] as? NSNumber)?.intValue ?? 0
-        let epd1 = (datePair?[1] as? NSNumber)?.intValue ?? 0
-
-        let maxc = fnArray.count
-        var vid: Int
-        let to = MyTracker
-
-        var result = 0.0
-        var v0 = 0.0
-        var v1 = 0.0
-
-        while currFnNdx < maxc {
-            let currTok = fnArray[currFnNdx].intValue
-            if isFn1Arg(currTok) {
-                currFnNdx += 1
-                vid = fnArray[currFnNdx].intValue
-                switch currTok {
-                case FN1ARGDELTA:
-                    if epd1 == 0 {
-                        v1 = Double(to.getValObj(vid)!.value)!
-                    } else {
-                        sql = String(format: "select val from voData where vid=%ld and date=%d;", vid, epd1)
-                        v1 = to.toQry2Double(sql:sql)!
-                    }
-                    sql = String(format: "select val from voData where vid=%ld and date=%d;", vid, epd0)
-                    v0 = to.toQry2Double(sql:sql)!
-                    result = v1 - v0
-                case FN1ARGAVG:
-                    if epd1 == 0 {
-                        v1 = Double(to.getValObj(vid)!.value)!
-                        sql = String(format: "select avg(val) from voData where vid=%ld and date >=%d;", vid, epd0)
-                        result = Double(to.toQry2Float(sql:sql)!) + v1
-                    } else {
-                        sql = String(format: "select avg(val) from voData where vid=%ld and date >=%d and date <=%d;", vid, epd0, epd1)
-                        result = Double(to.toQry2Float(sql:sql)!)
-                    }
-                default:
-                    switch currTok {
-                    case FN1ARGSUM, FN1ARGPOSTSUM, FN1ARGPRESUM:
-                        break
-                    default:
-                        break
-                    }
-                }
-            }
-        }
-
-
-        return NSNumber(value: result)
-
-    }
-      */
     
     // supplied with previous endpoint (endpoint 0), calculate function to current tracker
     func calcFunctionValue(withCurrent epd0: Int, fn2op: Bool = false) -> NSNumber? {
@@ -833,6 +559,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         }
         DBGLog(String("fndbg \(vo.valueName ?? "") calcFnValueWithCurrent fnArray= \(outstr)"))
         #endif
+        
         var epd1: Int
         if to.trackerDate == nil {
             // current tracker entry no date set so epd1=now
@@ -880,7 +607,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                 // v1 is value for current tracker entry (epd1) for our arg
                 switch currTok {
                 // changed to date > epd1 for consistency with other functions
-                case FN1ARGDELTA, FN1ARGONRATIO, FN1ARGNORATIO, FN1ARGELAPSEDWEEKS, FN1ARGELAPSEDDAYS, FN1ARGELAPSEDHOURS, FN1ARGELAPSEDMINS, FN1ARGELAPSEDSECS:
+                case FN1ARGROUND, FN1ARGDELTA, FN1ARGONRATIO, FN1ARGNORATIO, FN1ARGELAPSEDWEEKS, FN1ARGELAPSEDDAYS, FN1ARGELAPSEDHOURS, FN1ARGELAPSEDMINS, FN1ARGELAPSEDSECS:
                     if nullV1 {
                         return nil // delta requires v1 to subtract from, sums and avg just get one less result
                     }
@@ -925,6 +652,8 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                     #endif
                     // do caclulation
                     switch currTok {
+                    case FN1ARGROUND:
+                        result = round(v1)
                     case FN1ARGDELTA:
                         result = v1 - v0
                     case FN1ARGONRATIO:
@@ -1001,6 +730,14 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                     }
                     #if FUNCTIONDBG
                     DBGLog(String("count: result= \(result)"))
+                    #endif
+                case FN1ARGDELAY:
+                    let ep0def = Int(self.vo.optDict["frep0"]!)
+                    let ep0delta = (ep0def == FREPENTRY ? 0 : ep0def == FREPHOURS ? (60*60) : (60*60*24)) / 2
+                    sql = String(format: "select val from voData where id=%ld and date >=%ld and date <%d limit 1;", vid, epd0-ep0delta, epd0+ep0delta)
+                    result = Double(to.toQry2Float(sql:sql)!)
+                    #if FUNCTIONDBG
+                    DBGLog(String("delay: result= \(result)"))
                     #endif
                 default:
                     // remaining options for fn w/ 1 arg are pre/post/all sum
