@@ -353,7 +353,7 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
     }
 
     func fireRecalculateFns() {
-        if tracker?.recalcFnLock.get() != nil {
+        if tracker?.recalcFnLock.get() != false {
             return // already running
         }
         rTracker_resource.startProgressBar(scrollView, navItem: nil, disable: false, yloc: 20.0)
