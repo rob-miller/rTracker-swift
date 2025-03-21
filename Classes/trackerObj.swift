@@ -1570,9 +1570,6 @@ class trackerObj: tObjBase {
 
         var lsize = CGSize(width: 0.0, height: 0.0)
 
-        //NSEnumerator *enumer = [self.valObjTable objectEnumerator];
-        //valueObj *vo;
-        //while ( vo = (valueObj *) [enumer nextObject]) {
         for vo in valObjTable {
             let tsize = vo.getLabelSize()
             //DBGLog(@"rescanMaxLabel: name= %@ w=%f  h= %f",vo.valueName,tsize.width,tsize.height);
@@ -1580,38 +1577,29 @@ class trackerObj: tObjBase {
 
                 if tsize.width > lsize.width {
                     lsize = tsize
-                    // bug in xcode 4.2
-                    //if (lsize.width == lsize.height) {
-                    //    lsize.height = 18.0f;
-                    //}
                 }
             }
             if tsize.height > lsize.height {
                 // still need height for trackers with only choices and/or sliders
                 lsize.height = tsize.height
             }
-
-            /*
-                     if (   (VOT_INFO == vo.vtype)
-                     || (VOT_CHOICE == vo.vtype)
-                     || (VOT_SLIDER == vo.vtype)
-                     ) {
-                     lsize.width = 0.0;  // don't include info, choice, slider labels in maxWidth calculation
-                     }
-                     */
         }
+        let placeholderWidth = "<enter number>".size(withAttributes: [
+            NSAttributedString.Key.font: UIFont.preferredFont(forTextStyle: .body)
+        ]).width
+
+        // Ensure minimum width for labels, but not more than 50% of screen width
         let kww5 = ceil(rTracker_resource.getKeyWindowWidth() / 3.0)
         if lsize.width < kww5 {
             lsize.width = kww5
+        } else if lsize.width > rTracker_resource.getKeyWindowWidth() * 0.5 {
+            // Limit label to 50% of screen width to ensure control has space
+            lsize.width = rTracker_resource.getKeyWindowWidth() * 0.5
         }
 
-        let screenSize = UIScreen.main.bounds.size
-
-        //#define PrefBodyFont [UIFont preferredFontForTextStyle:UIFontTextStyleBody]
-        //CGFloat maxWidth = screenSize.width - (2*MARGIN) - [@"<enter number>" sizeWithAttributes:@{NSFontAttributeName: [UIFont systemFontOfSize:20.0]}].width;
-        let maxWidth = screenSize.width - (2 * MARGIN) - "<enter number>".size(withAttributes: [
-            NSAttributedString.Key.font: UIFont.preferredFont(forTextStyle: .body)
-        ]).width
+        // Ensure there's always room for the placeholder text plus padding
+        let screenWidth = rTracker_resource.getKeyWindowWidth()
+        let maxWidth = screenWidth - (2 * MARGIN) - placeholderWidth - 16 // Added extra padding
         if lsize.width > maxWidth {
             lsize.width = maxWidth
         }
