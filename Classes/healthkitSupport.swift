@@ -332,7 +332,7 @@ let healthDataQueries: [HealthDataQuery] = [
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierBloodGlucose",
         displayName: "Blood Glucose",
-        unit: nil,
+        unit: [HKUnit.gramUnit(with: .milli).unitDivided(by: .literUnit(with: .deci))],
         needUnit: false,
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
@@ -387,7 +387,7 @@ let healthDataQueries: [HealthDataQuery] = [
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierBloodPressureSystolic",
         displayName: "Blood Pressure Systolic",
-        unit: nil,
+        unit: [HKUnit.millimeterOfMercury()],
         needUnit: false,
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
@@ -398,7 +398,7 @@ let healthDataQueries: [HealthDataQuery] = [
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierBloodPressureDiastolic",
         displayName: "Blood Pressure Diastolic",
-        unit: nil,
+        unit: [HKUnit.millimeterOfMercury()],
         needUnit: false,
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
@@ -474,7 +474,7 @@ let healthDataQueries: [HealthDataQuery] = [
     ),
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierPhysicalEffort",
-        displayName: "Stair Ascent Speed",
+        displayName: "Physical Effort",
         unit: nil,
         needUnit: false,
         aggregationStyle: .discreteArithmetic,
@@ -497,7 +497,18 @@ let healthDataQueries: [HealthDataQuery] = [
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierStairAscentSpeed",
         displayName: "Stair Ascent Speed",
-        unit: nil,
+        unit: [HKUnit(from: "m/s")],
+        needUnit: false,
+        aggregationStyle: .discreteArithmetic,
+        customProcessor: nil,
+        aggregationType: nil,
+        aggregationTime: nil,
+        info: nil
+    ),
+    HealthDataQuery(
+        identifier: "HKQuantityTypeIdentifierStairDescentSpeed",
+        displayName: "Stair Descent Speed",
+        unit: [HKUnit(from: "m/s")],
         needUnit: false,
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
@@ -519,7 +530,7 @@ let healthDataQueries: [HealthDataQuery] = [
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierWalkingSpeed",
         displayName: "Walking Speed",
-        unit: nil,
+        unit: [HKUnit(from: "m/s")],
         needUnit: false,
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
@@ -530,7 +541,7 @@ let healthDataQueries: [HealthDataQuery] = [
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierWalkingStepLength",
         displayName: "Walking Step Length",
-        unit: nil,
+        unit: [HKUnit.meter(), HKUnit.foot(), HKUnit.yard()],
         needUnit: false,
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
@@ -541,29 +552,7 @@ let healthDataQueries: [HealthDataQuery] = [
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierWalkingAsymmetryPercentage",
         displayName: "Walking Asymmetry %",
-        unit: nil,
-        needUnit: false,
-        aggregationStyle: .discreteArithmetic,
-        customProcessor: nil,
-        aggregationType: nil,
-        aggregationTime: nil,
-        info: nil
-    ),
-    HealthDataQuery(
-        identifier: "HKQuantityTypeIdentifierStairAscentSpeed",
-        displayName: "Stair Ascent Speed",
-        unit: nil,
-        needUnit: false,
-        aggregationStyle: .discreteArithmetic,
-        customProcessor: nil,
-        aggregationType: nil,
-        aggregationTime: nil,
-        info: nil
-    ),
-    HealthDataQuery(
-        identifier: "HKQuantityTypeIdentifierStairDescentSpeed",
-        displayName: "Stair Descent Speed",
-        unit: nil,
+        unit: [HKUnit.percent()],
         needUnit: false,
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
@@ -1544,14 +1533,13 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
             return
         }
 
-        // Debug
-
-        
-        let calendar = Calendar.current
         // Predicate for all time
-        //let startDate = (lastDate ?? 0 > 0 ? Date(timeIntervalSince1970: Double(lastDate!)) : Date.distantPast)
-        let specificDate = calendar.date(from: DateComponents(year: 2024, month: 9, day: 19, hour: 0, minute: 0, second: 0))
-        let startDate = (lastDate ?? 0 > 0 ? Date(timeIntervalSince1970: Double(lastDate!)) : specificDate)
+        let startDate = (lastDate ?? 0 > 0 ? Date(timeIntervalSince1970: Double(lastDate!)) : Date.distantPast)
+        
+        // debug date
+        //let calendar = Calendar.current
+        //let specificDate = calendar.date(from: DateComponents(year: 2024, month: 9, day: 19, hour: 0, minute: 0, second: 0))
+        //let startDate = (lastDate ?? 0 > 0 ? Date(timeIntervalSince1970: Double(lastDate!)) : specificDate)
         
         let predicate = HKQuery.predicateForSamples(withStart: startDate, end: Date(), options: [])
 
