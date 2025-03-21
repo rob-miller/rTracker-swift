@@ -605,15 +605,16 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 // Check for external source
                 let isOtSource = vo?.optDict["otsrc"] == "1"
                 let isAhkSource = vo?.optDict["ahksrc"] == "1"
-                let isExternalSource = isOtSource || isAhkSource
+                let isFn = vo?.vtype == VOT_FUNC
+                let isIconTagged = isOtSource || isAhkSource || isFn
                 
                 // Use standard text labeling
                 cell?.textLabel?.text = vo?.valueName
                 
                 // For external sources, add a small icon to the left of the text
-                if isExternalSource {
+                if isIconTagged {
                     // Create a small icon to the left of the text
-                    let iconName = isOtSource ? "link" : "heart.text.square"
+                    let iconName = isOtSource ? "link" : isAhkSource ? "heart.text.square" : "function"
                     let sourceIndicator = UIImageView(image: UIImage(systemName: iconName))
                     sourceIndicator.tag = kViewTag + 1
                     sourceIndicator.tintColor = .systemBlue
