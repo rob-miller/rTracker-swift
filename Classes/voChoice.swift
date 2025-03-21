@@ -114,7 +114,7 @@ class voChoice: voState {
 
     override func voTVCellHeight() -> CGFloat {
         //return CELL_HEIGHT_TALL;
-        return segmentedControl!.frame.size.height + (3 * MARGIN) + vo.getLabelSize().height + vo.getLongTitleSize().height
+        return segmentedControl!.frame.size.height + (3 * MARGIN) + vo.getLabelSize().height
 
     }
 

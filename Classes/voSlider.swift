@@ -85,8 +85,8 @@ class voSlider: voState {
 
     override func voTVCellHeight() -> CGFloat {
         //return CELL_HEIGHT_TALL;
-        //DBGLog(String("\(sliderCtl!.frame.size.height) \(3 * MARGIN) \(vo.getLabelSize().height) \(vo.getLongTitleSize().height)"))
-        return sliderCtl!.frame.size.height + (3 * MARGIN) + vo.getLabelSize().height + vo.getLongTitleSize().height
+        //DBGLog(String("\(sliderCtl!.frame.size.height) \(3 * MARGIN) \(vo.getLabelSize().height) "))
+        return sliderCtl!.frame.size.height + (3 * MARGIN) + vo.getLabelSize().height
     }
 
     @objc func sliderAction(_ sender: UISlider?) {
@@ -102,7 +102,7 @@ class voSlider: voState {
                 //let ival = Int(Double(Int(slider?.value ?? 0)) + 0.5)
                 //let ival = Int((slider?.value ?? 0.0) + 0.5)
                 let ival = Int(slider.value + Float(0.5))
-                slider.setValue(Float(ival), animated: true)
+                slider.setValue(Float(ival), animated: false)
             }
         }
          

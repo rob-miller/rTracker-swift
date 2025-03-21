@@ -628,25 +628,6 @@ class valueObj: NSObject, UITextFieldDelegate {
         //return [self.valueName sizeWithAttributes:@{NSFontAttributeName:[UIFont systemFontOfSize:[UIFont systemFontSize]]}];
     }
 
-    func getLongTitleSize() -> CGSize {
-        var labelSize = CGSize(width: 0, height: 0)
-        if optDict["longTitle"] != nil && ("" != optDict["longTitle"]) {
-            var maxSize = rTracker_resource.getKeyWindowFrame().size
-            maxSize.height = 9999
-            maxSize.width -= 2 * MARGIN
-            let lts = optDict["longTitle"]
-            let ltrect = lts?.boundingRect(with: maxSize, options: .usesLineFragmentOrigin, attributes: [
-                NSAttributedString.Key.font: PrefBodyFont
-            ], context: nil)
-            labelSize.height += (ltrect?.size.height ?? 0.0) - (ltrect?.origin.y ?? 0.0)
-            labelSize.height = minLabelHeight(labelSize.height)
-            labelSize.width = ltrect?.size.width ?? 0.0
-        }
-        return labelSize
-
-        //return [self.valueName sizeWithAttributes:@{NSFontAttributeName:[UIFont systemFontOfSize:[UIFont systemFontSize]]}];
-    }
-
     // specific to VOT_CHOICE with optional values - seach dictionary for value, return index
     func getChoiceIndex(forValue val: String?) -> Int {
         //DBGLog(@"gciv val=%@",val);

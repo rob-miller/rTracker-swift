@@ -1262,7 +1262,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
 
         //trackerObj *to = (trackerObj*) parentTracker;
         vosFrame = bounds
-        _rlab = nil  // fforce recreate
+        _rlab = nil  // force recreate
         
         //UILabel *rlab = [[UILabel alloc] initWithFrame:bounds];
         //rlab.textAlignment = UITextAlignmentRight;
