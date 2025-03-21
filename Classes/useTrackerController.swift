@@ -148,15 +148,59 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             }
             n += 1
         }
-        // n.b. we hardcode number of sections in a tracker tableview here
+
         if isViewLoaded && view.window != nil {
-            if let iparr = iparr as? [IndexPath] {
-                tableView!.reloadRows(at: iparr, with: .none)
+            UIView.performWithoutAnimation {
+                if let iparr = iparr as? [IndexPath] {
+                    tableView!.reloadRows(at: iparr, with: .none)
+                }
             }
         }
 
     }
 
+    /*
+     
+     // this version works with tableView(willDisplay), but don't like control flickering 
+    var pendingVOUpdates = Set<Int>()
+    
+    func updateTableCellsx(_ inVO: valueObj?) {
+        var voIndices: [Int] = []
+        var n = 0
+        
+        // Find which valueObjs need updating
+        for vo in tracker!.valObjTable {
+            if VOT_FUNC == vo.vtype || vo.optDict["otTracker"] ?? "" == tracker?.trackerName {
+                vo.display = nil // always redisplay
+                voIndices.append(n)
+            } else if (inVO?.vid == vo.vid) && (nil == vo.display) {
+                voIndices.append(n)
+            }
+            n += 1
+        }
+        
+        // If view is loaded and visible
+        if isViewLoaded && view.window != nil {
+            // First approach: Direct control updates for visible cells
+            for index in voIndices {
+                let indexPath = IndexPath(row: index, section: 0)
+                
+                // Only update visible cells
+                if let cell = self.tableView?.cellForRow(at: indexPath),
+                   let vo = tracker?.valObjTable[index] {
+                    
+                    // Update just the control
+                    vo.vos?.updateControlInCell(cell)
+                }
+            }
+            
+            // For cells that aren't visible, we'll need to reload them when they become visible
+            // Store which ones need updating when they appear
+            self.pendingVOUpdates = Set(voIndices)
+        }
+    }
+     */
+    
     // handle rtTrackerUpdatedNotification
     @objc func updateUTC(_ notification: Notification?) {
         DBGLog(String("UTC update notification from tracker \((notification?.object as? trackerObj)?.trackerName)"))
@@ -577,12 +621,6 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     override func viewWillDisappear(_ animated: Bool) {
         viewDisappearing = true
-        /*
-         if (self.needSave) {
-                self.alertResponse=CSCANCEL;
-                [self alertChkSave];
-            }
-         */
 
         DBGLog("utc view disappearing")
         //already done [self.tracker.activeControl resignFirstResponder];
@@ -1909,6 +1947,20 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     let CHECKBOX_WIDTH = 40.0
 
 
+    /*
+    // Add to tableView:willDisplayCell:forRowAtIndexPath: method
+    func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+        //super.tableView(tableView, willDisplay: cell, forRowAt: indexPath)
+        
+        // Check if this cell needs a control update
+        if pendingVOUpdates.contains(indexPath.row),
+           let vo = tracker?.valObjTable[indexPath.row] {
+            vo.vos?.updateControlInCell(cell)
+            pendingVOUpdates.remove(indexPath.row)
+        }
+    }
+    */
+    
     // Customize the appearance of table view cells.
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let row = indexPath.row
@@ -1916,35 +1968,17 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         //DBGLog(@"uvc table cell at index %d label %@",row,vo.valueName);
 
         return (vo.vos?.voTVCell(tableView))!
-        /*
-            UITableViewCell *tvc = [vo.vos voTVCell:tableView];
-            UIImageView *bg = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"bkgnd-cell1-320-56.png"]];
-            [tvc setBackgroundView:bg];
-            [bg release];
 
-            return tvc;
-             */
     }
 
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         let row = indexPath.row
         let vo = (tracker!.valObjTable)[row]
         return vo.vos?.voTVCellHeight() ?? 0.0
-        /*
-        	NSInteger vt = ((valueObj*) (self.tracker.valObjTable)[[indexPath row]]).vtype;
-        	if ( vt == VOT_CHOICE || vt == VOT_SLIDER )
-        		return CELL_HEIGHT_TALL;
-        	return CELL_HEIGHT_NORMAL;
-             */
     }
 
     // Override to support row selection in the table view.
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-
-        // Navigation logic may go here -- for example, create and push another view controller.
-        // AnotherViewController *anotherViewController = [[AnotherViewController alloc] initWithNibName:@"AnotherView" bundle:nil];
-        // [self.navigationController pushViewController:anotherViewController animated:YES];
-        // [anotherViewController release];
 
         let vo = (tracker!.valObjTable)[indexPath.row]
 
@@ -1972,35 +2006,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             }
 
         }
-
-
-
-
-
-
     }
 }
-
-// UIAdaptivePresentationControllerDelegate added so dpvc.presentationController.delegate can be set to trigger viewWillAppear for ios13 - hacky.
-
-/*
- {
-	trackerObj *tracker;
-	datePickerVC *dpvc;
-    dpRslt *dpr;
-	CGRect saveFrame;
-    BOOL needSave;
-    BOOL didSave;
-    BOOL fwdRotations;
-    BOOL rejectable;
-    BOOL viewDisappearing;
-    trackerList *tlist;
-    int alertResponse;
-    int saveTargD;
-
-    trackerCalViewController *tsCalVC;
-}
-*/
 
 let CSCANCEL = 1
 let CSSETDATE = 2

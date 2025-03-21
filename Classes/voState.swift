@@ -154,9 +154,6 @@ class voState: NSObject, voProtocol {
         if nil == vo.optDict["privacy"] {
             vo.optDict["privacy"] = "\(PRIVDFLT)"
         }
-        if nil == vo.optDict["longTitle"] {
-            vo.optDict["longTitle"] = ""
-        }
 
         if nil == vo.optDict["otsrc"] {
             vo.optDict["otsrc"] = OTSRCDFLT ? "1" : "0"
@@ -177,8 +174,7 @@ class voState: NSObject, voProtocol {
         if ((key == "graph") && (val == (GRAPHDFLT ? "1" : "0")))
             || ((key == "privacy") && (Int(val ?? "") ?? 0 == PRIVDFLT))
             || ((key == "otCurrent") && (val == (OTCURRDFLT ? "1" : "0")))
-            || ((key == "otsrc") && (val == (OTSRCDFLT ? "1" : "0")))
-            || ((key == "longTitle") && (val == "")) {
+            || ((key == "otsrc") && (val == (OTSRCDFLT ? "1" : "0"))) {
             vo.optDict.removeValue(forKey: key)
             return true
         }
@@ -219,25 +215,6 @@ class voState: NSObject, voProtocol {
         //}
 
         //return [self.vos cleanOptDictDflts:key];
-    }
-
-    @objc func longTitleSave(_ str: String?) {
-        DBGLog(String("lts: \(str)"))
-        vo.optDict["longTitle"] = str?.trimmingCharacters(in: .whitespaces)
-    }
-
-    func longTitleBtn() {
-        DBGLog("long title")
-
-        let vde = voDataEdit()
-        vde.vo = nil
-        vde.saveClass = self
-        vde.saveSelector = #selector(longTitleSave(_:))
-        vde.text = vo.optDict["longTitle"]
-
-        //[self performSelector:vde.saveSelector withObject:@"foo" afterDelay:(NSTimeInterval)0];
-        let navCon = UINavigationController(rootViewController: vde)
-        vc?.present(navCon, animated: true)
     }
 
     func tvn() -> String {
@@ -308,19 +285,6 @@ class voState: NSObject, voProtocol {
             text: vo.optDict["yline1"],
             addsv: true)
 
-        //------
-
-        frame.origin.x = MARGIN
-        frame.origin.y += MARGIN + frame.size.height
-
-        /* disable long title for now...
-            self.vc = ctvovc;
-            frame = [ctvovc configActionBtn:frame key:nil label:@"long title" target:self action:@selector(longTitleBtn)];
-            */
-
-
-        //------
-
         ctvovc.lasty = frame.origin.y + frame.size.height + MARGIN
         ctvovc.lastx = (ctvovc.lastx < frame.origin.x + frame.size.width + MARGIN ? frame.origin.x + frame.size.width + MARGIN : ctvovc.lastx)
 
@@ -337,7 +301,6 @@ class voState: NSObject, voProtocol {
         let xcd = vo.optDict["otCurrent"] == "1"
         if (!xtName.isEmpty && !xvName.isEmpty) {
             if xtName == MyTracker.trackerName {
-                DBGLog("hello")
                 let xvo = MyTracker.getValObjByName(xvName)
                 return xvo?.value ?? ""
             } else {
@@ -390,8 +353,203 @@ class voState: NSObject, voProtocol {
     let BMARGIN = 7.0
 
 
+    func updateControlInCell(_ cell: UITableViewCell) {
+        // Remove existing control
+        let controlTag = kViewTag + 100
+        if let existingControl = cell.contentView.viewWithTag(controlTag) {
+            existingControl.removeFromSuperview()
+        }
+        
+        // Calculate bounds based on cell type
+        var bounds = CGRect.zero
+        let maxLabel = self.vo.parentTracker.maxLabel
+        
+        // Check the cell type by looking for the switch control
+        let isEnabledCell = cell.contentView.subviews.contains { view in
+            return view is UISwitch && view.accessibilityIdentifier?.contains("\(tvn())_enable") == true
+        }
+        
+        if isEnabledCell {
+            // For two-row cells (enabled cells)
+            let screenSize = UIScreen.main.bounds.size
+            bounds.origin.y = maxLabel.height + (3.0 * MARGIN)
+            bounds.size.height = maxLabel.height + (1.5 * MARGIN)
+            bounds.size.width = screenSize.width - (2.0 * MARGIN)
+            bounds.origin.x = MARGIN
+        } else {
+            // For single-row cells
+            bounds.origin.x = maxLabel.width + LMARGIN
+            bounds.origin.y = MARGIN
+            bounds.size.width = rTracker_resource.getKeyWindowWidth() - maxLabel.width - LMARGIN - RMARGIN
+            bounds.size.height = maxLabel.height + MARGIN
+        }
+        
+        // Force recreation of display
+        self.vo.display = nil
+        
+        // Create and add the new control with smooth transition
+        if let newDisplay = self.vo.display(bounds) {
+            newDisplay.tag = controlTag
+            
+            // Add with fade-in animation
+            newDisplay.alpha = 0
+            cell.contentView.addSubview(newDisplay)
+            
+            UIView.animate(withDuration: 0.15) {
+                newDisplay.alpha = 1.0
+            }
+        }
+    }
+    
+    
     static let voTVEnabledCellCellIdentifier = "Cell1"
 
+    func voTVEnabledCell(_ tableView: UITableView?) -> UITableViewCell {
+        var cell: UITableViewCell?
+        let maxLabel = vo.parentTracker.maxLabel
+        
+        // Dequeue or create cell
+        cell = tableView?.dequeueReusableCell(withIdentifier: voState.voTVEnabledCellCellIdentifier)
+        if cell == nil {
+            cell = UITableViewCell(style: .default, reuseIdentifier: voState.voTVEnabledCellCellIdentifier)
+            cell?.selectionStyle = .none
+            cell?.backgroundColor = nil
+        } else {
+            // Remove any existing views with the label tag
+            while let viewToRemove = cell?.contentView.viewWithTag(kViewTag) {
+                viewToRemove.removeFromSuperview()
+            }
+            
+            // Remove any existing control view
+            if let controlView = cell?.contentView.viewWithTag(kViewTag + 100) {
+                controlView.removeFromSuperview()
+            }
+        }
+        
+        cell?.backgroundColor = .clear
+        
+        // Setup the switch control
+        var bounds = CGRect.zero
+        bounds.origin.x = MARGIN
+        bounds.origin.y = MARGIN
+        bounds.size.width = 30.0 // for checkbox
+        bounds.size.height = 30.0
+        vo.switchUseVO?.frame = bounds
+        vo.switchUseVO?.tag = kViewTag
+        vo.switchUseVO?.accessibilityHint = "enable this control"
+        vo.switchUseVO?.accessibilityIdentifier = "\(tvn())_enable"
+        vo.switchUseVO?.isOn = vo.useVO
+        
+        if let aswitchUseVO = vo.switchUseVO {
+            cell?.contentView.addSubview(aswitchUseVO)
+        }
+        
+        // Setup the label(s)
+        setupEnabledLabelForCell(cell!, switchWidth: vo.switchUseVO?.intrinsicContentSize.width ?? 0.0, maxLabel: maxLabel)
+        
+        // Setup control display in second row
+        let screenSize = UIScreen.main.bounds.size
+        bounds.origin.y = maxLabel.height + (3.0 * MARGIN)
+        bounds.size.height = maxLabel.height + (1.5 * MARGIN)
+        bounds.size.width = screenSize.width - (2.0 * MARGIN)
+        bounds.origin.x = MARGIN
+        
+        if let aDisplay = vo.display(bounds) {
+            aDisplay.tag = kViewTag + 100 // Special tag for controls
+            cell?.contentView.addSubview(aDisplay)
+        }
+        
+        return cell!
+    }
+
+    // Helper method for enabled cell labels
+    private func setupEnabledLabelForCell(_ cell: UITableViewCell, switchWidth: CGFloat, maxLabel: CGSize) {
+        var bounds = CGRect.zero
+        bounds.origin.x = MARGIN + switchWidth + MARGIN
+        bounds.origin.y = MARGIN
+        
+        let screenSize = UIScreen.main.bounds.size
+        bounds.size.width = screenSize.width - switchWidth - (2.0 * MARGIN)
+        bounds.size.height = maxLabel.height + MARGIN
+        
+        let splitStrArr = vo.valueName?.components(separatedBy: "|")
+        let hasSplit = 1 < (splitStrArr?.count ?? 0)
+        
+        if hasSplit {
+            bounds.size.width /= 2.0
+        }
+        
+        // Check if this valueObj is icon tagged
+        let isIconTagged = vo.optDict["otsrc"] == "1" || vo.optDict["ahksrc"] == "1" || vo.vtype == VOT_FUNC
+        
+        // First label (or only label if no split)
+        let labelContainer = UIView(frame: bounds)
+        labelContainer.tag = kViewTag
+        
+        let label = UILabel(frame: CGRect(
+            x: isIconTagged ? 26 : 0,
+            y: 0,
+            width: isIconTagged ? bounds.size.width - 26 : bounds.size.width,
+            height: bounds.size.height
+        ))
+        
+        label.font = PrefBodyFont
+        label.textColor = .label
+        let darkMode = vc?.traitCollection.userInterfaceStyle == .dark
+        label.backgroundColor = darkMode ? UIColor.systemBackground : UIColor.clear
+        label.alpha = 1.0
+        label.textAlignment = .left
+        label.contentMode = .topLeft
+        label.text = splitStrArr?[0]
+        label.lineBreakMode = .byTruncatingTail
+        label.numberOfLines = 1
+        
+        labelContainer.addSubview(label)
+        
+        // Add source indicator if needed
+        if isIconTagged {
+            let iconName = vo.optDict["otsrc"] == "1" ? "link" : vo.optDict["ahksrc"] == "1" ? "heart.text.square" : "function"
+            let sourceIndicator = UIImageView(image: UIImage(systemName: iconName))
+            sourceIndicator.tintColor = .systemBlue
+            sourceIndicator.contentMode = .scaleAspectFit
+            sourceIndicator.frame = CGRect(x: 0, y: 0, width: 22, height: bounds.size.height)
+            sourceIndicator.center.y = bounds.size.height / 2
+            labelContainer.addSubview(sourceIndicator)
+        }
+        
+        cell.contentView.addSubview(labelContainer)
+        
+        // Second label if split by |
+        if hasSplit {
+            bounds.origin.x += bounds.size.width
+            bounds.size.width -= 2.0 * MARGIN
+            
+            let secondLabelContainer = UIView(frame: bounds)
+            secondLabelContainer.tag = kViewTag
+            
+            let secondLabel = UILabel(frame: CGRect(
+                x: 0,
+                y: 0,
+                width: bounds.size.width,
+                height: bounds.size.height
+            ))
+            
+            secondLabel.font = PrefBodyFont
+            secondLabel.textColor = .label
+            secondLabel.backgroundColor = darkMode ? UIColor.systemBackground : UIColor.clear
+            secondLabel.alpha = 1.0
+            secondLabel.textAlignment = .right
+            secondLabel.contentMode = .topRight
+            secondLabel.text = splitStrArr?[1]
+            secondLabel.lineBreakMode = .byTruncatingTail
+            secondLabel.numberOfLines = 1
+            
+            secondLabelContainer.addSubview(secondLabel)
+            cell.contentView.addSubview(secondLabelContainer)
+        }
+    }
+    
+    /*
     func voTVEnabledCell(_ tableView: UITableView?) -> UITableViewCell {
 
         var bounds: CGRect = CGRect.zero
@@ -405,26 +563,14 @@ class voState: NSObject, voProtocol {
             cell?.selectionStyle = .none
             cell?.backgroundColor = nil
         } else {
-            // the cell is being recycled, remove old embedded controls
-            //var viewToRemove: UIView? = nil
             while let viewToRemove = cell?.contentView.viewWithTag(kViewTag) {
                 viewToRemove.removeFromSuperview()
             }
         }
 
-
-        //cell.accessoryType = UITableViewCellAccessoryCheckmark;
-
-        // checkButton top row left
-
-        //let checkImage = UIImage(named: "checked.png")
-
         bounds.origin.x = MARGIN
         bounds.origin.y = MARGIN
-        /* changed to constant 30x30 7.iv.2013
-        	bounds.size.width = checkImage.size.width ; //CHECKBOX_WIDTH; // cell.frame.size.width;
-        	bounds.size.height = checkImage.size.height ; //self.tracker.maxLabel.height + 2*BMARGIN; //CELL_HEIGHT_TALL/2.0; //self.tracker.maxLabel.height + BMARGIN;
-             */
+
         bounds.size.width = 30.0 // for checkbox
         bounds.size.height = 30.0
 
@@ -435,13 +581,6 @@ class voState: NSObject, voProtocol {
 
         vo.switchUseVO?.accessibilityHint = "enable this control"
         vo.switchUseVO?.accessibilityIdentifier = "\(tvn())_enable"
-        
-        //if (! self.vo.retrievedData) {  // only show enable checkbox if this is data entry mode (not show historical)
-        // 26 mar 2011 -- why not show for historical ?
-        // 30 mar 2011 -- seems like switchUseVO should be correct state if use enablevo everywhere; else don't use it
-        //let image = vo.useVO ? checkImage : UIImage(named: "unchecked.png")
-        //let newImage = image?.stretchableImage(withLeftCapWidth: Int(12.0), topCapHeight: Int(0.0))
-        //vo.switchUseVO?.setImage(newImage, for: .normal)
         
         vo.switchUseVO?.isOn = vo.useVO
         if let aswitchUseVO = vo.switchUseVO {
@@ -532,10 +671,10 @@ class voState: NSObject, voProtocol {
         return cell!
 
     }
-
+     */
+    
     func voTVCellHeight() -> CGFloat {
-        var labelSize = vo.getLabelSize()
-        labelSize.height += vo.getLongTitleSize().height
+        let labelSize = vo.getLabelSize()
         let maxLabel = vo.parentTracker.maxLabel
 
         if labelSize.width <= maxLabel.width || VOT_INFO == vo.vtype {
@@ -548,10 +687,98 @@ class voState: NSObject, voProtocol {
         }
     }
 
-    //DBGLog(@"votvcell maxLabel= w= %f h= %f",maxLabel.width,maxLabel.height);
-
     static let voTVCellCellIdentifier = "Cell2"
+    
+    func voTVCell(_ tableView: UITableView) -> UITableViewCell {
+        var cell: UITableViewCell?
+        let maxLabel = vo.parentTracker.maxLabel
+        
+        // Dequeue or create cell
+        cell = tableView.dequeueReusableCell(withIdentifier: voState.voTVCellCellIdentifier)
+        if cell == nil {
+            cell = UITableViewCell(style: .default, reuseIdentifier: voState.voTVCellCellIdentifier)
+            cell?.selectionStyle = .none
+        } else {
+            // Remove any existing views with the label/container tag
+            while let viewToRemove = cell?.contentView.viewWithTag(kViewTag) {
+                viewToRemove.removeFromSuperview()
+            }
+            
+            // Remove any existing control view
+            if let controlView = cell?.contentView.viewWithTag(kViewTag + 100) {
+                controlView.removeFromSuperview()
+            }
+        }
+         
+        cell?.backgroundColor = .clear
+        
+        // Create the label portion
+        setupLabelForCell(cell!, maxLabel: maxLabel)
+        
+        // Add control display
+        var bounds = CGRect.zero
+        bounds.origin.x = maxLabel.width + LMARGIN
+        bounds.origin.y = MARGIN
+        bounds.size.width = rTracker_resource.getKeyWindowWidth() - maxLabel.width - LMARGIN - RMARGIN
+        bounds.size.height = maxLabel.height + MARGIN
+        
+        if let aDisplay = vo.display(bounds) {
+            aDisplay.tag = kViewTag + 100 // Special tag for controls
+            cell?.contentView.addSubview(aDisplay)
+        }
+        
+        return cell!
+    }
 
+    // Helper method to setup the label portion of the cell
+    private func setupLabelForCell(_ cell: UITableViewCell, maxLabel: CGSize) {
+        var bounds = CGRect.zero
+        bounds.origin.x = MARGIN
+        bounds.origin.y = MARGIN
+        bounds.size.width = maxLabel.width
+        bounds.size.height = maxLabel.height
+        
+        let containerView = UIView(frame: bounds)
+        containerView.tag = kViewTag
+        
+        let isIconTagged = vo.optDict["otsrc"] == "1" || vo.optDict["ahksrc"] == "1" || vo.vtype == VOT_FUNC
+        
+        let label = UILabel(frame: CGRect(
+            x: isIconTagged ? 26 : 0,
+            y: 0,
+            width: isIconTagged ? bounds.size.width - 26 : bounds.size.width,
+            height: bounds.size.height
+        ))
+        
+        label.font = PrefBodyFont
+        label.textColor = .label
+        let darkMode = vc?.traitCollection.userInterfaceStyle == .dark
+        label.backgroundColor = darkMode ? UIColor.systemBackground : UIColor.clear
+        label.alpha = 1.0
+        label.textAlignment = .left
+        label.contentMode = .topLeft
+        label.text = vo.valueName
+        label.lineBreakMode = .byTruncatingTail
+        label.numberOfLines = 1
+        
+        containerView.addSubview(label)
+        
+        // Add source indicator if needed
+        if isIconTagged {
+            let iconName = vo.optDict["otsrc"] == "1" ? "link" : vo.optDict["ahksrc"] == "1" ? "heart.text.square" : "function"
+            let sourceIndicator = UIImageView(image: UIImage(systemName: iconName))
+            sourceIndicator.tintColor = .systemBlue
+            sourceIndicator.contentMode = .scaleAspectFit
+            sourceIndicator.frame = CGRect(x: 0, y: 0, width: 22, height: bounds.size.height)
+            sourceIndicator.center.y = bounds.size.height / 2
+            containerView.addSubview(sourceIndicator)
+        }
+        
+        cell.contentView.addSubview(containerView)
+        cell.accessibilityIdentifier = "useT_\(vo.vos!.tvn())"
+    }
+    
+    /*
     func voTVCell(_ tableView: UITableView) -> UITableViewCell {
         var bounds: CGRect = CGRect.zero
         var cell: UITableViewCell?
@@ -568,38 +795,28 @@ class voState: NSObject, voProtocol {
                 viewToRemove.removeFromSuperview()
             }
         }
-        
-        // Set cell background based on source
-         // not good with darkmode
-        let isExternalSource = vo.optDict["otsrc"] == "1" || vo.optDict["ahksrc"] == "1"
-        //if isExternalSource {
-        //    cell?.backgroundColor = UIColor(red: 0.95, green: 0.95, blue: 1.0, alpha: 0.8) // Very light blue
-        //} else {
          
-            cell?.backgroundColor = .clear
-        //}
+        cell?.backgroundColor = .clear
         
         // Configure main label bounds
         bounds.origin.x = MARGIN
         bounds.origin.y = MARGIN
         let labelSize = vo.getLabelSize()
-        let longTitleSize = vo.getLongTitleSize()
         
-        if labelSize.width <= maxLabel.width {
-            bounds.size.width = maxLabel.width
-        } else {
-            bounds.size.width = rTracker_resource.getKeyWindowWidth() - MARGIN - RMARGIN
-        }
+        // Always constrain to maxLabel.width to ensure one-line layout
+        bounds.size.width = maxLabel.width
         bounds.size.height = labelSize.height
         
         // Create main label with icon if needed
         let containerView = UIView(frame: bounds)
         containerView.tag = kViewTag
         
+        let isIconTagged = vo.optDict["otsrc"] == "1" || vo.optDict["ahksrc"] == "1" || vo.vtype == VOT_FUNC
+        
         let label = UILabel(frame: CGRect(
-            x: isExternalSource ? 26 : 0,
+            x: isIconTagged ? 26 : 0,
             y: 0,
-            width: isExternalSource ? bounds.size.width - 26 : bounds.size.width,
+            width: isIconTagged ? bounds.size.width - 26 : bounds.size.width,
             height: bounds.size.height
         ))
         
@@ -612,11 +829,15 @@ class voState: NSObject, voProtocol {
         label.contentMode = .topLeft
         label.text = vo.valueName
         
+        // Add these properties to truncate text properly
+        label.lineBreakMode = .byTruncatingTail
+        label.numberOfLines = 1
+        
         containerView.addSubview(label)
         
         // Add source indicator if needed
-        if isExternalSource {
-            let iconName = vo.optDict["otsrc"] == "1" ? "link" : "heart.text.square"
+        if isIconTagged {
+            let iconName = vo.optDict["otsrc"] == "1" ? "link" : vo.optDict["ahksrc"] == "1" ? "heart.text.square" : "function"
             let sourceIndicator = UIImageView(image: UIImage(systemName: iconName))
             sourceIndicator.tintColor = .systemBlue
             sourceIndicator.contentMode = .scaleAspectFit
@@ -628,61 +849,11 @@ class voState: NSObject, voProtocol {
         cell?.contentView.addSubview(containerView)
         cell?.accessibilityIdentifier = "useT_\(vo.vos!.tvn())"
         
-        // Add long title if present
-        if longTitleSize.height > 0 {
-            DBGLog(String("longTitle:\(vo.optDict["longTitle"])"))
-            
-            bounds.origin.y += 3 * MARGIN
-            bounds.size = longTitleSize
-            
-            let longTitleContainer = UIView(frame: bounds)
-            longTitleContainer.tag = kViewTag
-            
-            let longTitleLabel = UILabel(frame: CGRect(
-                x: isExternalSource ? 26 : 0,
-                y: 0,
-                width: isExternalSource ? bounds.size.width - 26 : bounds.size.width,
-                height: bounds.size.height
-            ))
-            
-            longTitleLabel.font = PrefBodyFont
-            longTitleLabel.textColor = .blue
-            longTitleLabel.alpha = 1.0
-            longTitleLabel.backgroundColor = .clear
-            longTitleLabel.lineBreakMode = .byWordWrapping
-            longTitleLabel.numberOfLines = 0 // remove any limit
-            longTitleLabel.textAlignment = .left
-            longTitleLabel.contentMode = .topLeft
-            longTitleLabel.text = vo.optDict["longTitle"]
-            
-            longTitleContainer.addSubview(longTitleLabel)
-            
-            // Add source indicator to longTitle if needed
-            if isExternalSource {
-                let iconName = vo.optDict["otsrc"] == "1" ? "link" : "heart.text.square"
-                let sourceIndicator = UIImageView(image: UIImage(systemName: iconName))
-                sourceIndicator.tintColor = .systemBlue
-                sourceIndicator.contentMode = .scaleAspectFit
-                sourceIndicator.frame = CGRect(x: 0, y: 0, width: 22, height: bounds.size.height)
-                sourceIndicator.center.y = bounds.size.height / 2
-                longTitleContainer.addSubview(sourceIndicator)
-            }
-            
-            cell?.contentView.addSubview(longTitleContainer)
-        }
-        
-        // Configure the control display bounds
-        if (labelSize.width > maxLabel.width) || longTitleSize.height > 0 {
-            bounds.origin.x = cell!.frame.origin.x + MARGIN
-            bounds.origin.y += bounds.size.height + MARGIN
-            bounds.size.width = rTracker_resource.getKeyWindowWidth() - MARGIN - RMARGIN
-            bounds.size.height = maxLabel.height + MARGIN
-        } else {
-            bounds.origin.x = maxLabel.width + LMARGIN
-            bounds.origin.y = MARGIN
-            bounds.size.width = rTracker_resource.getKeyWindowWidth() - maxLabel.width - LMARGIN - RMARGIN
-            bounds.size.height = maxLabel.height + MARGIN
-        }
+        // Configure the control display bounds - always keep on same line
+        bounds.origin.x = maxLabel.width + LMARGIN
+        bounds.origin.y = MARGIN
+        bounds.size.width = rTracker_resource.getKeyWindowWidth() - maxLabel.width - LMARGIN - RMARGIN
+        bounds.size.height = maxLabel.height + MARGIN
         
         // Add control display
         if let aDisplay = vo.display(bounds) {
@@ -691,6 +862,7 @@ class voState: NSObject, voProtocol {
         
         return cell!
     }
+     */
     
     func dataEditVDidLoad(_ vc: UIViewController) {
     }
