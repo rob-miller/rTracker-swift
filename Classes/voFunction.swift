@@ -677,6 +677,8 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
 
                     var c = Double(vo.optDict["frv0"] ?? "") ?? 0 // if ep has assoc value, then avg is over that num with date/time range already determined
                     // in other words, is it avg over 'frv' number of hours/days/weeks then that is our denominator
+                    // 25.iii.2025 this is incorrect if there are not frv0 db entries to average over... except there is avg sex/last 4 days (/4) and avg deep sleep last 4 days (/entry count)
+                    //var c = 0.0
                     if c == 0.0 {
                         // else denom is number of entries between epd0 to epd1 
                         sql = String(format: "select count(val) from voData where id=%ld and val <> '' and date >=%ld and date <%d;", vid, epd0, epd1)
@@ -691,6 +693,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                     result = (v + v1) / c
                     #if FUNCTIONDBG
                     DBGLog(String("avg: v= \(v) v1= \(v1) (v+v1)= \(v + v1) c= \(c) rslt= \(result) "))
+                    DBGLog("hello")
                     #endif
                 case FN1ARGMIN:
                     if 0 == ci && nullV1 {
