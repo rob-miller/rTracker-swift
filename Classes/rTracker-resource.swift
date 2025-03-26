@@ -176,8 +176,9 @@ class rTracker_resource: NSObject {
 
     // For UIKit-based apps
     class func getSafeAreaInsets() -> UIEdgeInsets {
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = windowScene.windows.first {
+        // Get the active window scene
+        if let windowScene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene,
+           let window = windowScene.windows.first(where: { $0.isKeyWindow }) {
             return window.safeAreaInsets
         }
         return .zero
