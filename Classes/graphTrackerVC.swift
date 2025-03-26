@@ -148,7 +148,7 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
         
         // graph rect x starts at edge of y-axis labels, which is already shifted in by insets.left
         gtvRect.origin.x = rect.size.width + insets.left
-        // graph rect width is total width minus the origin minus insetss.right
+        // graph rect width is total width minus the origin minus insets.right
         gtvRect.size.width = srect.size.width - gtvRect.origin.x - insets.right
 
     
@@ -171,8 +171,7 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
         gtvRect.size.height = rect.origin.y - gtvRect.origin.y
 
         // add scrollview for main graph
-        let tsv = UIScrollView(frame: gtvRect)
-        scrollView = tsv
+        scrollView = UIScrollView(frame: gtvRect)
         scrollView?.backgroundColor = .black
         //[self.scrollView setBackgroundColor:[UIColor greenColor]];
         scrollView?.delegate = self
@@ -211,14 +210,13 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
         }
 
         // add main graph view
-        let tgtv = graphTrackerV(frame: gtvRect)
-        gtv = tgtv
+        gtv = graphTrackerV(frame: gtvRect)
         gtv?.tracker = tracker
         gtv?.gtvCurrVO = currVO
         gtv?.parentGTVC = self
         if DPA_GOTO == dpr?.action {
             let targSecs = Int(dpr!.date!.timeIntervalSince1970) - tracker!.togd!.firstDate
-            gtv?.xMark = Double((tracker!.togd!).firstDate) + (Double(targSecs) * (tracker!.togd!.dateScale))
+            gtv?.xMark = Double(targSecs) * (tracker!.togd!.dateScale)
             xAV?.markDate = dpr!.date
         }
 

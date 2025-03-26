@@ -106,14 +106,15 @@ class gtXAxV: UIView {
         let dateStep = (finDate - startDate) / XTICKS
 
         //CGFloat len = self.bounds.size.width - (CGFloat) (2*BORDER);
-        let step = (scaleWidthX - (1 * BORDER)) / XTICKS // ignore scaleOrigin as it is 0
-
+        //let step = (scaleWidthX - (1 * BORDER)) / XTICKS // ignore scaleOrigin as it is 0
+        let step = (scaleWidthX) / XTICKS
+        
         //[self flipCTM:context];
 
         var nextXt = -2 * DOFFST
         var nextXd = -2 * DOFFST
 
-        for i in 1...Int(XTICKS) {
+        for i in 1...Int(XTICKS-1) {
             var x = CGFloat(d(i) * step)
             var y: CGFloat = 0.0 // self.bounds.size.height - BORDER;
             MoveTo(context!, x, y)
@@ -154,7 +155,7 @@ class gtXAxV: UIView {
             }
 
             x -= DOFFST
-            if (i == 1 || dateStep < 24 * 60 * 60 || Double(i) == XTICKS) && x > nextXt {
+            if (i == 1 || dateStep < 24 * 60 * 60 || Double(i) == XTICKS-1) && x > nextXt {
                 if let myFont {
                     ts.draw(at: CGPoint(x: x, y: y), withAttributes: [
                         NSAttributedString.Key.font: myFont,
@@ -166,7 +167,7 @@ class gtXAxV: UIView {
 
             y += tsize?.height ?? 0.0 // + 1.0f;
             x -= 15.0
-            if (i == 1 || dateStep >= 24 * 60 * 60 || Double(i) == XTICKS) && x > (nextXd + 10.0) {
+            if (i == 1 || dateStep >= 24 * 60 * 60 || Double(i) == XTICKS-1) && x > (nextXd + 10.0) {
                 if (i != 1) && (Double(i) != XTICKS) {
                     AddLineTo(context!, x2, y2)
                 }
