@@ -136,6 +136,8 @@
 		D4E8F90112E8682100A2526B /* privacyV.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E8F90012E8682100A2526B /* privacyV.swift */; };
 		D4E8F90412E868A300A2526B /* tictacV.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E8F90312E868A300A2526B /* tictacV.swift */; };
 		D4E8F90712E868B700A2526B /* ppwV.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E8F90612E868B700A2526B /* ppwV.swift */; };
+		D4EE7D852D8DE57000206D26 /* trackerChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4EE7D842D8DE57000206D26 /* trackerChart.swift */; };
+		D4EE7D862D8DE57000206D26 /* trackerChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4EE7D842D8DE57000206D26 /* trackerChart.swift */; };
 		D4F02398137BFF7F0097AC16 /* gtTitleV.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4F02397137BFF7F0097AC16 /* gtTitleV.swift */; };
 		D4F0239B137BFFA10097AC16 /* gtXAxV.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4F0239A137BFFA10097AC16 /* gtXAxV.swift */; };
 		D4F0239E137BFFB40097AC16 /* gtYAxV.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4F0239D137BFFB30097AC16 /* gtYAxV.swift */; };
@@ -300,6 +302,7 @@
 		D4E8F90012E8682100A2526B /* privacyV.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = privacyV.swift; sourceTree = "<group>"; };
 		D4E8F90312E868A300A2526B /* tictacV.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = tictacV.swift; sourceTree = "<group>"; };
 		D4E8F90612E868B700A2526B /* ppwV.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = ppwV.swift; sourceTree = "<group>"; };
+		D4EE7D842D8DE57000206D26 /* trackerChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = trackerChart.swift; sourceTree = "<group>"; };
 		D4F02397137BFF7F0097AC16 /* gtTitleV.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = gtTitleV.swift; sourceTree = "<group>"; };
 		D4F0239A137BFFA10097AC16 /* gtXAxV.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = gtXAxV.swift; sourceTree = "<group>"; };
 		D4F0239D137BFFB30097AC16 /* gtYAxV.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = gtYAxV.swift; sourceTree = "<group>"; };
@@ -591,6 +594,7 @@
 			children = (
 				28C286E00D94DF7D0034E888 /* RootViewController.swift */,
 				D49854AE12312A400009E458 /* useTrackerController.swift */,
+				D4EE7D842D8DE57000206D26 /* trackerChart.swift */,
 				D4588ADB1177497200AD2106 /* addTrackerController.swift */,
 				D4A9E4361A412FF300BD15B5 /* addTrackerController.xib */,
 				D48F9FB0119B4CA600B37C93 /* addValObjController.swift */,
@@ -860,6 +864,7 @@
 				D4620057182C046E00F6F2C2 /* notifyReminder.swift in Sources */,
 				D4B6AE77127EC36E00C036ED /* voSlider.swift in Sources */,
 				D4CB672F18B3FF7100096490 /* voInfo.swift in Sources */,
+				D4EE7D862D8DE57000206D26 /* trackerChart.swift in Sources */,
 				D4B6AE7C127EC38300C036ED /* voChoice.swift in Sources */,
 				D4B6AE83127EC39800C036ED /* voBoolean.swift in Sources */,
 				D41AA9032D26CDD6001393C8 /* healthkitSupport.swift in Sources */,
@@ -900,6 +905,7 @@
 				D4CA92BC2D2B115400554F55 /* ahViewController.swift in Sources */,
 				D49F29482ACC8CC800B11560 /* rTrackerUITestsLaunchTests.swift in Sources */,
 				D49F29462ACC8CC800B11560 /* rTrackerUITests.swift in Sources */,
+				D4EE7D852D8DE57000206D26 /* trackerChart.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
