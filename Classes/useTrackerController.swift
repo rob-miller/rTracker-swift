@@ -392,6 +392,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             // Notify when all operations are completed
             dispatchGroup.notify(queue: .main) {
                 DBGLog("All HealthKit data loaded and SQL inserts completed.")
+                self.tracker?.cleanDb()
                 self.tableView!.refreshControl?.endRefreshing()
                 _ = self.tracker!.loadData(Int(self.tracker!.trackerDate!.timeIntervalSince1970))
                 self.updateTrackerTableView()
@@ -1101,6 +1102,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         tbi.append(flexibleSpaceButtonItem)
         if postD != 0 || (lastD == currD) {
             tbi.append(skip2EndBtn)
+        } else if (10 < tracker?.toQry2Int(sql: "select count(*) from trkrData") ?? 0) {
+            tbi.append(createChartBtn)
         } else {
             tbi.append(fixed1SpaceButtonItem)
         }
@@ -1407,6 +1410,17 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         setTrackerDate(0)
     }
 
+    @objc func btnCreateChart() {
+        // Create an instance of the TrackerChart view controller
+        let chartVC = TrackerChart(nibName: nil, bundle: nil)
+        
+        // Pass the current tracker to the chart view controller
+        chartVC.tracker = self.tracker
+        
+        // Present the chart view controller
+        navigationController?.pushViewController(chartVC, animated: true)
+    }
+    
     @objc func btnCurrDate() {
         //DBGLog(@"pressed date becuz its a button, should pop up a date picker....");
 
@@ -1641,16 +1655,10 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 target: self,
                 action: #selector(btnSkip2End))
             
-            _calBtn!.accessibilityLabel = "Skip"
-            _calBtn!.accessibilityHint = "tap to skip to new entry"
-            _calBtn!.accessibilityIdentifier = "trkrSkip"
+            _skip2EndBtn!.accessibilityLabel = "Skip"
+            _skip2EndBtn!.accessibilityHint = "tap to skip to new entry"
+            _skip2EndBtn!.accessibilityIdentifier = "trkrSkip"
             
-            //_calBtn.tintColor = [UIColor colorWithRed:0.0 green:0.8 blue:0.0 alpha:1.0];
-            //_calBtn.tintColor = [UIColor greenColor];
-            //[_calBtn setTitleTextAttributes:@{
-            //                                  NSFontAttributeName: [UIFont systemFontOfSize:28.0]
-            //                                  ,NSForegroundColorAttributeName: [UIColor blueColor]
-            //                                  } forState:UIControlStateNormal];
         }
 
         return _skip2EndBtn!
@@ -1671,6 +1679,23 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         updateTrackerTableView()
     }
 
+    var _createChartBtn: UIBarButtonItem?
+    var createChartBtn: UIBarButtonItem {
+        if _createChartBtn == nil {
+            // Use chart.bar.xaxis as the system image which represents a bar chart
+            _createChartBtn = UIBarButtonItem(
+                image: UIImage(systemName: "chart.bar.xaxis"),
+                style: .plain,
+                target: self,
+                action: #selector(btnCreateChart))
+            
+            _createChartBtn!.accessibilityLabel = "Chart"
+            _createChartBtn!.accessibilityHint = "tap to view data charts"
+            _createChartBtn!.accessibilityIdentifier = "trkrChart"
+        }
+        return _createChartBtn!
+    }
+    
     @IBAction func iTunesExport() {
 
         DBGLog("exporting tracker:")
