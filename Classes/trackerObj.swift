@@ -1627,6 +1627,13 @@ class trackerObj: tObjBase {
     func deleteTrackerDB() {
         deleteTDb()
     }
+    
+    func cleanDb() {
+        var sql = "delete from trkrData where date not in (select date from voData)"
+        toExecSql(sql: sql)
+        sql = "delete from voData where date not in (select date from trkrData)"
+        toExecSql(sql: sql)
+    }
 
     func deleteTrackerRecordsOnly() {
         var sql = "delete from trkrData;"
