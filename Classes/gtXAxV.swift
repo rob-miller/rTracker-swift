@@ -36,7 +36,8 @@ class gtXAxV: UIView {
     var scaleOriginX: CGFloat = 0.0
     var scaleWidthX: CGFloat = 0.0
     var graphSV: UIScrollView?
-
+    var markDate: Date? = nil
+    
     override init(frame: CGRect) {
         super.init(frame: frame)
         // Initialization code
@@ -60,8 +61,37 @@ class gtXAxV: UIView {
         //Stroke
         context!.strokePath()
         drawXAxis(context)
+        
+        // Draw markDate in lower right corner if available
+        if let markDate = markDate {
+            drawMarkDate(context, date: markDate)
+        }
     }
 
+    func drawMarkDate(_ context: CGContext?, date: Date) {
+        // Format the date (date only, no time)
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateStyle = .medium
+        dateFormatter.timeStyle = .none
+        let dateString = dateFormatter.string(from: date)
+        
+        // Calculate position for lower right corner
+        guard let myFont = myFont else { return }
+        let dateSize = dateString.size(withAttributes: [NSAttributedString.Key.font: myFont])
+        
+        // Position in lower right with some padding
+        let padding: CGFloat = 10.0
+        let x = scaleWidthX - dateSize.width - padding
+        let y = bounds.height - dateSize.height - padding
+        
+        // Draw the date
+        dateString.draw(at: CGPoint(x: x, y: y), withAttributes: [
+            NSAttributedString.Key.font: myFont,
+            NSAttributedString.Key.foregroundColor: UIColor.white
+        ])
+    }
+    
+    
     let DOFFST = 15.0
 
     func drawXAxis(_ context: CGContext?) {

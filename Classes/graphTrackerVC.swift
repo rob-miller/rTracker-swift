@@ -84,27 +84,9 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
     var dpr: dpRslt?
     var parentUTC: useTrackerController?
 
-    //,shakeLock=_shakeLock;
-
-    /*
-     - (void) loadView {
-        [super loadView];
-         //scrollView = [[UIScrollView alloc] initWithFrame:[[self view] bounds]];
-         scrollView = [[UIScrollView alloc] initWithFrame:[[self view] bounds]];
-        //scrollView = [[UIScrollView alloc] initWithFrame:CGRectZero];
-        [scrollView setBackgroundColor:[UIColor magentaColor]];
-        [scrollView setDelegate:self];
-        [scrollView setBouncesZoom:YES];
-        [[self view] addSubview:scrollView];
-        [[self view] setBackgroundColor:[UIColor brownColor]];
-
-    }
-    */
     
     func buildView() {
-        //self.shakeLock = 0;
-        //if (0 != self.shakeLock) return;
-        //if (self.tracker.recalcFnLock) return;
+
 
         let insets = rTracker_resource.getSafeAreaInsets()
         DBGLog("safe insets= Top: \(insets.top), Left: \(insets.left), Bottom: \(insets.bottom), Right: \(insets.right)")
@@ -118,37 +100,14 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
 
         let srect = view.bounds
 
-        /*
-            if ( SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"5.0") && SYSTEM_VERSION_LESS_THAN(@"6.0")) {
-                srect.size.width -= 5;
-                srect.size.height += 20;
-                self.view.bounds = srect;
-            }
-            */
-
-        //srect.origin.y -= 50;
-
         DBGLog(String("gtvc srect: \(srect.origin.x) \(srect.origin.y) \(srect.size.width) \(srect.size.height)"))
-
-        /*
-            CGFloat tw = srect.size.width;   // swap because landscape only implementation and view not loaded yet
-            CGFloat th = srect.size.height;
-
-            if ( SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"8.0")) {
-                th = srect.size.width;   // swap back because fixed!
-                tw = srect.size.height;
-            }
-
-            srect.size.width = th;
-            srect.size.height = tw;
-            */
 
         // add views for title, axes and labels
 
         myFont = UIFont(name: String(FONTNAME), size: CGFloat(FONTSIZE))
         let labelHeight = (myFont?.lineHeight ?? 0.0) + 2.0
 
-        // view for title
+        // view for title -- trackerName across top
         var rect: CGRect = CGRect.zero
         rect.origin.y = 0.0
         rect.size.height = labelHeight
@@ -159,47 +118,51 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
         titleView = ttv
         titleView?.tracker = tracker
         titleView?.myFont = myFont
-        //self.titleView.backgroundColor = [UIColor greenColor];  // debug
+        //self.titleView?.backgroundColor = UIColor.green;  // debug
 
         if let titleView {
             view.addSubview(titleView)
         }
-
-        //[self.titleView release]; // rtm 05 feb 2012 +1 alloc +1 self. retain
-
+        // titleView done
+        
+        // graph rect y starts at the height of the titleView (measure from the top)
         gtvRect.origin.y = rect.size.height
 
+        
         // view for y axis labels
 
-        rect.origin.x = 0.0
+        rect.origin.x = insets.left  // 0.0
         rect.size.width = getMaxDataLabelWidth() + (2 * SPACE) + TICKLEN
         rect.origin.y = titleView?.frame.size.height ?? 0.0
-        rect.size.height = srect.size.height - labelHeight // ((2*labelHeight) + (3*SPACE) + TICKLEN);
+        rect.size.height = srect.size.height - labelHeight - insets.bottom   // ((2*labelHeight) + (3*SPACE) + TICKLEN);
 
         DBGLog(String("gtvc yax rect: \(rect.origin.x) \(rect.origin.y) \(rect.size.width) \(rect.size.height)"))
 
-        let tyav = gtYAxV(frame: rect)
-        yAV = tyav
+        yAV = gtYAxV(frame: rect)
         yAV?.myFont = myFont
 
         yAV?.scaleOriginY = 0.0
         yAV?.parentGTVC = self
 
-        gtvRect.origin.x = rect.size.width
+        // done with y-axis labels
+        
+        // graph rect x starts at edge of y-axis labels, which is already shifted in by insets.left
+        gtvRect.origin.x = rect.size.width + insets.left
+        // graph rect width is total width minus the origin minus insetss.right
         gtvRect.size.width = srect.size.width - gtvRect.origin.x - insets.right
 
+    
         // view for x axis labels
-        rect.origin.y = srect.size.height - ((2 * labelHeight) + (3 * SPACE) + TICKLEN) - insets.bottom
-        rect.size.height = srect.size.height - rect.origin.y //BORDER - rect.size.width;
-        rect.origin.x = rect.size.width
-        rect.size.width = gtvRect.size.width  // srect.size.width - rect.size.width - 10
+        rect.origin.y = srect.size.height  - insets.bottom - ((2 * labelHeight) + (3 * SPACE) + TICKLEN)
+        rect.size.height = srect.size.height - rect.origin.y  //BORDER - rect.size.width;
+        rect.origin.x = gtvRect.origin.x
+        rect.size.width = gtvRect.size.width
 
         DBGLog(String("gtvc xax rect: \(rect.origin.x) \(rect.origin.y) \(rect.size.width) \(rect.size.height)"))
 
         yAV?.scaleHeightY = rect.origin.y - (titleView?.frame.size.height ?? 0.0) // set bottom of y scale area
 
-        let txav = gtXAxV(frame: rect)
-        xAV = txav
+        xAV = gtXAxV(frame: rect)
         xAV?.myFont = myFont
 
         xAV?.scaleOriginX = 0.0
@@ -218,9 +181,6 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
         if let scrollView {
             view.addSubview(scrollView)
         }
-
-        //[self.scrollView release];  // rtm 05 feb 2012 +1 alloc +1 self.retain
-        //[[self view] setBackgroundColor:[UIColor yellowColor]];  //debug
 
         DBGLog("did create scrollview")
 
@@ -243,7 +203,6 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
         if let yAV {
             view.addSubview(yAV)
         }
-        //[self.yAV setBackgroundColor:[UIColor yellowColor]];
 
         xAV?.mytogd = tracker?.togd as? Togd
         xAV?.graphSV = scrollView
@@ -260,35 +219,19 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
         if DPA_GOTO == dpr?.action {
             let targSecs = Int(dpr!.date!.timeIntervalSince1970) - tracker!.togd!.firstDate
             gtv?.xMark = Double((tracker!.togd!).firstDate) + (Double(targSecs) * (tracker!.togd!.dateScale))
+            xAV?.markDate = dpr!.date
         }
 
 
         if let gtv {
             scrollView?.addSubview(gtv)
         }
-
-        //[self.gtv release];  // rtm 05 feb 2012 +1 alloc +1 self.retain
-        //[[self view] addSubview:[[[UIView alloc]initWithFrame:srect] retain]];
-        //self.view.multipleTouchEnabled = YES;
-
-        //[parentUTC.view addSubview:self.view];
-
-
     }
 
     // Implement viewDidLoad to do additional setup after loading the view, typically from a nib.
     override func viewDidLoad() {
-        //DBGLog(@".");
-        /*
-            CGRect frame = self.view.frame;
-            frame.size.height -= 22.0f;
-            self.view.frame = frame;
-             */
         super.viewDidLoad()
-
-        //if ( SYSTEM_VERSION_LESS_THAN(@"6.0") ) {
         buildView()
-        //}
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -314,6 +257,37 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
         //[self.view removeFromSuperview];
         super.viewWillDisappear(animated)
     }
+    
+    private var hasBuiltView = false
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        
+        // Check if we need to rebuild the view (e.g., after rotation)
+        let currentBounds = view.bounds
+        if !hasBuiltView || currentBounds != previousBounds {
+            // Remove existing subviews first
+            for subview in view.subviews {
+                subview.removeFromSuperview()
+            }
+            
+            // Reset any view references
+            titleView = nil
+            yAV = nil
+            xAV = nil
+            gtv = nil
+            scrollView = nil
+            
+            // Rebuild the view
+            buildView()
+            
+            hasBuiltView = true
+            previousBounds = currentBounds
+        }
+    }
+
+    // Add this property to track when the bounds change
+    private var previousBounds: CGRect = .zero
 
     // MARK: -
     // MARK: handle shake event
@@ -745,16 +719,19 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
             dpr?.action = DPA_GOTO
             //self.gtv.xMark = touchPoint.x;
             gtv?.xMark = Double(newDate - tracker!.togd!.firstDate) * tracker!.togd!.dateScale
+            xAV?.markDate = dpr?.date
         } else if (2 == touch?.tapCount) && (1 == (touches?.count ?? 0)) {
             DBGLog("gtvTap: cancel")
             gtv?.xMark = NOXMARK
             dpr?.action = DPA_GOTO
             dpr?.date = nil
+            xAV?.markDate = nil
         } else {
             DBGLog("gtvTap: null event")
         }
 
         gtv?.setNeedsDisplay()
+        xAV?.setNeedsDisplay()
     }
 
     // MARK: -

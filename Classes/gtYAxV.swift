@@ -347,7 +347,7 @@ class gtYAxV: UIView {
                         ]
                         
                         // Note: The position might need to be adjusted based on your layout
-                        let textPosition = CGPoint(x: 5 * SPACE5, y: BORDER/2)
+                        let textPosition = CGPoint(x: 5 * SPACE5, y: 0)
                         vogd.vo.valueName?.draw(at: textPosition, withAttributes: attributes)
 
                         // Restore the graphics context
