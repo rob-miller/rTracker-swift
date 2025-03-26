@@ -234,7 +234,8 @@ class voNumber: voState, UITextFieldDelegate {
                         let formattedValue: String
                         
                         if self.vo.optDict["hrsmins"] ?? "0" == "1" {
-                            formattedValue = String(format: "%d:%02d", Int(result.value)/60, Int(result.value) % 60)
+                            let rv = round(result.value)
+                            formattedValue = String(format: "%d:%02d", Int(rv)/60, Int(rv) % 60)
                         } else if result.value.truncatingRemainder(dividingBy: 1) == 0 {
                             // If the value is a whole number, format as an integer
                             formattedValue = String(format: "%.0f", result.value)
@@ -242,6 +243,7 @@ class voNumber: voState, UITextFieldDelegate {
                             // Otherwise, format to two decimal places
                             formattedValue = String(format: "%.2f", result.value)
                         }
+                        DBGLog("\(formattedValue)")
                         DispatchQueue.main.async {
                             self.dtf.text = "\(formattedValue)"
                             self.vo.vos?.addExternalSourceOverlay(to: self.dtf)  // no taps
@@ -266,7 +268,8 @@ class voNumber: voState, UITextFieldDelegate {
                 dtf.backgroundColor = .secondarySystemBackground
                 dtf.textColor = .label
                 if vo.optDict["hrsmins"] ?? "0" == "1", let result = Double(vo.value) {
-                    let formattedValue = String(format: "%d:%02d", Int(result)/60, Int(result) % 60)
+                    let ri = Int(round(result))
+                    let formattedValue = String(format: "%d:%02d", ri/60, ri % 60)
                     dtf.text = formattedValue
                 } else {
                     dtf.text = vo.value
@@ -393,6 +396,7 @@ class voNumber: voState, UITextFieldDelegate {
             var newDates: [TimeInterval]
             if self.vo.optDict["ahAvg"] ?? "1" == "1" {
                 // find dates that are not on the same calendar day as any existing dates
+                // because prefer to use existing times if possible, not 12:00
                 newDates = hkDates.filter { hkDate in
                     !existingDates.contains { existingDate in
                         calendar.isDate(Date(timeIntervalSince1970: hkDate), inSameDayAs: Date(timeIntervalSince1970: Double(existingDate)))
@@ -424,8 +428,11 @@ class voNumber: voState, UITextFieldDelegate {
             }
             
             // Insert the new dates into trkrData
+            // trkrData is 'on conflict replace'
+            // only update an existing row if the new minpriv is lower
             let priv = max(MINPRIV, self.vo.vpriv)  // priv needs to be at least minpriv if vpriv = 0
             for newDate in newDates {
+                // fix minpriv issues at end below
                 let sql = "insert into trkrData (date, minpriv) values (\(Int(newDate)), \(priv))"
                 to.toExecSql(sql: sql)
             }
@@ -441,6 +448,7 @@ class voNumber: voState, UITextFieldDelegate {
             DBGLog("HealthKit dates processed, continuing with loadHKdata.")
 
             // Fetch dates from trkrData for processing
+            // will update where we don't have data sourced from healthkit already
             var sql = """
             SELECT trkrData.date
             FROM trkrData
@@ -456,12 +464,12 @@ class voNumber: voState, UITextFieldDelegate {
                 WHERE voHKstatus.date = trkrData.date
                   AND voHKstatus.id = \(Int(vo.vid))
             );
-            """  // voHKstatus may be fail or data already stored
+            """  // voHKstatus may be fail/no data or data already stored, in either case don't try to update
             let dateSet = to.toQry2AryI(sql: sql)
             
             DBGLog("Query complete, count is \(dateSet.count)")
             let calendar = Calendar.current
-            for dat in dateSet {
+            for dat in dateSet.sorted() {  // .sorted() is just to help debugging
                 let date = Date(timeIntervalSince1970: TimeInterval(dat))
                 let components = calendar.dateComponents([.hour, .minute, .second], from: date)
                 
@@ -487,11 +495,20 @@ class voNumber: voState, UITextFieldDelegate {
                         to.toExecSql(sql: sql)
                     } else {
                         for result in results {
-                            DBGLog("\(results.count) entries - \(self.vo.valueName!) Target: \(targD) results - Date: \(result.date), Value: \(result.value), Unit: \(result.unit)")
+                            DBGLog("\(results.count) entries - \(self.vo.valueName!) TargetDate: \(targD) results - Date: \(result.date), Value: \(result.value), Unit: \(result.unit)")
                             break
                         }
                         
                         var result = results.last!
+                        
+                        /*
+                        let date = result.date
+                        // This line will help you set a conditional breakpoint
+                        if Calendar.current.isDate(date, inSameDayAs: DateComponents(calendar: .current, year: 2025, month: 3, day: 23).date!) {
+                            // Set your breakpoint on this line
+                            print("Breakpoint will trigger here")
+                        }
+                         */
                         
                         if results.count > 1 {
                             if self.vo.optDict["ahAvg"] ?? "1" == "1" {
@@ -534,8 +551,9 @@ class voNumber: voState, UITextFieldDelegate {
                                 sql = "insert into voHKstatus (id, date, stat) values (\(self.vo.vid), \(nextdat), \(hkStatus.hkData.rawValue))"
                                 to.toExecSql(sql: sql)
                                 
-                                // as this is going into day+1, possibly day+1 not in trkrdata but should be, and day-1 should be removed
-                                sql = "insert or ignore into trkrData (date, minpriv) values (\(nextdat), \(self.vo.vpriv))"
+                                // as this is going into day+1, possibly day+1 not in trkrdata but should be, and day-1 should be removed - done below
+                                sql = "insert into trkrData (date, minpriv) values (\(nextdat), \(self.vo.vpriv))"
+
                                 to.toExecSql(sql: sql)
                             }
                             // no insert if ahPrevD and dat is in today
@@ -551,11 +569,12 @@ class voNumber: voState, UITextFieldDelegate {
                 }
             }
             
-            if self.vo.optDict["ahPrevD"] ?? "0" == "1" {
+            // this seems to conflict with other simultaneous updates and deletes more than it should
+            //if self.vo.optDict["ahPrevD"] ?? "0" == "1" {
                 // possibly a day-1 entry should be removed
-                sql = "delete from trkrdata where date not in (select date from voData where voData.date = trkrdata.date)"
-                to.toExecSql(sql: sql)
-            }
+                //sql = "delete from trkrdata where date not in (select date from voData)"
+                //to.toExecSql(sql: sql)
+            //}
             
             // ensure trkrData has lowest priv if just added a lower privacy valuObj to a trkrData entry
             let priv = max(MINPRIV, self.vo.vpriv)  // priv needs to be at least minpriv if vpriv = 0
