@@ -559,6 +559,127 @@ class tObjBase: NSObject {
         }
     }
 
+    func toQry2Ary(sql: String) -> [(Any, Any)] {
+        return tObjBase.performDatabaseOperation(toid: toid) { [self] in
+            
+            SQLDbg(String("toQry2Ary: \(dbName!) => *\(sql)*"))
+            guard let tDb = tDb else {
+                dbgNSAssert(false, "toQry2Ary called with no tDb")
+                return []
+            }
+            
+            var stmt: OpaquePointer?
+            if sqlite3_prepare_v2(tDb, sql, -1, &stmt, nil) == SQLITE_OK {
+                var results: [(Any, Any)] = []
+                while sqlite3_step(stmt) == SQLITE_ROW {
+                    // Get column types
+                    let col0Type = sqlite3_column_type(stmt, 0)
+                    let col1Type = sqlite3_column_type(stmt, 1)
+                    
+                    // Extract values based on column types
+                    var val0: Any
+                    var val1: Any
+                    
+                    // Column 0
+                    switch col0Type {
+                    case SQLITE_INTEGER:
+                        val0 = Int(sqlite3_column_int64(stmt, 0))
+                    case SQLITE_FLOAT:
+                        val0 = sqlite3_column_double(stmt, 0)
+                    case SQLITE_TEXT:
+                        if let cString = sqlite3_column_text(stmt, 0) {
+                            val0 = String(cString: cString)
+                        } else {
+                            val0 = ""
+                        }
+                    case SQLITE_NULL:
+                        val0 = NSNull()
+                    default:
+                        val0 = NSNull()
+                    }
+                    
+                    // Column 1
+                    switch col1Type {
+                    case SQLITE_INTEGER:
+                        val1 = Int(sqlite3_column_int64(stmt, 1))
+                    case SQLITE_FLOAT:
+                        val1 = sqlite3_column_double(stmt, 1)
+                    case SQLITE_TEXT:
+                        if let cString = sqlite3_column_text(stmt, 1) {
+                            val1 = String(cString: cString)
+                        } else {
+                            val1 = ""
+                        }
+                    case SQLITE_NULL:
+                        val1 = NSNull()
+                    default:
+                        val1 = NSNull()
+                    }
+                    
+                    results.append((val0, val1))
+                    SQLDbg(String("  rslt: \(val0) \(val1)"))
+                }
+                sqlite3_finalize(stmt)
+                return results
+            } else {
+                tobPrepError(sql)
+                return []
+            }
+        }
+    }
+    
+    /*
+    func toQry2AryID(sql: String) -> [(Int, Double)] {
+        // This is a placeholder - replace with your actual implementation
+        return tracker?.tObjBase.performDatabaseOperation(toid: tracker?.toid ?? 0) { [weak self] in
+            guard let self = self, let tDb = tracker?.tDb else {
+                return []
+            }
+            
+            var stmt: OpaquePointer?
+            if sqlite3_prepare_v2(tDb, sql, -1, &stmt, nil) == SQLITE_OK {
+                var results: [(Int, Double)] = []
+                while sqlite3_step(stmt) == SQLITE_ROW {
+                    let i1 = Int(sqlite3_column_int(stmt, 0))
+                    let d1 = sqlite3_column_double(stmt, 1)
+                    results.append((i1, d1))
+                }
+                sqlite3_finalize(stmt)
+                return results
+            } else {
+                // Handle error
+                return []
+            }
+        } ?? []
+    }
+    */
+    
+    func toQry2AryDate(sql: String) -> [(Date, Double)] {
+        return tObjBase.performDatabaseOperation(toid: toid) { [weak self] in
+            guard let self = self, let tDb = tDb else {
+                return []
+            }
+            
+            var stmt: OpaquePointer?
+            if sqlite3_prepare_v2(tDb, sql, -1, &stmt, nil) == SQLITE_OK {
+                var results: [(Date, Double)] = []
+                
+                while sqlite3_step(stmt) == SQLITE_ROW {
+                    // Get the timestamp as seconds since 1970
+                    let timestamp = sqlite3_column_int64(stmt, 0)
+                    // Convert to Date
+                    let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
+                    let val = sqlite3_column_double(stmt, 1)
+                    results.append((date, val))
+                }
+                sqlite3_finalize(stmt)
+                return results
+            } else {
+                // Handle error
+                return []
+            }
+        } ?? []
+    }
     func toQry2AryI(sql: String) -> [Int] {
         tObjBase.performDatabaseOperation(toid: toid) { [self] in
             
