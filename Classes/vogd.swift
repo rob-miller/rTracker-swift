@@ -110,24 +110,17 @@ class vogd: NSObject {
                 maxVal = offVal
             }
         } else if vo.vtype == VOT_CHOICE {
-            minVal = d(0)
+            minVal = Double.greatestFiniteMagnitude
             maxVal = d(0)
             choiceCount = 0
             var c = 0
             for i in 0..<CHOICES {
                 var tval:Double? = nil
-                let key = "cv\(i)"
-                let tstVal = vo.optDict[key]
-                let skey = "c\(i)"
-                let tstStr = vo.optDict[skey]
-                if let tstVal {
-                    // only do specified choice values
+                if (vo.optDict["c\(i)"] ?? "" != "") {
                     c += 1
-                    tval = Double(tstVal) ?? 0.0
-                } else if tstStr != nil && "" != tstStr {
-                    c += 1
-                    tval = Double(i)
+                    tval = Double(vo.optDict["cv\(i)"] ?? "") ?? Double(i+1)
                 }
+
                 if let tval {
                     if minVal > tval {
                         minVal = tval
@@ -145,7 +138,8 @@ class vogd: NSObject {
                 maxVal = d(choiceCount)  // CHOICES
             }
             #if GRAPHDBG
-            DBGLog(String("choice minVal= \(minVal) maxVal= \(maxVal)"))
+            DBGLog(String("choice count \(choiceCount) minVal= \(minVal) maxVal= \(maxVal)"))
+            DBGLog("hello")
             #endif
 
             /*
@@ -179,15 +173,14 @@ class vogd: NSObject {
             maxVal = 1.0
         }
 
-        if VOT_CHOICE != vo.vtype {
-            let yScaleExpand = (maxVal - minVal) * GRAPHSCALE
-            if nil == vo.optDict["gmax"] || "" == vo.optDict["gmax"] {
-                maxVal += yScaleExpand // +5% each way for visibility unless specified
-            }
-            if nil == vo.optDict["gmin"] || "" == vo.optDict["gmin"] {
-                minVal -= yScaleExpand
-            }
+        let yScaleExpand = (maxVal - minVal) * GRAPHSCALE
+        if nil == vo.optDict["gmax"] || "" == vo.optDict["gmax"] {
+            maxVal += yScaleExpand // +5% each way for visibility unless specified
         }
+        if nil == vo.optDict["gmin"] || "" == vo.optDict["gmin"] {
+            minVal -= yScaleExpand
+        }
+
         #if GRAPHDBG
         DBGLog(String("\(vo.valueName) minval= \(minVal) maxval= \(maxVal)"))
         #endif

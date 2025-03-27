@@ -101,7 +101,7 @@ let CLKEY = "fdcLab"
 
 
 // add to x and y axes to improve visibility of endpoints
-let GRAPHSCALE = d(0.02)
+let GRAPHSCALE = d(0.05)
 
 // default preference for separateDateTimePicker
 

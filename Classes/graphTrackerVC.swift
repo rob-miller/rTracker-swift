@@ -92,7 +92,6 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
         DBGLog("safe insets= Top: \(insets.top), Left: \(insets.left), Bottom: \(insets.bottom), Right: \(insets.right)")
         
         view.backgroundColor = .black
-        //[[self view] setBackgroundColor:[UIColor redColor]];
 
         var gtvRect: CGRect = CGRect.zero
 
@@ -132,7 +131,7 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
         // view for y axis labels
 
         rect.origin.x = insets.left  // 0.0
-        rect.size.width = getMaxDataLabelWidth() + (2 * SPACE) + TICKLEN
+        rect.size.width = getMaxDataLabelWidth() + (2 * SPACE) + TICKLEN + ceil(myFont?.lineHeight ?? 10.0) + SPACE
         rect.origin.y = titleView?.frame.size.height ?? 0.0
         rect.size.height = srect.size.height - labelHeight - insets.bottom   // ((2*labelHeight) + (3*SPACE) + TICKLEN);
 
@@ -140,7 +139,7 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
 
         yAV = gtYAxV(frame: rect)
         yAV?.myFont = myFont
-
+        
         yAV?.scaleOriginY = 0.0
         yAV?.parentGTVC = self
 
@@ -788,11 +787,8 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
                     //DBGLog("bval= \(bval)")
                     maxw = testDblWidth(bval != nil ? bval!.doubleValue : d(BOOLVALDFLT), max: maxw)
                 case VOT_CHOICE:
-                    //var i: Int
                     for i in 0..<CHOICES {
-                        let key = "c\(i)"
-                        let s = vo.optDict[key]
-                        if (s != nil) && (s != "") {
+                        if let s = vo.optDict["c\(i)"], !s.isEmpty {
                             maxw = testStrWidth(s, max: maxw)
                         }
                     }

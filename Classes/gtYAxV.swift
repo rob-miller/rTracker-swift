@@ -73,17 +73,7 @@ func choiceCompare(_ ndx0: Any?, _ ndx1: Any?, _ context: UnsafeMutableRawPointe
 */
 
 class gtYAxV: UIView {
-    /*{
-        vogd *vogd;
-        UIFont *myFont;
-        CGFloat scaleOriginY;
-        CGFloat scaleHeightY;
-        UIScrollView *graphSV;
 
-        id parentGTVC;
-    }*/
-
-    //@property(nonatomic,retain) UIColor *backgroundColor;
     var vogd: vogd?
     var myFont: UIFont?
     var scaleOriginY: CGFloat = 0.0
@@ -91,23 +81,10 @@ class gtYAxV: UIView {
     var graphSV: UIScrollView?
     var parentGTVC: Any?
 
- //, backgroundColor;
     override init(frame: CGRect) {
         super.init(frame: frame)
-        // Initialization code
-        // rtm debug
-        //[self setBackgroundColor:[UIColor yellowColor]];
-        //self.backgroundColor = [UIColor yellowColor];
-        //self.opaque = YES;
-        //self.alpha = 1.0f;
-
-        //DBGLog(@"gtyaxv init done");
         accessibilityIdentifier = "gtYAxV"
     }
-
-    //- (void) setBackgroundColor:(UIColor *) col {
-    //    DBGLog(@" gtyaxv bg color set to %@", col);
-    //}
 
     func vtChoiceSetColor(_ context: CGContext?, ndx: Int) {
         let cc = "cc\(ndx)"
@@ -149,65 +126,34 @@ class gtYAxV: UIView {
             for i in 1...Int(YTICKS) {
                 let val = startUnit + (d(YTICKS - Double(i)) * unitStep)
                 let chc = vogd?.vo.getChoiceIndex(forValue: "\(val)") ?? 0
-                let chcVal = Double(vogd?.vo.optDict["cv\(chc)"] ?? "") ?? Double(i+1)
+                let chcVal = Double(vogd?.vo.optDict["cv\(chc)"] ?? "") ?? Double(chc + 1) 
                 choiceMap[i] = chc
                 valMap[i] = val
                 deltaMap[i] = abs(chcVal - val)
             }
             
-            var delSet: Set<Int> = []
-            // don't have any choices duplicated
-            for (ndx, chc) in choiceMap {
-                for (ndx2, chc2) in choiceMap {
-                    if ndx != ndx2 && chc == chc2 {
-                        if deltaMap[ndx2]! < deltaMap[ndx]! {
-                            delSet.insert(ndx)
-                        }
-                    }
-                }
-                // don't have any undefined chnoices
-                if vogd?.vo.optDict["c\(chc)"] == nil {
-                    delSet.insert(ndx)
-                }
-            }
-            for i in delSet {
-                choiceMap[i] = nil
-            }
+            // For each choice find the closest ytick by value
+            var bestTickForChoice: [Int:Int] = [:]  // Maps choice -> best tick
+            var bestDeltaForChoice: [Int:Double] = [:]  // Maps choice -> smallest delta
 
-            /*
-            // don't miss any choices ... not working
-            var addSet: Set<Int> = []
-            for i in 0..<vogd!.choiceCount {
-                var missed = true
-                for (_, chc) in choiceMap {
-                    if i == chc {
-                        missed = false
-                        break
-                    }
-                }
-                if missed {
-                    print("missed \(i)  \(vogd!.vo.optDict["c\(i)"]!)")
-                    addSet.insert(i)
+            // First, find the best (closest) tick for each choice
+            for (tick, choice) in choiceMap {
+                let delta = deltaMap[tick] ?? Double.infinity
+                
+                if bestTickForChoice[choice] == nil || delta < (bestDeltaForChoice[choice] ?? Double.infinity) {
+                    bestTickForChoice[choice] = tick
+                    bestDeltaForChoice[choice] = delta
                 }
             }
 
-            for newChoice in addSet {
-                let newValue = Double(vogd?.vo.optDict["cv\(newChoice)"] ?? "") ?? Double(newChoice+1)
-                // Find the position to insert the new value
-                let insertPosition = valMap.first(where: { $0.value >= newValue })?.key ?? choiceMap.count
-
-                // Shift the elements from the end to the insert position
-                for i in stride(from: choiceMap.keys.max() ?? 0, to: insertPosition - 1, by: -1) {
-                    choiceMap[i + 1] = choiceMap[i]
+            // Now rebuild choiceMap with only the best tick for each choice
+            choiceMap.removeAll()
+            for (choice, bestTick) in bestTickForChoice {
+                // Make sure the choice is defined
+                if vogd?.vo.optDict["c\(choice)"] != nil {
+                    choiceMap[bestTick] = choice
                 }
-
-                // Insert the new value
-                choiceMap[insertPosition] = newChoice
-
-                //print(dict) // Result: [2: 3, 4: 4, 0: 1, 5: 6, 1: 2, 3: 5]
-
             }
-             */
         }
 
         i = Int(YTICKS)
@@ -221,32 +167,15 @@ class gtYAxV: UIView {
             var vstr: String?
             switch vtype {
             case VOT_CHOICE:
-                //if YTICKS == Double(i) {
-                //    vstr = ""
-                //} else {
 
-                    if let choice = choiceMap[i] {  // vogd?.vo.getChoiceIndex(forValue: "\(val)") ?? 0
-                        vtChoiceSetColor(context, ndx: choice)
-                        let ch = "c\(choice)"
-                        vstr = vogd?.vo.optDict[ch] as? String
-                        DBGLog("i= \(i) ch= \(ch)  vstr= \(vstr!) val= \(val)")
-                    } else {
-                        vstr = ""
-                    }
-                //}
-                /*
-                let choice = choiceMap[i]  // vogd?.vo.getChoiceIndex(forValue: "\(val)") ?? 0
-                if let choice {
-                    vtChoiceSetColor(context, ndx: choice!)
-                    let ch = "c\(choice!)"
+                if let choice = choiceMap[i] {
+                    vtChoiceSetColor(context, ndx: choice)
+                    let ch = "c\(choice)"
                     vstr = vogd?.vo.optDict[ch] as? String
                     DBGLog("i= \(i) ch= \(ch)  vstr= \(vstr!) val= \(val)")
                 } else {
                     vstr = ""
                 }
-
-                //}
-                 */
             case VOT_BOOLEAN:
                 if 1 == i {
                     vstr = (vogd?.vo.optDict)?["boolval"] as? String
@@ -302,14 +231,7 @@ class gtYAxV: UIView {
 
                 vstr = String(format: fmt, val)
 
-
-                //if ([vstr isEqualToString:vsCopy])
-                //    vstr = nil;  // just do once, tho could do better at getting closer to actual value
-                //else
-                //    vsCopy = vstr;
             }
-            //CGSize vh = [vstr sizeWithFont:self.myFont];
-            //[vstr drawAtPoint:(CGPoint) {(x2 - vh.width ),(y - (vh.height/1.5f))} withFont:self.myFont];
 
             var vh: CGSize? = nil
             if let myFont, let vstr {
@@ -325,7 +247,6 @@ class gtYAxV: UIView {
             i -= 1
         }
 
-        //[[self.vogd myGraphColor] set];  dictionaryWithObjects
         if let vogd {
             // can get here with no graph data if only vot_info entries
             safeDispatchSync({ [self] in
@@ -354,24 +275,12 @@ class gtYAxV: UIView {
                         context.restoreGState()
                     }
                 }
-                /*
-                if let myFont {
-                    let myGraphColor = vogd.myGraphColor()
-                    vogd.vo.valueName?.draw(at: CGPoint(x: 3 * SPACE5, y: frame.size.height - BORDER), withAttributes: [
-                        NSAttributedString.Key.font: myFont,
-                        NSAttributedString.Key.foregroundColor: myGraphColor
-                    ])
-                }
-                 */
             })
         }
         //[self.vogd.vo.valueName drawAtPoint:(CGPoint) {SPACE5,(self.frame.size.height - BORDER)} withFont:self.myFont];
         UIColor.white.set()
 
-        //Stroke
         context.strokePath()
-        // rtm debug
-        //backgroundColor = .yellow
     }
 
     override func draw(_ rect: CGRect) {
@@ -379,7 +288,7 @@ class gtYAxV: UIView {
         let context = UIGraphicsGetCurrentContext()!
         context.clear(bounds)
         UIColor.white.set()
-
+        
         MoveTo(context, bounds.size.width, scaleOriginY)
         AddLineTo(context, bounds.size.width, scaleHeightY) // scaleOriginY = 0
 
