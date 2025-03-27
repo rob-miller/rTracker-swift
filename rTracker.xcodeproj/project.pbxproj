@@ -1702,7 +1702,7 @@
 					"$(PROJECT_DIR)",
 				);
 				MARKETING_VERSION = 4.1.0;
-				ONLY_ACTIVE_ARCH = NO;
+				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "";
 				OTHER_CPLUSPLUSFLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.realidata.rTracker;
@@ -1811,7 +1811,7 @@
 					"$(PROJECT_DIR)",
 				);
 				MARKETING_VERSION = 4.1.0;
-				ONLY_ACTIVE_ARCH = NO;
+				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "";
 				OTHER_CPLUSPLUSFLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.realidata.rTracker;
@@ -1920,7 +1920,7 @@
 					"$(PROJECT_DIR)",
 				);
 				MARKETING_VERSION = 4.1.0;
-				ONLY_ACTIVE_ARCH = NO;
+				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "";
 				OTHER_CPLUSPLUSFLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.realidata.rTracker;
@@ -2029,7 +2029,7 @@
 					"$(PROJECT_DIR)",
 				);
 				MARKETING_VERSION = 4.1.0;
-				ONLY_ACTIVE_ARCH = NO;
+				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "";
 				OTHER_CPLUSPLUSFLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.realidata.rTracker;
@@ -2138,7 +2138,7 @@
 					"$(PROJECT_DIR)",
 				);
 				MARKETING_VERSION = 4.1.0;
-				ONLY_ACTIVE_ARCH = NO;
+				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "";
 				OTHER_CPLUSPLUSFLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.realidata.rTracker;
@@ -2247,7 +2247,7 @@
 					"$(PROJECT_DIR)",
 				);
 				MARKETING_VERSION = 4.1.0;
-				ONLY_ACTIVE_ARCH = NO;
+				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "";
 				OTHER_CPLUSPLUSFLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.realidata.rTracker;
