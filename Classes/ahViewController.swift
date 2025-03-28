@@ -206,8 +206,10 @@ struct ahViewController: View {
     
     private var previousDaySection: some View {
         ZStack {
-            if let selectedConfig = selectedConfiguration(),
-               selectedConfig.aggregationStyle == .discreteArithmetic && avgDataSwitch {
+            if let selectedConfig = selectedConfiguration()
+               // ,
+               //selectedConfig.aggregationStyle == .discreteArithmetic && avgDataSwitch
+            {
                 HStack {
                     Text("For previous day")
                         .font(.system(size: 16))
@@ -234,7 +236,7 @@ struct ahViewController: View {
         .sheet(isPresented: $showingPrevDayInfo) {
             infoSheet(
                 title: "For Previous Day",
-                content: "ON: Assigns the data to the following day. Perfect for metrics like sleep tracking, where data collected overnight (e.g., from 10 PM to 6 AM) belongs conceptually to the next morning.\n\nOFF: Keeps data assigned to the day it was collected. Best for most metrics like steps, exercise, or calorie intake where the data belongs to the day of activity."
+                content: "ON: Assigns the data to the following day. Perfect for a sleep tracker, where the activity might affect your sleep the following night.\n\nOFF: Keeps data assigned to the day it was collected. Best for an exercise or calorie tracker where the data belongs to the day of activity."
             )
         }
     }
