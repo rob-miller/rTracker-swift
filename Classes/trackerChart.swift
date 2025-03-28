@@ -1255,46 +1255,23 @@ extension TrackerChart {
         
         noDataLabel.isHidden = true
         
-        // Setup basic dimensions with an area for metadata at the top
-        let margin: CGFloat = 40
-        let topMargin: CGFloat = 70  // Increased top margin for labels and metadata
-        let graphWidth = chartView.bounds.width - 2 * margin
-        let graphHeight = chartView.bounds.height - margin - topMargin - 30  // Adjusted for top margin
-        
-        // Create a background view for metadata section
-        let metadataBackground = UIView(frame: CGRect(
-            x: 0,
-            y: 0,
-            width: chartView.bounds.width,
-            height: topMargin
-        ))
-        metadataBackground.backgroundColor = .systemBackground
-        chartView.addSubview(metadataBackground)
-        
-        // Draw correlation if available
-        if let correlation = chartData["correlation"] as? Double {
-            let correlationLabel = UILabel(frame: CGRect(
-                x: margin + graphWidth - 150,
-                y: topMargin - 45,
-                width: 150,
-                height: 20
-            ))
-            correlationLabel.text = String(format: "Correlation: %.3f", correlation)
-            correlationLabel.textAlignment = .right
-            correlationLabel.font = UIFont.systemFont(ofSize: 12)
-            correlationLabel.textColor = .secondaryLabel
-            chartView.addSubview(correlationLabel)
-        }
+        // Setup basic dimensions with more room for all elements
+        let leftMargin: CGFloat = 60     // Space for y-axis labels
+        let rightMargin: CGFloat = 40    // Consistent right margin
+        let topMargin: CGFloat = 60      // Increased from 40 to provide more room for legends/correlation
+        let bottomMargin: CGFloat = 40   // Consistent bottom margin
+        let graphWidth = chartView.bounds.width - leftMargin - rightMargin
+        let graphHeight = chartView.bounds.height - topMargin - bottomMargin - 30  // Extra space for correlation
         
         // Draw axes
         let axesView = UIView(frame: chartView.bounds)
         chartView.addSubview(axesView)
         
-        let xAxis = UIView(frame: CGRect(x: margin, y: topMargin + graphHeight, width: graphWidth, height: 1))
+        let xAxis = UIView(frame: CGRect(x: leftMargin, y: topMargin + graphHeight, width: graphWidth, height: 1))
         xAxis.backgroundColor = .label
         axesView.addSubview(xAxis)
         
-        let yAxis = UIView(frame: CGRect(x: margin, y: topMargin, width: 1, height: graphHeight))
+        let yAxis = UIView(frame: CGRect(x: leftMargin, y: topMargin, width: 1, height: graphHeight))
         yAxis.backgroundColor = .label
         axesView.addSubview(yAxis)
         
@@ -1324,34 +1301,31 @@ extension TrackerChart {
         let maxColor = colorValues.max() ?? 1
         let colorRange = max(0.001, maxColor - minColor)
         
-        // Draw color legend if needed - position before drawing points to ensure it's in the metadata area
-        if useColorMap {
-            drawColorLegend(in: chartView, topMargin: topMargin, minValue: minColor, maxValue: maxColor)
-        }
-        
         // Draw axis labels
         let xVO = tracker?.valObjTable.first { $0.vid == selectedValueObjIDs["xAxis"] }
         let yVO = tracker?.valObjTable.first { $0.vid == selectedValueObjIDs["yAxis"] }
         
-        let xLabel = UILabel(frame: CGRect(x: margin, y: topMargin + graphHeight + 25, width: graphWidth, height: 20))
+        // X-axis label - moved further down from tick labels
+        let xLabel = UILabel(frame: CGRect(x: leftMargin, y: topMargin + graphHeight + 25, width: graphWidth, height: 20))
         xLabel.text = xVO?.valueName ?? "X Axis"
         xLabel.textAlignment = .center
         xLabel.font = UIFont.systemFont(ofSize: 12)
         axesView.addSubview(xLabel)
         
+        // Y-axis label - moved further left from tick labels
         let yLabel = UILabel()
         yLabel.text = yVO?.valueName ?? "Y Axis"
         yLabel.font = UIFont.systemFont(ofSize: 12)
         yLabel.sizeToFit()
         yLabel.transform = CGAffineTransform(rotationAngle: -CGFloat.pi/2)
-        yLabel.center = CGPoint(x: margin - 35, y: topMargin + graphHeight/2)
+        yLabel.center = CGPoint(x: leftMargin - 45, y: topMargin + graphHeight/2) // Moved further left
         axesView.addSubview(yLabel)
         
         // Draw scale markers
         // X scale
         for i in 0...5 {
             let value = paddedMinX + Double(i) * (paddedMaxX - paddedMinX) / 5.0
-            let x = margin + CGFloat(i) * graphWidth / 5.0
+            let x = leftMargin + CGFloat(i) * graphWidth / 5.0
             
             let tick = UIView(frame: CGRect(x: x, y: topMargin + graphHeight, width: 1, height: 5))
             tick.backgroundColor = .label
@@ -1369,11 +1343,11 @@ extension TrackerChart {
             let value = paddedMaxY - Double(i) * (paddedMaxY - paddedMinY) / 5.0
             let y = topMargin + CGFloat(i) * graphHeight / 5.0
             
-            let tick = UIView(frame: CGRect(x: margin - 5, y: y, width: 5, height: 1))
+            let tick = UIView(frame: CGRect(x: leftMargin - 5, y: y, width: 5, height: 1))
             tick.backgroundColor = .label
             axesView.addSubview(tick)
             
-            let label = UILabel(frame: CGRect(x: margin - 35, y: y - 8, width: 30, height: 15))
+            let label = UILabel(frame: CGRect(x: leftMargin - 50, y: y - 8, width: 45, height: 15)) // Wider label and further left
             label.text = String(format: "%.1f", value)
             label.textAlignment = .right
             label.font = UIFont.systemFont(ofSize: 10)
@@ -1384,27 +1358,26 @@ extension TrackerChart {
         let pointsContainerView = UIView(frame: chartView.bounds)
         chartView.addSubview(pointsContainerView)
         
-        // Create a clipping path to restrict points to the graph area
-        let graphRect = CGRect(x: margin, y: topMargin, width: graphWidth, height: graphHeight)
-        let clipPath = UIBezierPath(rect: graphRect)
-        
-        let clipLayer = CAShapeLayer()
-        clipLayer.path = clipPath.cgPath
-        pointsContainerView.layer.mask = clipLayer
-        
         for point in points {
             guard let x = point["x"] as? Double,
                   let y = point["y"] as? Double else { continue }
             
             // Convert to view coordinates
-            let xPos = margin + CGFloat((x - paddedMinX) / (paddedMaxX - paddedMinX)) * graphWidth
+            let xPos = leftMargin + CGFloat((x - paddedMinX) / (paddedMaxX - paddedMinX)) * graphWidth
             let yPos = topMargin + graphHeight - CGFloat((y - paddedMinY) / (paddedMaxY - paddedMinY)) * graphHeight
             
             // Determine color
-            var pointColor: UIColor = .black
+            var pointColor: UIColor
             if useColorMap, let colorValue = point["color"] as? Double {
                 let normalizedColorValue = (colorValue - minColor) / colorRange
                 pointColor = getColorGradient(normalizedValue: normalizedColorValue)
+            } else {
+                // Adapt color based on current interface style
+                if self.traitCollection.userInterfaceStyle == .dark {
+                    pointColor = UIColor.white  // White points on dark background
+                } else {
+                    pointColor = UIColor.black  // Black points on light background
+                }
             }
             
             // Create point view
@@ -1433,6 +1406,21 @@ extension TrackerChart {
                 objc_setAssociatedObject(pointView, &AssociatedKeys.pointData, userData, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
             }
         }
+        
+        // Draw correlation if available
+        if let correlation = chartData["correlation"] as? Double {
+            let correlationLabel = UILabel(frame: CGRect(x: leftMargin + 10, y: 15, width: 150, height: 20))
+            correlationLabel.text = String(format: "Correlation: %.3f", correlation)
+            correlationLabel.textAlignment = .left
+            correlationLabel.font = UIFont.systemFont(ofSize: 12)
+            correlationLabel.textColor = .secondaryLabel
+            chartView.addSubview(correlationLabel)
+        }
+        
+        // Draw color legend if needed
+        if useColorMap {
+            drawColorLegend(in: chartView, minValue: minColor, maxValue: maxColor, rightMargin: 20, topMargin: 20)
+        }
     }
     
     private func renderDistributionPlot() {
@@ -1453,11 +1441,13 @@ extension TrackerChart {
         
         noDataLabel.isHidden = true
         
-        // Setup basic dimensions
-        let margin: CGFloat = 40
-        let topMargin: CGFloat = 60  // Increased top margin for labels
-        let graphWidth = chartView.bounds.width - 2 * margin
-        let graphHeight = chartView.bounds.height - margin - topMargin - 30  // Adjusted for top margin
+        // Setup basic dimensions with more room for all elements
+        let leftMargin: CGFloat = 60     // Space for y-axis labels
+        let rightMargin: CGFloat = 40    // Consistent right margin
+        let topMargin: CGFloat = 60      // Increased from 40 to provide more room for legends
+        let bottomMargin: CGFloat = 40   // Consistent bottom margin
+        let graphWidth = chartView.bounds.width - leftMargin - rightMargin
+        let graphHeight = chartView.bounds.height - topMargin - bottomMargin - 30
         
         // Create histogram bins
         let binCount = min(20, backgroundValues.count / 5)  // Ensure reasonable bin count
@@ -1486,7 +1476,6 @@ extension TrackerChart {
         
         // Process selection data if available
         let selectionData = chartData["selectionData"] as? [String: [Double]] ?? [:]
-        ------
         
         // Calculate bins for each selection category
         var selectionBins: [String: [Double]] = [:]
@@ -1510,11 +1499,11 @@ extension TrackerChart {
         let axesView = UIView(frame: chartView.bounds)
         chartView.addSubview(axesView)
         
-        let xAxis = UIView(frame: CGRect(x: margin, y: margin + graphHeight, width: graphWidth, height: 1))
+        let xAxis = UIView(frame: CGRect(x: leftMargin, y: topMargin + graphHeight, width: graphWidth, height: 1))
         xAxis.backgroundColor = .label
         axesView.addSubview(xAxis)
         
-        let yAxis = UIView(frame: CGRect(x: margin, y: margin, width: 1, height: graphHeight))
+        let yAxis = UIView(frame: CGRect(x: leftMargin, y: topMargin, width: 1, height: graphHeight))
         yAxis.backgroundColor = .label
         axesView.addSubview(yAxis)
         
@@ -1527,31 +1516,33 @@ extension TrackerChart {
         // Draw axis labels
         let backgroundVO = tracker?.valObjTable.first { $0.vid == selectedValueObjIDs["background"] }
         
-        let xLabel = UILabel(frame: CGRect(x: margin, y: margin + graphHeight + 25, width: graphWidth, height: 20))
+        // X-axis label - moved further down from tick labels
+        let xLabel = UILabel(frame: CGRect(x: leftMargin, y: topMargin + graphHeight + 25, width: graphWidth, height: 20))
         xLabel.text = backgroundVO?.valueName ?? "Value"
         xLabel.textAlignment = .center
         xLabel.font = UIFont.systemFont(ofSize: 12)
         axesView.addSubview(xLabel)
         
+        // Y-axis label - moved further left from tick labels
         let yLabel = UILabel()
         yLabel.text = "Frequency"
         yLabel.font = UIFont.systemFont(ofSize: 12)
         yLabel.sizeToFit()
         yLabel.transform = CGAffineTransform(rotationAngle: -CGFloat.pi/2)
-        yLabel.center = CGPoint(x: margin - 35, y: margin + graphHeight/2)
+        yLabel.center = CGPoint(x: leftMargin - 45, y: topMargin + graphHeight/2) // Moved further left
         axesView.addSubview(yLabel)
         
         // Draw scale markers
         // X scale
         for i in 0...5 {
             let value = paddedMinValue + Double(i) * (paddedMaxValue - paddedMinValue) / 5.0
-            let x = margin + CGFloat(i) * graphWidth / 5.0
+            let x = leftMargin + CGFloat(i) * graphWidth / 5.0
             
-            let tick = UIView(frame: CGRect(x: x, y: margin + graphHeight, width: 1, height: 5))
+            let tick = UIView(frame: CGRect(x: x, y: topMargin + graphHeight, width: 1, height: 5))
             tick.backgroundColor = .label
             axesView.addSubview(tick)
             
-            let label = UILabel(frame: CGRect(x: x - 25, y: margin + graphHeight + 5, width: 50, height: 15))
+            let label = UILabel(frame: CGRect(x: x - 25, y: topMargin + graphHeight + 5, width: 50, height: 15))
             label.text = String(format: "%.1f", value)
             label.textAlignment = .center
             label.font = UIFont.systemFont(ofSize: 10)
@@ -1561,13 +1552,13 @@ extension TrackerChart {
         // Y scale (percentage)
         for i in 0...5 {
             let percentage = (1.0 - Double(i) / 5.0) * maxBinValue * 100
-            let y = margin + CGFloat(i) * graphHeight / 5.0
+            let y = topMargin + CGFloat(i) * graphHeight / 5.0
             
-            let tick = UIView(frame: CGRect(x: margin - 5, y: y, width: 5, height: 1))
+            let tick = UIView(frame: CGRect(x: leftMargin - 5, y: y, width: 5, height: 1))
             tick.backgroundColor = .label
             axesView.addSubview(tick)
             
-            let label = UILabel(frame: CGRect(x: margin - 35, y: y - 8, width: 30, height: 15))
+            let label = UILabel(frame: CGRect(x: leftMargin - 45, y: y - 8, width: 40, height: 15)) // Wider label and further left
             label.text = String(format: "%.0f%%", percentage)
             label.textAlignment = .right
             label.font = UIFont.systemFont(ofSize: 10)
@@ -1583,8 +1574,8 @@ extension TrackerChart {
             let barHeight = normalizedHeight * graphHeight
             let barWidth = graphWidth / CGFloat(binCount)
             
-            let x = margin + CGFloat(index) * barWidth
-            let y = margin + graphHeight - barHeight
+            let x = leftMargin + CGFloat(index) * barWidth
+            let y = topMargin + graphHeight - barHeight
             
             let barView = UIView(frame: CGRect(x: x, y: y, width: barWidth, height: barHeight))
             barView.backgroundColor = UIColor.systemGray.withAlphaComponent(0.5)
@@ -1596,16 +1587,59 @@ extension TrackerChart {
         chartView.addSubview(selectionView)
         
         // Generate colors for each category
-        let categoryCount = selectionBins.count
         var categoryColors: [String: UIColor] = [:]
         
-        for (index, category) in selectionBins.keys.enumerated() {
-            let normalizedValue = categoryCount > 1 ? Double(index) / Double(categoryCount - 1) : 0.5
-            categoryColors[category] = getColorGradient(normalizedValue: normalizedValue)
+        // Extract numerical values for each category
+        var categoryValues: [String: Int] = [:]
+        for category in selectionBins.keys {
+            // Special case for no_entry
+            if category == "no_entry" {
+                // Assign green color directly to no_entry
+                categoryColors[category] = UIColor.systemGreen
+                continue
+            }
+            
+            // Try to convert numerical categories
+            if let numValue = Int(category) {
+                categoryValues[category] = numValue
+            } else if category == "true" {
+                categoryValues[category] = 1
+            } else if category == "false" {
+                categoryValues[category] = 0
+            } else if category == "low" {
+                categoryValues[category] = 0
+            } else if category == "medium" {
+                categoryValues[category] = 1
+            } else if category == "high" {
+                categoryValues[category] = 2
+            } else {
+                // For non-standard categories, look up the value from the selection object
+                if let selectionID = selectedValueObjIDs["selection"], selectionID != -1 {
+                    let categoryMap = fetchChoiceCategories(forID: selectionID)
+                    // Find the key in categoryMap that has the category as its value
+                    for (value, label) in categoryMap {
+                        if label == category {
+                            categoryValues[category] = value
+                            break
+                        }
+                    }
+                }
+            }
         }
         
-        
-        ----
+        // Find min and max values (only for categories that will use the gradient)
+        let filteredValues = categoryValues.values
+        if !filteredValues.isEmpty {
+            let minCategoryValue = filteredValues.min() ?? 0
+            let maxCategoryValue = filteredValues.max() ?? 1
+            let categoryValueRange = max(1, maxCategoryValue - minCategoryValue)
+            
+            // Assign colors based on normalized value for non-special categories
+            for (category, value) in categoryValues {
+                let normalizedValue = Double(value - minCategoryValue) / Double(categoryValueRange)
+                categoryColors[category] = getColorGradient(normalizedValue: normalizedValue)
+            }
+        }
         
         // Draw category lines
         for (category, bins) in selectionBins {
@@ -1614,8 +1648,8 @@ extension TrackerChart {
             
             for (index, value) in bins.enumerated() {
                 let normalizedHeight = CGFloat(value / maxBinValue)
-                let yPos = margin + graphHeight - normalizedHeight * graphHeight
-                let xPos = margin + CGFloat(index) * barWidth + barWidth / 2
+                let yPos = topMargin + graphHeight - normalizedHeight * graphHeight
+                let xPos = leftMargin + CGFloat(index) * barWidth + barWidth / 2
                 
                 if index == 0 {
                     linePath.move(to: CGPoint(x: xPos, y: yPos))
@@ -1638,15 +1672,14 @@ extension TrackerChart {
         }
     }
     
-    private func drawColorLegend(in view: UIView, topMargin: CGFloat, minValue: Double, maxValue: Double) {
-        let legendWidth: CGFloat = 150
+    private func drawColorLegend(in view: UIView, minValue: Double, maxValue: Double, rightMargin: CGFloat = 20, topMargin: CGFloat = 20) {
+        let legendWidth: CGFloat = 120
         let legendHeight: CGFloat = 20
-        let margin: CGFloat = 40
         
-        // Create gradient view - positioned in the metadata area, aligned with correlation
+        // Create gradient view
         let gradientView = UIView(frame: CGRect(
-            x: margin,
-            y: topMargin - 45,  // Align exactly with correlation label
+            x: view.bounds.width - legendWidth - rightMargin,
+            y: topMargin,
             width: legendWidth,
             height: legendHeight
         ))
@@ -1689,7 +1722,7 @@ extension TrackerChart {
         maxLabel.font = UIFont.systemFont(ofSize: 10)
         view.addSubview(maxLabel)
         
-        // Add title label - positioned above the gradient
+        // Add title label
         let colorVO = tracker?.valObjTable.first { $0.vid == selectedValueObjIDs["color"] }
         let titleLabel = UILabel(frame: CGRect(
             x: gradientView.frame.minX,
@@ -1704,16 +1737,59 @@ extension TrackerChart {
     }
     
     private func drawCategoryLegend(in view: UIView, categories: [String], colors: [String: UIColor]) {
-        let legendWidth: CGFloat = 150
+        let legendWidth: CGFloat = 140
         let itemHeight: CGFloat = 15
-        let margin: CGFloat = 40
         let padding: CGFloat = 5
+        
+        // Adjusted margin - move closer to right edge
+        let rightMargin: CGFloat = 15
+        
+        // Position legend in top right with proper spacing
+        let topMargin: CGFloat = 15
+        
+        // Create a dictionary of category values
+        var categoryValues: [String: Int] = [:]
+        for category in categories {
+            if category == "no_entry" {
+                // Assign a very high value to ensure it appears last
+                categoryValues[category] = Int.max
+            } else if let numValue = Int(category) {
+                categoryValues[category] = numValue
+            } else if category == "true" {
+                categoryValues[category] = 1
+            } else if category == "false" {
+                categoryValues[category] = 0
+            } else if category == "low" {
+                categoryValues[category] = 0
+            } else if category == "medium" {
+                categoryValues[category] = 1
+            } else if category == "high" {
+                categoryValues[category] = 2
+            } else {
+                // For choice categories, look up the value
+                if let selectionID = selectedValueObjIDs["selection"], selectionID != -1 {
+                    let categoryMap = fetchChoiceCategories(forID: selectionID)
+                    // Find the key in categoryMap that has the category as its value
+                    for (value, label) in categoryMap {
+                        if label == category {
+                            categoryValues[category] = value
+                            break
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Sort categories by their values
+        let sortedCategories = categories.sorted {
+            return (categoryValues[$0] ?? 0) < (categoryValues[$1] ?? 0)
+        }
         
         let legendHeight: CGFloat = CGFloat(categories.count) * (itemHeight + padding)
         
         let legendView = UIView(frame: CGRect(
-            x: view.bounds.width - legendWidth - margin,
-            y: margin,
+            x: view.bounds.width - legendWidth - rightMargin,
+            y: topMargin,
             width: legendWidth,
             height: legendHeight
         ))
@@ -1722,17 +1798,6 @@ extension TrackerChart {
         legendView.layer.borderWidth = 0.5
         legendView.layer.borderColor = UIColor.systemGray.cgColor
         view.addSubview(legendView)
-        
-        // Sort categories for consistent display
-        // First "no entry" if it exists, then sort others numerically or alphabetically
-        let sortedCategories = categories.sorted { cat1, cat2 -> Bool in
-            if cat1 == "no_entry" { return true }
-            if cat2 == "no_entry" { return false }
-            if let num1 = Int(cat1), let num2 = Int(cat2) {
-                return num1 < num2
-            }
-            return cat1 < cat2
-        }
         
         for (index, category) in sortedCategories.enumerated() {
             // Color indicator
@@ -1746,23 +1811,21 @@ extension TrackerChart {
             colorView.layer.cornerRadius = 5
             legendView.addSubview(colorView)
             
-            // Label - display "no entry" without underscore
-            let displayCategory = category == "no_entry" ? "no entry" : category
-            
+            // Label
             let label = UILabel(frame: CGRect(
                 x: 30,
                 y: CGFloat(index) * (itemHeight + padding),
                 width: legendWidth - 40,
                 height: itemHeight
             ))
-            label.text = displayCategory
+            label.text = category
             label.font = UIFont.systemFont(ofSize: 10)
             label.adjustsFontSizeToFitWidth = true
             label.minimumScaleFactor = 0.7
             legendView.addSubview(label)
         }
         
-        // Add title
+        // Add title - also moved up and to the right with the legend
         let selectionVO = tracker?.valObjTable.first { $0.vid == selectedValueObjIDs["selection"] }
         let titleLabel = UILabel(frame: CGRect(
             x: legendView.frame.minX,
@@ -1865,6 +1928,9 @@ extension TrackerChart {
                 noDataLabel.isHidden = false
             }
         }
+        
+        // Update date labels to ensure they're displayed after changing chart types
+        updateDateLabels()
     }
     
     // Update the dateSliderChanged method to ensure proper date formatting
