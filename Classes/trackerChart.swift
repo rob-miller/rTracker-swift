@@ -59,6 +59,14 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     private var startDateLabel: UILabel!
     private var endDateLabel: UILabel!
     
+    // Date labels
+    private var startDateTextTappable: UILabel!
+    private var endDateTextTappable: UILabel!
+    private var showStartDateAsRelative: Bool = false
+    private var showEndDateAsRelative: Bool = false
+    private var sliderHeightConstraint: NSLayoutConstraint!
+    private var sliderContainerHeightConstraint: NSLayoutConstraint!
+    
     // Data selection
     private var selectedValueObjIDs: [String: Int] = [:]
     private var allowedValueObjTypes: [String: [Int]] = [:]
@@ -177,7 +185,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             chartView.topAnchor.constraint(equalTo: segmentedControl.bottomAnchor, constant: 16),
             chartView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             chartView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            chartView.heightAnchor.constraint(equalToConstant: 300), // Fixed height instead of multiplier
+            chartView.heightAnchor.constraint(equalToConstant: 350), // Fixed height instead of multiplier
             
             // No data label
             noDataLabel.centerXAnchor.constraint(equalTo: chartView.centerXAnchor),
@@ -205,14 +213,17 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         // Create date sliders
         setupDateSliders()
         
-        // Configure layout
+        // Create slider container with adequate height
+        let sliderContainer = createSliderContainer()
+        
+        // Configure layout - no longer using fillEqually distribution
         let stackView = UIStackView(arrangedSubviews: [
             xAxisButton, yAxisButton, colorButton,
-            createSliderContainer()
+            sliderContainer
         ])
         stackView.axis = .vertical
         stackView.spacing = 12
-        stackView.distribution = .fillEqually
+        stackView.distribution = .fill  // Changed from fillEqually to fill
         stackView.translatesAutoresizingMaskIntoConstraints = false
         configContainer.addSubview(stackView)
         
@@ -220,7 +231,10 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             stackView.topAnchor.constraint(equalTo: configContainer.topAnchor),
             stackView.leadingAnchor.constraint(equalTo: configContainer.leadingAnchor),
             stackView.trailingAnchor.constraint(equalTo: configContainer.trailingAnchor),
-            stackView.bottomAnchor.constraint(equalTo: configContainer.bottomAnchor)
+            stackView.bottomAnchor.constraint(equalTo: configContainer.bottomAnchor),
+            
+            // Set a fixed height constraint for the slider container
+            sliderContainer.heightAnchor.constraint(equalToConstant: 120)  // Increased height for sliders
         ])
         
         // Update buttons with any previously selected values
@@ -240,14 +254,17 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         // Create date sliders
         setupDateSliders()
         
-        // Configure layout
+        // Create slider container with adequate height
+        let sliderContainer = createSliderContainer()
+        
+        // Configure layout - no longer using fillEqually distribution
         let stackView = UIStackView(arrangedSubviews: [
             backgroundButton, selectionButton,
-            createSliderContainer()
+            sliderContainer
         ])
         stackView.axis = .vertical
         stackView.spacing = 12
-        stackView.distribution = .fillEqually
+        stackView.distribution = .fill  // Changed from fillEqually to fill
         stackView.translatesAutoresizingMaskIntoConstraints = false
         configContainer.addSubview(stackView)
         
@@ -255,7 +272,10 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             stackView.topAnchor.constraint(equalTo: configContainer.topAnchor),
             stackView.leadingAnchor.constraint(equalTo: configContainer.leadingAnchor),
             stackView.trailingAnchor.constraint(equalTo: configContainer.trailingAnchor),
-            stackView.bottomAnchor.constraint(equalTo: configContainer.bottomAnchor)
+            stackView.bottomAnchor.constraint(equalTo: configContainer.bottomAnchor),
+            
+            // Set a fixed height constraint for the slider container
+            sliderContainer.heightAnchor.constraint(equalToConstant: 120)  // Increased height for sliders
         ])
         
         // Update buttons with any previously selected values
@@ -263,20 +283,31 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     }
     
     private func setupDateSliders() {
+        // Create start date slider with proper interaction
         startDateSlider = UISlider()
         startDateSlider.translatesAutoresizingMaskIntoConstraints = false
         startDateSlider.minimumValue = 0
         startDateSlider.maximumValue = 1
         startDateSlider.value = 0
         startDateSlider.addTarget(self, action: #selector(dateSliderChanged), for: .valueChanged)
+        startDateSlider.minimumTrackTintColor = .systemBlue
+        startDateSlider.maximumTrackTintColor = .systemGray3
+        startDateSlider.thumbTintColor = .systemBlue
+        startDateSlider.isContinuous = true
         
+        // Create end date slider with proper interaction
         endDateSlider = UISlider()
         endDateSlider.translatesAutoresizingMaskIntoConstraints = false
         endDateSlider.minimumValue = 0
         endDateSlider.maximumValue = 1
         endDateSlider.value = 1
         endDateSlider.addTarget(self, action: #selector(dateSliderChanged), for: .valueChanged)
+        endDateSlider.minimumTrackTintColor = .systemBlue
+        endDateSlider.maximumTrackTintColor = .systemGray3
+        endDateSlider.thumbTintColor = .systemBlue
+        endDateSlider.isContinuous = true
         
+        // Original labels (kept for compatibility)
         startDateLabel = UILabel()
         startDateLabel.translatesAutoresizingMaskIntoConstraints = false
         startDateLabel.font = UIFont.systemFont(ofSize: 12)
@@ -287,8 +318,42 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         endDateLabel.font = UIFont.systemFont(ofSize: 12)
         endDateLabel.textColor = .secondaryLabel
         endDateLabel.textAlignment = .right
+        
+        // Add tappable text labels for showing date or days ago
+        startDateTextTappable = UILabel()
+        startDateTextTappable.translatesAutoresizingMaskIntoConstraints = false
+        startDateTextTappable.font = UIFont.systemFont(ofSize: 16, weight: .medium)
+        startDateTextTappable.textColor = .label
+        startDateTextTappable.text = "Start Date" // Default text until dates are loaded
+        startDateTextTappable.isUserInteractionEnabled = true
+        startDateTextTappable.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(toggleStartDateFormat)))
+        
+        endDateTextTappable = UILabel()
+        endDateTextTappable.translatesAutoresizingMaskIntoConstraints = false
+        endDateTextTappable.font = UIFont.systemFont(ofSize: 16, weight: .medium)
+        endDateTextTappable.textColor = .label
+        endDateTextTappable.text = "End Date" // Default text until dates are loaded
+        endDateTextTappable.textAlignment = .center
+        endDateTextTappable.isUserInteractionEnabled = true
+        endDateTextTappable.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(toggleEndDateFormat)))
+        
+        // Add visual indicator that these labels are tappable
+        startDateTextTappable.layer.cornerRadius = 8
+        startDateTextTappable.layer.borderWidth = 1.0
+        startDateTextTappable.layer.borderColor = UIColor.systemGray4.cgColor
+        startDateTextTappable.clipsToBounds = true
+        startDateTextTappable.backgroundColor = .systemBackground
+        startDateTextTappable.textAlignment = .center
+        
+        endDateTextTappable.layer.cornerRadius = 8
+        endDateTextTappable.layer.borderWidth = 1.0
+        endDateTextTappable.layer.borderColor = UIColor.systemGray4.cgColor
+        endDateTextTappable.clipsToBounds = true
+        endDateTextTappable.backgroundColor = .systemBackground
+        endDateTextTappable.textAlignment = .center
     }
-    
+
+    // Modify createSliderContainer() to include the new tappable labels
     private func createSliderContainer() -> UIView {
         let container = UIView()
         container.translatesAutoresizingMaskIntoConstraints = false
@@ -309,14 +374,17 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             dateRangeLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             dateRangeLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor),
             
-            startDateSlider.topAnchor.constraint(equalTo: dateRangeLabel.bottomAnchor, constant: 8),
+            // Increase the spacing between elements
+            startDateSlider.topAnchor.constraint(equalTo: dateRangeLabel.bottomAnchor, constant: 16),
             startDateSlider.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             startDateSlider.trailingAnchor.constraint(equalTo: container.trailingAnchor),
             
-            endDateSlider.topAnchor.constraint(equalTo: startDateSlider.bottomAnchor, constant: 16),
+            // Increase the spacing between sliders
+            endDateSlider.topAnchor.constraint(equalTo: startDateSlider.bottomAnchor, constant: 24),
             endDateSlider.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             endDateSlider.trailingAnchor.constraint(equalTo: container.trailingAnchor),
             
+            // Position labels below sliders with adequate spacing
             startDateLabel.topAnchor.constraint(equalTo: endDateSlider.bottomAnchor, constant: 8),
             startDateLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             startDateLabel.widthAnchor.constraint(equalTo: container.widthAnchor, multiplier: 0.5),
@@ -327,6 +395,43 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         ])
         
         return container
+    }
+
+    // Add new methods to toggle between date formats
+    @objc private func toggleStartDateFormat(_ sender: UITapGestureRecognizer) {
+        // Add haptic feedback
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
+        
+        // Flash animation to indicate tap was recognized
+        UIView.animate(withDuration: 0.1, animations: {
+            self.startDateTextTappable.alpha = 0.5
+        }) { _ in
+            UIView.animate(withDuration: 0.1) {
+                self.startDateTextTappable.alpha = 1.0
+            }
+        }
+        
+        showStartDateAsRelative.toggle()
+        updateDateLabels()
+    }
+
+    @objc private func toggleEndDateFormat(_ sender: UITapGestureRecognizer) {
+        // Add haptic feedback
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
+        
+        // Flash animation to indicate tap was recognized
+        UIView.animate(withDuration: 0.1, animations: {
+            self.endDateTextTappable.alpha = 0.5
+        }) { _ in
+            UIView.animate(withDuration: 0.1) {
+                self.endDateTextTappable.alpha = 1.0
+            }
+        }
+        
+        showEndDateAsRelative.toggle()
+        updateDateLabels()
     }
     
     private func createConfigButton(title: String, action: Selector) -> UIButton {
@@ -432,10 +537,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         guard let tracker = tracker else { return }
         
         // Get date range from tracker data
-        // This would typically query the database for the earliest and latest dates
-        // For now, we'll use a placeholder implementation
-        
-        // Example implementation to fetch date range
+
         let dateRange = fetchDateRange()
         earliestDate = dateRange.earliest
         latestDate = dateRange.latest
@@ -674,41 +776,95 @@ extension TrackerChart {
         let sql = "SELECT MIN(date), MAX(date) FROM trkrData WHERE minpriv <= \(privacyValue)"
         
         // Execute the query using tracker's query function
-        let results = tracker.toQry2Ary(sql: sql)
-        
-        if !results.isEmpty, let result = results.first {
-            var minDate: Date? = nil
-            var maxDate: Date? = nil
+        if let results = tracker.toQry2IntInt(sql: sql) {
             
             // Get timestamps as seconds since 1970
-            if let minTimestamp = result.0 as? Int64, minTimestamp > 0 {
-                minDate = Date(timeIntervalSince1970: TimeInterval(minTimestamp))
-            }
-            
-            if let maxTimestamp = result.1 as? Int64, maxTimestamp > 0 {
-                maxDate = Date(timeIntervalSince1970: TimeInterval(maxTimestamp))
-            }
-            
+            let minDate = Date(timeIntervalSince1970: TimeInterval(results.0))
+            let maxDate = Date(timeIntervalSince1970: TimeInterval(results.1))
             return (minDate, maxDate)
         }
         
-        // Fallback to current date range if query fails
-        let now = Date()
-        let calendar = Calendar.current
-        let oneYearAgo = calendar.date(byAdding: .year, value: -1, to: now)
-        
-        return (oneYearAgo, now)
+        return(nil,nil)
     }
     
+    // Update the updateDateLabels() method to handle both formats
     private func updateDateLabels() {
-        guard let startDate = selectedStartDate, let endDate = selectedEndDate else { return }
+        // Set default dates if not set yet
+        if selectedStartDate == nil || selectedEndDate == nil {
+            let now = Date()
+            let calendar = Calendar.current
+            let oneMonthAgo = calendar.date(byAdding: .month, value: -1, to: now) ?? now
+            
+            selectedStartDate = selectedStartDate ?? oneMonthAgo
+            selectedEndDate = selectedEndDate ?? now
+        }
         
         let dateFormatter = DateFormatter()
         dateFormatter.dateStyle = .medium
         dateFormatter.timeStyle = .none
         
-        startDateLabel.text = dateFormatter.string(from: startDate)
-        endDateLabel.text = dateFormatter.string(from: endDate)
+        // Create calendar for date component calculations
+        let calendar = Calendar.current
+        let now = Date()
+        
+        // Set start date to beginning of day (00:00)
+        var startComponents = calendar.dateComponents([.year, .month, .day], from: selectedStartDate!)
+        startComponents.hour = 0
+        startComponents.minute = 0
+        startComponents.second = 0
+        let startOfDay = calendar.date(from: startComponents) ?? selectedStartDate!
+        
+        // Set end date to end of day (23:59)
+        var endComponents = calendar.dateComponents([.year, .month, .day], from: selectedEndDate!)
+        endComponents.hour = 23
+        endComponents.minute = 59
+        endComponents.second = 59
+        let endOfDay = calendar.date(from: endComponents) ?? selectedEndDate!
+        
+        // Update the actual dates being used
+        selectedStartDate = startOfDay
+        selectedEndDate = endOfDay
+        
+        // Format the dates
+        let startDateStr = dateFormatter.string(from: startOfDay)
+        let endDateStr = dateFormatter.string(from: endOfDay)
+        
+        // Calculate days ago
+        let startDaysComponents = calendar.dateComponents([.day], from: startOfDay, to: now)
+        let endDaysComponents = calendar.dateComponents([.day], from: endOfDay, to: now)
+        
+        let startDaysAgo = startDaysComponents.day ?? 0
+        let endDaysAgo = endDaysComponents.day ?? 0
+        
+        // Add visual feedback when labels are tapped
+        UIView.animate(withDuration: 0.2) {
+            // Update the tappable labels with appropriate format
+            if self.showStartDateAsRelative {
+                let daysAgoText = startDaysAgo > 0 ? "\(startDaysAgo) days ago" : "Today"
+                self.startDateTextTappable.text = daysAgoText
+                self.startDateTextTappable.backgroundColor = .systemGray6
+            } else {
+                self.startDateTextTappable.text = startDateStr
+                self.startDateTextTappable.backgroundColor = .systemBackground
+            }
+            
+            if self.showEndDateAsRelative {
+                let daysAgoText = endDaysAgo > 0 ? "\(endDaysAgo) days ago" : "Today"
+                self.endDateTextTappable.text = daysAgoText
+                self.endDateTextTappable.backgroundColor = .systemGray6
+            } else {
+                self.endDateTextTappable.text = endDateStr
+                self.endDateTextTappable.backgroundColor = .systemBackground
+            }
+        }
+        
+        // Keep original labels updated for compatibility (though they're hidden)
+        startDateLabel.text = startDateStr
+        endDateLabel.text = endDateStr
+        
+        // Keep original labels updated for compatibility
+        startDateLabel.text = startDateStr
+        endDateLabel.text = endDateStr
     }
     
     private func getEligibleValueObjs(for configType: String) -> [valueObj] {
@@ -914,7 +1070,7 @@ extension TrackerChart {
                         choiceByDate[date] = value
                     }
                     
-                    // Get choice categories from votInfo
+                    // Get choice categories from voInfo
                     let choiceCategories = fetchChoiceCategories(forID: selectionID)
                     
                     // Initialize arrays for each category
@@ -1027,10 +1183,10 @@ extension TrackerChart {
     private func fetchChoiceCategories(forID id: Int) -> [Int: String] {
         guard let tracker = tracker else { return [:] }
         
-        // This would query the votInfo table for choice labels
+        // This would query the voInfo table for choice labels
         // Example SQL query
         let sql = """
-        SELECT field, val FROM votInfo 
+        SELECT field, val FROM voInfo 
         WHERE id = \(id) AND field LIKE 'c%' AND val IS NOT NULL
         """
         
@@ -1038,7 +1194,7 @@ extension TrackerChart {
         
         // Check if there are custom values
         let customValuesSql = """
-        SELECT field, val FROM votInfo 
+        SELECT field, val FROM voInfo 
         WHERE id = \(id) AND field LIKE 'cv%'
         """
         var customValues: [String: Int] = [:]
@@ -1061,8 +1217,13 @@ extension TrackerChart {
                 // Extract index from 'c0', 'c1', etc.
                 if let indexStr = field.dropFirst(1).first, let index = Int(String(indexStr)) {
                     // Check if there's a custom value for this field
-                    let value = customValues["cv\(index)"] ?? (index + 1)
-                    categories[value] = label
+                    let cvField = "cv\(index)"
+                    if let customValue = customValues[cvField] {
+                        categories[customValue] = label
+                    } else {
+                        // If no custom value, assign index + 1 (so c0=1, c1=2, etc.)
+                        categories[index + 1] = label
+                    }
                 }
             }
         }
@@ -1094,20 +1255,46 @@ extension TrackerChart {
         
         noDataLabel.isHidden = true
         
-        // Setup basic dimensions
+        // Setup basic dimensions with an area for metadata at the top
         let margin: CGFloat = 40
+        let topMargin: CGFloat = 70  // Increased top margin for labels and metadata
         let graphWidth = chartView.bounds.width - 2 * margin
-        let graphHeight = chartView.bounds.height - 2 * margin - 30  // Extra space for correlation
+        let graphHeight = chartView.bounds.height - margin - topMargin - 30  // Adjusted for top margin
+        
+        // Create a background view for metadata section
+        let metadataBackground = UIView(frame: CGRect(
+            x: 0,
+            y: 0,
+            width: chartView.bounds.width,
+            height: topMargin
+        ))
+        metadataBackground.backgroundColor = .systemBackground
+        chartView.addSubview(metadataBackground)
+        
+        // Draw correlation if available
+        if let correlation = chartData["correlation"] as? Double {
+            let correlationLabel = UILabel(frame: CGRect(
+                x: margin + graphWidth - 150,
+                y: topMargin - 45,
+                width: 150,
+                height: 20
+            ))
+            correlationLabel.text = String(format: "Correlation: %.3f", correlation)
+            correlationLabel.textAlignment = .right
+            correlationLabel.font = UIFont.systemFont(ofSize: 12)
+            correlationLabel.textColor = .secondaryLabel
+            chartView.addSubview(correlationLabel)
+        }
         
         // Draw axes
         let axesView = UIView(frame: chartView.bounds)
         chartView.addSubview(axesView)
         
-        let xAxis = UIView(frame: CGRect(x: margin, y: margin + graphHeight, width: graphWidth, height: 1))
+        let xAxis = UIView(frame: CGRect(x: margin, y: topMargin + graphHeight, width: graphWidth, height: 1))
         xAxis.backgroundColor = .label
         axesView.addSubview(xAxis)
         
-        let yAxis = UIView(frame: CGRect(x: margin, y: margin, width: 1, height: graphHeight))
+        let yAxis = UIView(frame: CGRect(x: margin, y: topMargin, width: 1, height: graphHeight))
         yAxis.backgroundColor = .label
         axesView.addSubview(yAxis)
         
@@ -1137,11 +1324,16 @@ extension TrackerChart {
         let maxColor = colorValues.max() ?? 1
         let colorRange = max(0.001, maxColor - minColor)
         
+        // Draw color legend if needed - position before drawing points to ensure it's in the metadata area
+        if useColorMap {
+            drawColorLegend(in: chartView, topMargin: topMargin, minValue: minColor, maxValue: maxColor)
+        }
+        
         // Draw axis labels
         let xVO = tracker?.valObjTable.first { $0.vid == selectedValueObjIDs["xAxis"] }
         let yVO = tracker?.valObjTable.first { $0.vid == selectedValueObjIDs["yAxis"] }
         
-        let xLabel = UILabel(frame: CGRect(x: margin, y: margin + graphHeight + 10, width: graphWidth, height: 20))
+        let xLabel = UILabel(frame: CGRect(x: margin, y: topMargin + graphHeight + 25, width: graphWidth, height: 20))
         xLabel.text = xVO?.valueName ?? "X Axis"
         xLabel.textAlignment = .center
         xLabel.font = UIFont.systemFont(ofSize: 12)
@@ -1152,7 +1344,7 @@ extension TrackerChart {
         yLabel.font = UIFont.systemFont(ofSize: 12)
         yLabel.sizeToFit()
         yLabel.transform = CGAffineTransform(rotationAngle: -CGFloat.pi/2)
-        yLabel.center = CGPoint(x: margin - 20, y: margin + graphHeight/2)
+        yLabel.center = CGPoint(x: margin - 35, y: topMargin + graphHeight/2)
         axesView.addSubview(yLabel)
         
         // Draw scale markers
@@ -1161,11 +1353,11 @@ extension TrackerChart {
             let value = paddedMinX + Double(i) * (paddedMaxX - paddedMinX) / 5.0
             let x = margin + CGFloat(i) * graphWidth / 5.0
             
-            let tick = UIView(frame: CGRect(x: x, y: margin + graphHeight, width: 1, height: 5))
+            let tick = UIView(frame: CGRect(x: x, y: topMargin + graphHeight, width: 1, height: 5))
             tick.backgroundColor = .label
             axesView.addSubview(tick)
             
-            let label = UILabel(frame: CGRect(x: x - 25, y: margin + graphHeight + 5, width: 50, height: 15))
+            let label = UILabel(frame: CGRect(x: x - 25, y: topMargin + graphHeight + 5, width: 50, height: 15))
             label.text = String(format: "%.1f", value)
             label.textAlignment = .center
             label.font = UIFont.systemFont(ofSize: 10)
@@ -1175,7 +1367,7 @@ extension TrackerChart {
         // Y scale
         for i in 0...5 {
             let value = paddedMaxY - Double(i) * (paddedMaxY - paddedMinY) / 5.0
-            let y = margin + CGFloat(i) * graphHeight / 5.0
+            let y = topMargin + CGFloat(i) * graphHeight / 5.0
             
             let tick = UIView(frame: CGRect(x: margin - 5, y: y, width: 5, height: 1))
             tick.backgroundColor = .label
@@ -1192,13 +1384,21 @@ extension TrackerChart {
         let pointsContainerView = UIView(frame: chartView.bounds)
         chartView.addSubview(pointsContainerView)
         
+        // Create a clipping path to restrict points to the graph area
+        let graphRect = CGRect(x: margin, y: topMargin, width: graphWidth, height: graphHeight)
+        let clipPath = UIBezierPath(rect: graphRect)
+        
+        let clipLayer = CAShapeLayer()
+        clipLayer.path = clipPath.cgPath
+        pointsContainerView.layer.mask = clipLayer
+        
         for point in points {
             guard let x = point["x"] as? Double,
                   let y = point["y"] as? Double else { continue }
             
             // Convert to view coordinates
             let xPos = margin + CGFloat((x - paddedMinX) / (paddedMaxX - paddedMinX)) * graphWidth
-            let yPos = margin + graphHeight - CGFloat((y - paddedMinY) / (paddedMaxY - paddedMinY)) * graphHeight
+            let yPos = topMargin + graphHeight - CGFloat((y - paddedMinY) / (paddedMaxY - paddedMinY)) * graphHeight
             
             // Determine color
             var pointColor: UIColor = .black
@@ -1233,21 +1433,6 @@ extension TrackerChart {
                 objc_setAssociatedObject(pointView, &AssociatedKeys.pointData, userData, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
             }
         }
-        
-        // Draw correlation if available
-        if let correlation = chartData["correlation"] as? Double {
-            let correlationLabel = UILabel(frame: CGRect(x: margin + graphWidth - 150, y: margin - 25, width: 150, height: 20))
-            correlationLabel.text = String(format: "Correlation: %.3f", correlation)
-            correlationLabel.textAlignment = .right
-            correlationLabel.font = UIFont.systemFont(ofSize: 12)
-            correlationLabel.textColor = .secondaryLabel
-            chartView.addSubview(correlationLabel)
-        }
-        
-        // Draw color legend if needed
-        if useColorMap {
-            drawColorLegend(in: chartView, minValue: minColor, maxValue: maxColor)
-        }
     }
     
     private func renderDistributionPlot() {
@@ -1270,8 +1455,9 @@ extension TrackerChart {
         
         // Setup basic dimensions
         let margin: CGFloat = 40
+        let topMargin: CGFloat = 60  // Increased top margin for labels
         let graphWidth = chartView.bounds.width - 2 * margin
-        let graphHeight = chartView.bounds.height - 2 * margin - 30
+        let graphHeight = chartView.bounds.height - margin - topMargin - 30  // Adjusted for top margin
         
         // Create histogram bins
         let binCount = min(20, backgroundValues.count / 5)  // Ensure reasonable bin count
@@ -1300,6 +1486,7 @@ extension TrackerChart {
         
         // Process selection data if available
         let selectionData = chartData["selectionData"] as? [String: [Double]] ?? [:]
+        ------
         
         // Calculate bins for each selection category
         var selectionBins: [String: [Double]] = [:]
@@ -1340,7 +1527,7 @@ extension TrackerChart {
         // Draw axis labels
         let backgroundVO = tracker?.valObjTable.first { $0.vid == selectedValueObjIDs["background"] }
         
-        let xLabel = UILabel(frame: CGRect(x: margin, y: margin + graphHeight + 10, width: graphWidth, height: 20))
+        let xLabel = UILabel(frame: CGRect(x: margin, y: margin + graphHeight + 25, width: graphWidth, height: 20))
         xLabel.text = backgroundVO?.valueName ?? "Value"
         xLabel.textAlignment = .center
         xLabel.font = UIFont.systemFont(ofSize: 12)
@@ -1351,7 +1538,7 @@ extension TrackerChart {
         yLabel.font = UIFont.systemFont(ofSize: 12)
         yLabel.sizeToFit()
         yLabel.transform = CGAffineTransform(rotationAngle: -CGFloat.pi/2)
-        yLabel.center = CGPoint(x: margin - 20, y: margin + graphHeight/2)
+        yLabel.center = CGPoint(x: margin - 35, y: margin + graphHeight/2)
         axesView.addSubview(yLabel)
         
         // Draw scale markers
@@ -1417,6 +1604,9 @@ extension TrackerChart {
             categoryColors[category] = getColorGradient(normalizedValue: normalizedValue)
         }
         
+        
+        ----
+        
         // Draw category lines
         for (category, bins) in selectionBins {
             let linePath = UIBezierPath()
@@ -1448,15 +1638,15 @@ extension TrackerChart {
         }
     }
     
-    private func drawColorLegend(in view: UIView, minValue: Double, maxValue: Double) {
+    private func drawColorLegend(in view: UIView, topMargin: CGFloat, minValue: Double, maxValue: Double) {
         let legendWidth: CGFloat = 150
         let legendHeight: CGFloat = 20
         let margin: CGFloat = 40
         
-        // Create gradient view
+        // Create gradient view - positioned in the metadata area, aligned with correlation
         let gradientView = UIView(frame: CGRect(
-            x: view.bounds.width - legendWidth - margin,
-            y: margin,
+            x: margin,
+            y: topMargin - 45,  // Align exactly with correlation label
             width: legendWidth,
             height: legendHeight
         ))
@@ -1499,7 +1689,7 @@ extension TrackerChart {
         maxLabel.font = UIFont.systemFont(ofSize: 10)
         view.addSubview(maxLabel)
         
-        // Add title label
+        // Add title label - positioned above the gradient
         let colorVO = tracker?.valObjTable.first { $0.vid == selectedValueObjIDs["color"] }
         let titleLabel = UILabel(frame: CGRect(
             x: gradientView.frame.minX,
@@ -1533,7 +1723,18 @@ extension TrackerChart {
         legendView.layer.borderColor = UIColor.systemGray.cgColor
         view.addSubview(legendView)
         
-        for (index, category) in categories.enumerated() {
+        // Sort categories for consistent display
+        // First "no entry" if it exists, then sort others numerically or alphabetically
+        let sortedCategories = categories.sorted { cat1, cat2 -> Bool in
+            if cat1 == "no_entry" { return true }
+            if cat2 == "no_entry" { return false }
+            if let num1 = Int(cat1), let num2 = Int(cat2) {
+                return num1 < num2
+            }
+            return cat1 < cat2
+        }
+        
+        for (index, category) in sortedCategories.enumerated() {
             // Color indicator
             let colorView = UIView(frame: CGRect(
                 x: 10,
@@ -1545,14 +1746,16 @@ extension TrackerChart {
             colorView.layer.cornerRadius = 5
             legendView.addSubview(colorView)
             
-            // Label
+            // Label - display "no entry" without underscore
+            let displayCategory = category == "no_entry" ? "no entry" : category
+            
             let label = UILabel(frame: CGRect(
                 x: 30,
                 y: CGFloat(index) * (itemHeight + padding),
                 width: legendWidth - 40,
                 height: itemHeight
             ))
-            label.text = category
+            label.text = displayCategory
             label.font = UIFont.systemFont(ofSize: 10)
             label.adjustsFontSizeToFitWidth = true
             label.minimumScaleFactor = 0.7
@@ -1631,40 +1834,80 @@ extension TrackerChart {
     @objc private func chartTypeChanged(_ sender: UISegmentedControl) {
         if sender.selectedSegmentIndex == CHART_TYPE_SCATTER {
             setupScatterPlotConfig()
-            if let chartData = chartData as? [String: Any], chartData["type"] as? String == "scatter" {
-                renderScatterPlot()
+            
+            // Check if X and Y axes are selected for scatter plot
+            if selectedValueObjIDs["xAxis"] != -1 && selectedValueObjIDs["yAxis"] != -1 {
+                generateScatterPlotData()
             } else {
+                // Clear the chart and show instruction
+                for subview in chartView.subviews {
+                    if subview != noDataLabel {
+                        subview.removeFromSuperview()
+                    }
+                }
                 noDataLabel.text = "Configure chart options below"
                 noDataLabel.isHidden = false
             }
         } else {
             setupDistributionPlotConfig()
-            if let chartData = chartData as? [String: Any], chartData["type"] as? String == "distribution" {
-                renderDistributionPlot()
+            
+            // Check if background data is selected for distribution plot
+            if selectedValueObjIDs["background"] != -1 {
+                generateDistributionPlotData()
             } else {
+                // Clear the chart and show instruction
+                for subview in chartView.subviews {
+                    if subview != noDataLabel {
+                        subview.removeFromSuperview()
+                    }
+                }
                 noDataLabel.text = "Configure chart options below"
                 noDataLabel.isHidden = false
             }
         }
     }
     
+    // Update the dateSliderChanged method to ensure proper date formatting
     @objc private func dateSliderChanged(_ sender: UISlider) {
+        // If we don't have date ranges yet, use default range of last year
+        if earliestDate == nil || latestDate == nil {
+            let now = Date()
+            let calendar = Calendar.current
+            earliestDate = calendar.date(byAdding: .year, value: -1, to: now)
+            latestDate = now
+        }
+        
         guard let earliestDate = earliestDate, let latestDate = latestDate else { return }
         
-        let timeRange = latestDate.timeIntervalSince(earliestDate)
+        let timeRange = max(1.0, latestDate.timeIntervalSince(earliestDate)) // Ensure non-zero range
         
+        // Update dates based on slider values
         if sender == startDateSlider {
             let startInterval = TimeInterval(sender.value) * timeRange
             selectedStartDate = earliestDate.addingTimeInterval(startInterval)
+            
+            // Ensure start date is not after end date
+            if let endDate = selectedEndDate, let startDate = selectedStartDate, startDate > endDate {
+                startDateSlider.value = endDateSlider.value
+                selectedStartDate = selectedEndDate
+            }
         } else if sender == endDateSlider {
             let endInterval = TimeInterval(sender.value) * timeRange
             selectedEndDate = earliestDate.addingTimeInterval(endInterval)
+            
+            // Ensure end date is not before start date
+            if let endDate = selectedEndDate, let startDate = selectedStartDate, endDate < startDate {
+                endDateSlider.value = startDateSlider.value
+                selectedEndDate = selectedStartDate
+            }
         }
         
+        // Update the date labels
         updateDateLabels()
         
-        // Regenerate chart data if both dates are set
-        if let selectedStartDate = selectedStartDate, let selectedEndDate = selectedEndDate {
+        // Don't regenerate data on every slider change to improve performance
+        if !sender.isTracking {
+            // Only regenerate when slider is released
             if segmentedControl.selectedSegmentIndex == CHART_TYPE_SCATTER {
                 generateScatterPlotData()
             } else {
