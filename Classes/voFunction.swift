@@ -2139,7 +2139,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         // called from trackerObj.m
         var sql: String
         if vo.value == "" {
-            //TODO: null/init value is 0.00 so what does this delete line do?
+            // if value is empty we should not have data in db
             sql = String(format: "delete from voData where id = %ld and date = %d;", Int(vo.vid), tDate)
             //DBGLog(@"sql delete= %@",sql);
         } else {
