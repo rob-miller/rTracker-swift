@@ -1541,33 +1541,19 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
 
         let startDate: Date
         let endDate: Date
-
+        
         if let aggregationTime = queryConfig.aggregationTime {
             // Define endDate as the targetDate's day at the aggregationTime
-            
-            //*
-            startDate = calendar.date(bySettingHour: aggregationTime.hour ?? 0,
-                                    minute: aggregationTime.minute ?? 0,
-                                    second: aggregationTime.second ?? 0,
-                                    of: Date(timeIntervalSince1970: TimeInterval(targetDate))) ??
-                     Date(timeIntervalSince1970: TimeInterval(targetDate))
 
-            // Define startDate as 1 day before the targetDate at the aggregationTime
-            endDate = calendar.date(byAdding: .day, value: 1, to: startDate) ??
-                        Date(timeIntervalSince1970: TimeInterval(targetDate) + 86400) // Default to one day earlier
-            // */
-            
-            /*  ah data looks like this is 1 day later
             endDate = calendar.date(bySettingHour: aggregationTime.hour ?? 0,
                                     minute: aggregationTime.minute ?? 0,
                                     second: aggregationTime.second ?? 0,
                                     of: Date(timeIntervalSince1970: TimeInterval(targetDate))) ??
                      Date(timeIntervalSince1970: TimeInterval(targetDate))
 
-            // Define startDate as 1 day before the targetDate at the aggregationTime
+            // startDate is one day before endDate
             startDate = calendar.date(byAdding: .day, value: -1, to: endDate) ??
                         Date(timeIntervalSince1970: TimeInterval(targetDate) - 86400) // Default to one day earlier
-            */
             
             DBGLog("startDate \(startDate)  endDate  \(endDate)")
             DBGLog("hello")
