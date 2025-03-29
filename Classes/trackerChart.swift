@@ -999,6 +999,44 @@ extension TrackerChart {
         renderScatterPlot()
     }
     
+    func findFirstGreaterThan(_ sortedArray: [Double], _ threshold: Double) -> Int {
+        var low = 0
+        var high = sortedArray.count - 1
+        var result: Int? = nil
+        
+        while low <= high {
+            let mid = (low + high) / 2
+            if sortedArray[mid] > threshold {
+                // This could be our answer, but let's check if there's a smaller one
+                result = mid
+                high = mid - 1
+            } else {
+                low = mid + 1
+            }
+        }
+        
+        return result ?? high
+    }
+    
+    func findLastLessThan(_ array: [Double], _ threshold: Double) -> Int {
+        var low = 0
+        var high = array.count - 1
+        var result: Int? = nil
+        
+        while low <= high {
+            let mid = (low + high) / 2
+            if array[mid] < threshold {
+                // This could be our answer, but let's check if there's a larger one
+                result = mid
+                low = mid + 1
+            } else {
+                high = mid - 1
+            }
+        }
+        
+        return result ?? low
+    }
+    
     private func generateDistributionPlotData() {
         guard let tracker = tracker,
               let selectedStartDate = selectedStartDate,
@@ -1121,9 +1159,19 @@ extension TrackerChart {
                         let q1Index = values.count / 4
                         let q3Index = (values.count * 3) / 4
                         
-                        let q1 = values[q1Index]
-                        let q3 = values[q3Index]
+                        var q1 = values[q1Index]
+                        var q3 = values[q3Index]
                         
+                        if (q1 == values[0] || q3 == values[values.count-1]) {  // range not found
+                            // not guaranteed improvement but will break up first or last quartile if that's where all data is
+                            if (q1 == values[0]) {
+                                q1 = values[findFirstGreaterThan(values, q3)]
+                                q3 = q1 + (values[values.count-1] - q1)/2
+                            } else if (q3 == values[values.count-1]) {
+                                q3 = values[findLastLessThan(values, q1)]
+                                q1 = (q3 - values[0])/2
+                            }
+                        }
                         var lowValues: [Double] = []
                         var midValues: [Double] = []
                         var highValues: [Double] = []
