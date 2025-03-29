@@ -160,7 +160,7 @@ struct otViewController: View {
                 let to = trackerObj(tid)
                 
                 // Get all value names
-                let allValues = to.toQry2AryS(sql: "select name from voConfig")
+                let allValues = to.toQry2AryS(sql: "select name from voConfig where priv <= \(privacyValue)")
                 
                 // Filter out values that have a recursive reference to the current tracker
                 return allValues.filter { valueName in
