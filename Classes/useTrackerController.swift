@@ -67,6 +67,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     
     var hkDataSource = false
     var otDataSource = false
+    var loadingData = false
     
     /*
     var prevDateBtn: UIBarButtonItem?
@@ -341,8 +342,16 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
             dispatchGroup.enter()
             // Load HealthKit data
+            self.loadingData = true
             self.hkDataSource = self.tracker!.loadHKdata(dispatchGroup: dispatchGroup)
             self.otDataSource = self.tracker!.loadOTdata(dispatchGroup: dispatchGroup)
+            if self.tracker?.optDict["dirtyFns"] != nil {
+                self.tracker?.setFnVals()
+                self.tracker?.optDict.removeValue(forKey: "dirtyFns")
+                let sql = "delete from trkrInfo where field='dirtyFns';"
+                self.tracker?.toExecSql(sql:sql)
+            }
+            self.loadingData = false
             dispatchGroup.leave()
 
 
@@ -368,6 +377,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     @objc func handlePullDownAction() {
         DBGLog("Refresh initiated")
+        if loadingData { return }
+            
         let dispatchGroup = DispatchGroup()
         
         DispatchQueue.main.async {
@@ -393,6 +404,11 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             dispatchGroup.notify(queue: .main) {
                 DBGLog("All HealthKit data loaded and SQL inserts completed.")
                 self.tracker?.cleanDb()
+                self.tracker?.setFnVals()
+                self.tracker?.optDict.removeValue(forKey: "dirtyFns")
+                let sql = "delete from trkrInfo where field='dirtyFns';"
+                self.tracker?.toExecSql(sql:sql)
+
                 self.tableView!.refreshControl?.endRefreshing()
                 _ = self.tracker!.loadData(Int(self.tracker!.trackerDate!.timeIntervalSince1970))
                 self.updateTrackerTableView()
