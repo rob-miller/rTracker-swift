@@ -188,8 +188,8 @@ class voNumber: voState, UITextFieldDelegate {
                     dtf.text = r
                 }
                 //sql = nil;
-            } else if vo.optDict["ahksrc"] == "1" && (2.0 > abs(targD.timeIntervalSince(self.MyTracker.trackerDate!))){
-                // apple healthkit source and trackerDate is now within 2 seconds (not historical)
+            } else if vo.optDict["ahksrc"] == "1" && (3.0 > abs(targD.timeIntervalSince(self.MyTracker.trackerDate!))){
+                // apple healthkit source and trackerDate is now within 3 seconds (not historical)
                 if vo.optDict["ahPrevD"] ?? "0" == "1" {
                     let calendar = Calendar.current
                     targD = calendar.date(byAdding: .day, value: -1, to: targD) ?? targD
@@ -473,10 +473,12 @@ class voNumber: voState, UITextFieldDelegate {
                 let date = Date(timeIntervalSince1970: TimeInterval(dat))
                 let components = calendar.dateComponents([.hour, .minute, .second], from: date)
                 
-                if vo.optDict["ahAvg"] ?? "1" == "1" && (components.hour != 12 || components.minute != 0 || components.second != 0) {
+                if vo.optDict["ahAvg"] ?? "0" == "1" && (components.hour != 12 || components.minute != 0 || components.second != 0) {
                     continue // Skip to the next entry if ahAvg and the time is not 12:00:00 noon
                 }
-                            
+                
+                let prevDate = Int((calendar.date(byAdding: .day, value: -1, to: date))!.timeIntervalSince1970)
+                
                 dispatchGroup?.enter() // Enter the group for each query
 
                 let targD = Date(timeIntervalSince1970: TimeInterval(dat))
@@ -484,13 +486,21 @@ class voNumber: voState, UITextFieldDelegate {
                 if let unitString = vo.optDict["ahUnit"] {
                     unit = HKUnit(from: unitString)
                 }
+
+                
+                DBGLog("calling phq \(srcName) date \(date)  prevD \(self.vo.optDict["ahPrevD"] ?? "nil") prevDate= \(prevDate)")
+                
                 rthk.performHealthQuery(
                     displayName: srcName,
-                    targetDate: dat,
+                    targetDate: self.vo.optDict["ahPrevD"] ?? "0" == "1" ? prevDate : dat,
                     specifiedUnit: unit
                 ) { results in
                     if results.isEmpty {
-                        DBGLog("No results found for \(targD).")
+                        if self.vo.optDict["ahPrevD"] ?? "0" == "1" {
+                            DBGLog("No results found for postDate \(prevDate).")
+                        } else {
+                            DBGLog("No results found for \(targD).")
+                        }
                         let sql = "insert into voHKstatus (id, date, stat) values (\(self.vo.vid), \(dat), \(hkStatus.noData.rawValue))"
                         to.toExecSql(sql: sql)
                     } else {
@@ -540,7 +550,7 @@ class voNumber: voState, UITextFieldDelegate {
                             formattedValue = String(format: "%.2f", result.value)
                         }
 
-                        if self.vo.optDict["ahPrevD"] ?? "0" == "1" {  // if data is for previous day, set to next day, unless that is in future from today
+                        if false && self.vo.optDict["ahPrevD"] ?? "0" == "1" {  // if data is for previous day, set to next day, unless that is in future from today
                             var date = Date(timeIntervalSince1970: TimeInterval(dat))
                             if !calendar.isDateInToday(date) {
                                 date = calendar.date(byAdding: .day, value: 1, to: date)!
