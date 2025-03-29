@@ -2330,6 +2330,16 @@ class trackerObj: tObjBase {
     }
 
     func setFnVals() {
+        // leave early if no functions here
+        var haveFn = false
+        for vo: valueObj in valObjTable {
+            if VOT_FUNC == vo.vtype {
+                haveFn = true
+                break
+            }
+        }
+        if (!haveFn) { return }
+                
         let currDate = Int(trackerDate?.timeIntervalSince1970 ?? 0)
         var nextDate = firstDate()
 
@@ -2344,9 +2354,7 @@ class trackerObj: tObjBase {
         repeat {
             _ = loadData(nextDate)
             for vo: valueObj in valObjTable {
-                if VOT_FUNC == vo.vtype {
                     vo.vos?.setFnVals(nextDate)
-                }
             }
 
             //safeDispatchSync(^{
@@ -2368,7 +2376,6 @@ class trackerObj: tObjBase {
     }
 
     func recalculateFns() {
-        // deprecated ios10 if (0 != OSAtomicTestAndSet(0, &(_recalcFnLock))) {
         DBGLog("try atomic set recalcFnLock")
         if recalcFnLock.testAndSet(newValue: true) {
             // wasn't 0 before, so we didn't get lock, so leave because shake handling already in process
