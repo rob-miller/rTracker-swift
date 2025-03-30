@@ -374,8 +374,10 @@ class voNumber: voState, UITextFieldDelegate {
         let hkDispatchGroup = DispatchGroup()
 
         hkDispatchGroup.enter()
+        
         let sql = "select max(date) from voHKstatus where id = \(Int(vo.vid))"
         let lastDate = to.toQry2Int(sql: sql)
+        
         rthk.getHealthKitDates(for: srcName, lastDate: lastDate) { hkDates in
             DBGLog("hk dates for \(srcName), ahAvg is \(self.vo.optDict["ahAvg"] ?? "1")")
             let existingDatesQuery = """
@@ -397,7 +399,11 @@ class voNumber: voState, UITextFieldDelegate {
             if self.vo.optDict["ahAvg"] ?? "1" == "1" {
                 // find dates that are not on the same calendar day as any existing dates
                 // because prefer to use existing times if possible, not 12:00
+                // also remove today if present because today's data shown on current tracker not saved yet
                 newDates = hkDates.filter { hkDate in
+                    // First check if it's not today
+                    !calendar.isDateInToday(Date(timeIntervalSince1970: hkDate)) &&
+                    // Then check if it's not already in existing dates
                     !existingDates.contains { existingDate in
                         calendar.isDate(Date(timeIntervalSince1970: hkDate), inSameDayAs: Date(timeIntervalSince1970: Double(existingDate)))
                     }
