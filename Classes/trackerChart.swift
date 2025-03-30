@@ -73,6 +73,12 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     private var endDateSlider: UISlider!
     private var startDateLabel: UILabel!
     private var endDateLabel: UILabel!
+    // for debouncing
+    private var chartUpdateWorkItem: DispatchWorkItem?
+    
+    // date lock
+    private var dateRangeLockSwitch: UISwitch!
+    private var dateRangeLockIcon: UIImageView!
     
     // Date labels
     private var startDateTextTappable: UILabel!
@@ -370,7 +376,6 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         endDateTextTappable.textAlignment = .center
     }
 
-    // Modify createSliderContainer() to include the new tappable labels
     private func createSliderContainer() -> UIView {
         let container = UIView()
         container.translatesAutoresizingMaskIntoConstraints = false
@@ -380,7 +385,23 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         dateRangeLabel.text = "Date Range"
         dateRangeLabel.font = UIFont.boldSystemFont(ofSize: 14)
         
+        // Create lock icon
+        dateRangeLockIcon = UIImageView(image: UIImage(systemName: "lock"))
+        dateRangeLockIcon.translatesAutoresizingMaskIntoConstraints = false
+        dateRangeLockIcon.tintColor = .secondaryLabel
+        dateRangeLockIcon.contentMode = .scaleAspectFit
+        dateRangeLockIcon.alpha = 0.5 // Greyed out initially
+        
+        // Create lock switch
+        dateRangeLockSwitch = UISwitch()
+        dateRangeLockSwitch.translatesAutoresizingMaskIntoConstraints = false
+        dateRangeLockSwitch.isOn = false
+        dateRangeLockSwitch.isEnabled = false // Disabled initially
+        dateRangeLockSwitch.addTarget(self, action: #selector(dateRangeLockChanged), for: .valueChanged)
+        
         container.addSubview(dateRangeLabel)
+        container.addSubview(dateRangeLockIcon)
+        container.addSubview(dateRangeLockSwitch)
         container.addSubview(startDateSlider)
         container.addSubview(endDateSlider)
         container.addSubview(startDateLabel)
@@ -389,7 +410,16 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         NSLayoutConstraint.activate([
             dateRangeLabel.topAnchor.constraint(equalTo: container.topAnchor, constant: 8),
             dateRangeLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            dateRangeLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            
+            // Position lock icon
+            dateRangeLockIcon.centerYAnchor.constraint(equalTo: dateRangeLabel.centerYAnchor),
+            dateRangeLockIcon.trailingAnchor.constraint(equalTo: dateRangeLockSwitch.leadingAnchor, constant: -8),
+            dateRangeLockIcon.widthAnchor.constraint(equalToConstant: 16),
+            dateRangeLockIcon.heightAnchor.constraint(equalToConstant: 16),
+            
+            // Position lock switch
+            dateRangeLockSwitch.centerYAnchor.constraint(equalTo: dateRangeLabel.centerYAnchor),
+            dateRangeLockSwitch.trailingAnchor.constraint(equalTo: container.trailingAnchor),
             
             // Increase the spacing between elements
             startDateSlider.topAnchor.constraint(equalTo: dateRangeLabel.bottomAnchor, constant: 16),
@@ -413,7 +443,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         
         return container
     }
-
+    
     // Add new methods to toggle between date formats
     @objc private func toggleStartDateFormat(_ sender: UITapGestureRecognizer) {
         // Add haptic feedback
@@ -629,6 +659,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
                   }
               } else {
                   if selectedValueObjIDs["background"] != -1 {
+                      axisConfig.removeValue(forKey: "background")  // cause full chart reset
                       generateDistributionPlotData()
                   }
               }
@@ -2036,18 +2067,42 @@ extension TrackerChart {
     ) {
         // Find the maximum normalized bin value for scaling
         let maxBinValue = max(
-            normalizedBackgroundBins.max() ?? 0,
-            selectionBins.values.flatMap { $0 }.max() ?? 0
+            normalizedBackgroundBins.max() ?? 0.001,  // Ensure non-zero value
+            selectionBins.values.flatMap { $0 }.max() ?? 0.001
         )
+        
+        // Clear any previous histogram elements
+        // This ensures we don't have leftover views from previous renders
+        for subview in chartView.subviews {
+            if subview != noDataLabel && subview is UIView && subview.tag == 1001 {
+                subview.removeFromSuperview()
+            }
+        }
         
         // Draw background histogram
         let histogramView = UIView(frame: chartView.bounds)
+        histogramView.tag = 1001  // Tag to identify for later removal
         chartView.addSubview(histogramView)
         
         for (index, value) in normalizedBackgroundBins.enumerated() {
+            // Guard against invalid values
+            guard !value.isNaN && !value.isInfinite && maxBinValue > 0 else {
+                continue
+            }
+            
             let normalizedHeight = CGFloat(value / maxBinValue)
+            // Ensure height is valid
+            guard !normalizedHeight.isNaN && !normalizedHeight.isInfinite else {
+                continue
+            }
+            
             let barHeight = normalizedHeight * graphHeight
             let barWidth = graphWidth / CGFloat(binCount)
+            
+            // Validate final dimensions
+            guard !barHeight.isNaN && !barHeight.isInfinite && barHeight >= 0 else {
+                continue
+            }
             
             let x = leftMargin + CGFloat(index) * barWidth
             let y = topMargin + graphHeight - barHeight
@@ -2059,36 +2114,51 @@ extension TrackerChart {
         
         // Draw selection lines
         let selectionView = UIView(frame: chartView.bounds)
+        selectionView.tag = 1001  // Same tag for easy removal
         chartView.addSubview(selectionView)
         
         // Generate colors for categories
         let categoryData = generateCategoryColors(selectionBins.keys)
         let categoryColors = categoryData.colors
-        //let categoryValues = categoryData.values
         
         // Draw category lines
         for (category, bins) in selectionBins {
             let linePath = UIBezierPath()
             let barWidth = graphWidth / CGFloat(binCount)
+            var validPoints = false
             
             for (index, value) in bins.enumerated() {
+                // Guard against invalid values
+                guard !value.isNaN && !value.isInfinite && maxBinValue > 0 else {
+                    continue
+                }
+                
                 let normalizedHeight = CGFloat(value / maxBinValue)
+                // Ensure height is valid
+                guard !normalizedHeight.isNaN && !normalizedHeight.isInfinite else {
+                    continue
+                }
+                
                 let yPos = topMargin + graphHeight - normalizedHeight * graphHeight
                 let xPos = leftMargin + CGFloat(index) * barWidth + barWidth / 2
                 
-                if index == 0 {
+                if index == 0 || !validPoints {
                     linePath.move(to: CGPoint(x: xPos, y: yPos))
+                    validPoints = true
                 } else {
                     linePath.addLine(to: CGPoint(x: xPos, y: yPos))
                 }
             }
             
-            let lineLayer = CAShapeLayer()
-            lineLayer.path = linePath.cgPath
-            lineLayer.strokeColor = categoryColors[category]?.cgColor ?? UIColor.black.cgColor
-            lineLayer.fillColor = UIColor.clear.cgColor
-            lineLayer.lineWidth = 2
-            selectionView.layer.addSublayer(lineLayer)
+            // Only add the line if we have valid points
+            if validPoints {
+                let lineLayer = CAShapeLayer()
+                lineLayer.path = linePath.cgPath
+                lineLayer.strokeColor = categoryColors[category]?.cgColor ?? UIColor.black.cgColor
+                lineLayer.fillColor = UIColor.clear.cgColor
+                lineLayer.lineWidth = 2
+                selectionView.layer.addSublayer(lineLayer)
+            }
         }
     }
     
@@ -2206,6 +2276,10 @@ extension TrackerChart {
     // MARK: - UI Actions
     
     @objc private func chartTypeChanged(_ sender: UISegmentedControl) {
+
+        selectedStartDate = earliestDate
+        selectedEndDate = latestDate
+        
         if sender.selectedSegmentIndex == CHART_TYPE_SCATTER {
             setupScatterPlotConfig()
             
@@ -2214,6 +2288,7 @@ extension TrackerChart {
                 if axisConfig["xAxis"] == nil || axisConfig["yAxis"] == nil {
                     analyzeScatterData()
                 } else {
+                    // Ensure we're using the current date range
                     generateScatterPlotData()
                 }
             } else {
@@ -2234,6 +2309,7 @@ extension TrackerChart {
                 if axisConfig["background"] == nil {
                     analyzeDistributionData()
                 } else {
+                    // Ensure we're using the current date range
                     generateDistributionPlotData()
                 }
             } else {
@@ -2248,8 +2324,14 @@ extension TrackerChart {
             }
         }
         
-        // Update date labels to ensure they're displayed after changing chart types
+        // Make sure date labels are updated
         updateDateLabels()
+
+    }
+    
+    @objc private func dateRangeLockChanged(_ sender: UISwitch) {
+        // The lock state can be accessed via dateRangeLockSwitch.isOn
+        // You might want to update UI or behavior when lock is toggled
     }
     
     @objc private func dateSliderChanged(_ sender: UISlider) {
@@ -2264,38 +2346,160 @@ extension TrackerChart {
         guard let earliestDate = earliestDate, let latestDate = latestDate else { return }
         
         let timeRange = max(1.0, latestDate.timeIntervalSince(earliestDate)) // Ensure non-zero range
+        let calendar = Calendar.current
         
-        // Update dates based on slider values
+        // Store previous dates for lock mode calculations
+        let previousStartDate = selectedStartDate
+        let previousEndDate = selectedEndDate
+        
+        // Calculate the previous date range in days
+        var daysBetweenDates = 0
+        if let start = previousStartDate, let end = previousEndDate {
+            daysBetweenDates = calendar.dateComponents([.day], from: start, to: end).day ?? 0
+        }
+        
+        // Update dates based on slider values and lock state
         if sender == startDateSlider {
+            // Calculate new start date
             let startInterval = TimeInterval(sender.value) * timeRange
             selectedStartDate = earliestDate.addingTimeInterval(startInterval)
             
-            // Ensure start date is not after end date
-            if let endDate = selectedEndDate, let startDate = selectedStartDate, startDate > endDate {
-                startDateSlider.value = endDateSlider.value
-                selectedStartDate = selectedEndDate
+            if dateRangeLockSwitch.isOn {
+                // Lock mode: Keep date range constant
+                if let startDate = selectedStartDate {
+                    // Move end date to maintain fixed range
+                    selectedEndDate = calendar.date(byAdding: .day, value: daysBetweenDates, to: startDate)
+                    
+                    // Update end slider position
+                    if let endDate = selectedEndDate {
+                        let endInterval = endDate.timeIntervalSince(earliestDate)
+                        let normalizedEndValue = Float(min(1.0, endInterval / timeRange))
+                        endDateSlider.value = normalizedEndValue
+                        
+                        // Ensure end date doesn't exceed latest date
+                        if endDate > latestDate {
+                            // Adjust both sliders to respect the boundary
+                            selectedEndDate = latestDate
+                            endDateSlider.value = 1.0
+                            
+                            // Adjust start date back by daysBetweenDates
+                            selectedStartDate = calendar.date(byAdding: .day, value: -daysBetweenDates, to: latestDate)
+                            let adjustedStartInterval = selectedStartDate!.timeIntervalSince(earliestDate)
+                            startDateSlider.value = Float(max(0.0, min(1.0, adjustedStartInterval / timeRange)))
+                        }
+                    }
+                }
+            } else {
+                // Unlocked mode: Ensure start date is not after end date - 1 day
+                if let endDate = selectedEndDate, let startDate = selectedStartDate {
+                    // Minimum 1 day between dates
+                    let minEndDate = calendar.date(byAdding: .day, value: 1, to: startDate) ?? startDate
+                    
+                    if endDate < minEndDate {
+                        // Push end date forward
+                        selectedEndDate = minEndDate
+                        let endInterval = minEndDate.timeIntervalSince(earliestDate)
+                        endDateSlider.value = Float(min(1.0, endInterval / timeRange))
+                    }
+                }
             }
         } else if sender == endDateSlider {
+            // Calculate new end date
             let endInterval = TimeInterval(sender.value) * timeRange
             selectedEndDate = earliestDate.addingTimeInterval(endInterval)
             
-            // Ensure end date is not before start date
-            if let endDate = selectedEndDate, let startDate = selectedStartDate, endDate < startDate {
-                endDateSlider.value = startDateSlider.value
-                selectedEndDate = selectedStartDate
+            if dateRangeLockSwitch.isOn {
+                // Lock mode: Keep date range constant
+                if let endDate = selectedEndDate {
+                    // Move start date to maintain fixed range
+                    selectedStartDate = calendar.date(byAdding: .day, value: -daysBetweenDates, to: endDate)
+                    
+                    // Update start slider position
+                    if let startDate = selectedStartDate {
+                        let startInterval = startDate.timeIntervalSince(earliestDate)
+                        let normalizedStartValue = Float(max(0.0, startInterval / timeRange))
+                        startDateSlider.value = normalizedStartValue
+                        
+                        // Ensure start date doesn't go below earliest date
+                        if startDate < earliestDate {
+                            // Adjust both sliders to respect the boundary
+                            selectedStartDate = earliestDate
+                            startDateSlider.value = 0.0
+                            
+                            // Adjust end date forward by daysBetweenDates
+                            selectedEndDate = calendar.date(byAdding: .day, value: daysBetweenDates, to: earliestDate)
+                            let adjustedEndInterval = selectedEndDate!.timeIntervalSince(earliestDate)
+                            endDateSlider.value = Float(min(1.0, adjustedEndInterval / timeRange))
+                        }
+                    }
+                }
+            } else {
+                // Unlocked mode: Ensure end date is not before start date + 1 day
+                if let startDate = selectedStartDate, let endDate = selectedEndDate {
+                    // Minimum 1 day between dates
+                    let minStartDate = calendar.date(byAdding: .day, value: -1, to: endDate) ?? endDate
+                    
+                    if startDate > minStartDate {
+                        // Push start date backward
+                        selectedStartDate = minStartDate
+                        let startInterval = minStartDate.timeIntervalSince(earliestDate)
+                        startDateSlider.value = Float(max(0.0, startInterval / timeRange))
+                    }
+                }
             }
         }
+        
+        // Check if we should enable or disable the lock switch
+        updateLockSwitchState()
         
         // Update the date labels
         updateDateLabels()
         
-        // Don't regenerate data on every slider change to improve performance
-        if !sender.isTracking {
-            // Only regenerate when slider is released
-            if segmentedControl.selectedSegmentIndex == CHART_TYPE_SCATTER {
-                generateScatterPlotData()
-            } else {
-                generateDistributionPlotData()
+        // Use a debounced update for chart data to prevent performance issues during sliding
+        // Remove the tracking check - now we update during sliding too
+        updateChartDataWithDebounce()
+    }
+
+    // Add this method for debounced updates
+    private func updateChartDataWithDebounce() {
+        // Cancel any existing work item
+        chartUpdateWorkItem?.cancel()
+        
+        // Create a new work item
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self = self else { return }
+            
+            DispatchQueue.main.async {
+                // Update the chart based on current selection
+                if self.segmentedControl.selectedSegmentIndex == self.CHART_TYPE_SCATTER {
+                    self.generateScatterPlotData()
+                } else {
+                    self.generateDistributionPlotData()
+                }
+            }
+        }
+        
+        // Store reference to new work item
+        chartUpdateWorkItem = workItem
+        
+        // Schedule the work item to execute after a short delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: workItem)
+    }
+    private func updateLockSwitchState() {
+        // Check if either slider is not at the extreme
+        let startNotAtMin = startDateSlider.value > 0.001 // Allow for floating point imprecision
+        let endNotAtMax = endDateSlider.value < 0.999 // Allow for floating point imprecision
+        
+        // Enable the switch if date range is not covering full data range
+        let shouldEnable = startNotAtMin || endNotAtMax
+        
+        // Only update if state is changing
+        if dateRangeLockSwitch.isEnabled != shouldEnable {
+            dateRangeLockSwitch.isEnabled = shouldEnable
+            
+            // Update icon appearance
+            UIView.animate(withDuration: 0.3) {
+                self.dateRangeLockIcon.alpha = shouldEnable ? 1.0 : 0.5
             }
         }
     }
@@ -2433,11 +2637,6 @@ extension TrackerChart {
         titleLabel.font = UIFont.systemFont(ofSize: 10)
         view.addSubview(titleLabel)
     }
-    
-    // MARK: - Utility Functions
-    
-    // MARK: - UI Actions
-    
 
 }
 
