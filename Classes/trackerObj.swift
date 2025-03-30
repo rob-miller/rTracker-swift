@@ -850,6 +850,7 @@ class trackerObj: tObjBase {
         }
 
         if rvo == nil {
+            // won't find if privacy restricted
             DBGLog(String("tObj getValObj failed to find vid \(qVid)"))
         }
         return rvo
