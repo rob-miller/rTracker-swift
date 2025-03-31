@@ -57,7 +57,8 @@ class trackerObj: tObjBase {
         }
     }
     var trackerDate: Date?
-
+    var lastDbDate: Int = 0
+    
     var optDict: [String : Any] = [:]  // trackerObj level optDict in dtabase as text : any
 
     var valObjTable: [valueObj] = []
@@ -480,6 +481,9 @@ class trackerObj: tObjBase {
 
         DBGLog(String("to optdict: \(optDict)"))
 
+        sql = "select max(date) from trkrData"
+        lastDbDate = toQry2Int(sql:sql)!
+        
         //self.trackerName = [self.optDict objectForKey:@"name"];
 
         let w = CGFloat(Double(optDict["width"] as? Double ?? 0))

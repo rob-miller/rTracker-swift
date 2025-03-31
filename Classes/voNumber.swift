@@ -173,7 +173,7 @@ class voNumber: voState, UITextFieldDelegate {
         
         //if (![self.vo.value isEqualToString:dtf.text]) {
 
-        var targD = Date()
+        var targD = Date()  // now
         if vo.value == "" {
             if (vo.optDict["nswl"] == "1") /* && ![to hasData] */ {  // nswl = number start with last
                 // only if new entry
@@ -188,8 +188,8 @@ class voNumber: voState, UITextFieldDelegate {
                     dtf.text = r
                 }
                 //sql = nil;
-            } else if vo.optDict["ahksrc"] == "1" && (3.0 > abs(targD.timeIntervalSince(self.MyTracker.trackerDate!))){
-                // apple healthkit source and trackerDate is now within 3 seconds (not historical)
+            } else if vo.optDict["ahksrc"] == "1" && Int(vo.parentTracker.trackerDate!.timeIntervalSince1970) > self.MyTracker.lastDbDate{
+                // apple healthkit source and trackerDate is newer than last in database (not historical)
                 if vo.optDict["ahPrevD"] ?? "0" == "1" {
                     let calendar = Calendar.current
                     targD = calendar.date(byAdding: .day, value: -1, to: targD) ?? targD
@@ -253,9 +253,11 @@ class voNumber: voState, UITextFieldDelegate {
             } else if vo.optDict["otsrc"] == "1" {
                 if let xrslt = vo.vos?.getOTrslt() {
                     self.dtf.text = xrslt
+                    /*
                     self.dtf.isEnabled = false
                     self.dtf.textColor = UIColor.black // Much darker than default disabled color
                     self.dtf.backgroundColor = UIColor(white: 0.95, alpha: 1.0) // Light gray background
+                     */
                 } else {
                     self.dtf.text = ""
                 }
@@ -273,6 +275,9 @@ class voNumber: voState, UITextFieldDelegate {
                     dtf.text = formattedValue
                 } else {
                     dtf.text = vo.value
+                }
+                if vo.optDict["ahksrc"] == "1" || vo.optDict["otsrc"] == "1" {
+                    self.vo.vos?.addExternalSourceOverlay(to: self.dtf)  // no taps
                 }
             }
         }
