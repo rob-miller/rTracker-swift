@@ -581,7 +581,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     // MARK: - Data Loading
     
     private func loadDateRanges() {
-        guard let tracker = tracker else { return }
+        guard tracker != nil else { return }
         
         // Get date range from tracker data
         let dateRange = fetchDateRange()
@@ -716,11 +716,27 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         }
     }
     
+    
+    private struct AssociatedKeys {
+        // Use a static void pointer instead of a string
+        static var pointData = UnsafeRawPointer(bitPattern: 1)
+    }
+     
+    
     @objc private func showPointDetails(_ sender: UITapGestureRecognizer) {
+        /*
         guard let pointView = sender.view,
               let pointData = objc_getAssociatedObject(pointView, &AssociatedKeys.pointData) as? [String: Any] else {
             return
         }
+         */
+        
+        guard let pointView = sender.view,
+              let key = AssociatedKeys.pointData,
+              let pointData = objc_getAssociatedObject(pointView, key) as? [String: Any] else {
+            return
+        }
+        
         
         // Extract point data
         let x = pointData["x"] as? Double ?? 0
@@ -833,7 +849,7 @@ extension TrackerChart {
     
     // Analyze scatter data to set axis scales (using full data range)
     private func analyzeScatterData() {
-        guard let tracker = tracker,
+        guard tracker != nil,
               let earliestDate = earliestDate,
               let latestDate = latestDate,
               selectedValueObjIDs["xAxis"] != -1,
@@ -898,7 +914,7 @@ extension TrackerChart {
     
     // Analyze distribution data to set axis scales (using full data range)
     private func analyzeDistributionData() {
-        guard let tracker = tracker,
+        guard tracker != nil,
               let earliestDate = earliestDate,
               let latestDate = latestDate,
               selectedValueObjIDs["background"] != -1 else {
@@ -1092,7 +1108,7 @@ extension TrackerChart {
         for result in customValuesResults {
             if let field = result.0 as? String, let valStr = result.1 as? String, let val = Int(valStr) {
                 // Extract index from 'cv0', 'cv1', etc.
-                if let indexStr = field.dropFirst(2).first, let index = Int(String(indexStr)) {
+                if let indexStr = field.dropFirst(2).first, let _ = Int(String(indexStr)) {
                     customValues[field] = val
                 }
             }
@@ -1186,7 +1202,7 @@ extension TrackerChart {
     }
     
     private func generateScatterPlotData() {
-        guard let tracker = tracker,
+        guard tracker != nil,
               let selectedStartDate = selectedStartDate,
               let selectedEndDate = selectedEndDate,
               selectedValueObjIDs["xAxis"] != -1,
@@ -1274,7 +1290,7 @@ extension TrackerChart {
         chartData = [
             "type": "scatter",
             "points": points,
-            "correlation": correlation
+            "correlation": correlation as Any
         ]
         
         // Render the chart
@@ -1282,7 +1298,7 @@ extension TrackerChart {
     }
     
     private func generateDistributionPlotData() {
-        guard let tracker = tracker,
+        guard tracker != nil,
               let selectedStartDate = selectedStartDate,
               let selectedEndDate = selectedEndDate,
               selectedValueObjIDs["background"] != -1 else {
@@ -1575,8 +1591,7 @@ extension TrackerChart {
             }
         }
         
-        guard let chartData = chartData as? [String: Any],
-              chartData["type"] as? String == "scatter",
+        guard chartData["type"] as? String == "scatter",
               let points = chartData["points"] as? [[String: Any]],
               !points.isEmpty else {
             noDataLabel.isHidden = false
@@ -1835,8 +1850,11 @@ extension TrackerChart {
                 pointView.isUserInteractionEnabled = true
                 
                 // Store the actual data in a dictionary accessible by objectForKey
-                let userData = ["x": x, "y": y, "date": date, "colorValue": point["color"] as? Double] as [String : Any]
-                objc_setAssociatedObject(pointView, &AssociatedKeys.pointData, userData, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+                let userData = ["x": x, "y": y, "date": date, "colorValue": point["color"] as? Double as Any] as [String : Any]
+                //objc_setAssociatedObject(pointView, &AssociatedKeys.pointData, userData, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+                if let key = AssociatedKeys.pointData {
+                    objc_setAssociatedObject(pointView, key, userData, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+                }
             }
         }
     }
@@ -1849,8 +1867,7 @@ extension TrackerChart {
             }
         }
         
-        guard let chartData = chartData as? [String: Any],
-              chartData["type"] as? String == "distribution",
+        guard chartData["type"] as? String == "distribution",
               let backgroundValues = chartData["backgroundValues"] as? [Double],
               !backgroundValues.isEmpty else {
             noDataLabel.text = "No distribution data available"
@@ -2074,7 +2091,7 @@ extension TrackerChart {
         // Clear any previous histogram elements
         // This ensures we don't have leftover views from previous renders
         for subview in chartView.subviews {
-            if subview != noDataLabel && subview is UIView && subview.tag == 1001 {
+            if subview != noDataLabel && subview.tag == 1001 {
                 subview.removeFromSuperview()
             }
         }
