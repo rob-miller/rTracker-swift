@@ -74,6 +74,8 @@
 		D47FBB8114A9E2E300CE0547 /* fullview-button.png in Resources */ = {isa = PBXBuildFile; fileRef = D47FBB8014A9E2E300CE0547 /* fullview-button.png */; };
 		D47FBB8314A9E2F100CE0547 /* shadeview-button.png in Resources */ = {isa = PBXBuildFile; fileRef = D47FBB8214A9E2F100CE0547 /* shadeview-button.png */; };
 		D481089A19E056D600B422A8 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D481089919E056D600B422A8 /* Images.xcassets */; };
+		D4821EFE2D9B291100BE5A4C /* trackerChartPlots.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4821EFD2D9B290000BE5A4C /* trackerChartPlots.swift */; };
+		D4821F002D9B293200BE5A4C /* trackerChartDataHandling.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4821EFF2D9B291F00BE5A4C /* trackerChartDataHandling.swift */; };
 		D482D272114FEB5E00CE6BC8 /* trackerList.swift in Sources */ = {isa = PBXBuildFile; fileRef = D482D271114FEB5E00CE6BC8 /* trackerList.swift */; };
 		D482D276114FEB7500CE6BC8 /* trackerObj.swift in Sources */ = {isa = PBXBuildFile; fileRef = D482D275114FEB7500CE6BC8 /* trackerObj.swift */; };
 		D487D7741260A77800298C1D /* configTVObjVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = D487D7721260A77800298C1D /* configTVObjVC.swift */; };
@@ -239,6 +241,8 @@
 		D47FD5D0128C22DC00EFE8A7 /* AddressBook.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AddressBook.framework; path = System/Library/Frameworks/AddressBook.framework; sourceTree = SDKROOT; };
 		D47FD5E1128C230700EFE8A7 /* AddressBookUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AddressBookUI.framework; path = System/Library/Frameworks/AddressBookUI.framework; sourceTree = SDKROOT; };
 		D481089919E056D600B422A8 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = rTracker/Images.xcassets; sourceTree = "<group>"; };
+		D4821EFD2D9B290000BE5A4C /* trackerChartPlots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = trackerChartPlots.swift; sourceTree = "<group>"; };
+		D4821EFF2D9B291F00BE5A4C /* trackerChartDataHandling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = trackerChartDataHandling.swift; sourceTree = "<group>"; };
 		D482D271114FEB5E00CE6BC8 /* trackerList.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = trackerList.swift; sourceTree = "<group>"; };
 		D482D275114FEB7500CE6BC8 /* trackerObj.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = trackerObj.swift; sourceTree = "<group>"; };
 		D487D7721260A77800298C1D /* configTVObjVC.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = configTVObjVC.swift; sourceTree = "<group>"; };
@@ -543,6 +547,16 @@
 			name = icon;
 			sourceTree = "<group>";
 		};
+		D4821F012D9B2EB600BE5A4C /* charts */ = {
+			isa = PBXGroup;
+			children = (
+				D4EE7D842D8DE57000206D26 /* trackerChart.swift */,
+				D4821EFD2D9B290000BE5A4C /* trackerChartPlots.swift */,
+				D4821EFF2D9B291F00BE5A4C /* trackerChartDataHandling.swift */,
+			);
+			path = charts;
+			sourceTree = "<group>";
+		};
 		D4956B1F12E06EAA00B0BB9B /* valueObj classes */ = {
 			isa = PBXGroup;
 			children = (
@@ -594,7 +608,7 @@
 			children = (
 				28C286E00D94DF7D0034E888 /* RootViewController.swift */,
 				D49854AE12312A400009E458 /* useTrackerController.swift */,
-				D4EE7D842D8DE57000206D26 /* trackerChart.swift */,
+				D4821F012D9B2EB600BE5A4C /* charts */,
 				D4588ADB1177497200AD2106 /* addTrackerController.swift */,
 				D4A9E4361A412FF300BD15B5 /* addTrackerController.xib */,
 				D48F9FB0119B4CA600B37C93 /* addValObjController.swift */,
@@ -844,6 +858,7 @@
 				D482D272114FEB5E00CE6BC8 /* trackerList.swift in Sources */,
 				D482D276114FEB7500CE6BC8 /* trackerObj.swift in Sources */,
 				D417E3102A2121570093564A /* TSQCalendarMonthHeaderCell.m in Sources */,
+				D4821EFE2D9B291100BE5A4C /* trackerChartPlots.swift in Sources */,
 				D417E3132A2121570093564A /* TSQCalendarView.m in Sources */,
 				D4588ADC1177497200AD2106 /* addTrackerController.swift in Sources */,
 				D4A314AA1189BB6A00F062AC /* tObjBase.swift in Sources */,
@@ -862,6 +877,7 @@
 				D4B6AE68127EC33500C036ED /* voNumber.swift in Sources */,
 				D4B6AE6D127EC34D00C036ED /* voText.swift in Sources */,
 				D4620057182C046E00F6F2C2 /* notifyReminder.swift in Sources */,
+				D4821F002D9B293200BE5A4C /* trackerChartDataHandling.swift in Sources */,
 				D4B6AE77127EC36E00C036ED /* voSlider.swift in Sources */,
 				D4CB672F18B3FF7100096490 /* voInfo.swift in Sources */,
 				D4EE7D862D8DE57000206D26 /* trackerChart.swift in Sources */,
