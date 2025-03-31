@@ -206,31 +206,26 @@ struct ahViewController: View {
     
     private var previousDaySection: some View {
         ZStack {
-            if let selectedConfig = selectedConfiguration()
-               // ,
-               //selectedConfig.aggregationStyle == .discreteArithmetic && avgDataSwitch
-            {
-                HStack {
-                    Text("For previous day")
-                        .font(.system(size: 16))
-                        .foregroundColor(.primary)
-                    
-                    Button(action: {
-                        showingPrevDayInfo = true
-                    }) {
-                        Image(systemName: "info.circle")
-                            .foregroundColor(.blue)
-                    }
-                    .accessibilityLabel("Previous Day Information")
-                    
-                    Spacer()
-                    Toggle("", isOn: $prevDateSwitch)
-                        .labelsHidden()
+            
+            HStack {
+                Text("For previous day")
+                    .font(.system(size: 16))
+                    .foregroundColor(.primary)
+                
+                Button(action: {
+                    showingPrevDayInfo = true
+                }) {
+                    Image(systemName: "info.circle")
+                        .foregroundColor(.blue)
                 }
-                .padding()
-            } else {
-                Color.clear
+                .accessibilityLabel("Previous Day Information")
+                
+                Spacer()
+                Toggle("", isOn: $prevDateSwitch)
+                    .labelsHidden()
             }
+            .padding()
+            
         }
         .frame(height: 30)
         .sheet(isPresented: $showingPrevDayInfo) {
