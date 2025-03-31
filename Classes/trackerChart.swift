@@ -73,12 +73,16 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     private var endDateSlider: UISlider!
     private var startDateLabel: UILabel!
     private var endDateLabel: UILabel!
+    
     // for debouncing
     private var chartUpdateWorkItem: DispatchWorkItem?
     
     // date lock
     private var dateRangeLockSwitch: UISwitch!
     private var dateRangeLockIcon: UIImageView!
+    
+    // date slider container
+    private var sliderContainer: UIView!
     
     // Date labels
     private var startDateTextTappable: UILabel!
@@ -115,6 +119,12 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         
         // Configure view
         setupView()
+        
+        // Set up date sliders - this should happen only once
+         setupDateSliders()
+        
+        // Set up slider container
+        setupSliderContainer()
         
         // Initialize configurations
         initializeChartConfigurations()
@@ -199,6 +209,8 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
             contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor), // Same width as scroll view
             
+            //  deepseek r1 contentView.heightAnchor.constraint(greaterThanOrEqualTo: scrollView.frameLayoutGuide.heightAnchor),
+
             // Segmented control
             segmentedControl.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
             segmentedControl.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
@@ -233,12 +245,6 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         yAxisButton = createConfigButton(title: "Select Y Axis", action: #selector(selectYAxis))
         colorButton = createConfigButton(title: "Select Color (Optional)", action: #selector(selectColor))
         
-        // Create date sliders
-        setupDateSliders()
-        
-        // Create slider container with adequate height
-        let sliderContainer = createSliderContainer()
-        
         // Configure layout - no longer using fillEqually distribution
         let stackView = UIStackView(arrangedSubviews: [
             xAxisButton, yAxisButton, colorButton,
@@ -257,7 +263,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             stackView.bottomAnchor.constraint(equalTo: configContainer.bottomAnchor),
             
             // Set a fixed height constraint for the slider container
-            sliderContainer.heightAnchor.constraint(equalToConstant: 120)  // Increased height for sliders
+            //sliderContainer.heightAnchor.constraint(equalToConstant: 120)  // Increased height for sliders
         ])
         
         // Update buttons with any previously selected values
@@ -273,12 +279,6 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         // Create buttons for Background and Selection
         backgroundButton = createConfigButton(title: "Select Background Data", action: #selector(selectBackground))
         selectionButton = createConfigButton(title: "Select Segmentation Data", action: #selector(selectSelection))
-        
-        // Create date sliders
-        setupDateSliders()
-        
-        // Create slider container with adequate height
-        let sliderContainer = createSliderContainer()
         
         // Configure layout - no longer using fillEqually distribution
         let stackView = UIStackView(arrangedSubviews: [
@@ -298,7 +298,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             stackView.bottomAnchor.constraint(equalTo: configContainer.bottomAnchor),
             
             // Set a fixed height constraint for the slider container
-            sliderContainer.heightAnchor.constraint(equalToConstant: 120)  // Increased height for sliders
+            //sliderContainer.heightAnchor.constraint(equalToConstant: 120)  // Increased height for sliders
         ])
         
         // Update buttons with any previously selected values
@@ -317,6 +317,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         startDateSlider.maximumTrackTintColor = .systemGray3
         startDateSlider.thumbTintColor = .systemBlue
         startDateSlider.isContinuous = true
+        // deepseek r1  startDateSlider.heightAnchor.constraint(equalToConstant: 24).isActive = true
         
         // Create end date slider with proper interaction
         endDateSlider = UISlider()
@@ -329,7 +330,8 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         endDateSlider.maximumTrackTintColor = .systemGray3
         endDateSlider.thumbTintColor = .systemBlue
         endDateSlider.isContinuous = true
-        
+        // deepseek r1  endDateSlider.heightAnchor.constraint(equalToConstant: 24).isActive = true
+
         // Original labels (kept for compatibility)
         startDateLabel = UILabel()
         startDateLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -376,9 +378,9 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         endDateTextTappable.textAlignment = .center
     }
 
-    private func createSliderContainer() -> UIView {
-        let container = UIView()
-        container.translatesAutoresizingMaskIntoConstraints = false
+    private func setupSliderContainer() {
+        sliderContainer = UIView()
+        sliderContainer.translatesAutoresizingMaskIntoConstraints = false
         
         let dateRangeLabel = UILabel()
         dateRangeLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -399,17 +401,26 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         dateRangeLockSwitch.isEnabled = false // Disabled initially
         dateRangeLockSwitch.addTarget(self, action: #selector(dateRangeLockChanged), for: .valueChanged)
         
-        container.addSubview(dateRangeLabel)
-        container.addSubview(dateRangeLockIcon)
-        container.addSubview(dateRangeLockSwitch)
-        container.addSubview(startDateSlider)
-        container.addSubview(endDateSlider)
-        container.addSubview(startDateLabel)
-        container.addSubview(endDateLabel)
+        sliderContainer.addSubview(dateRangeLabel)
+        sliderContainer.addSubview(dateRangeLockIcon)
+        sliderContainer.addSubview(dateRangeLockSwitch)
+        sliderContainer.addSubview(startDateSlider)
+        sliderContainer.addSubview(endDateSlider)
+        sliderContainer.addSubview(startDateLabel)
+        sliderContainer.addSubview(endDateLabel)
+        sliderContainer.addSubview(startDateTextTappable)
+        sliderContainer.addSubview(endDateTextTappable)
+        
+        /*
+        // Add these lines to highlight the sliderContainer for debugging
+        sliderContainer.layer.borderWidth = 2.0
+        sliderContainer.layer.borderColor = UIColor.red.cgColor
+        sliderContainer.backgroundColor = UIColor.yellow.withAlphaComponent(0.3)
+        */
         
         NSLayoutConstraint.activate([
-            dateRangeLabel.topAnchor.constraint(equalTo: container.topAnchor, constant: 8),
-            dateRangeLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            dateRangeLabel.topAnchor.constraint(equalTo: sliderContainer.topAnchor, constant: 8),
+            dateRangeLabel.leadingAnchor.constraint(equalTo: sliderContainer.leadingAnchor),
             
             // Position lock icon
             dateRangeLockIcon.centerYAnchor.constraint(equalTo: dateRangeLabel.centerYAnchor),
@@ -419,29 +430,50 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             
             // Position lock switch
             dateRangeLockSwitch.centerYAnchor.constraint(equalTo: dateRangeLabel.centerYAnchor),
-            dateRangeLockSwitch.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            dateRangeLockSwitch.trailingAnchor.constraint(equalTo: sliderContainer.trailingAnchor),
+            
+            
+            // Position start date tappable label
+            startDateTextTappable.topAnchor.constraint(equalTo: dateRangeLabel.bottomAnchor, constant: 12),
+            startDateTextTappable.leadingAnchor.constraint(equalTo: sliderContainer.leadingAnchor),
+            startDateTextTappable.widthAnchor.constraint(equalTo: sliderContainer.widthAnchor, multiplier: 0.45),
+            startDateTextTappable.heightAnchor.constraint(equalToConstant: 30),
+            
+            // Position end date tappable label
+            endDateTextTappable.topAnchor.constraint(equalTo: dateRangeLabel.bottomAnchor, constant: 12),
+            endDateTextTappable.trailingAnchor.constraint(equalTo: sliderContainer.trailingAnchor),
+            endDateTextTappable.widthAnchor.constraint(equalTo: sliderContainer.widthAnchor, multiplier: 0.45),
+            endDateTextTappable.heightAnchor.constraint(equalToConstant: 30),
             
             // Increase the spacing between elements
-            startDateSlider.topAnchor.constraint(equalTo: dateRangeLabel.bottomAnchor, constant: 16),
-            startDateSlider.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            startDateSlider.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            startDateSlider.topAnchor.constraint(equalTo: startDateTextTappable.bottomAnchor, constant: 10),
+            //startDateSlider.topAnchor.constraint(equalTo: dateRangeLockSwitch.bottomAnchor, constant: 10),
+            startDateSlider.leadingAnchor.constraint(equalTo: sliderContainer.leadingAnchor),
+            startDateSlider.trailingAnchor.constraint(equalTo: sliderContainer.trailingAnchor),
             
             // Increase the spacing between sliders
-            endDateSlider.topAnchor.constraint(equalTo: startDateSlider.bottomAnchor, constant: 24),
-            endDateSlider.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            endDateSlider.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            endDateSlider.topAnchor.constraint(equalTo: startDateSlider.bottomAnchor, constant: 15),
+            endDateSlider.leadingAnchor.constraint(equalTo: sliderContainer.leadingAnchor),
+            endDateSlider.trailingAnchor.constraint(equalTo: sliderContainer.trailingAnchor),
             
-            // Position labels below sliders with adequate spacing
+            // Position original labels below sliders
             startDateLabel.topAnchor.constraint(equalTo: endDateSlider.bottomAnchor, constant: 8),
-            startDateLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            startDateLabel.widthAnchor.constraint(equalTo: container.widthAnchor, multiplier: 0.5),
+            startDateLabel.leadingAnchor.constraint(equalTo: sliderContainer.leadingAnchor),
+            startDateLabel.widthAnchor.constraint(equalTo: sliderContainer.widthAnchor, multiplier: 0.5),
             
             endDateLabel.topAnchor.constraint(equalTo: endDateSlider.bottomAnchor, constant: 8),
-            endDateLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            endDateLabel.widthAnchor.constraint(equalTo: container.widthAnchor, multiplier: 0.5)
+            endDateLabel.trailingAnchor.constraint(equalTo: sliderContainer.trailingAnchor),
+            endDateLabel.widthAnchor.constraint(equalTo: sliderContainer.widthAnchor, multiplier: 0.5),
+            
+            sliderContainer.bottomAnchor.constraint(equalTo: endDateLabel.bottomAnchor, constant: 10)
         ])
         
-        return container
+        //sliderHeightConstraint = sliderContainer.heightAnchor.constraint(equalToConstant: 120)
+        //sliderHeightConstraint.isActive = true
+        
+        // Add a maximum height constraint if needed
+        //sliderContainerHeightConstraint = sliderContainer.heightAnchor.constraint(lessThanOrEqualToConstant: 200)
+        //sliderContainerHeightConstraint.isActive = true
     }
     
     // Add new methods to toggle between date formats
@@ -2294,8 +2326,9 @@ extension TrackerChart {
     
     @objc private func chartTypeChanged(_ sender: UISegmentedControl) {
 
-        selectedStartDate = earliestDate
-        selectedEndDate = latestDate
+        
+        //selectedStartDate = earliestDate
+        //selectedEndDate = latestDate
         
         if sender.selectedSegmentIndex == CHART_TYPE_SCATTER {
             setupScatterPlotConfig()
