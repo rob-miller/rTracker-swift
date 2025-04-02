@@ -307,7 +307,7 @@ extension TrackerChart {
                 let roundedValue = Int(round(choiceValue))
                 
                 // Find the matching category
-                let category = findChoiceCategory(forValue: roundedValue, inCategories: choiceCategories) ?? "unknown"
+                let category = findChoiceCategory(forValue: roundedValue, inCategories: choiceCategories) ?? "no_entry" // "unknown"
                 
                 if categoryValues[category] != nil {
                     categoryValues[category]?.append(value)
@@ -637,32 +637,31 @@ extension TrackerChart {
     internal func fetchChoiceCategories(forID id: Int) -> [Int: String] {
         guard let tracker = tracker else { return [:] }
         
-        // This would query the voInfo table for choice labels
-        // Example SQL query
-        let sql = """
+        // Check if there are custom values
+        var sql = """
+        SELECT field, val FROM voInfo 
+        WHERE id = \(id) AND field LIKE 'cv%'
+        """
+        var customValues: [Int: Int] = [:]
+        
+        // Fetch custom values
+        let customValuesResults = tracker.toQry2Ary(sql: sql)
+        for result in customValuesResults {
+            if let field = result.0 as? String, let valStr = result.1 as? String, let val = Int(valStr) {
+                // Extract index from 'cv0', 'cv1', etc.
+                if let indexStr = field.dropFirst(2).first, let ndx = Int(String(indexStr)) {
+                    customValues[ndx] = val
+                }
+            }
+        }
+        
+        // query the voInfo table for choice labels
+        sql = """
         SELECT field, val FROM voInfo 
         WHERE id = \(id) AND field LIKE 'c%' AND val IS NOT NULL
         """
         
         var categories: [Int: String] = [:]
-        
-        // Check if there are custom values
-        let customValuesSql = """
-        SELECT field, val FROM voInfo 
-        WHERE id = \(id) AND field LIKE 'cv%'
-        """
-        var customValues: [String: Int] = [:]
-        
-        // Fetch custom values
-        let customValuesResults = tracker.toQry2Ary(sql: customValuesSql)
-        for result in customValuesResults {
-            if let field = result.0 as? String, let valStr = result.1 as? String, let val = Int(valStr) {
-                // Extract index from 'cv0', 'cv1', etc.
-                if let indexStr = field.dropFirst(2).first, let _ = Int(String(indexStr)) {
-                    customValues[field] = val
-                }
-            }
-        }
         
         // Fetch categories
         let categoryResults = tracker.toQry2Ary(sql: sql)
@@ -671,8 +670,7 @@ extension TrackerChart {
                 // Extract index from 'c0', 'c1', etc.
                 if let indexStr = field.dropFirst(1).first, let index = Int(String(indexStr)) {
                     // Check if there's a custom value for this field
-                    let cvField = "cv\(index)"
-                    if let customValue = customValues[cvField] {
+                    if let customValue = customValues[index] {
                         categories[customValue] = label
                     } else {
                         // If no custom value, assign index + 1 (so c0=1, c1=2, etc.)

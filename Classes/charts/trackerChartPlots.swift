@@ -368,11 +368,13 @@ extension TrackerChart {
             let categoryColors = categoryData.colors
             let categoryValues = categoryData.values
             
+            
             // Sort categories by their values (higher values first)
             let sortedCategories = Array(selectionBins.keys).sorted { (a, b) -> Bool in
                 return (categoryValues[a] ?? 0) > (categoryValues[b] ?? 0)
             }
             
+            print(sortedCategories)
             drawCategoryLegend(
                 in: chartView,
                 categories: sortedCategories,
@@ -611,62 +613,68 @@ extension TrackerChart {
     }
     
     internal func generateCategoryColors(_ categories: Dictionary<String, [Double]>.Keys) -> (colors: [String: UIColor], values: [String: Int]) {
-        var categoryColors: [String: UIColor] = [:]
-        var categoryValues: [String: Int] = [:]
-        
-        // Assign values to categories
-        for category in categories {
-            // Special case for no_entry
-            if category == "no_entry" {
-                categoryColors[category] = UIColor.systemGreen
-                continue
-            }
+            var categoryColors: [String: UIColor] = [:]
+            var categoryValues: [String: Int] = [:]
             
-            // Try to convert numerical categories
-            if let numValue = Int(category) {
-                categoryValues[category] = numValue
-            } else if category == "true" {
-                categoryValues[category] = 1
-            } else if category == "false" {
-                categoryValues[category] = 0
-            } else if category == "low" {
-                categoryValues[category] = 0
-            } else if category == "medium" {
-                categoryValues[category] = 1
-            } else if category == "high" {
-                categoryValues[category] = 2
-            } else {
-                // For non-standard categories, look up the value from the selection object
-                if let selectionID = selectedValueObjIDs["selection"], selectionID != -1 {
-                    let categoryMap = fetchChoiceCategories(forID: selectionID)
-                    // Find the key in categoryMap that has the category as its value
-                    for (value, label) in categoryMap {
-                        if label == category {
-                            categoryValues[category] = value
-                            break
-                        }
-                    }
+            // Check if this is a VOT_CHOICE selection and fetch categories once
+            var choiceLabelToValue: [String: Int]? = nil
+            if let selectionID = selectedValueObjIDs["selection"],
+               let vo = self.tracker?.getValObj(selectionID),
+               vo.vtype == VOT_CHOICE {
+                let categoryMap = fetchChoiceCategories(forID: selectionID)
+                // Create inverted map from label to value
+                choiceLabelToValue = categoryMap.reduce(into: [:]) { result, pair in
+                    result[pair.value] = pair.key
                 }
             }
-        }
         
-        // Find min and max values
-        let filteredValues = categoryValues.values
-        if !filteredValues.isEmpty {
-            let minCategoryValue = filteredValues.min() ?? 0
-            let maxCategoryValue = filteredValues.max() ?? 1
-            let categoryValueRange = max(1, maxCategoryValue - minCategoryValue)
-            
-            // Assign colors based on normalized value
-            for (category, value) in categoryValues {
-                let normalizedValue = Double(value - minCategoryValue) / Double(categoryValueRange)
-                categoryColors[category] = getColorGradient(normalizedValue: normalizedValue)
+            // Assign values to categories
+            for category in categories {
+                if category == "no_entry" {
+                    categoryColors[category] = UIColor.systemGreen
+                    continue
+                }
+                
+                if let choiceMap = choiceLabelToValue {
+                    // Handle VOT_CHOICE categories
+                    if let value = choiceMap[category] {
+                        categoryValues[category] = value
+                        continue
+                    }
+                }
+                
+                // Handle other category types
+                if let numValue = Int(category) {
+                    categoryValues[category] = numValue
+                } else if category == "true" {
+                    categoryValues[category] = 1
+                } else if category == "false" {
+                    categoryValues[category] = 0
+                } else if category == "low" {
+                    categoryValues[category] = 0
+                } else if category == "medium" {
+                    categoryValues[category] = 1
+                } else if category == "high" {
+                    categoryValues[category] = 2
+                }
             }
+            
+            // Find min and max values
+            let filteredValues = categoryValues.values
+            if !filteredValues.isEmpty {
+                let minCategoryValue = filteredValues.min() ?? 0
+                let maxCategoryValue = filteredValues.max() ?? 1
+                let categoryValueRange = max(1, maxCategoryValue - minCategoryValue)
+                
+                // Assign colors based on normalized value
+                for (category, value) in categoryValues {
+                    let normalizedValue = Double(value - minCategoryValue) / Double(categoryValueRange)
+                    categoryColors[category] = getColorGradient(normalizedValue: normalizedValue)
+                }
+            }
+            
+            return (categoryColors, categoryValues)
         }
-        
-        return (categoryColors, categoryValues)
-
-    }
     
     
     internal func getColorGradient(normalizedValue: Double) -> UIColor {

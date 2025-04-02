@@ -142,9 +142,22 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        
+        // Keep navigation bar, hide toolbar
+        self.navigationController?.setToolbarHidden(true, animated: animated)
+        
         loadDateRanges()
     }
     
+    /*
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        
+        // This is optional - only if you want to restore the toolbar state
+        // when navigating away from this screen
+        self.navigationController?.setToolbarHidden(false, animated: animated)
+    }
+    */
     // MARK: - UI Setup
     
     internal func setupView() {
@@ -208,8 +221,6 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
             contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
             contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor), // Same width as scroll view
-            
-            //  deepseek r1 contentView.heightAnchor.constraint(greaterThanOrEqualTo: scrollView.frameLayoutGuide.heightAnchor),
 
             // Segmented control
             segmentedControl.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
@@ -317,7 +328,6 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         startDateSlider.maximumTrackTintColor = .systemGray3
         startDateSlider.thumbTintColor = .systemBlue
         startDateSlider.isContinuous = true
-        // deepseek r1  startDateSlider.heightAnchor.constraint(equalToConstant: 24).isActive = true
         
         // Create end date slider with proper interaction
         endDateSlider = UISlider()
@@ -330,7 +340,6 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         endDateSlider.maximumTrackTintColor = .systemGray3
         endDateSlider.thumbTintColor = .systemBlue
         endDateSlider.isContinuous = true
-        // deepseek r1  endDateSlider.heightAnchor.constraint(equalToConstant: 24).isActive = true
 
         // Original labels (kept for compatibility)
         startDateLabel = UILabel()
@@ -358,10 +367,10 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         endDateTextTappable.font = UIFont.systemFont(ofSize: 16, weight: .medium)
         endDateTextTappable.textColor = .label
         endDateTextTappable.text = "End Date" // Default text until dates are loaded
-        endDateTextTappable.textAlignment = .center
+        endDateTextTappable.textAlignment = .right
         endDateTextTappable.isUserInteractionEnabled = true
         endDateTextTappable.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(toggleEndDateFormat)))
-        
+        /*
         // Add visual indicator that these labels are tappable
         startDateTextTappable.layer.cornerRadius = 8
         startDateTextTappable.layer.borderWidth = 1.0
@@ -376,6 +385,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         endDateTextTappable.clipsToBounds = true
         endDateTextTappable.backgroundColor = .systemBackground
         endDateTextTappable.textAlignment = .center
+        */
     }
 
     internal func setupSliderContainer() {
@@ -406,8 +416,8 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         sliderContainer.addSubview(dateRangeLockSwitch)
         sliderContainer.addSubview(startDateSlider)
         sliderContainer.addSubview(endDateSlider)
-        sliderContainer.addSubview(startDateLabel)
-        sliderContainer.addSubview(endDateLabel)
+        //sliderContainer.addSubview(startDateLabel)
+        //sliderContainer.addSubview(endDateLabel)
         sliderContainer.addSubview(startDateTextTappable)
         sliderContainer.addSubview(endDateTextTappable)
         
@@ -417,7 +427,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         sliderContainer.layer.borderColor = UIColor.red.cgColor
         sliderContainer.backgroundColor = UIColor.yellow.withAlphaComponent(0.3)
         */
-        
+
         NSLayoutConstraint.activate([
             dateRangeLabel.topAnchor.constraint(equalTo: sliderContainer.topAnchor, constant: 8),
             dateRangeLabel.leadingAnchor.constraint(equalTo: sliderContainer.leadingAnchor),
@@ -432,22 +442,9 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             dateRangeLockSwitch.centerYAnchor.constraint(equalTo: dateRangeLabel.centerYAnchor),
             dateRangeLockSwitch.trailingAnchor.constraint(equalTo: sliderContainer.trailingAnchor),
             
-            
-            // Position start date tappable label
-            startDateTextTappable.topAnchor.constraint(equalTo: dateRangeLabel.bottomAnchor, constant: 12),
-            startDateTextTappable.leadingAnchor.constraint(equalTo: sliderContainer.leadingAnchor),
-            startDateTextTappable.widthAnchor.constraint(equalTo: sliderContainer.widthAnchor, multiplier: 0.45),
-            startDateTextTappable.heightAnchor.constraint(equalToConstant: 30),
-            
-            // Position end date tappable label
-            endDateTextTappable.topAnchor.constraint(equalTo: dateRangeLabel.bottomAnchor, constant: 12),
-            endDateTextTappable.trailingAnchor.constraint(equalTo: sliderContainer.trailingAnchor),
-            endDateTextTappable.widthAnchor.constraint(equalTo: sliderContainer.widthAnchor, multiplier: 0.45),
-            endDateTextTappable.heightAnchor.constraint(equalToConstant: 30),
-            
             // Increase the spacing between elements
-            startDateSlider.topAnchor.constraint(equalTo: startDateTextTappable.bottomAnchor, constant: 10),
-            //startDateSlider.topAnchor.constraint(equalTo: dateRangeLockSwitch.bottomAnchor, constant: 10),
+            //startDateSlider.topAnchor.constraint(equalTo: startDateTextTappable.bottomAnchor, constant: 10),
+            startDateSlider.topAnchor.constraint(equalTo: dateRangeLockSwitch.bottomAnchor, constant: 10),
             startDateSlider.leadingAnchor.constraint(equalTo: sliderContainer.leadingAnchor),
             startDateSlider.trailingAnchor.constraint(equalTo: sliderContainer.trailingAnchor),
             
@@ -456,6 +453,23 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             endDateSlider.leadingAnchor.constraint(equalTo: sliderContainer.leadingAnchor),
             endDateSlider.trailingAnchor.constraint(equalTo: sliderContainer.trailingAnchor),
             
+            
+            // Position start date tappable label
+            //startDateTextTappable.topAnchor.constraint(equalTo: dateRangeLabel.bottomAnchor, constant: 12),
+            startDateTextTappable.topAnchor.constraint(equalTo: endDateSlider.bottomAnchor, constant: 12),
+
+            startDateTextTappable.leadingAnchor.constraint(equalTo: sliderContainer.leadingAnchor),
+            startDateTextTappable.widthAnchor.constraint(equalTo: sliderContainer.widthAnchor, multiplier: 0.45),
+            startDateTextTappable.heightAnchor.constraint(equalToConstant: 30),
+            
+            // Position end date tappable label
+            //endDateTextTappable.topAnchor.constraint(equalTo: dateRangeLabel.bottomAnchor, constant: 12),
+            endDateTextTappable.topAnchor.constraint(equalTo: endDateSlider.bottomAnchor, constant: 12),
+            endDateTextTappable.trailingAnchor.constraint(equalTo: sliderContainer.trailingAnchor),
+            endDateTextTappable.widthAnchor.constraint(equalTo: sliderContainer.widthAnchor, multiplier: 0.45),
+            endDateTextTappable.heightAnchor.constraint(equalToConstant: 30),
+            
+            /*
             // Position original labels below sliders
             startDateLabel.topAnchor.constraint(equalTo: endDateSlider.bottomAnchor, constant: 8),
             startDateLabel.leadingAnchor.constraint(equalTo: sliderContainer.leadingAnchor),
@@ -464,8 +478,10 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             endDateLabel.topAnchor.constraint(equalTo: endDateSlider.bottomAnchor, constant: 8),
             endDateLabel.trailingAnchor.constraint(equalTo: sliderContainer.trailingAnchor),
             endDateLabel.widthAnchor.constraint(equalTo: sliderContainer.widthAnchor, multiplier: 0.5),
+            */
             
-            sliderContainer.bottomAnchor.constraint(equalTo: endDateLabel.bottomAnchor, constant: 10)
+            //sliderContainer.bottomAnchor.constraint(equalTo: endDateLabel.bottomAnchor, constant: 10)
+            sliderContainer.bottomAnchor.constraint(equalTo: endDateTextTappable.bottomAnchor, constant: 10)
         ])
 
     }
@@ -875,9 +891,12 @@ extension TrackerChart {
         let startDateStr = dateFormatter.string(from: startOfDay)
         let endDateStr = dateFormatter.string(from: endOfDay)
         
-        // Calculate days ago
-        let startDaysComponents = calendar.dateComponents([.day], from: startOfDay, to: now)
-        let endDaysComponents = calendar.dateComponents([.day], from: endOfDay, to: now)
+        // Calculate days ago using start of day for both dates
+        let endStartOfDay = calendar.startOfDay(for: endOfDay)
+        let nowStartOfDay = calendar.startOfDay(for: Date())
+        
+        let startDaysComponents = calendar.dateComponents([.day], from: calendar.startOfDay(for: startOfDay), to: nowStartOfDay)
+        let endDaysComponents = calendar.dateComponents([.day], from: endStartOfDay, to: nowStartOfDay)
         
         let startDaysAgo = startDaysComponents.day ?? 0
         let endDaysAgo = endDaysComponents.day ?? 0
@@ -886,21 +905,15 @@ extension TrackerChart {
         UIView.animate(withDuration: 0.2) {
             // Update the tappable labels with appropriate format
             if self.showStartDateAsRelative {
-                let daysAgoText = startDaysAgo > 0 ? "\(startDaysAgo) days ago" : "Today"
-                self.startDateTextTappable.text = daysAgoText
-                self.startDateTextTappable.backgroundColor = .systemGray6
+                self.startDateTextTappable.text = self.formatDaysAgo(startDaysAgo)
             } else {
                 self.startDateTextTappable.text = startDateStr
-                self.startDateTextTappable.backgroundColor = .systemBackground
             }
             
             if self.showEndDateAsRelative {
-                let daysAgoText = endDaysAgo > 0 ? "\(endDaysAgo) days ago" : "Today"
-                self.endDateTextTappable.text = daysAgoText
-                self.endDateTextTappable.backgroundColor = .systemGray6
+                self.endDateTextTappable.text = self.formatDaysAgo(endDaysAgo)
             } else {
                 self.endDateTextTappable.text = endDateStr
-                self.endDateTextTappable.backgroundColor = .systemBackground
             }
         }
         
@@ -911,8 +924,15 @@ extension TrackerChart {
    
     // MARK: - Utility Functions
 
+    internal func formatDaysAgo(_ days: Int) -> String {
+        if days == 0 {
+            return "Today"
+        } else if days == 1 {
+            return "1 day ago"
+        }
+        return "\(days) days ago"
+    }
 
-    
     // MARK: - UI Actions
     
     @objc internal func chartTypeChanged(_ sender: UISegmentedControl) {
@@ -1144,11 +1164,7 @@ extension TrackerChart {
             }
         }
     }
-    
-
         
+
         
 }
-
-
-   
