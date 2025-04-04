@@ -152,7 +152,8 @@ protocol voProtocol: AnyObject {
     func resetData()
     func mapValue2Csv() -> String?
     func mapCsv2Value(_ inCsv: String) -> String
-    func loadHKdata(dispatchGroup: DispatchGroup?)
+    func loadHKdata(dispatchGroup: DispatchGroup?)  //, completion: (() -> Void)?)
+    //func loadOTdata(dispatchGroup: DispatchGroup?, completion: (() -> Void)?)
     func clearHKdata()
 }
 
@@ -630,11 +631,15 @@ class valueObj: NSObject, UITextFieldDelegate {
 
     // specific to VOT_CHOICE with optional values - seach dictionary for value, return index
     func getChoiceIndex(forValue val: String?) -> Int {
-            guard let val = val,
-                  let inValue = Double(val) else {
-                return CHOICES - 1  // Return last choice if value is nil or not a number
-            }
-            
+        guard let val = val,
+              let inValue = Double(val) else {
+            return CHOICES - 1  // Return last choice if value is nil or not a number
+        }
+        return getChoiceIndex(forDouble: inValue)
+    }
+    
+    func getChoiceIndex(forDouble val: Double) -> Int {
+        let inValue = val
             // Create array of tuples with index and value for each valid choice
             var choiceValues: [(index: Int, value: Double)] = []
             
@@ -682,4 +687,5 @@ class valueObj: NSObject, UITextFieldDelegate {
             // For values in between, find closest match
             return choiceValues.min { abs($0.value - inValue) < abs($1.value - inValue) }?.index ?? sortedChoices[0].index
         }
+
 }
