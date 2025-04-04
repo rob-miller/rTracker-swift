@@ -299,7 +299,7 @@ extension TrackerChart {
         for (_, label) in choiceCategories {
             categoryValues[label] = []
         }
-        categoryValues["no_entry"] = [] // For no data
+        categoryValues["no entry"] = [] // For no data
         
         // Group background data by choice value
         for (date, value) in backgroundData {
@@ -307,7 +307,7 @@ extension TrackerChart {
                 let roundedValue = Int(round(choiceValue))
                 
                 // Find the matching category
-                let category = findChoiceCategory(forValue: roundedValue, inCategories: choiceCategories) ?? "no_entry" // "unknown"
+                let category = findChoiceCategory(forValue: roundedValue, inCategories: choiceCategories) ?? "no entry" // "unknown"
                 
                 if categoryValues[category] != nil {
                     categoryValues[category]?.append(value)
@@ -315,7 +315,7 @@ extension TrackerChart {
                     categoryValues[category] = [value]
                 }
             } else {
-                categoryValues["no_entry"]?.append(value)
+                categoryValues["no entry"]?.append(value)
             }
         }
         
@@ -384,7 +384,7 @@ extension TrackerChart {
             selectionData["low"] = lowValues
             selectionData["medium"] = midValues
             selectionData["high"] = highValues
-            selectionData["no_entry"] = noEntryValues
+            selectionData["no entry"] = noEntryValues
         }
     }
     
@@ -587,12 +587,17 @@ extension TrackerChart {
     func generatePieChartData() {
         guard let pieDataID = selectedValueObjIDs["pieData"],
               let startDate = selectedStartDate,
-              let endDate = selectedEndDate else {
+              let endDate = selectedEndDate,
+              let tracker = tracker else {
             return
         }
         
         let startTimestamp = Int(startDate.timeIntervalSince1970)
         let endTimestamp = Int(endDate.timeIntervalSince1970)
+        
+        // Get total number of entries in date range
+        let totalCountSQL = "SELECT COUNT(*) FROM trkrData WHERE date >= \(startTimestamp) AND date <= \(endTimestamp) AND minpriv <= \(privacyValue)"
+        let totalPossibleEntries = tracker.toQry2Int(sql: totalCountSQL) ?? 0
         
         // Fetch data for the selected value object
         let data = fetchDataForValueObj(id: pieDataID, startTimestamp: startTimestamp, endTimestamp: endTimestamp)
@@ -600,26 +605,58 @@ extension TrackerChart {
         var valueCounts: [String: Int] = [:]
         
         // Process the data based on the valueObj type
-        if let valueObj = tracker?.valObjTable.first(where: { $0.vid == pieDataID }) {
+        if let valueObj = tracker.valObjTable.first(where: { $0.vid == pieDataID }) {
             switch valueObj.vtype {
             case VOT_BOOLEAN:
+                valueCounts["True"] = 0
+                valueCounts["False"] = 0
+                //valueCounts["No Entry"] = 0  // no entry for bool is false
+                
                 for (_, value) in data {
-                    let boolValue = value != 0
+                    let boolValue = value >= 0.5
                     let key = boolValue ? "True" : "False"
-                    valueCounts[key, default: 0] += 1
+                    valueCounts[key]? += 1
                 }
+                // Calculate no entries
+                valueCounts["False"]! += totalPossibleEntries - (valueCounts["True"]! + valueCounts["False"]!)
                 
             case VOT_CHOICE:
                 let categories = fetchChoiceCategories(forID: pieDataID)
-                for (_, value) in data {
-                    if let category = categories[Int(value)] {
-                        valueCounts[category, default: 0] += 1
-                    }
+                valueCounts["No Entry"] = 0
+                
+                // Initialize all categories to 0
+                for (_, category) in categories {
+                    valueCounts[category] = 0
                 }
+                
+                for (_, value) in data {
+                    let categoryNdx = valueObj.getChoiceIndex(forDouble: value)
+                    if let category = valueObj.optDict["c\(categoryNdx)"] {
+                        valueCounts[category]? += 1
+                    } else {
+                        DBGLog("no category for \(value)")
+                        DBGLog("valueObj: \(valueObj)")
+                    }
+                    
+                    /*
+                    if let category = categories[Int(value)] {
+                        valueCounts[category]? += 1
+                    }
+                     */
+                }
+                
+                // Calculate no entries
+                let totalEntries = valueCounts.values.reduce(0, +)
+                valueCounts["No Entry"] = totalPossibleEntries - totalEntries
                 
             default:
                 break
             }
+        }
+        
+        // Remove "No Entry" category if it's 0
+        if let noEntryCount = valueCounts["No Entry"], noEntryCount == 0 {
+            valueCounts.removeValue(forKey: "No Entry")
         }
         
         // Store the data for rendering

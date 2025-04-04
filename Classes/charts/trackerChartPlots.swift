@@ -628,7 +628,7 @@ extension TrackerChart {
         
             // Assign values to categories
             for category in categories {
-                if category == "no_entry" {
+                if category == "no entry" {
                     categoryColors[category] = UIColor.systemGreen
                     continue
                 }
@@ -856,12 +856,62 @@ internal func drawCategoryLegend(
         // Calculate total for percentages
         let total = Double(valueCounts.values.reduce(0, +))
         
-        // Generate colors for segments
-        let colors = generatePieChartColors(count: valueCounts.count)
+        // Get valueObj type and prepare colors
+        let valueObj = selectedValueObjIDs["pieData"].flatMap { pieDataID in
+            tracker?.valObjTable.first(where: { $0.vid == pieDataID })
+        }
+        
+        var entries: [(key: String, value: Int, color: UIColor)] = []
+        
+        if let vo = valueObj {
+            switch vo.vtype {
+            case VOT_BOOLEAN:
+                // Fixed boolean colors
+                let booleanColors: [String: UIColor] = [
+                    "True": UIColor(red: 1.0, green: 0.0, blue: 0.0, alpha: 1.0),
+                    "False": UIColor(red: 0.0, green: 0.0, blue: 1.0, alpha: 1.0),
+                    "No Entry": UIColor.systemGray
+                ]
+                
+                // Fixed order for boolean
+                let orderedKeys = ["True", "False", "No Entry"]
+                entries = orderedKeys.compactMap { key in
+                    if let count = valueCounts[key] {
+                        return (key, count, booleanColors[key] ?? .systemGray)
+                    }
+                    return nil
+                }
+                
+            case VOT_CHOICE:
+                let colorSet = rTracker_resource.colorSet()
+                var choiceColors: [String: UIColor] = [:]
+                
+                // Build color mapping from valueObj's optDict
+                for i in 0..<CHOICES {
+                    if let choiceName = vo.optDict["c\(i)"] {
+                        let colorIndex = Int(vo.optDict["cc\(i)"] ?? "0") ?? 0
+                        choiceColors[choiceName] = colorSet[colorIndex]
+                    }
+                }
+                choiceColors["No Entry"] = .systemGray
+                
+                // Create entries maintaining original order from valueCounts
+                entries = valueCounts.map { (key, value) in
+                    (key, value, choiceColors[key] ?? .systemGray)
+                }
+                
+            default:
+                // Use default color generation for other types
+                let colors = generatePieChartColors(count: valueCounts.count)
+                entries = Array(valueCounts.enumerated().map { (index, entry) in
+                    (entry.key, entry.value, colors[index])
+                })
+            }
+        }
         
         // Draw segments
         var startAngle: CGFloat = -.pi / 2 // Start from top
-        for (index, (key, value)) in valueCounts.enumerated() {
+        for (key, value, color) in entries {
             let percentage = Double(value) / total
             let endAngle = startAngle + CGFloat(percentage * 2 * .pi)
             
@@ -874,7 +924,7 @@ internal func drawCategoryLegend(
             // Create segment layer
             let segmentLayer = CAShapeLayer()
             segmentLayer.path = path.cgPath
-            segmentLayer.fillColor = colors[index].cgColor
+            segmentLayer.fillColor = color.cgColor
             segmentLayer.strokeColor = UIColor.white.cgColor
             segmentLayer.lineWidth = 1
             
@@ -908,15 +958,45 @@ internal func drawCategoryLegend(
             startAngle = endAngle
         }
     }
-    
+
     private func generatePieChartColors(count: Int) -> [UIColor] {
-        var colors: [UIColor] = []
-        for i in 0..<count {
-            let hue = CGFloat(i) / CGFloat(count)
-            let color = UIColor(hue: hue, saturation: 0.7, brightness: 0.9, alpha: 1.0)
-            colors.append(color)
+        guard let pieDataID = selectedValueObjIDs["pieData"],
+              let valueObj = tracker?.valObjTable.first(where: { $0.vid == pieDataID }) else {
+            return []
         }
-        return colors
+        
+        switch valueObj.vtype {
+        case VOT_BOOLEAN:
+            return []  // Handled in renderPieChart
+            
+        case VOT_CHOICE:
+            var choiceColors: [String: UIColor] = [:]
+            let colorSet = rTracker_resource.colorSet()
+            
+            // Build mapping of choice names to their assigned colors
+            for i in 0..<CHOICES {
+                // Get choice name from 'c{i}'
+                if let choiceName = valueObj.optDict["c\(i)"] {
+                    // Get color index from 'cc{i}'
+                    let colorIndex = Int(valueObj.optDict["cc\(i)"] ?? "0") ?? 0
+                    choiceColors[choiceName] = colorSet[colorIndex]
+                }
+            }
+            choiceColors["No Entry"] = .systemGray
+            
+            // Return empty array - we'll use the mapping in renderPieChart
+            return []
+            
+        default:
+            // Original color generation for other types
+            var colors: [UIColor] = []
+            for i in 0..<count {
+                let hue = CGFloat(i) / CGFloat(count)
+                let color = UIColor(hue: hue, saturation: 0.7, brightness: 0.9, alpha: 1.0)
+                colors.append(color)
+            }
+            return colors
+        }
     }
     
     // MARK: - Data Loading
