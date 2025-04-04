@@ -921,7 +921,7 @@ extension TrackerChart {
         
         // Create calendar for date component calculations
         let calendar = Calendar.current
-        let now = Date()
+        //let now = Date()
         
         // Set start date to beginning of day (00:00)
         var startComponents = calendar.dateComponents([.year, .month, .day], from: selectedStartDate!)
