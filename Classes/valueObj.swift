@@ -40,7 +40,7 @@ let VOT_INFO = 7
 let VOT_MAX = 7
 
 // image not yet
-// #define VOT_IMAGE	7
+// #define VOT_IMAGE    7
 
 // max number of choices for VOT_CHOICE
 //#define CHOICES 6
@@ -101,7 +101,7 @@ let SETSTRACKERDATEDFLT = false
 let SLIDRMINDFLT = 0.0
 let SLIDRMAXDFLT = 100.0
 let SLIDRDFLTDFLT = 50.0
-//#define PRIVDFLT		0
+//#define PRIVDFLT        0
 let FREPDFLT = -1
 let FDDPDFLT = 2
 let BOOLVALDFLT = 1.0
@@ -204,11 +204,11 @@ class valueObj: NSObject, UITextFieldDelegate {
                 //value = [[NSMutableString alloc] initWithCapacity:32];
                 //[self.value setString:@""];
             /*
-            		case VOT_IMAGE:
-            			tvos = [[voImage alloc] initWithVO:self];
-            			//value = [[NSMutableString alloc] initWithCapacity:64];
-            			//[self.value setString:@""];
-            			break;
+                    case VOT_IMAGE:
+                        tvos = [[voImage alloc] initWithVO:self];
+                        //value = [[NSMutableString alloc] initWithCapacity:64];
+                        //[self.value setString:@""];
+                        break;
                          */
             case VOT_TEXTB:
                 tvos = voTextBox(vo: self)
@@ -304,7 +304,7 @@ class valueObj: NSObject, UITextFieldDelegate {
 
     init(dict parentTO: trackerObj, dict: [AnyHashable : Any]?) {
         /*
-        	DBGLog(@"init vObj with dict vid: %d vtype: %d vname: %@",
+            DBGLog(@"init vObj with dict vid: %d vtype: %d vname: %@",
                    [(NSNumber*) [dict objectForKey:@"vid"] integerValue],
                    [(NSNumber*) [dict objectForKey:@"vtype"] integerValue],
                    (NSString*) [dict objectForKey:@"valueName"]);
@@ -630,56 +630,56 @@ class valueObj: NSObject, UITextFieldDelegate {
 
     // specific to VOT_CHOICE with optional values - seach dictionary for value, return index
     func getChoiceIndex(forValue val: String?) -> Int {
-        //DBGLog(@"gciv val=%@",val);
-        let inValF = CGFloat(Float(val ?? "") ?? 0.0)
-        var minValF: CGFloat = 0.0
-        var maxValF: CGFloat = 0.0
-        //CGFloat closestValF = 99999999999.9F;
-        var closestNdx = -1
-        var closestDistanceF: CGFloat = 99999999999.9
-
-        let inVal = "\(Float(val ?? "") ?? 0.0)"
-        for i in 0..<CHOICES {
-            let key = "cv\(i)"
-            var tstVal = optDict[key]
-            //if (tstVal) { // bug - don't get to handling default value below - introduced jan/feb, removed 8 mar 2015
-            if nil == tstVal {
-                tstVal = "\(Float(i) + 1)" // added 7.iv.2013 - need default value
-            } else {
-                tstVal = "\(Float(tstVal!)!)"
+            guard let val = val,
+                  let inValue = Double(val) else {
+                return CHOICES - 1  // Return last choice if value is nil or not a number
             }
-            //DBGLog(@"gciv test against %d: %@",i,tstVal);
-            if tstVal == inVal {
-                return i
+            
+            // Create array of tuples with index and value for each valid choice
+            var choiceValues: [(index: Int, value: Double)] = []
+            
+            // Collect only valid choices
+            for i in 0..<CHOICES {
+                let key = "cv\(i)"
+                // Check if we have a choice label - if not, we've hit the end of valid choices
+                if optDict["c\(i)"] == nil {
+                    break
+                }
+                
+                let value: Double
+                if let customVal = optDict[key],
+                   let customDouble = Double(customVal) {
+                    value = customDouble
+                } else {
+                    value = Double(i + 1)  // Default value if no custom value set
+                }
+                
+                choiceValues.append((i, value))
             }
-
-            let tstValF = CGFloat(Float(tstVal!)!)
-            if minValF > tstValF {
-                minValF = tstValF
+            
+            guard !choiceValues.isEmpty else {
+                return 0  // Return 0 if no valid choices
             }
-            if maxValF < tstValF {
-                maxValF = tstValF
+            
+            // First try exact match
+            if let exactMatch = choiceValues.first(where: { $0.value == inValue }) {
+                return exactMatch.index
             }
-            let testDistanceF = CGFloat(abs(Float(tstValF - inValF)))
-            if testDistanceF < closestDistanceF {
-                closestDistanceF = testDistanceF
-                closestNdx = i
+            
+            // Sort by value for min/max comparisons
+            let sortedChoices = choiceValues.sorted { $0.value < $1.value }
+            
+            // If value is less than minimum, return the choice with minimum value
+            if inValue <= sortedChoices[0].value {
+                return sortedChoices[0].index
             }
-            //}
+            
+            // If value is greater than maximum, return the choice with maximum value
+            if inValue >= sortedChoices[sortedChoices.count - 1].value {
+                return sortedChoices[sortedChoices.count - 1].index
+            }
+            
+            // For values in between, find closest match
+            return choiceValues.min { abs($0.value - inValue) < abs($1.value - inValue) }?.index ?? sortedChoices[0].index
         }
-
-        //DBGLog(@"gciv: no match");
-        if (-1 != closestNdx) && (inValF > minValF) && (inValF < maxValF) {
-            return closestNdx
-        }
-        return CHOICES-1
-
-    }
 }
-
-/*
-//@class voState;
-func f(_ x: Any) -> CGFloat {
-    CGFloat(x)
-}
-*/
