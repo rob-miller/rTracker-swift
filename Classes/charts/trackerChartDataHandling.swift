@@ -583,6 +583,59 @@ extension TrackerChart {
         generateDistributionPlotData()
     }
     
+    // Add new function to generate pie chart data
+    func generatePieChartData() {
+        guard let pieDataID = selectedValueObjIDs["pieData"],
+              let startDate = selectedStartDate,
+              let endDate = selectedEndDate else {
+            return
+        }
+        
+        let startTimestamp = Int(startDate.timeIntervalSince1970)
+        let endTimestamp = Int(endDate.timeIntervalSince1970)
+        
+        // Fetch data for the selected value object
+        let data = fetchDataForValueObj(id: pieDataID, startTimestamp: startTimestamp, endTimestamp: endTimestamp)
+        
+        var valueCounts: [String: Int] = [:]
+        
+        // Process the data based on the valueObj type
+        if let valueObj = tracker?.valObjTable.first(where: { $0.vid == pieDataID }) {
+            switch valueObj.vtype {
+            case VOT_BOOLEAN:
+                for (_, value) in data {
+                    let boolValue = value != 0
+                    let key = boolValue ? "True" : "False"
+                    valueCounts[key, default: 0] += 1
+                }
+                
+            case VOT_CHOICE:
+                let categories = fetchChoiceCategories(forID: pieDataID)
+                for (_, value) in data {
+                    if let category = categories[Int(value)] {
+                        valueCounts[category, default: 0] += 1
+                    }
+                }
+                
+            default:
+                break
+            }
+        }
+        
+        // Store the data for rendering
+        chartData["pieData"] = valueCounts
+        
+        // Calculate total for percentages
+        let total = valueCounts.values.reduce(0, +)
+        var percentages: [String: Double] = [:]
+        for (key, count) in valueCounts {
+            percentages[key] = Double(count) / Double(total) * 100.0
+        }
+        chartData["piePercentages"] = percentages
+        
+        // Trigger chart update
+        renderPieChart()
+    }
     
     internal func getEligibleValueObjs(for configType: String) -> [valueObj] {
         guard let tracker = tracker else { return [] }
@@ -721,7 +774,4 @@ extension TrackerChart {
         
         return result ?? low
     }
-    
-    
 }
-

@@ -32,6 +32,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     // Chart type constants
     internal let CHART_TYPE_SCATTER = 0
     internal let CHART_TYPE_DISTRIBUTION = 1
+    internal let CHART_TYPE_PIE = 2
     
     // Chart layout constants
     internal let leftMargin: CGFloat = 60     // Space for y-axis labels
@@ -67,6 +68,9 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     // Distribution plot configuration
     internal var backgroundButton: UIButton!
     internal var selectionButton: UIButton!
+    
+    // Pie chart configuration
+    internal var pieDataButton: UIButton!
     
     // Date range sliders
     internal var startDateSlider: UISlider!
@@ -174,7 +178,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         scrollView.addSubview(contentView)
         
         // Create a segmented control for different chart types
-        segmentedControl = UISegmentedControl(items: ["Scatter", "Distribution"])
+        segmentedControl = UISegmentedControl(items: ["Scatter", "Distribution", "Pie"])
         segmentedControl.selectedSegmentIndex = CHART_TYPE_SCATTER
         segmentedControl.addTarget(self, action: #selector(chartTypeChanged), for: .valueChanged)
         segmentedControl.translatesAutoresizingMaskIntoConstraints = false
@@ -313,6 +317,37 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         ])
         
         // Update buttons with any previously selected values
+        updateButtonTitles()
+    }
+    
+    internal func setupPieChartConfig() {
+        // Remove existing subviews
+        for subview in configContainer.subviews {
+            subview.removeFromSuperview()
+        }
+        
+        // Create button for data selection
+        pieDataButton = createConfigButton(title: "Select Data", action: #selector(selectPieData))
+        
+        // Configure layout
+        let stackView = UIStackView(arrangedSubviews: [
+            pieDataButton,
+            sliderContainer
+        ])
+        stackView.axis = .vertical
+        stackView.spacing = 12
+        stackView.distribution = .fill
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        configContainer.addSubview(stackView)
+        
+        NSLayoutConstraint.activate([
+            stackView.topAnchor.constraint(equalTo: configContainer.topAnchor),
+            stackView.leadingAnchor.constraint(equalTo: configContainer.leadingAnchor),
+            stackView.trailingAnchor.constraint(equalTo: configContainer.trailingAnchor),
+            stackView.bottomAnchor.constraint(equalTo: configContainer.bottomAnchor)
+        ])
+        
+        // Update button with any previously selected values
         updateButtonTitles()
     }
     
@@ -600,7 +635,8 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             "yAxis": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER],
             "color": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_BOOLEAN, VOT_CHOICE],
             "background": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_BOOLEAN, VOT_CHOICE],
-            "selection": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_BOOLEAN, VOT_CHOICE]
+            "selection": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_BOOLEAN, VOT_CHOICE],
+            "pieData": [VOT_BOOLEAN, VOT_CHOICE]
         ]
         
         // Initialize empty selections
@@ -609,14 +645,17 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             "yAxis": -1,
             "color": -1,
             "background": -1,
-            "selection": -1
+            "selection": -1,
+            "pieData": -1
         ]
         
         // Setup initial configuration based on selected chart type
         if segmentedControl.selectedSegmentIndex == CHART_TYPE_SCATTER {
             setupScatterPlotConfig()
-        } else {
+        } else if segmentedControl.selectedSegmentIndex == CHART_TYPE_DISTRIBUTION {
             setupDistributionPlotConfig()
+        } else {
+            setupPieChartConfig()
         }
     }
     
@@ -638,6 +677,10 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
       
       @objc internal func selectSelection() {
           showPickerForValueObjSelection(type: "selection")
+      }
+      
+      @objc internal func selectPieData() {
+          showPickerForValueObjSelection(type: "pieData")
       }
       
       internal func showPickerForValueObjSelection(type: String) {
@@ -678,10 +721,14 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
                   if selectedValueObjIDs["xAxis"] != -1 && selectedValueObjIDs["yAxis"] != -1 {
                       generateScatterPlotData()
                   }
-              } else {
+              } else if segmentedControl.selectedSegmentIndex == CHART_TYPE_DISTRIBUTION {
                   if selectedValueObjIDs["background"] != -1 {
                       axisConfig.removeValue(forKey: "background")  // cause full chart reset
                       generateDistributionPlotData()
+                  }
+              } else {
+                  if selectedValueObjIDs["pieData"] != -1 {
+                      generatePieChartData()
                   }
               }
           }
@@ -719,7 +766,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             } else {
                 colorButton.setTitle("Select Color (Optional)", for: .normal)
             }
-        } else {
+        } else if segmentedControl.selectedSegmentIndex == CHART_TYPE_DISTRIBUTION {
             // Update distribution plot button titles
             if let bgID = selectedValueObjIDs["background"], bgID != -1 {
                 let bgVO = tracker?.valObjTable.first { $0.vid == bgID }
@@ -734,9 +781,16 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             } else {
                 selectionButton.setTitle("Select Segmentation Data", for: .normal)
             }
+        } else {
+            // Update pie chart button title
+            if let pieID = selectedValueObjIDs["pieData"], pieID != -1 {
+                let pieVO = tracker?.valObjTable.first { $0.vid == pieID }
+                pieDataButton.setTitle(pieVO?.valueName ?? "Data", for: .normal)
+            } else {
+                pieDataButton.setTitle("Select Data", for: .normal)
+            }
         }
     }
-    
     
     internal struct AssociatedKeys {
         // Use a static void pointer instead of a string
@@ -962,7 +1016,7 @@ extension TrackerChart {
                 noDataLabel.text = "Configure chart options below"
                 noDataLabel.isHidden = false
             }
-        } else {
+        } else if sender.selectedSegmentIndex == CHART_TYPE_DISTRIBUTION {
             setupDistributionPlotConfig()
             
             // Check if background data is selected for distribution plot
@@ -973,6 +1027,22 @@ extension TrackerChart {
                     // Ensure we're using the current date range
                     generateDistributionPlotData()
                 }
+            } else {
+                // Clear the chart and show instruction
+                for subview in chartView.subviews {
+                    if subview != noDataLabel {
+                        subview.removeFromSuperview()
+                    }
+                }
+                noDataLabel.text = "Configure chart options below"
+                noDataLabel.isHidden = false
+            }
+        } else {
+            setupPieChartConfig()
+            
+            // Check if pie data is selected
+            if selectedValueObjIDs["pieData"] != -1 {
+                generatePieChartData()
             } else {
                 // Clear the chart and show instruction
                 for subview in chartView.subviews {
@@ -1134,8 +1204,10 @@ extension TrackerChart {
                 // Update the chart based on current selection
                 if self.segmentedControl.selectedSegmentIndex == self.CHART_TYPE_SCATTER {
                     self.generateScatterPlotData()
-                } else {
+                } else if self.segmentedControl.selectedSegmentIndex == self.CHART_TYPE_DISTRIBUTION {
                     self.generateDistributionPlotData()
+                } else {
+                    self.generatePieChartData()
                 }
             }
         }

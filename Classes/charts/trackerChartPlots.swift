@@ -6,7 +6,6 @@
 //  Copyright © 2025 Robert T. Miller. All rights reserved.
 //
 
-
 import UIKit
 
 // MARK: - Chart Rendering Extensions
@@ -367,7 +366,6 @@ extension TrackerChart {
             let categoryData = generateCategoryColors(selectionBins.keys)
             let categoryColors = categoryData.colors
             let categoryValues = categoryData.values
-            
             
             // Sort categories by their values (higher values first)
             let sortedCategories = Array(selectionBins.keys).sorted { (a, b) -> Bool in
@@ -830,6 +828,97 @@ internal func drawCategoryLegend(
     view.addSubview(titleLabel)
 }
 
+    internal func renderPieChart() {
+        // Clear existing subviews except noDataLabel
+        for subview in chartView.subviews {
+            if subview != noDataLabel {
+                subview.removeFromSuperview()
+            }
+        }
+        
+        guard let valueCounts = chartData["pieData"] as? [String: Int],
+              !valueCounts.isEmpty else {
+            noDataLabel.isHidden = false
+            return
+        }
+        
+        noDataLabel.isHidden = true
+        
+        // Calculate dimensions
+        let padding: CGFloat = 20
+        let size = min(chartView.bounds.width, chartView.bounds.height) - padding * 2
+        let center = CGPoint(x: chartView.bounds.width / 2, y: chartView.bounds.height / 2)
+        
+        // Create pie chart view
+        let pieChartView = UIView(frame: CGRect(x: 0, y: 0, width: chartView.bounds.width, height: chartView.bounds.height))
+        chartView.addSubview(pieChartView)
+        
+        // Calculate total for percentages
+        let total = Double(valueCounts.values.reduce(0, +))
+        
+        // Generate colors for segments
+        let colors = generatePieChartColors(count: valueCounts.count)
+        
+        // Draw segments
+        var startAngle: CGFloat = -.pi / 2 // Start from top
+        for (index, (key, value)) in valueCounts.enumerated() {
+            let percentage = Double(value) / total
+            let endAngle = startAngle + CGFloat(percentage * 2 * .pi)
+            
+            // Create segment path
+            let path = UIBezierPath()
+            path.move(to: center)
+            path.addArc(withCenter: center, radius: size / 2, startAngle: startAngle, endAngle: endAngle, clockwise: true)
+            path.close()
+            
+            // Create segment layer
+            let segmentLayer = CAShapeLayer()
+            segmentLayer.path = path.cgPath
+            segmentLayer.fillColor = colors[index].cgColor
+            segmentLayer.strokeColor = UIColor.white.cgColor
+            segmentLayer.lineWidth = 1
+            
+            pieChartView.layer.addSublayer(segmentLayer)
+            
+            // Add label
+            let labelAngle = startAngle + CGFloat(percentage * .pi)
+            let labelRadius = size / 2 * 0.7 // Position label at 70% of radius
+            let labelPoint = CGPoint(
+                x: center.x + cos(labelAngle) * labelRadius,
+                y: center.y + sin(labelAngle) * labelRadius
+            )
+            
+            let label = UILabel()
+            label.text = "\(key)\n\(Int(percentage * 100))%"
+            label.numberOfLines = 2
+            label.textAlignment = .center
+            label.font = UIFont.systemFont(ofSize: 12)
+            label.sizeToFit()
+            
+            // Center label around calculated point
+            label.frame = CGRect(
+                x: labelPoint.x - label.bounds.width / 2,
+                y: labelPoint.y - label.bounds.height / 2,
+                width: label.bounds.width,
+                height: label.bounds.height
+            )
+            
+            pieChartView.addSubview(label)
+            
+            startAngle = endAngle
+        }
+    }
+    
+    private func generatePieChartColors(count: Int) -> [UIColor] {
+        var colors: [UIColor] = []
+        for i in 0..<count {
+            let hue = CGFloat(i) / CGFloat(count)
+            let color = UIColor(hue: hue, saturation: 0.7, brightness: 0.9, alpha: 1.0)
+            colors.append(color)
+        }
+        return colors
+    }
+    
     // MARK: - Data Loading
     
     internal func loadDateRanges() {
