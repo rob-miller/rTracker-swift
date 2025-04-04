@@ -44,7 +44,7 @@ struct otViewController: View {
                 }
                 .pickerStyle(SegmentedPickerStyle())
                 .padding()
-                .onChange(of: selectedSegment) { newSegment in
+                .onChange(of: selectedSegment) { oldSegment, newSegment in
                     if newSegment == 1 && currentTracker == nil {
                         selectedSegment = 0
                     }
@@ -146,7 +146,7 @@ struct otViewController: View {
                 }
             }
             .pickerStyle(WheelPickerStyle())
-            .onChange(of: currentTracker) { newTracker in
+            .onChange(of: currentTracker) { oldTracker, newTracker in
                 // Reset value when tracker changes
                 currentValue = nil
             }

@@ -57,7 +57,7 @@ struct ahViewController: View {
                                    currentUnit?.unitString == "min" {
                                     if !seenMinuteSelections.contains(newSelection) {
                                         hrsMinSwitch = true  // Turn on for first time
-                                        previousHrsMinState = true 
+                                        previousHrsMinState = true
                                         seenMinuteSelections.insert(newSelection)  // Mark as seen
                                     } else {
                                         hrsMinSwitch = previousHrsMinState  // Use previous state
@@ -145,13 +145,13 @@ struct ahViewController: View {
             if let selectedConfig = selectedConfiguration(),
                selectedConfig.unit != nil {
                 UnitSegmentedControl(selectedConfig: selectedConfig, currentUnit: $currentUnit)
-                    .onChange(of: selectedConfig.identifier) { newIdentifier in
+                    .onChange(of: selectedConfig.identifier) { oldIdentifier, newIdentifier in
                         if let config = rthk.configurations.first(where: { $0.identifier == newIdentifier }),
                            config.needUnit && currentUnit == nil {
                             currentUnit = config.unit?.first
                         }
                     }
-                    .onChange(of: currentUnit) { newUnit in
+                    .onChange(of: currentUnit) { oldUnit, newUnit in
                         // Reset hrs:mins switch if unit is not minutes
                         if newUnit?.unitString == "min" {
                             hrsMinSwitch = previousHrsMinState
