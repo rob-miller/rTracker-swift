@@ -8,8 +8,9 @@
 
 import SwiftUI
 import HealthKit
+
 struct ahViewController: View {
-    var onDismiss: (String?, String?, Bool, Bool, Bool) -> Void  // Updated to include hrsMinSwitch
+    var onDismiss: (String?, String?, Bool, Bool, Bool) -> Void
     @Environment(\.dismiss) var dismiss // For the Back/Exit button
     @State private var currentSelection: String? // Stores the datasource selection
     @State private var currentUnit: HKUnit? // Tracks the selected unit
@@ -19,6 +20,8 @@ struct ahViewController: View {
     @State private var showingAvgInfo = false // For average info popup
     @State private var showingPrevDayInfo = false // For previous day info popup
     @State private var showingConfigInfo = false // For selected config info popup
+    @State private var previousHrsMinState: Bool = false
+    @State private var seenMinuteSelections: Set<String> = []  // Add this to track which selections we've seen
     @ObservedObject var rthk = rtHealthKit.shared
     
     init(selectedChoice: String?, selectedUnitString: String?, ahAvg: Bool, ahPrevD: Bool, ahHrsMin: Bool = false, onDismiss: @escaping (String?, String?, Bool, Bool, Bool) -> Void) {
@@ -32,6 +35,7 @@ struct ahViewController: View {
         avgDataSwitch = ahAvg
         prevDateSwitch = ahPrevD
         _hrsMinSwitch = State(initialValue: ahHrsMin)
+        _previousHrsMinState = State(initialValue: ahHrsMin)
     }
     
     var body: some View {
@@ -42,6 +46,26 @@ struct ahViewController: View {
                 
                 // Picker (Choice Wheel)
                 dataSourcePicker
+                    .onChange(of: currentSelection) { oldSelection, newSelection in
+                        currentUnit = nil
+                        if let selectedConfig = selectedConfiguration() {
+                            if selectedConfig.unit != nil && selectedConfig.needUnit {
+                                currentUnit = selectedConfig.unit?.first
+                                
+                                // If this selection offers minutes and we haven't seen it before
+                                if let newSelection = newSelection,
+                                   currentUnit?.unitString == "min" {
+                                    if !seenMinuteSelections.contains(newSelection) {
+                                        hrsMinSwitch = true  // Turn on for first time
+                                        previousHrsMinState = true 
+                                        seenMinuteSelections.insert(newSelection)  // Mark as seen
+                                    } else {
+                                        hrsMinSwitch = previousHrsMinState  // Use previous state
+                                    }
+                                }
+                            }
+                        }
+                    }
                 
                 // Unit selection control
                 unitSelectionArea
@@ -114,14 +138,6 @@ struct ahViewController: View {
             }
         }
         .pickerStyle(WheelPickerStyle())
-        .onChange(of: currentSelection) { newSelection in
-            currentUnit = nil
-            if let selectedConfig = selectedConfiguration() {
-                if selectedConfig.unit != nil && selectedConfig.needUnit {
-                    currentUnit = selectedConfig.unit?.first
-                }
-            }
-        }
     }
     
     private var unitSelectionArea: some View {
@@ -137,7 +153,9 @@ struct ahViewController: View {
                     }
                     .onChange(of: currentUnit) { newUnit in
                         // Reset hrs:mins switch if unit is not minutes
-                        if newUnit?.unitString != "min" {
+                        if newUnit?.unitString == "min" {
+                            hrsMinSwitch = previousHrsMinState
+                        } else {
                             hrsMinSwitch = false
                         }
                     }
@@ -160,6 +178,9 @@ struct ahViewController: View {
                     Spacer()
                     Toggle("", isOn: $hrsMinSwitch)
                         .labelsHidden()
+                        .onChange(of: hrsMinSwitch) { oldValue, newValue in
+                            previousHrsMinState = newValue
+                        }
                 }
                 .padding()
             } else {
