@@ -443,7 +443,7 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .cumulative,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: DateComponents(hour: 00, minute: 0), // midnight
+        aggregationTime: DateComponents(hour: 23, minute: 59), // midnight end of day
         info: nil
     ),
     HealthDataQuery(
@@ -455,7 +455,7 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .cumulative,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: DateComponents(hour: 00, minute: 0), // midnight
+        aggregationTime: DateComponents(hour: 23, minute: 59), // midnight end of day
         info: nil
     ),
     HealthDataQuery(
@@ -467,7 +467,7 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .cumulative,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: DateComponents(hour: 00, minute: 0), // midnight
+        aggregationTime: DateComponents(hour: 23, minute: 59), // midnight end of day
         info: nil
     ),
     HealthDataQuery(
@@ -479,7 +479,7 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .cumulative,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: DateComponents(hour: 00, minute: 0), // midnight
+        aggregationTime: DateComponents(hour: 23, minute: 59), // midnight end of day
         info: nil
     ),
     HealthDataQuery(
@@ -491,7 +491,7 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .cumulative,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: DateComponents(hour: 00, minute: 0), // midnight
+        aggregationTime: DateComponents(hour: 23, minute: 59), // midnight end of day
         info: nil
     ),
     HealthDataQuery(
@@ -503,7 +503,7 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .cumulative,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: DateComponents(hour: 00, minute: 0), // midnight
+        aggregationTime: DateComponents(hour: 23, minute: 59), // midnight end of day
         info: nil
     ),
     HealthDataQuery(
