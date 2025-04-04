@@ -510,7 +510,7 @@ class voNumber: voState, UITextFieldDelegate {
                         if self.vo.optDict["ahPrevD"] ?? "0" == "1" {
                             DBGLog("No results found for postDate \(prevDate).")
                         } else {
-                            DBGLog("No results found for \(targD).")
+                            DBGLog("No results found - \(self.vo.valueName!) for \(targD).")
                         }
                         let sql = "insert into voHKstatus (id, date, stat) values (\(self.vo.vid), \(dat), \(hkStatus.noData.rawValue))"
                         to.toExecSql(sql: sql)
@@ -642,13 +642,13 @@ class voNumber: voState, UITextFieldDelegate {
                     vo.optDict["ahPrevD"] = updatedAhPrevD ? "1" : "0"
                     vo.optDict["hrsmins"] = updatedAhHrsMin ? "1" : "0"
                     if let button = ctvovcp?.scroll.subviews.first(where: { $0 is UIButton && $0.accessibilityIdentifier == "configtv_ahSelBtn" }) as? UIButton {
-                        print("ahSelect view returned: \(updatedChoice ?? "nil") \(updatedUnit ?? "nil") optDict is \(vo.optDict["ahSource"] ?? "nil")  \(vo.optDict["ahUnit"] ?? "nil")")
+                        DBGLog("ahSelect view returned: \(updatedChoice ?? "nil") \(updatedUnit ?? "nil") optDict is \(vo.optDict["ahSource"] ?? "nil")  \(vo.optDict["ahUnit"] ?? "nil")")
                         DispatchQueue.main.async {
                             button.setTitle(self.vo.optDict["ahSource"] ?? "Configure", for: .normal)
                             button.sizeToFit()
                         }
                     }
-                    //print("ahSelect view returned: \(updatedChoice) optDict is \(vo.optDict["ahSource"] ?? "nil")")
+                    //DBGLog("ahSelect view returned: \(updatedChoice) optDict is \(vo.optDict["ahSource"] ?? "nil")")
                 }
             )
         )
