@@ -52,36 +52,33 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
     }
 
     func pleaseRegister(forNotifications rootViewController: RootViewController) {
-        // ios 8.1 must register for notifications
-        if SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO("8.0") {
-            if !rTracker_resource.getNotificationsEnabled() {
-
-
-                if !rTracker_resource.getToldAboutNotifications() {
-                    // if not yet told
-
-                    let alert = UIAlertController(
-                        title: "Authorise notifications",
-                        message: "Authorise notifications in the next window to enable tracker reminders.",
-                        preferredStyle: .alert)
-
-                    let defaultAction = UIAlertAction(
-                        title: "OK",
-                        style: .default,
-                        handler: { [self] action in
-                            registerForNotifications()
-
-                            rTracker_resource.setToldAboutNotifications(true)
-                            UserDefaults.standard.set(true, forKey: "toldAboutNotifications")
-                            UserDefaults.standard.synchronize()
-                        })
-
-                    alert.addAction(defaultAction)
-                    rootViewController.present(alert, animated: true)
-                }
+        
+        if !rTracker_resource.getNotificationsEnabled() {
+            
+            
+            if !rTracker_resource.getToldAboutNotifications() {
+                // if not yet told
+                
+                let alert = UIAlertController(
+                    title: "Authorise notifications",
+                    message: "Authorise notifications in the next window to enable tracker reminders.",
+                    preferredStyle: .alert)
+                
+                let defaultAction = UIAlertAction(
+                    title: "OK",
+                    style: .default,
+                    handler: { [self] action in
+                        registerForNotifications()
+                        
+                        rTracker_resource.setToldAboutNotifications(true)
+                        UserDefaults.standard.set(true, forKey: "toldAboutNotifications")
+                        UserDefaults.standard.synchronize()
+                    })
+                
+                alert.addAction(defaultAction)
+                rootViewController.present(alert, animated: true)
             }
         }
-
     }
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
@@ -129,13 +126,6 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
         }
         rTracker_resource.setNotificationsEnabled()
         rTracker_resource.setToldAboutNotifications(sud.bool(forKey: "toldAboutNotifications"))
-
-        // Override point for customization after app launch    
-
-        // fix 'Application windows are expected to have a root view controller at the end of application launch'
-        //   as found in http://stackoverflow.com/questions/7520971
-
-        //[self.window addSubview:[navigationController view]];
 
         let rootViewController = RootViewController()
         let navigationController = UINavigationController(rootViewController: rootViewController)
@@ -186,22 +176,6 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
                 rootViewController.present(alert, animated: true)
             }
         }
-        
-
-        
-        /*
-            // for when actually not running, not just in background:
-            UILocalNotification *notification = launchOptions[UIApplicationLaunchOptionsLocalNotificationKey];
-            if (nil != notification) {
-                DBGLog(@"responding to local notification with msg : %@",notification.alertBody);
-                //[rtr alert:@"launched with locNotification" msg:notification.alertBody];
-                //NSUserDefaults *sud = [NSUserDefaults standardUserDefaults];
-                //[sud synchronize];
-                [rtr setToldAboutSwipe:[sud boolForKey:@"toldAboutSwipe"]];
-
-                [rootController performSelectorOnMainThread:@selector(doOpenTrackerOC:) withObject:(notification.userInfo)[@"tid"] waitUntilDone:NO];
-            }
-        */
 
         if let shortcutItem = launchOptions?[.shortcutItem] as? UIApplicationShortcutItem {
             if let tidString = shortcutItem.userInfo?["tid"] as? String, let tid = Int(tidString) {
@@ -217,55 +191,6 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
-    /*
-    func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
-       guard let bdn = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String else { return false }
-       
-       DBGLog("openURL \(url)")
-       DBGLog("bundle id: \(bdn)")
-       
-       guard let rootController = getRootController() else {
-           return false
-       }
-       
-        var tid: Int = 0
-        let urlas = url.absoluteString
-        //let curl = urlas.cString(using: .utf8)
-        let base = "\(bdn)://"
-        let format = "\(base)tid=%d"
-        let scanner = Scanner(string: urlas)
-        let _ = scanner.scanUpToString("tid=")
-
-        if !scanner.isAtEnd {
-            scanner.currentIndex = scanner.string.index(scanner.currentIndex, offsetBy: "tid=".count)
-        }
-
-        // Finally, scan the integer value
-        if scanner.scanInt(&tid) {
-            DBGLog("curl=\(urlas) format=\(format) tid=\(tid)")
-       
-            let tlist = rootController.tlist
-            tlist.loadTopLayoutTable()
-
-            if tlist.topLayoutIDs.contains(tid) {
-                rootController.doOpenTracker(tid)
-            } else {
-                rTracker_resource.alert("no tracker found", msg: "No tracker with ID \(tid) found in \(bdn).  Edit the tracker, tap the ⚙, and look in 'database info' for the tracker id.", vc: rootController)
-            }
-           
-        } else if urlas == base {
-            // do nothing because rTracker:// should open with default trackerList page
-        } else if urlas.hasPrefix(base) || urlas.hasPrefix(base.lowercased()) {
-            DBGLog("sscanf fail url=\(urlas) format=\(format)")
-            rTracker_resource.alert("bad URL", msg: "URL received was \(url.absoluteString) but should look like \(format)", vc: rootController)
-        } else if urlas.hasPrefix("file://") {
-            rTracker_resource.copyFileToInboxDirectory(from: url)
-            // rootviewcontroller will read as rejectable
-        }
-       
-        return true
-    }
-     */
     
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
         // Start accessing the security-scoped resource
@@ -377,34 +302,69 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
         UIDevice.current.endGeneratingDeviceOrientationNotifications()
     }
 
-    /*
-     // UIUserNotification deprecated iOS 10, see if we can just proceed without checking and silently fail?
+    func applicationWillResignActive(_ application: UIApplication) {
+        if regNotifs {
+            return  // spurious event when registering for notifications
+        }
+        resigningActive = true
+        // Save data if appropriate
+        //DBGLog(@"rt app delegate: app will resign active");
+        let rootController = (navigationController.viewControllers)[0]
+        let topController = navigationController.viewControllers.last
 
-    - (BOOL)checkNotificationTypeX:(UIUserNotificationType)type
-    {
-        UIUserNotificationSettings *currentSettings = [[UIApplication sharedApplication] currentUserNotificationSettings];
+        _ = (rootController as? RootViewController)?.privacyObj.lockDown()
 
-        return (currentSettings.types & type);
+        UIApplication.shared.isIdleTimerDisabled = false
+
+        let rtSelector = NSSelectorFromString("rejectTracker")
+
+        if topController?.responds(to: rtSelector) ?? false {
+            // leaving so reject tracker if it is rejectable
+            if (((topController as? useTrackerController)?.rejectable) != nil) {
+                //[((useTrackerController *) topController) rejectTracker];
+                navigationController.popViewController(animated: true)
+            }
+        }
+
+        // Update badge count using new API
+        let badgeCount = (rootController as? RootViewController)?.pendingNotificationCount() ?? 0
+        UNUserNotificationCenter.current().setBadgeCount(badgeCount) { error in
+            if let error = error {
+                DBGLog("Failed to set badge count: \(error.localizedDescription)")
+            }
+        }
+
+        resigningActive = false
     }
 
-    - (BOOL)checkNotificationType:(UNAuthorizationOptions)type
-    {
-        BOOL retval = FALSE;
-        // https://useyourloaf.com/blog/local-notifications-with-ios-10
-        UNUserNotificationCenter *uncenter = [UNUserNotificationCenter currentNotificationCenter];
-        [uncenter getNotificationSettingsWithCompletionHandler:^(UNNotificationSettings * _Nonnull settings) {
-          if (settings.authorizationStatus != UNAuthorizationStatusAuthorized) {
-            // Notifications not allowed
-          }
-        }];
-        //[uncenter getNotificationSettingsWithCompletionHandler:(^{
-
-        //})]
-        UIUserNotificationSettings *currentSettings = [[UIApplication sharedApplication] currentUserNotificationSettings];
-        //[UNUserNotificationCenter getNotificationSettingsWithCompletionHandler:] and -[UNUserNotificationCenter getNotificationCategoriesWithCompletionHandler:]
-        return (currentSettings.types & type);
+    func applicationDidBecomeActive(_ application: UIApplication) {
+        // update arrows on reminded trackers if needed
+        NotificationCenter.default.post(name: .notifyOpenTrackerInApp, object: nil, userInfo: nil)
     }
-    */
+    
+    func getRootController() -> RootViewController? {
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            if let navController = windowScene.windows.first!.rootViewController as? UINavigationController,
+               let rootController = navController.viewControllers.first as? RootViewController {
+                return rootController
+            }
+        }
+        return nil
+    }
+    
+    func application(_ application: UIApplication, performActionFor shortcutItem: UIApplicationShortcutItem, completionHandler: @escaping (Bool) -> Void) {
+        // don't think this ever gets called with handler in didFinishLaunching
+        if let rootController = getRootController() {
+            if let tid = shortcutItem.userInfo?["tid"] as? Int {
+                rootController.doOpenTracker(tid)
+                completionHandler(true)
+            } else {
+                completionHandler(false)
+            }
+        } else {
+            completionHandler(false)
+        }
+    }
     
     ///*
      // needs notification set above, still called after applicationWillResignActive()
@@ -442,81 +402,5 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
         let window = windowScene!.windows.first
         let rootViewController = window!.rootViewController!
         rootViewController.dismiss(animated: false, completion: nil)
-    }
-    
-    
-    func applicationWillResignActive(_ application: UIApplication) {
-        if regNotifs {
-            return  // spurious event when registering for notifications
-        }
-        resigningActive = true
-        // Save data if appropriate
-        //DBGLog(@"rt app delegate: app will resign active");
-        let rootController = (navigationController.viewControllers)[0]
-        let topController = navigationController.viewControllers.last
-
-        
-        //DispatchQueue.main.async(execute: {
-            _ = (rootController as? RootViewController)?.privacyObj.lockDown() // hiding is handled after startup - viewDidAppear() below
-           // (rootController as? RootViewController)?.tableView?.reloadData()
-        //})
-        
-        UIApplication.shared.isIdleTimerDisabled = false
-
-        let rtSelector = NSSelectorFromString("rejectTracker")
-
-        if topController?.responds(to: rtSelector) ?? false {
-            // leaving so reject tracker if it is rejectable
-            if (((topController as? useTrackerController)?.rejectable) != nil) {
-                //[((useTrackerController *) topController) rejectTracker];
-                navigationController.popViewController(animated: true)
-            }
-        }
-
-        application.applicationIconBadgeNumber = (rootController as? RootViewController)?.pendingNotificationCount() ?? 0
-
-        resigningActive = false
-    }
-
-    /*
-    // does not make utc disappear before first visible
-     - (void) applicationWillBecomeActive:(UIApplication *)application {
-    	DBGLog(@"rt app delegate: app will become active");
-        [self.navigationController.visibleViewController viewWillAppear:YES];
-    }
-    */
-
-    /*
-    - (void)applicationWillEnterForeground:(UIApplication *)application {
-    }
-    */
-
-    func applicationDidBecomeActive(_ application: UIApplication) {
-        // update arrows on reminded trackers if needed
-        NotificationCenter.default.post(name: .notifyOpenTrackerInApp, object: nil, userInfo: nil)
-    }
-    
-    func getRootController() -> RootViewController? {
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-            if let navController = windowScene.windows.first!.rootViewController as? UINavigationController,
-               let rootController = navController.viewControllers.first as? RootViewController {
-                return rootController
-            }
-        }
-        return nil
-    }
-    
-    func application(_ application: UIApplication, performActionFor shortcutItem: UIApplicationShortcutItem, completionHandler: @escaping (Bool) -> Void) {
-        // don't think this ever gets called with handler in didFinishLaunching
-        if let rootController = getRootController() {
-            if let tid = shortcutItem.userInfo?["tid"] as? Int {
-                rootController.doOpenTracker(tid)
-                completionHandler(true)
-            } else {
-                completionHandler(false)
-            }
-        } else {
-            completionHandler(false)
-        }
     }
 }

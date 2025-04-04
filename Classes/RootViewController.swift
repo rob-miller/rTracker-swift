@@ -1580,13 +1580,19 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     }
 
 
-
     public override func viewWillDisappear(_ animated: Bool) {
-        DBGLog("rvc viewWillDisappear")
+            DBGLog("rvc viewWillDisappear")
 
-        UIApplication.shared.applicationIconBadgeNumber = pendingNotificationCount()
-        super.viewWillDisappear(animated)
-    }
+            // Update badge count using ios 17 new API
+            let count = pendingNotificationCount()
+            UNUserNotificationCenter.current().setBadgeCount(count) { error in
+                if let error = error {
+                    DBGLog("Failed to set badge count: \(error.localizedDescription)")
+                }
+            }
+            
+            super.viewWillDisappear(animated)
+        }
 
     public override func didReceiveMemoryWarning() {
         // Releases the view if it doesn't have a superview.
