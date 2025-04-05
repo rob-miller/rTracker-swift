@@ -929,9 +929,9 @@ class rTracker_resource: NSObject {
         return outstr
     }
 
-    class func toSqlStr(_ instr: String?) -> String? {
+    class func toSqlStr(_ instr: String) -> String {
         //DBGLog(@"in: %@",instr);
-        let outstr = instr?.replacingOccurrences(of: "'", with: "''")
+        let outstr = instr.replacingOccurrences(of: "'", with: "''")
         //DBGLog(@"in: %@  out: %@",instr,outstr);
         return outstr
     }

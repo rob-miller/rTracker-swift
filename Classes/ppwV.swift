@@ -425,7 +425,7 @@ class ppwV: UIView, UITextFieldDelegate {
             return // no empty or whitespace-only passwords
         }
 
-        let sql = "insert or replace into priv0 (key,val) values (0,'\(rTracker_resource.toSqlStr(pass) ?? "")');"
+        let sql = "insert or replace into priv0 (key,val) values (0,'\(rTracker_resource.toSqlStr(pass!))');"
         tob?.toExecSql(sql:sql)
     }
 

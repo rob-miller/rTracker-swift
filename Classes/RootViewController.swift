@@ -456,7 +456,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         }
      */
     
-    func loadTrackerDict(_ tdict: [String: Any], tname: String?, completion: @escaping (Int) -> Void) {
+    func loadTrackerDict(_ tdict: [String: Any], tname: String, completion: @escaping (Int) -> Void) {
         // get input tid
         let newTID = tdict["tid"] as! Int
         DBGLog(String("load input: \(tname) tid \(newTID)"))
@@ -482,7 +482,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
             // Present a choice to the user
             let alertController = UIAlertController(
                 title: "Tracker Already Exists",
-                message: "A tracker named '\(tname ?? "")' already exists. Would you like to merge with it or create a new tracker?",
+                message: "A tracker named '\(tname)' already exists. Would you like to merge with it or create a new tracker?",
                 preferredStyle: .alert
             )
             
@@ -527,21 +527,20 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     }
 
     // Helper method to handle the create new case
-    private func processNewTracker(tdict: [String: Any], tname: String?) {
+    private func processNewTracker(tdict: [String: Any], tname: String) {
         // Create a mutable copy of the dictionary
         var newDict = tdict
         let nameClash = tlist.getTIDfromNameDb(tname) != [] // redundant but need to know if have name clash
         
         // Append "-new" to the tracker name
-        if let trackerName = tname {
-            if !loadingDemos && nameClash {
-                let newName = "\(trackerName)-new"
-                
-                // Update the name in the dictionary if there's an optDict with a name key
-                if var optDict = newDict["optDict"] as? [String: Any] {
-                    optDict["name"] = newName
-                    newDict["optDict"] = optDict
-                }
+
+        if !loadingDemos && nameClash {
+            let newName = "\(tname)-new"
+            
+            // Update the name in the dictionary if there's an optDict with a name key
+            if var optDict = newDict["optDict"] as? [String: Any] {
+                optDict["name"] = newName
+                newDict["optDict"] = optDict
             }
         }
         
@@ -585,7 +584,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         }
         
         // Call the asynchronous loadTrackerDict with a completion handler
-        loadTrackerDict(tdict, tname: tname) { tid in
+        loadTrackerDict(tdict, tname: tname!) { tid in
             if let dataDict = dataDict {
                 let to = trackerObj(tid)
                 to.loadDataDict(dataDict) // vids ok because confirmTOdict updated as needed

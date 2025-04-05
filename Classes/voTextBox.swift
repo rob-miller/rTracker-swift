@@ -676,7 +676,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
                     continue
                 }
                 var st = ss.trimmingCharacters(in: .whitespaces)
-                st = rTracker_resource.toSqlStr(st) ?? ""
+                st = rTracker_resource.toSqlStr(st)
                 if 0 < st.count {
                     if cont {
                         sql = sql + (orAnd ? " and " : " or ")

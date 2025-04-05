@@ -211,14 +211,12 @@ class trackerList: tObjBase {
         var privVal = Int(tObj.optDict["privacy"] as? String ?? "1") ?? 1
         privVal = (privVal != 0 ? privVal : PRIVDFLT) // default is 1 not 0;
 
-        if let tname = rTracker_resource.toSqlStr(tObj.trackerName) {
-            if torank != rank || toname != tname || topriv != privVal || toremindercount != tObj.enabledReminderCount() {
-                sql = String(format: "insert or replace into toplevel (rank, id, name, priv, remindercount) values (%li, %li, \"%@\", %i, %i);", rank, Int(tObj.toid ), tname, privVal, tObj.enabledReminderCount() )
-                toExecSql(sql:sql)
-            }
-        } else {
-            dbgNSAssert(false, "can't get tracker name for tid \(tObj.toid) name \(tObj.trackerName ?? "nil")")
+        let tname = rTracker_resource.toSqlStr(tObj.trackerName!)
+        if torank != rank || toname != tname || topriv != privVal || toremindercount != tObj.enabledReminderCount() {
+            sql = String(format: "insert or replace into toplevel (rank, id, name, priv, remindercount) values (%li, %li, \"%@\", %i, %i);", rank, Int(tObj.toid ), tname, privVal, tObj.enabledReminderCount() )
+            toExecSql(sql:sql)
         }
+
     }
 
     func reorderDbFromTLT() {
@@ -265,7 +263,7 @@ class trackerList: tObjBase {
             nrank += 1  // arrays above 0-indexed, rank in db non-0 so increment here and cover both.
             
             //DBGLog(@" %@ id %d to rank %d",tracker,tid,nrank);
-            sql = String(format: "insert into toplevel (rank, id, name, priv,remindercount) values (%i, %ld, \"%@\", %ld, %ld);", nrank, tid, rTracker_resource.toSqlStr(tracker)!, priv, rc) // rank in db always non-0
+            sql = String(format: "insert into toplevel (rank, id, name, priv,remindercount) values (%i, %ld, \"%@\", %ld, %ld);", nrank, tid, rTracker_resource.toSqlStr(tracker), priv, rc) // rank in db always non-0
             toExecSql(sql:sql) // better if used bind vars, but this keeps access in tObjBase
 
         }
@@ -303,8 +301,8 @@ class trackerList: tObjBase {
     }
 
     // return aaray of TIDs which match name, order by rank
-    func getTIDfromNameDb(_ str: String?) -> [Int] {
-        let sql = "select id from toplevel where name=\"\(rTracker_resource.toSqlStr(str) ?? "")\" order by rank"
+    func getTIDfromNameDb(_ str: String) -> [Int] {
+        let sql = "select id from toplevel where name=\"\(rTracker_resource.toSqlStr(str))\" order by rank"
         return toQry2AryI(sql: sql)
     }
 
