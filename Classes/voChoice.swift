@@ -26,12 +26,6 @@ import QuartzCore
 import UIKit
 
 class voChoice: voState {
-    /*{
-    	configTVObjVC *ctvovcp;
-        UISegmentedControl *segmentedControl;
-        BOOL processingTfDone;
-        BOOL processingTfvDone;
-    }*/
     var ctvovcp: configTVObjVC?
 
     private var _segmentedControl: UISegmentedControl?
@@ -141,34 +135,7 @@ class voChoice: voState {
 
     func getSegmentIndexForValue() -> Int {
         return vo.getChoiceIndex(forValue: vo.value)
-        /*
-            // doesn't display if e.g only choice 6 configured
-            // rtm change with 'specify choice values' 24.xii.2012 return [self.vo.value integerValue]-1;
-            NSString *currVal = self.vo.value;
-            //DBGLog(@"gsiv val=%@",currVal);
-            for (int i=0; i<CHOICES; i++) {
-                NSString *key = [NSString stringWithFormat:@"cv%d",i];
-                NSString *tstVal = [self.vo.optDict valueForKey:key];  
-                if (nil == tstVal) {
-                    tstVal = [NSString stringWithFormat:@"%d",i];  // added 7.iv.2013 - need default value
-                }
-                //DBGLog(@"gsiv test against %d: %@",i,tstVal);
-                if ([tstVal isEqualToString:currVal]) {
-                    return i;
-                }
-            }
-            return CHOICES;
-             */
     }
-
-    /*
-     - (void) reportscwid {
-        int n;
-        for (n=0; n< [segmentedControl numberOfSegments]; n++) {
-            DBGLog(@"width of seg %d = %f", n, [segmentedControl widthForSegmentAtIndex:n]);
-        }    
-    }
-    */
 
     @objc func segmentAction(_ sender: UISegmentedControl) {
         if (sender.selectedSegmentIndex == getSegmentIndexForValue()) && vo.useVO { // check useVO in case programmed value is same as index
@@ -180,13 +147,7 @@ class voChoice: voState {
         if !vo.useVO {
             vo.enableVO()
         }
-        /*
-            if ([@"" isEqual: self.vo.value]) {
-                [self.vo disableVO];
-            } else {
-            	[self.vo enableVO];
-            }
-            */
+
         NotificationCenter.default.post(name: NSNotification.Name(rtValueUpdatedNotification), object: self)
     }
 
@@ -307,11 +268,8 @@ class voChoice: voState {
             vo.optDict.removeValue(forKey: "cv\(i)")
         }
 
-        //if (++i<CHOICES) {
         (ctvovcp!.wDict[String(format: "%dtf", i)] as! UITextField).becomeFirstResponder()
-        //} else {
-        //	[tf resignFirstResponder];
-        //}
+
 
         processingTfvDone = false
 
@@ -389,7 +347,7 @@ class voChoice: voState {
         frame.origin.x = MARGIN
         frame.origin.y += labframe.size.height + MARGIN
 
-        let tfvWidth = "-88 ".size(withAttributes: [
+        let tfvWidth = "-8888 ".size(withAttributes: [
             NSAttributedString.Key.font: PrefBodyFont
         ]).width
         let tfWidth = "888888888".size(withAttributes: [
@@ -398,7 +356,6 @@ class voChoice: voState {
 
         frame.size.height = minLabelHeight(ctvovc.lfHeight)
 
-        //var i: Int
         var j = 1
         for i in 0..<CHOICES {
             frame.size.width = tfvWidth
@@ -427,7 +384,6 @@ class voChoice: voState {
                 addsv: true)
             frame.origin.x += MARGIN + tfWidth
 
-            //frame.size.height = 1.2* frame.size.height;
             frame.size.width = frame.size.height
             let btn = UIButton(type: .custom)
             btn.frame = frame
@@ -444,20 +400,16 @@ class voChoice: voState {
 
             btn.addTarget(self, action: #selector(choiceColorButtonAction(_:)), for: .touchDown)
             ctvovc.wDict[String(format: "%dbtn", i)] = btn
-            //[ctvovc.view addSubview:btn];
             ctvovc.scroll.addSubview(btn)
 
-            ctvovc.lastx = (ctvovc.lastx < frame.origin.x + frame.size.width + MARGIN ? frame.origin.x + frame.size.width + MARGIN : ctvovc.lastx) 
+            ctvovc.lastx = (ctvovc.lastx < frame.origin.x + frame.size.width + MARGIN ? frame.origin.x + frame.size.width + MARGIN : ctvovc.lastx)
 
-            frame.origin.x = MARGIN + (Double(j) * (tfvWidth + tfWidth + ctvovc.lfHeight + 3 * MARGIN))
+            frame.origin.x = MARGIN + (Double(j) * (tfvWidth + tfWidth  + frame.size.width + 4 * MARGIN))
             j = j != 0 ? 0 : 1 // j toggles 0-1
             frame.origin.y += Double(j) * ((2 * MARGIN) + ctvovc.lfHeight)
 
-            //frame.size.width = tfWidth;
-            //frame.size.height = self.labelField.frame.size.height; // lab.frame.size.height;
         }
 
-        //frame.origin.y -= MARGIN; // remove extra from end of loop, add one back for next line
         frame.origin.x = MARGIN
 
         //-- general options label
@@ -525,20 +477,10 @@ class voChoice: voState {
         super.voDrawOptions(ctvovc)
     }
 
-    /*
-    - (void) transformVO:(NSMutableArray *)xdat ydat:(NSMutableArray *)ydat dscale:(double)dscale height:(CGFloat)height border:(float)border firstDate:(int)firstDate {
-
-        [self transformVO_num:xdat ydat:ydat dscale:dscale height:height border:border firstDate:firstDate];
-
-    }
-    */
-
     override func newVOGD() -> vogd {
         return vogd(vo).initAsNum(vo)
     }
 
-    /* rtm here : export value option 
-     */
 
     override func mapValue2Csv() -> String? {
 
@@ -551,16 +493,11 @@ class voChoice: voState {
         }
     }
 
-    /* rtm here : export value option -- need to parse and match value if choice did not match
-     */
-
     override func mapCsv2Value(_ inCsv: String) -> String {
-        //var optDict = vo.optDict
         if vo.optDict["exportvalb"] == "1" {
             // we simply store the value, up to the user to provide a choice to match it
             return inCsv
         }
-        //var ndx: Int
         let count = vo.optDict.count
         var maxc = -1
         var firstBlank = -1
@@ -619,7 +556,6 @@ class voChoice: voState {
 
         maxc += 1 // +1 because value not 0-based, while c%d key is
 
-        // for exportvalb=false, stored value is segment index
         return "\(maxc)"
     }
 }
