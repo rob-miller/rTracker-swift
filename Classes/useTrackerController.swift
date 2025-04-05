@@ -67,7 +67,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     
     var hkDataSource = false
     var otDataSource = false
-    var loadingData = false
+    private var loadingData = false
+    private var viewLoadfinished = false
     
     /*
     var prevDateBtn: UIBarButtonItem?
@@ -160,48 +161,6 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     }
 
-    /*
-     
-     // this version works with tableView(willDisplay), but don't like control flickering 
-    var pendingVOUpdates = Set<Int>()
-    
-    func updateTableCellsx(_ inVO: valueObj?) {
-        var voIndices: [Int] = []
-        var n = 0
-        
-        // Find which valueObjs need updating
-        for vo in tracker!.valObjTable {
-            if VOT_FUNC == vo.vtype || vo.optDict["otTracker"] ?? "" == tracker?.trackerName {
-                vo.display = nil // always redisplay
-                voIndices.append(n)
-            } else if (inVO?.vid == vo.vid) && (nil == vo.display) {
-                voIndices.append(n)
-            }
-            n += 1
-        }
-        
-        // If view is loaded and visible
-        if isViewLoaded && view.window != nil {
-            // First approach: Direct control updates for visible cells
-            for index in voIndices {
-                let indexPath = IndexPath(row: index, section: 0)
-                
-                // Only update visible cells
-                if let cell = self.tableView?.cellForRow(at: indexPath),
-                   let vo = tracker?.valObjTable[index] {
-                    
-                    // Update just the control
-                    vo.vos?.updateControlInCell(cell)
-                }
-            }
-            
-            // For cells that aren't visible, we'll need to reload them when they become visible
-            // Store which ones need updating when they appear
-            self.pendingVOUpdates = Set(voIndices)
-        }
-    }
-     */
-    
     // handle rtTrackerUpdatedNotification
     @objc func updateUTC(_ notification: Notification?) {
         DBGLog(String("UTC update notification from tracker \((notification?.object as? trackerObj)?.trackerName)"))
@@ -254,20 +213,9 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         title = tracker!.trackerName
 
         // tableview setup
-        //UIImageView *bg = [[UIImageView alloc] initWithImage:[UIImage imageNamed:[rTracker_resource getLaunchImageName]]];
+
         let bg = UIImageView(image: rTracker_resource.get_background_image(self))
 
-        //CGRect statusBarFrame = [self.navigationController.view.window convertRect:UIApplication.sharedApplication.statusBarFrame toView:self.navigationController.view];
-        //CGFloat statusBarHeight = statusBarFrame.size.height;
-
-        /*
-        var tableFrame = bg.frame
-        tableFrame.size.height = rTracker_resource.getVisibleSize(of:self).height //- ( 2 * statusBarHeight ) ;
-
-
-        DBGLog(String("tvf \(tableFrame)"))  // origin x %f y %f size w %f h %f", tableFrame.origin.x, tableFrame.origin.y, tableFrame.size.width, tableFrame.size.height)
-        tableView = UITableView(frame: tableFrame, style: .plain) // because getLaunchImageName worked out size! //self.saveFrame
-         */
         // Create a new UITableView instance
         tableView = UITableView(frame: .zero, style: .plain)
         
@@ -313,14 +261,6 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         swipe.direction = .right
         view.addGestureRecognizer(swipe)
 
-        /*
-             * cannot seem to work alongside tableview swipe
-             *
-            swipe = [[UISwipeGestureRecognizer alloc] initWithTarget:self action:@selector(handleViewSwipeUp:)];
-            [swipe setDirection:UISwipeGestureRecognizerDirectionUp];
-            [self.view addGestureRecognizer:swipe];
-            */
-
         tracker!.vc = self
         alertResponse = 0
         saveTargD = 0
@@ -331,7 +271,6 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             showSaveBtn()
         } else {
             // otherwise see if can load data from healthkit
-            //hkDataSource = tracker!.loadHKdata(dispatchGroup: nil)
             let dispatchGroup = DispatchGroup()
 
             // Show the spinner
@@ -340,21 +279,22 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             activityIndicator.startAnimating()
             self.view.addSubview(activityIndicator)
 
-            dispatchGroup.enter()
-            // Load HealthKit data
             self.loadingData = true
-            self.hkDataSource = self.tracker!.loadHKdata(dispatchGroup: dispatchGroup)
-            self.otDataSource = self.tracker!.loadOTdata(dispatchGroup: dispatchGroup)
-            if self.tracker?.optDict["dirtyFns"] != nil {
-                self.tracker?.setFnVals()
-                self.tracker?.optDict.removeValue(forKey: "dirtyFns")
-                let sql = "delete from trkrInfo where field='dirtyFns';"
-                self.tracker?.toExecSql(sql:sql)
-            }
-            self.loadingData = false
+            
+            // Load HealthKit data first
+            dispatchGroup.enter()
+            self.hkDataSource = self.tracker!.loadHKdata(dispatchGroup: dispatchGroup, completion: {
+                // have hk data, load OT data for really other trackers
+                _ = self.tracker!.loadOTdata(otSelf:false, dispatchGroup: dispatchGroup, completion:{
+                    // now can compute fn results
+                    _ = self.tracker!.loadFNdata(dispatchGroup: dispatchGroup, completion:{
+                        // now load ot data that look at self
+                        _ = self.tracker!.loadOTdata(otSelf:true, dispatchGroup: dispatchGroup)
+                    })
+                })
+            })
             dispatchGroup.leave()
-
-
+            
             // Notify when all operations are completed
             dispatchGroup.notify(queue: .main) {
                 // Stop and remove the spinner
@@ -364,6 +304,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 // Perform any UI updates after data loading
                 DBGLog("HealthKit and Othertracker data loaded.")
                 self.tableView?.reloadData()
+                self.loadingData = false
             }
         }
 
@@ -372,13 +313,14 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             refreshControl.addTarget(self, action: #selector(handlePullDownAction), for: .valueChanged)
             tableView!.refreshControl = refreshControl
         }
-        
+        viewLoadfinished = true
     }
 
     @objc func handlePullDownAction() {
         DBGLog("Refresh initiated")
         if loadingData { return }
-            
+        if !viewLoadfinished { return }
+        
         let dispatchGroup = DispatchGroup()
         
         DispatchQueue.main.async {
@@ -389,26 +331,32 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             for vo in self.tracker!.valObjTable {
                 vo.vos?.clearHKdata()  // rtm really want this?  re-load all hk data
                 vo.vos?.clearOTdata()
+                vo.vos?.clearFNdata()
             }
             // delete trkrData entries which no longer have associated voData
             let sql = "delete from trkrdata where date not in (select date from voData where voData.date = trkrdata.date)"
             self.tracker?.toExecSql(sql: sql)
             
             // Load HealthKit data and wait for all async tasks to complete
-            dispatchGroup.enter() // Mark the loadHKdata operation
-            _ = self.tracker!.loadHKdata(dispatchGroup: dispatchGroup)
-            _ = self.tracker!.loadOTdata(dispatchGroup: dispatchGroup)
+            dispatchGroup.enter() // starting
+            // load hk data
+            _ = self.tracker!.loadHKdata(dispatchGroup: dispatchGroup, completion: {
+                // have hk data, load OT data for really other trackers
+                _ = self.tracker!.loadOTdata(otSelf:false, dispatchGroup: dispatchGroup, completion:{
+                    // now can compute fn results
+                    _ = self.tracker!.loadFNdata(dispatchGroup: dispatchGroup, completion:{
+                        // now load ot data that look at self
+                        _ = self.tracker!.loadOTdata(otSelf:true, dispatchGroup: dispatchGroup)
+                    })
+                })
+
+            })
             dispatchGroup.leave() // Only if loadHKdata returns synchronously (no async left to track)
             
             // Notify when all operations are completed
             dispatchGroup.notify(queue: .main) {
                 DBGLog("All HealthKit data loaded and SQL inserts completed.")
                 self.tracker?.cleanDb()
-                self.tracker?.setFnVals()
-                self.tracker?.optDict.removeValue(forKey: "dirtyFns")
-                let sql = "delete from trkrInfo where field='dirtyFns';"
-                self.tracker?.toExecSql(sql:sql)
-
                 self.tableView!.refreshControl?.endRefreshing()
                 _ = self.tracker!.loadData(Int(self.tracker!.trackerDate!.timeIntervalSince1970))
                 self.updateTrackerTableView()

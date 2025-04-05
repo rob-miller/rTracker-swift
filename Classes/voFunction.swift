@@ -169,24 +169,6 @@ let FNSEGNDX_FUNCTBLD = 2
 
 class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
 
-    /*{
-    	configTVObjVC *ctvovcp;
-
-    	NSInteger fnSegNdx;				// overview, range, or fn definition page in configTVObjVC
-    	NSArray *epTitles;				// available range endpoints: valueObjs or offsets (hour, month, ...)
-    	NSMutableArray *fnTitles;		// 
-    	NSMutableArray *fnArray;		// ordered array of symbols (valObj [vid] or operation [<0]) to compute, <=> optDict:@"func"
-    	//NSMutableArray *fnStrs;			// valueObj names or predefined operation names (map to symbols, vids in nfArray)
-        NSArray *fn2args;
-    	NSInteger currFnNdx;			// index as we compute the function
-
-        UILabel *rlab;
-
-        NSArray *votWoSelf;             // myTracker's valobjtable without reference to self for picking endpoints
-    }*/
-
-    //@property (nonatomic,retain) NSMutableArray *fnStrs;
-
     private var _fnStrDict: [NSNumber : String]?
     var fnStrDict: [NSNumber : String] {
         if nil == _fnStrDict {
@@ -301,7 +283,10 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         if nil == _votWoSelf {
             var tvot: [valueObj] = [] // (repeating: 0, count: MyTracker?.valObjTable?.count ?? 0)
             for tvo in MyTracker.valObjTable {
-                if tvo.vid != vo.vid {
+                // Only add if:
+                // 1. It's not the current valueObj (vo)
+                // 2. It's not referencing current tracker as its otTracker
+                if tvo.vid != vo.vid && tvo.optDict["otTracker"] != MyTracker.trackerName {
                     tvot.append(tvo as valueObj)
                 }
             }
@@ -1848,7 +1833,10 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
 
     func ftAddVOs() {
         for valo in MyTracker.valObjTable {
-            if valo != vo {
+            // Only add if:
+            // 1. It's not the current valueObj (vo)
+            // 2. It's not referencing current tracker as its otTracker
+            if valo != vo && valo.optDict["otTracker"] != MyTracker.trackerName {
                 fnTitles.append(NSNumber(value: valo.vid))
             }
         }
@@ -2045,6 +2033,8 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
     // MARK: fn value results for graphing
 
     func trimFnVals(_ frep0: Int) {
+        // deletes duplicate date entries depending on ep0
+        
         DBGLog(String("ep= \(frep0)"))
         var sql: String
 
@@ -2087,18 +2077,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             switch frep0 {
             // if calendar week, we need to get to beginning of week as per calendar
             case FREPCWEEKS:
-                //var beginOfWeek: Date? = nil
                 targ = gregorian.dateComponents([.calendar, .yearForWeekOfYear, .weekOfYear], from: targ!).date
-                /*
-                //BOOL rslt = [gregorian rangeOfUnit:NSWeekCalendarUnit startDate:&beginOfWeek interval:NULL forDate: targ];
-                var rslt = false
-                if let targ {
-                    rslt = gregorian.range(of: .weekOfYear, start: &beginOfWeek, interval: nil, for: targ) ?? false
-                }
-                if rslt {
-                    targ = beginOfWeek
-                }
-                 */
                 fallthrough
             // if any of week, day, month, year we need to wipe hour, minute, second components
             case FREPCDAYS:
@@ -2125,6 +2104,8 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             if epDate == currD {
                 sql = String(format: "delete from voData where id = %ld and date = %d", Int(vo.vid), d) // safe because this is just cached fn rslt
                 MyTracker.toExecSql(sql:sql)
+                sql = "delete from voFNstatus where id = \(vo.vid) and date = \(d);"
+                MyTracker.toExecSql(sql:sql)
             } else {
                 epDate = currD
             }
@@ -2135,88 +2116,40 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
 
     }
 
-    override func setFnVals(_ tDate: Int) {
-        // called from trackerObj.m
+    override func setFnVal(_ tDate: Int, dispatchGroup: DispatchGroup?) {
+        dispatchGroup?.enter()
+        // if don't track vo's in fnstatus then cannot delete independently
         var sql: String
         if vo.value == "" {
             // if value is empty we should not have data in db
-            sql = String(format: "delete from voData where id = %ld and date = %d;", Int(vo.vid), tDate)
-            //DBGLog(@"sql delete= %@",sql);
+            sql = "delete from voData where id = \(vo.vid) and date = \(tDate);"
+            MyTracker.toExecSql(sql:sql)
+            sql = "delete from voFNstatus where id = \(vo.vid) and date = \(tDate);"
+            MyTracker.toExecSql(sql:sql)
         } else {
-            sql = String(format: "insert or replace into voData (id, date, val) values (%ld, %d,'%@');", Int(vo.vid), tDate, rTracker_resource.toSqlStr(vo.value)!)
+            let val = rTracker_resource.toSqlStr(vo.value)
+            sql = "insert or replace into voData (id, date, val) values (\(vo.vid), \(tDate),'\(val)');"
+            MyTracker.toExecSql(sql:sql)
+            sql = "insert into voFNstatus (id, date, stat) values (\(vo.vid), \(tDate), \(fnStatus.fnData.rawValue))"
+            MyTracker.toExecSql(sql:sql)
         }
-        MyTracker.toExecSql(sql:sql)
+        dispatchGroup?.leave()
     }
 
+    override func clearFNdata() {
+        let to = vo.parentTracker
+        var sql = "delete from voData where (id, date) in (select id, date from voFNstatus where id = \(vo.vid))"
+        to.toExecSql(sql: sql)
+        sql = "delete from voFNstatus where id = \(vo.vid)"
+        to.toExecSql(sql: sql)
+    }
+    
     override func doTrimFnVals() {
         let frep0 = Int(vo.optDict["frep0"]!)!
         if ISCALFREP(frep0) && (vo.optDict["graphlast"] != "0") && MyTracker.goRecalculate {
             trimFnVals(frep0)
         }
     }
-
-    /*
-    // change to move loop on date to tracker level so just do once, not for every fn vo
-
-     // TODO: rtm here -- optionally eliminate fn results for calendar unit endpoints
-    // based on vo opt @"graphlast"
-    - (void) setFnVals {
-        int currDate = (int) [MyTracker.trackerDate timeIntervalSince1970];
-        int nextDate = [MyTracker firstDate];
-
-        if (0 == nextDate) {  // no data yet for this tracker so do not generate a 0 value in database
-            return;
-        }
-
-        float ndx=1.0;
-        float all = [self.vo.parentTracker getDateCount];
-
-        do {
-            [MyTracker loadData:nextDate];
-            //DBGLog(@"sfv: %@ => %@",MyTracker.trackerDate, self.vo.value);
-            if ([self.vo.value isEqualToString:@""]) {   //TODO: null/init value is 0.00 so what does this delete line do? 
-               sql = [NSString stringWithFormat:@"delete from voData where id = %d and date = %d;",self.vo.vid, nextDate];
-            } else {
-               sql = [NSString stringWithFormat:@"insert or replace into voData (id, date, val) values (%d, %d,'%@');",
-                            self.vo.vid, nextDate, [rTracker_resource toSqlStr:self.vo.value]];
-            }
-            [MyTracker toExecSql:sql];
-
-            [rTracker_resource setProgressVal:(ndx/all)];
-            ndx += 1.0;
-
-        } while (MyTracker.goRecalculate && (nextDate = [MyTracker postDate]));    // iterate through dates
-
-        NSInteger frep0 = [[self.vo.optDict objectForKey:@"frep0"] integerValue];
-        if (ISCALFREP(frep0)
-            &&
-            (![[self.vo.optDict objectForKey:@"graphlast"] isEqualToString:@"0"])
-            &&
-            MyTracker.goRecalculate
-            ) {
-            [self trimFnVals:frep0];
-        }
-
-        // restore current date
-    	[MyTracker loadData:currDate];
-
-    }
-
-    - (void) recalculate {
-        [self setFnVals];
-    }
-    */
-
-    /*
-    - (void) transformVO:(NSMutableArray *)xdat ydat:(NSMutableArray *)ydat dscale:(double)dscale height:(CGFloat)height border:(float)border firstDate:(int)firstDate {
-
-        // set val for all dates if dirty
-        //[self setFnVals];
-
-        [self transformVO_num:xdat ydat:ydat dscale:dscale height:height border:border firstDate:firstDate];
-
-    }
-    */
 
     override func newVOGD() -> vogd {
         return vogd(vo).initAsNum(vo)

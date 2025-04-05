@@ -27,7 +27,6 @@ import UIKit
 
 
 class voState: NSObject, voProtocol {
-
     var vo: valueObj
     var MyTracker: trackerObj
     var vosFrame = CGRect.zero
@@ -63,8 +62,6 @@ class voState: NSObject, voProtocol {
     func loadConfig() {
     }
 
-
-    
     func loadHKdata(dispatchGroup: DispatchGroup?) {
     }
     
@@ -106,7 +103,7 @@ class voState: NSObject, voProtocol {
         
         let xcd = vo.optDict["otCurrent"] == "1"
 
-        var sql = "select max(date) from voOTstatus where id = \(Int(vo.vid))"
+        var sql = "select max(date) from voOTstatus where id = \(Int(vo.vid)) and stat = \(otStatus.otData.rawValue)"
         let lastDate = to.toQry2Int(sql: sql) ?? 0
         
         
@@ -160,6 +157,13 @@ class voState: NSObject, voProtocol {
         to.toExecSql(sql: sql)
         sql = "delete from voOTstatus where id = \(vo.vid)"
         to.toExecSql(sql: sql)
+    }
+    
+    
+    func loadFNdata(dispatchGroup: DispatchGroup?) {
+    }
+
+    func clearFNdata() {
     }
     
     func setOptDictDflts() {
@@ -531,130 +535,6 @@ class voState: NSObject, voProtocol {
         }
     }
     
-    /*
-    func voTVEnabledCell(_ tableView: UITableView?) -> UITableViewCell {
-
-        var bounds: CGRect = CGRect.zero
-        var cell: UITableViewCell?
-        let maxLabel = vo.parentTracker.maxLabel
-        //DBGLog(String("votvenabledcell maxLabel= w= \(maxLabel.width) h= \(maxLabel.height)"))
-
-        cell = tableView?.dequeueReusableCell(withIdentifier: voState.voTVEnabledCellCellIdentifier)
-        if cell == nil {
-            cell = UITableViewCell(style: .default, reuseIdentifier: voState.voTVEnabledCellCellIdentifier)
-            cell?.selectionStyle = .none
-            cell?.backgroundColor = nil
-        } else {
-            while let viewToRemove = cell?.contentView.viewWithTag(kViewTag) {
-                viewToRemove.removeFromSuperview()
-            }
-        }
-
-        bounds.origin.x = MARGIN
-        bounds.origin.y = MARGIN
-
-        bounds.size.width = 30.0 // for checkbox
-        bounds.size.height = 30.0
-
-
-        vo.switchUseVO?.frame = bounds
-        vo.switchUseVO?.tag = kViewTag
-        //vo.switchUseVO?.backgroundColor = cell?.backgroundColor
-
-        vo.switchUseVO?.accessibilityHint = "enable this control"
-        vo.switchUseVO?.accessibilityIdentifier = "\(tvn())_enable"
-        
-        vo.switchUseVO?.isOn = vo.useVO
-        if let aswitchUseVO = vo.switchUseVO {
-            cell?.contentView.addSubview(aswitchUseVO)
-        }
-
-        cell?.backgroundColor = .clear
-
-        // cell label top row right
-
-        let swSize = vo.switchUseVO?.intrinsicContentSize
-        bounds.origin.x += (swSize?.width ?? 0.0) + MARGIN
-
-        // [rTracker_resource getKeyWindowWidth] - maxLabel.width - LMARGIN - RMARGIN;
-        let screenSize = UIScreen.main.bounds.size
-        bounds.size.width = screenSize.width - (swSize?.width ?? 0.0) - (2.0 * MARGIN) //cell.frame.size.width - checkImage.size.width - (2.0*MARGIN);
-        bounds.size.height = maxLabel.height + MARGIN //CELL_HEIGHT_TALL/2.0; //self.tracker.maxLabel.height + BMARGIN;
-
-
-        let splitStrArr = vo.valueName?.components(separatedBy: "|")
-        if 1 < (splitStrArr?.count ?? 0) {
-            bounds.size.width /= 2.0
-        }
-        var label = UILabel(frame: bounds)
-        label.tag = kViewTag
-        //label.font = [UIFont boldSystemFontOfSize:18.0];
-        label.font = PrefBodyFont
-        var darkMode = false
-        if #available(iOS 13.0, *) {
-            label.textColor = .label
-            darkMode = vc?.traitCollection.userInterfaceStyle == .dark
-            label.backgroundColor = darkMode ? UIColor.systemBackground : UIColor.clear
-        } else {
-            label.textColor = .label
-            label.backgroundColor = .clear
-        }
-
-        label.alpha = 1.0
-
-        label.textAlignment = .left // ios6 UITextAlignmentLeft;
-        //don't use - messes up for loarger displays -- label.autoresizingMask = UIViewAutoresizingFlexibleRightMargin; // | UIViewAutoresizingFlexibleHeight;
-        label.contentMode = .topLeft
-        label.text = splitStrArr?[0] //self.vo.valueName;
-        //label.enabled = YES;
-        DBGLog(String("enabled text= \(label.text)"))
-
-
-        cell?.contentView.addSubview(label)
-
-        if 1 < (splitStrArr?.count ?? 0) {
-            bounds.origin.x += bounds.size.width
-            bounds.size.width -= 2.0 * MARGIN
-            label = UILabel(frame: bounds)
-            label.tag = kViewTag
-            //label.font = [UIFont boldSystemFontOfSize:18.0];
-            label.font = PrefBodyFont
-            if #available(iOS 13.0, *) {
-                label.textColor = .label
-                label.backgroundColor = darkMode ? UIColor.systemBackground : UIColor.clear
-            } else {
-                label.textColor = .label
-                label.backgroundColor = .clear
-            }
-
-            label.alpha = 1.0
-
-            label.textAlignment = .right // ios6 UITextAlignmentLeft;
-            // don't use - see above -- label.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin; // | UIViewAutoresizingFlexibleHeight;
-            label.contentMode = .topRight
-            label.text = splitStrArr?[1] //self.vo.valueName;
-
-            //label.enabled = YES;
-            DBGLog(String("enabled text2= \(label.text)"))
-
-            cell?.contentView.addSubview(label)
-        }
-
-        bounds.origin.y = maxLabel.height + (3.0 * MARGIN) //CELL_HEIGHT_TALL/2.0 + MARGIN; // 38.0f; //bounds.size.height; // + BMARGIN;
-        bounds.size.height = /*CELL_HEIGHT_TALL/2.0 ; // */ maxLabel.height + (1.5 * MARGIN)
-
-        bounds.size.width = screenSize.width - (2.0 * MARGIN) // cell.frame.size.width - (2.0f * MARGIN);
-        bounds.origin.x = MARGIN // 0.0f ;  //= bounds.origin.x + RMARGIN;
-
-        //DBGLog(@"votvenabledcell adding subview");
-        if let aDisplay = vo.display(bounds) {
-            cell?.contentView.addSubview(aDisplay)
-        }
-        return cell!
-
-    }
-     */
-    
     func voTVCellHeight() -> CGFloat {
         let labelSize = vo.getLabelSize()
         let maxLabel = vo.parentTracker.maxLabel
@@ -760,92 +640,6 @@ class voState: NSObject, voProtocol {
         cell.accessibilityIdentifier = "useT_\(vo.vos!.tvn())"
     }
     
-    /*
-    func voTVCell(_ tableView: UITableView) -> UITableViewCell {
-        var bounds: CGRect = CGRect.zero
-        var cell: UITableViewCell?
-        let maxLabel = vo.parentTracker.maxLabel
-        
-        // Dequeue or create cell
-        cell = tableView.dequeueReusableCell(withIdentifier: voState.voTVCellCellIdentifier)
-        if cell == nil {
-            cell = UITableViewCell(style: .default, reuseIdentifier: voState.voTVCellCellIdentifier)
-            cell?.selectionStyle = .none
-        } else {
-            // Remove any existing views
-            while let viewToRemove = cell?.contentView.viewWithTag(kViewTag) {
-                viewToRemove.removeFromSuperview()
-            }
-        }
-         
-        cell?.backgroundColor = .clear
-        
-        // Configure main label bounds
-        bounds.origin.x = MARGIN
-        bounds.origin.y = MARGIN
-        let labelSize = vo.getLabelSize()
-        
-        // Always constrain to maxLabel.width to ensure one-line layout
-        bounds.size.width = maxLabel.width
-        bounds.size.height = labelSize.height
-        
-        // Create main label with icon if needed
-        let containerView = UIView(frame: bounds)
-        containerView.tag = kViewTag
-        
-        let isIconTagged = vo.optDict["otsrc"] == "1" || vo.optDict["ahksrc"] == "1" || vo.vtype == VOT_FUNC
-        
-        let label = UILabel(frame: CGRect(
-            x: isIconTagged ? 26 : 0,
-            y: 0,
-            width: isIconTagged ? bounds.size.width - 26 : bounds.size.width,
-            height: bounds.size.height
-        ))
-        
-        label.font = PrefBodyFont
-        label.textColor = .label
-        let darkMode = vc?.traitCollection.userInterfaceStyle == .dark
-        label.backgroundColor = darkMode ? UIColor.systemBackground : UIColor.clear
-        label.alpha = 1.0
-        label.textAlignment = .left
-        label.contentMode = .topLeft
-        label.text = vo.valueName
-        
-        // Add these properties to truncate text properly
-        label.lineBreakMode = .byTruncatingTail
-        label.numberOfLines = 1
-        
-        containerView.addSubview(label)
-        
-        // Add source indicator if needed
-        if isIconTagged {
-            let iconName = vo.optDict["otsrc"] == "1" ? "link" : vo.optDict["ahksrc"] == "1" ? "heart.text.square" : "function"
-            let sourceIndicator = UIImageView(image: UIImage(systemName: iconName))
-            sourceIndicator.tintColor = .systemBlue
-            sourceIndicator.contentMode = .scaleAspectFit
-            sourceIndicator.frame = CGRect(x: 0, y: 0, width: 22, height: bounds.size.height)
-            sourceIndicator.center.y = bounds.size.height / 2
-            containerView.addSubview(sourceIndicator)
-        }
-        
-        cell?.contentView.addSubview(containerView)
-        cell?.accessibilityIdentifier = "useT_\(vo.vos!.tvn())"
-        
-        // Configure the control display bounds - always keep on same line
-        bounds.origin.x = maxLabel.width + LMARGIN
-        bounds.origin.y = MARGIN
-        bounds.size.width = rTracker_resource.getKeyWindowWidth() - maxLabel.width - LMARGIN - RMARGIN
-        bounds.size.height = maxLabel.height + MARGIN
-        
-        // Add control display
-        if let aDisplay = vo.display(bounds) {
-            cell?.contentView.addSubview(aDisplay)
-        }
-        
-        return cell!
-    }
-     */
-    
     func dataEditVDidLoad(_ vc: UIViewController) {
     }
 
@@ -881,7 +675,7 @@ class voState: NSObject, voProtocol {
         return vogd(vo).initAsNum(vo)
     }
 
-    func setFnVals(_ tDate: Int) {
+    func setFnVal(_ tDate: Int, dispatchGroup: DispatchGroup? = nil) {
         // subclass overrides if need to do anything
     }
 

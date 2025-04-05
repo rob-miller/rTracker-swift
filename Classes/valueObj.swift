@@ -126,6 +126,11 @@ enum otStatus: Int {
     case otData = 1
 }
 
+// Function data status in table voFNstatus
+enum fnStatus: Int {
+    case noData = 0
+    case fnData = 1
+}
 protocol voProtocol: AnyObject {
     func getValCap() -> Int
     func getNumVal() -> Double
@@ -142,19 +147,17 @@ protocol voProtocol: AnyObject {
     func dataEditVDidLoad(_ vc: UIViewController)
     func dataEditVWAppear(_ vc: UIViewController)
     func dataEditVWDisappear(_ vc: UIViewController)
-    //- (void) dataEditVDidUnload;
-    //- (void) dataEditFinished;
-    //- (void) transformVO:(NSMutableArray *)xdat ydat:(NSMutableArray *)ydat dscale:(double)dscale height:(CGFloat)height border:(float)border firstDate:(int)firstDate;
     func newVOGD() -> vogd
-    //- (void) recalculate;
-    func setFnVals(_ tDate: Int)
     func doTrimFnVals()
     func resetData()
     func mapValue2Csv() -> String?
     func mapCsv2Value(_ inCsv: String) -> String
-    func loadHKdata(dispatchGroup: DispatchGroup?)  //, completion: (() -> Void)?)
-    //func loadOTdata(dispatchGroup: DispatchGroup?, completion: (() -> Void)?)
+    func loadHKdata(dispatchGroup: DispatchGroup?)
+    //func loadOTdata(dispatchGroup: DispatchGroup?)
+    func setFnVal(_ tDate: Int, dispatchGroup: DispatchGroup?)
     func clearHKdata()
+    func clearOTdata()
+    func clearFNdata()
 }
 
 //extern const NSInteger kViewTag;

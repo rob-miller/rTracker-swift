@@ -380,7 +380,7 @@ class voNumber: voState, UITextFieldDelegate {
 
         hkDispatchGroup.enter()
         
-        let sql = "select max(date) from voHKstatus where id = \(Int(vo.vid))"
+        let sql = "select max(date) from voHKstatus where id = \(Int(vo.vid)) and stat = \(hkStatus.hkData.rawValue)"
         let lastDate = to.toQry2Int(sql: sql)
         
         rthk.getHealthKitDates(for: srcName, lastDate: lastDate) { hkDates in
@@ -480,6 +480,7 @@ class voNumber: voState, UITextFieldDelegate {
             
             DBGLog("Query complete, count is \(dateSet.count)")
             let calendar = Calendar.current
+            let secondHKDispatchGroup = DispatchGroup()
             for dat in dateSet.sorted() {  // .sorted() is just to help debugging
                 let date = Date(timeIntervalSince1970: TimeInterval(dat))
                 let components = calendar.dateComponents([.hour, .minute, .second], from: date)
@@ -490,7 +491,7 @@ class voNumber: voState, UITextFieldDelegate {
                 
                 let prevDate = Int((calendar.date(byAdding: .day, value: -1, to: date))!.timeIntervalSince1970)
                 
-                dispatchGroup?.enter() // Enter the group for each query
+                secondHKDispatchGroup.enter() // Enter the group for each query
 
                 let targD = Date(timeIntervalSince1970: TimeInterval(dat))
                 var unit: HKUnit? = nil
@@ -586,7 +587,7 @@ class voNumber: voState, UITextFieldDelegate {
                         }
                     }
 
-                    dispatchGroup?.leave() // Leave the group after this query is processed
+                    secondHKDispatchGroup.leave() // Leave the group after this query is processed
                 }
             }
             
@@ -597,28 +598,29 @@ class voNumber: voState, UITextFieldDelegate {
                 //to.toExecSql(sql: sql)
             //}
             
-            // ensure trkrData has lowest priv if just added a lower privacy valuObj to a trkrData entry
-            let priv = max(MINPRIV, self.vo.vpriv)  // priv needs to be at least minpriv if vpriv = 0
-            sql = """
-            UPDATE trkrData
-            SET minpriv = \(priv)
-            WHERE minpriv > \(priv)
-              AND EXISTS (
-                SELECT 1
-                FROM voData
-                WHERE voData.date = trkrData.date
-                  AND voData.id = \(Int(vo.vid))
-              );
-            """
-            to.toExecSql(sql: sql)
-            DBGLog("Done loadHKdata with \(dateSet.count) records.")
-            dispatchGroup?.leave()  // done with enter before getHealthkitDates processing overall
+            secondHKDispatchGroup.notify(queue: .main) {[self] in
+                // ensure trkrData has lowest priv if just added a lower privacy valuObj to a trkrData entry
+                let priv = max(MINPRIV, self.vo.vpriv)  // priv needs to be at least minpriv if vpriv = 0
+                sql = """
+                UPDATE trkrData
+                SET minpriv = \(priv)
+                WHERE minpriv > \(priv)
+                  AND EXISTS (
+                    SELECT 1
+                    FROM voData
+                    WHERE voData.date = trkrData.date
+                      AND voData.id = \(Int(vo.vid))
+                  );
+                """
+                to.toExecSql(sql: sql)
+                DBGLog("Done loadHKdata with \(dateSet.count) records.")
+                dispatchGroup?.leave()  // done with enter before getHealthkitDates processing overall
+            }
         }
     }
 
     override func clearHKdata() {
         let to = vo.parentTracker
-        //var sql = "delete from voData where (id, date) in (select id, date from voHKstatus where id = \(vo.vid) and stat = \(hkStatus.hkData.rawValue))"
         var sql = "delete from voData where (id, date) in (select id, date from voHKstatus where id = \(vo.vid))"
         to.toExecSql(sql: sql)
         sql = "delete from voHKstatus where id = \(vo.vid)"
