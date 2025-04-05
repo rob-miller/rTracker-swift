@@ -321,14 +321,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     }
 
     func delVOdb(_ vid: Int) {
-        var sql = String(format: "delete from voData where id=%ld;", vid)
-        tempTrackerObj?.toExecSql(sql:sql)
-        sql = String(format: "delete from voConfig where id=%ld;", vid)
-        tempTrackerObj?.toExecSql(sql:sql)
-        sql = String(format: "delete from voHKstatus where id=%ld;", vid)
-        tempTrackerObj?.toExecSql(sql:sql)
-        sql = String(format: "delete from voOTstatus where id=%ld;", vid)
-        tempTrackerObj?.toExecSql(sql:sql)
+        tempTrackerObj?.delVOdb(vid)
     }
 
     @objc func btnSaveSlowPart() {
