@@ -84,13 +84,24 @@ class voState: NSObject, voProtocol {
             return
         }
         
-        //let mytlist = trackerList()
-        let xto = trackerObj(tlist.getTIDfromNameDb(xtName)[0])
-        guard let xvid = xto.toQry2Int(sql: "select id from voConfig where name = '\(xvName)'") else {
-            DBGErr("no xvid for other tracker \(xtName) valueObj \(xvName)")
-            return
-        }
+        let xto: trackerObj
+        let xvid: Int
         
+        if xtName == to.trackerName {
+            xto = to
+            guard let xvo = xto.getValObjByName(xvName) else {
+                DBGErr("no xvid for other tracker = self \(xtName) valueObj \(xvName)")
+                return
+            }
+            xvid = xvo.vid
+        } else {
+            xto = trackerObj(tlist.getTIDfromNameDb(xtName)[0])
+            guard let tempxvid = xto.toQry2Int(sql: "select id from voConfig where name = '\(xvName)'") else {
+                DBGErr("no xvid for other tracker \(xtName) valueObj \(xvName)")
+                return
+            }
+            xvid = tempxvid
+        }
         dispatchGroup?.enter()  // wait for processing all OT data
         
         let xcd = vo.optDict["otCurrent"] == "1"
@@ -103,7 +114,9 @@ class voState: NSObject, voProtocol {
         var prevDate = lastDate
         
         for md in myDates {
-            if xcd {
+            if xto.toid == to.toid {  // other tracker is self so exact date match
+                sql = "select val from voData where id = \(xvid) and date = \(md)"
+            } else if xcd {
                 sql = "select val from voData where id = \(xvid) and date <= \(md) and date >= \(prevDate)"
             } else {
                 sql = "select val from voData where id = \(xvid) and date <= \(md)"
@@ -113,6 +126,9 @@ class voState: NSObject, voProtocol {
                 to.toExecSql(sql: sql)
                 sql = "insert into voOTstatus (id, date, stat) values (\(self.vo.vid), \(md), \(otStatus.otData.rawValue))"
                 to.toExecSql(sql: sql)
+            } else {
+                DBGLog("no data for \(sql)")
+                DBGLog("hello")
             }
             
             prevDate = md
@@ -181,40 +197,6 @@ class voState: NSObject, voProtocol {
 
         return false
 
-        //if ( 
-        //([key isEqualToString:@"autoscale"] && [val isEqualToString:(AUTOSCALEDFLT ? @"1" : @"0")])
-        //||
-        //([key isEqualToString:@"shrinkb"] && [val isEqualToString:(SHRINKBDFLT ? @"1" : @"0")])
-        //||
-        //([key isEqualToString:@"tbnl"] && [val isEqualToString:(TBNLDFLT ? @"1" : @"0")])
-        //||
-        //([key isEqualToString:@"tbni"] && [val isEqualToString:(TBNIDFLT ? @"1" : @"0")])
-        //||
-        //([key isEqualToString:@"tbhi"] && [val isEqualToString:(TBHIDFLT ? @"1" : @"0")])
-        //||
-        //([key isEqualToString:@"graph"] && [val isEqualToString:(GRAPHDFLT ? @"1" : @"0")])
-        //||
-        //([key isEqualToString:@"nswl"] && [val isEqualToString:(NSWLDFLT ? @"1" : @"0")])
-        //||
-        //([key isEqualToString:@"func"] && [val isEqualToString:@""])
-        //||
-        //([key isEqualToString:@"smin"] && ([val floatValue] == f(SLIDRMINDFLT)))
-        //||
-        //([key isEqualToString:@"smax"] && ([val floatValue] == f(SLIDRMAXDFLT)))
-        //||
-        //([key isEqualToString:@"sdflt"] && ([val floatValue] == f(SLIDRDFLTDFLT)))
-        //||
-        //([key isEqualToString:@"frep0"] && ([val intValue] == FREPDFLT))
-        //||
-        //([key isEqualToString:@"frep1"] && ([val intValue] == FREPDFLT))
-        //||
-        //([key isEqualToString:@"fnddp"] && ([val intValue] == FDDPDFLT))
-        //||
-        //([key isEqualToString:@"privacy"] && ([val intValue] == PRIVDFLT))
-        //   ) {
-        //}
-
-        //return [self.vos cleanOptDictDflts:key];
     }
 
     func tvn() -> String {
@@ -300,7 +282,7 @@ class voState: NSObject, voProtocol {
         let xvName = vo.optDict["otValue"] ?? ""
         let xcd = vo.optDict["otCurrent"] == "1"
         if (!xtName.isEmpty && !xvName.isEmpty) {
-            if xtName == MyTracker.trackerName {
+            if xtName == MyTracker.trackerName {  // looking at self
                 let xvo = MyTracker.getValObjByName(xvName)
                 return xvo?.value ?? ""
             } else {
@@ -886,28 +868,6 @@ class voState: NSObject, voProtocol {
     }
 
 
-    /*
-    - (void) transformVO_num:(NSMutableArray *)xdat 
-                        ydat:(NSMutableArray *)ydat 
-                      dscale:(double)dscale 
-                      height:(CGFloat)height 
-                      border:(float)border 
-                   firstDate:(int)firstDate;
-
-    - (void) transformVO_note:(NSMutableArray *)xdat 
-                        ydat:(NSMutableArray *)ydat 
-                      dscale:(double)dscale 
-                      height:(CGFloat)height 
-                      border:(float)border 
-                   firstDate:(int)firstDate;
-
-    - (void) transformVO_bool:(NSMutableArray *)xdat 
-                        ydat:(NSMutableArray *)ydat 
-                      dscale:(double)dscale 
-                      height:(CGFloat)height 
-                      border:(float)border 
-                   firstDate:(int)firstDate;
-    */
     class func voGraphSetNum() -> [String] {
         return ["dots", "bar", "line", "line+dots"]
     }
@@ -920,12 +880,6 @@ class voState: NSObject, voProtocol {
         DBGErr("newVOGD with no handler!")
         return vogd(vo).initAsNum(vo)
     }
-
-    /*
-    - (void) recalculate {
-    	// subclass overrides if need to do anything
-    }
-    */
 
     func setFnVals(_ tDate: Int) {
         // subclass overrides if need to do anything
@@ -947,131 +901,5 @@ class voState: NSObject, voProtocol {
     func mapCsv2Value(_ inCsv: String) -> String {
         return inCsv // subclass overrides if need to do anything - specifically for choice
     }
-    /*
-    - (void) transformVO:(NSMutableArray *)xdat ydat:(NSMutableArray *)ydat dscale:(double)dscale height:(CGFloat)height border:(float)border firstDate:(int)firstDate {
-        DBGErr(@"transformVO with no handler!");
-    }
 
-    - (void) transformVO_num:(NSMutableArray *)xdat ydat:(NSMutableArray *)ydat dscale:(double)dscale height:(CGFloat)height border:(float)border firstDate:(int)firstDate {
-    	//double dscale = d(self.bounds.size.width - (2.0f*BORDER)) / d(self.lastDate - self.firstDate);
-    	double minVal,maxVal;
-
-        trackerObj *myTracker = (trackerObj*) self.vo.parentTracker;
-
-    	if ((self.vo.vtype == VOT_NUMBER || self.vo.vtype == VOT_FUNC) 
-            && ([@"0" isEqualToString:[self.vo.optDict objectForKey:@"autoscale"]])
-            ) { 
-            //DBGLog(@"autoscale= %@", [self.vo.optDict objectForKey:@"autoscale"]);
-    		minVal = [[self.vo.optDict objectForKey:@"gmin"] doubleValue];
-    		maxVal = [[self.vo.optDict objectForKey:@"gmax"] doubleValue];
-    	} else if (self.vo.vtype == VOT_SLIDER) {
-    		NSNumber *nmin = [self.vo.optDict objectForKey:@"smin"];
-    		NSNumber *nmax = [self.vo.optDict objectForKey:@"smax"];
-    		minVal = ( nmin ? [nmin doubleValue] : d(SLIDRMINDFLT) );
-    		maxVal = ( nmax ? [nmax doubleValue] : d(SLIDRMAXDFLT) );
-    	} else if (self.vo.vtype == VOT_CHOICE) {
-    		minVal = d(0);
-    		maxVal = CHOICES+1;
-    	} else {
-    	sql = [NSString stringWithFormat:@"select min(val collate CMPSTRDBL) from voData where id=%d;",self.vo.vid];
-    		minVal = [myTracker toQry2Double:sql];
-    	sql = [NSString stringWithFormat:@"select max(val collate CMPSTRDBL) from voData where id=%d;",self.vo.vid];
-    		maxVal = [myTracker toQry2Double:sql];
-    	}
-
-    	if (minVal == maxVal) {
-    		minVal = 0.0f;
-    	}
-    	if (minVal == maxVal) {
-    		minVal = 1.0f;
-    	}
-
-    	//double vscale = d(self.bounds.size.height - (2.0f*BORDER)) / (maxVal - minVal);
-        double vscale = d(height - (2.0f*border)) / (maxVal - minVal);
-
-    	NSMutableArray *i1 = [[NSMutableArray alloc] init];
-    	NSMutableArray *d1 = [[NSMutableArray alloc] init];
-    	myTracker.sql = [NSString stringWithFormat:@"select date,val from voData where id=%d order by date;",self.vo.vid];
-    	[myTracker toQry2AryID:i1 d1:d1];
-    	myTracker.sql=nil;
-
-    	NSEnumerator *e = [d1 objectEnumerator];
-
-    	for (NSNumber *ni in i1) {
-
-    		NSNumber *nd = [e nextObject];
-
-    		DBGLog(@"i: %@  f: %@",ni,nd);
-    		double d = [ni doubleValue];		// date as int secs cast to float
-    		double v = [nd doubleValue] ;		// val as float
-
-    		d -= (double) firstDate; // self.firstDate;
-    		d *= dscale;
-    		v -= minVal;
-    		v *= vscale;
-
-    		d+= border; //BORDER;
-    		v+= border; //BORDER;
-            // done by doDrawGraph ? : why does this code run again after rotate to portrait?
-    		DBGLog(@"num final: %f %f",d,v);
-    		[xdat addObject:[NSNumber numberWithDouble:d]];
-    		[ydat addObject:[NSNumber numberWithDouble:v]];
-
-    	}
-
-    	[i1 release];
-    	[d1 release];
-    }
-
-    - (void) transformVO_note:(NSMutableArray *)xdat ydat:(NSMutableArray *) ydat dscale:(double)dscale height:(CGFloat)height border:(float)border firstDate:(int)firstDate {
-
-    	//double dscale = d(self.bounds.size.width - (2.0f*BORDER)) / d(self.lastDate - self.firstDate);
-        trackerObj *myTracker = (trackerObj*) self.vo.parentTracker;
-
-    	NSMutableArray *i1 = [[NSMutableArray alloc] init];
-    	myTracker.sql = [NSString stringWithFormat:@"select date from voData where id=%d and val not NULL order by date;",self.vo.vid];
-    	[myTracker toQry2AryI:i1];
-    	myTracker.sql=nil;
-
-    	for (NSNumber *ni in i1) {
-
-    		DBGLog(@"i: %@  ",ni);
-    		double d = [ni doubleValue];		// date as int secs cast to float
-
-    		d -= (double) firstDate;
-    		d *= dscale;
-    		d+= border;
-
-    		[xdat addObject:[NSNumber numberWithDouble:d]];
-    		[ydat addObject:[NSNumber numberWithFloat:(border + (height/10))]];   // DEFAULT_PT=BORDER+5
-
-    	}
-    	[i1 release];
-    }
-
-    - (void) transformVO_bool:(NSMutableArray *)xdat ydat:(NSMutableArray *) ydat dscale:(double)dscale height:(CGFloat)height border:(float)border firstDate:(int)firstDate {
-    	//double dscale = d(self.bounds.size.width - (2.0f*BORDER)) / d(self.lastDate - self.firstDate);
-        trackerObj *myTracker = (trackerObj*) self.vo.parentTracker;
-
-    	NSMutableArray *i1 = [[NSMutableArray alloc] init];
-    	myTracker.sql = [NSString stringWithFormat:@"select date from voData where id=%d and val='1' order by date;",self.vo.vid];
-    	[myTracker toQry2AryI:i1];
-    	myTracker.sql=nil;
-
-    	for (NSNumber *ni in i1) {
-
-    		DBGLog(@"i: %@  ",ni);
-    		double d = [ni doubleValue];		// date as int secs cast to float
-
-    		d -= (double) firstDate;
-    		d *= dscale;
-    		d+= border;
-
-    		[xdat addObject:[NSNumber numberWithDouble:d]];
-    		[ydat addObject:[NSNumber numberWithFloat:(border + (height/10))]];   // DEFAULT_PT=BORDER+5
-
-    	}
-    	[i1 release];
-    }
-    */
 }
