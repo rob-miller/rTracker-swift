@@ -1066,7 +1066,7 @@ class trackerObj: tObjBase {
             changedDateFrom = 0
         }
 
-        DBGLog(String("tObj saveData \(trackerName) date \(trackerDate)"))
+        DBGLog(String("tObj saveData \(trackerName) date \(trackerDate!)"))
 
         var haveData = false
         let tdi = Int(trackerDate?.timeIntervalSince1970 ?? 0) // scary! added (int) cast 6.ii.2013 !!!
@@ -1815,18 +1815,25 @@ class trackerObj: tObjBase {
                 "delete from \(table) where \(whereClause);"
             toExecSql(sql: sql)
         }
+        
+        if vid == nil {
+            let sql = whereClause.isEmpty ?
+            "delete from trkrData;" :
+            "delete from trkrData where \(whereClause);"
+            toExecSql(sql: sql)
+        }
     }
 
     func insertTrackerVodata(vid: Int, date: Int, val: String, vo: valueObj? = nil) {
-        var sql = "insert or replace into voData (id, date, val) values (\(vid),\(date),'|(val)');"
+        var sql = "insert or replace into voData (id, date, val) values (\(vid),\(date),'\(val)');"
         toExecSql(sql:sql)
         if let vo = vo {
             if vo.vtype == VOT_FUNC {
-                sql = "insert or replace into voFNstatus (id, date, stat) values (\(vid),\(date),\(fnStatus.fnData.rawValue);"
-            } else if vo.optDict["otsrc"] != nil {
-                sql = "insert or replace into voOTstatus (id, date, stat) values (\(vid),\(date),\(otStatus.otData.rawValue);"
-            } else if vo.optDict["ahksrc"] != nil {
-                sql = "insert or replace into voAHKstatus (id, date, stat) values (\(vid),\(date),\(hkStatus.hkData.rawValue));"
+                sql = "insert or replace into voFNstatus (id, date, stat) values (\(vid),\(date),\(fnStatus.fnData.rawValue));"
+            } else if vo.optDict["otsrc"] ?? "0" != "0" {
+                sql = "insert or replace into voOTstatus (id, date, stat) values (\(vid),\(date),\(otStatus.otData.rawValue));"
+            } else if vo.optDict["ahksrc"] ?? "0" != "0" {
+                sql = "insert or replace into voHKstatus (id, date, stat) values (\(vid),\(date),\(hkStatus.hkData.rawValue));"
             }
             toExecSql(sql:sql)
         }

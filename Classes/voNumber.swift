@@ -382,7 +382,7 @@ class voNumber: voState, UITextFieldDelegate {
         
         let sql = "select max(date) from voHKstatus where id = \(Int(vo.vid)) and stat = \(hkStatus.hkData.rawValue)"
         let lastDate = to.toQry2Int(sql: sql)
-        
+        DBGLog("lastDate is \(Date(timeIntervalSince1970:TimeInterval(lastDate!)))")
         rthk.getHealthKitDates(for: srcName, lastDate: lastDate) { hkDates in
             DBGLog("hk dates for \(srcName), ahAvg is \(self.vo.optDict["ahAvg"] ?? "1")")
             let existingDatesQuery = """
@@ -460,6 +460,7 @@ class voNumber: voState, UITextFieldDelegate {
 
             // Fetch dates from trkrData for processing
             // will update where we don't have data sourced from healthkit already
+            // since the last time valid data was loaded for this vid
             var sql = """
             SELECT trkrData.date
             FROM trkrData
@@ -473,7 +474,14 @@ class voNumber: voState, UITextFieldDelegate {
                 SELECT 1
                 FROM voHKstatus
                 WHERE voHKstatus.date = trkrData.date
+                  AND voHKstatus.stat = \(hkStatus.hkData.rawValue)
                   AND voHKstatus.id = \(Int(vo.vid))
+            )
+            AND trkrData.date >= (
+                SELECT COALESCE(MAX(date), 0)
+                FROM voHKstatus
+                WHERE id = \(Int(vo.vid))
+                  AND stat = \(hkStatus.hkData.rawValue)
             );
             """  // voHKstatus may be fail/no data or data already stored, in either case don't try to update
             let dateSet = to.toQry2AryI(sql: sql)
