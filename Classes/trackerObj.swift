@@ -314,8 +314,8 @@ class trackerObj: tObjBase {
             return rslt
         }
         
-                
-        //let currDate = Int(trackerDate?.timeIntervalSince1970 ?? 0)
+        let currDate = Int(trackerDate?.timeIntervalSince1970 ?? 0)
+        
         let sql = "select max(date) from voFNstatus where stat = \(fnStatus.fnData.rawValue)"  // any vid will do
         var nextDate = toQry2Int(sql: sql) ?? firstDate()
 
@@ -338,6 +338,10 @@ class trackerObj: tObjBase {
         for vo in valObjTable {
             vo.vos?.doTrimFnVals()
         }
+        
+        // restore current date
+        _ = loadData(currDate)
+        
         rslt = true
         // Wait for our local operations to complete before calling completion
         localGroup.notify(queue: .main) {
@@ -1068,49 +1072,27 @@ class trackerObj: tObjBase {
 
         DBGLog(String("tObj saveData \(trackerName) date \(trackerDate!)"))
 
-        var haveData = false
         let tdi = Int(trackerDate?.timeIntervalSince1970 ?? 0) // scary! added (int) cast 6.ii.2013 !!!
         var minPriv = BIGPRIV
 
         for vo in valObjTable {
             dbgNSAssert((vo.vid >= 0), "tObj saveData vo.vid <= 0")
             if VOT_INFO != vo.vtype || ("1" == vo.optDict["infosave"]) {
-                //if (vo.vtype != VOT_FUNC) { // no fn results data kept
+                
                 DBGLog(String("  vo \(vo.valueName)  id \(vo.vid) val \(vo.value)"))
-                if vo.value == "" {
-                    deleteTrackerVoData(vid:vo.vid, date:tdi)
-                } else {
-                    haveData = true
-                    minPriv = Int(min(vo.vpriv, minPriv))
-                    insertTrackerVodata(vid: vo.vid, date: tdi, val: rTracker_resource.toSqlStr(vo.value), vo:vo)
-                }
-
-
-                //}
+                minPriv = Int(min(vo.vpriv, minPriv))
+                insertTrackerVodata(vid: vo.vid, date: tdi, val: rTracker_resource.toSqlStr(vo.value), vo:vo)
+                
             }
         }
 
-        if haveData {
-            sql = String(format: "insert or replace into trkrData (date,minpriv) values (%d,%ld);", tdi, minPriv)
-            toExecSql(sql:sql)
-        } else {
-            sql = "select count(*) from voData where date=\(tdi);"
-            let r = toQry2Int(sql:sql)
-            if r == 0 {
-                sql = "delete from trkrData where date=\(tdi);"
-                toExecSql(sql:sql)
-            }
-        }
-
-        // cleanup empty values added 28 jan 2014
-        sql = "select count(*) from voData where val=''"
-        let ndc = toQry2Int(sql:sql)!
-        if 0 < ndc {
-            DBGWarn(String("deleting \(ndc) empty values from tracker \(super.toid)"))
-            sql = "delete from voData where val=''"
-            toExecSql(sql:sql)
-        }
-
+        sql = String(format: "insert or replace into trkrData (date,minpriv) values (%d,%ld);", tdi, minPriv)
+        toExecSql(sql:sql)
+        
+        // might have inserted blank voData or trkrData with no voData entries, so clean up
+        // confirm only matching trkrData and voData (and support) entries, no voData entries of ''
+        cleanDb()
+        
         setReminders()
     }
 
@@ -1761,8 +1743,13 @@ class trackerObj: tObjBase {
     }
     
     func cleanDb() {
-        var sql = "delete from trkrData where date not in (select date from voData)"
+        // wipe empty voData entries
+        var sql = "delete from voData where val=''"
+        toExecSql(sql:sql)
+        // wipe trkrData where no voData entries
+        sql = "delete from trkrData where date not in (select date from voData)"
         toExecSql(sql: sql)
+        // wipe voData and support tables where no trkrData entries
         let tables = ["voData", "voHKstatus", "voOTstatus", "voFNstatus"]
         for table in tables {
             sql = "delete from \(table) where date not in (select date from trkrData)"
