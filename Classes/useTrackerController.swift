@@ -173,9 +173,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         needSave = true
         showSaveBtn()
         tracker?.saveTempTrackerData()
-        // delete on save or cancel button
-        // load if present in viewdidload [?]
-        // delete all on program start [?]
+
     }
 /*
     override func loadView() {
@@ -454,9 +452,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 switch dpr.action {
                 case DPA_NEW:
                     tracker!.resetData()
-                    //[self updateTrackerTableView];  // moved below
                     tracker!.trackerDate = Date(timeIntervalSince1970: TimeInterval(tracker!.noCollideDate(Int(dpr.date!.timeIntervalSince1970))))
-                    //[self updateToolBar];
                 case DPA_SET:
                     if tracker!.hasData() {
                         tracker!.change(dpr.date)
@@ -1008,15 +1004,11 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         DispatchQueue.main.async(execute: { [self] in
 
             for vo in tracker!.valObjTable {
-                //if (vo.vtype == VOT_FUNC)
                 vo.display = nil // always redisplay
             }
 
             tableView!.reloadData()
         })
-
-        //[(UITableView *) self.view reloadData];
-        //	[self.tableView reloadData];  // if we were a uitableviewcontroller not uiviewcontroller
     }
 
     func updateToolBar() {
