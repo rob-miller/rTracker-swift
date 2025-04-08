@@ -713,14 +713,12 @@ extension TrackerChart {
         // This would query the database for data points
         guard id != -1, let tracker = tracker else { return [] }
         
-        // Example SQL query
         let sql = """
         SELECT date, val FROM voData 
         WHERE id = \(id) AND date >= \(startTimestamp) AND date <= \(endTimestamp)
         ORDER BY date
         """
         
-        // Call the function on tracker
         return tracker.toQry2AryDate(sql: sql)
     }
     

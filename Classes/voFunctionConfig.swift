@@ -855,13 +855,7 @@ extension voFunction {
     }
 
     func fnrRowCount(_ component: Int) -> Int {
-        /*
-            NSInteger other = (component ? 0 : 1);
-            NSString *otherKey = [NSString stringWithFormat:@"frep%d",other];
-            id otherObj = [self.vo.optDict objectForKey:otherKey];
-            NSInteger otherVal = [otherObj integerValue];
-            if (otherVal < -1) {
-         */        // only allow time offset for previous side of range
+       // only allow time offset for previous side of range
         if component == 1 {
             DBGLog(String(" returning \(votWoSelf.count + 1)"))
             return votWoSelf.count + 1 // [MyTracker.valObjTable count]+1;  // count all +1 for 'current entry'
@@ -898,16 +892,12 @@ extension voFunction {
             // FNSEGNDX_FUNCTBLD
             return fndRowTitle(row)
         }
-        //return [NSString stringWithFormat:@"row %d", row];
     }
 
     func update(forPickerRowSelect row: Int, inComponent component: Int) {
         if fnSegNdx == FNSEGNDX_RANGEBLD {
             ((ctvovcp?.wDict)?["frPkr"] as? UIPickerView)?.reloadComponent(component != 0 ? 0 : 1)
-            //else {
         }
-        //[((UIPickerView*) [self.wDict objectForKey:@"fnPkr"]) reloadComponent:0];
-        //}
     }
 
     func showConstTF() {
