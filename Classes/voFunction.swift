@@ -254,7 +254,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         }
     }
 
-    private var _fnArray: [NSNumber]?
+    var _fnArray: [NSNumber]?
     var fnArray: [NSNumber] {
         if _fnArray == nil {
             _fnArray = []
@@ -1142,5 +1142,57 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
 
     override func newVOGD() -> vogd {
         return vogd(vo).initAsNum(vo)
+    }
+    
+    
+    // MARK: protocol: voDrawOptions page
+
+    override func setOptDictDflts() {
+        if nil == vo.optDict["frep0"] {
+            vo.optDict["frep0"] = "\(FREPDFLT)"
+        }
+        if nil == vo.optDict["frep1"] {
+            vo.optDict["frep1"] = "\(FREPDFLT)"
+        }
+        if nil == vo.optDict["fnddp"] {
+            vo.optDict["fnddp"] = "\(FDDPDFLT)"
+        }
+        if nil == vo.optDict["func"] {
+            vo.optDict["func"] = ""
+        }
+        if nil == vo.optDict["autoscale"] {
+            vo.optDict["autoscale"] = AUTOSCALEDFLT ? "1" : "0"
+        }
+        if nil == vo.optDict["graphlast"] {
+            vo.optDict["graphlast"] = GRAPHLASTDFLT ? "1" : "0"
+        }
+
+        return super.setOptDictDflts()
+    }
+
+    override func cleanOptDictDflts(_ key: String) -> Bool {
+
+        let val = vo.optDict[key]
+        if nil == val {
+            return true
+        }
+
+        if ((key == "frep0") && (Int(val!) == FREPDFLT))
+            || ((key == "frep1") && (Int(val!) == FREPDFLT))
+            || ((key == "fnddp") && (Int(val!) == FDDPDFLT))
+            || ((key == "func") && (val! == ""))
+            || ((key == "autoscale") && (val! == (AUTOSCALEDFLT ? "1" : "0")))
+            || ((key == "graphlast") && (val! == (GRAPHLASTDFLT ? "1" : "0"))) {
+            vo.optDict.removeValue(forKey: key)
+            return true
+        }
+
+        return super.cleanOptDictDflts(key)
+    }
+
+    override func voDrawOptions(_ ctvovc: configTVObjVC?) {
+        ctvovcp = ctvovc
+        reloadEmptyFnArray()
+        drawSelectedPage()
     }
 }

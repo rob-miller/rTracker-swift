@@ -709,51 +709,12 @@ extension voFunction {
         //[UIView commitAnimations];
     }
 
-    // MARK: protocol: voDrawOptions page
-
-    override func setOptDictDflts() {
-        if nil == vo.optDict["frep0"] {
-            vo.optDict["frep0"] = "\(FREPDFLT)"
-        }
-        if nil == vo.optDict["frep1"] {
-            vo.optDict["frep1"] = "\(FREPDFLT)"
-        }
-        if nil == vo.optDict["fnddp"] {
-            vo.optDict["fnddp"] = "\(FDDPDFLT)"
-        }
-        if nil == vo.optDict["func"] {
-            vo.optDict["func"] = ""
-        }
-        if nil == vo.optDict["autoscale"] {
-            vo.optDict["autoscale"] = AUTOSCALEDFLT ? "1" : "0"
-        }
-        if nil == vo.optDict["graphlast"] {
-            vo.optDict["graphlast"] = GRAPHLASTDFLT ? "1" : "0"
-        }
-
-        return super.setOptDictDflts()
+    
+    func noVarsAlert() {
+        rTracker_resource.alert("No variables for function", msg: "A function needs variables to work on.\n\nPlease add a value (like a number, or anything other than a function) to your tracker before trying to create a function.", vc: nil)
     }
-
-    override func cleanOptDictDflts(_ key: String) -> Bool {
-
-        let val = vo.optDict[key]
-        if nil == val {
-            return true
-        }
-
-        if ((key == "frep0") && (Int(val!) == FREPDFLT))
-            || ((key == "frep1") && (Int(val!) == FREPDFLT))
-            || ((key == "fnddp") && (Int(val!) == FDDPDFLT))
-            || ((key == "func") && (val! == ""))
-            || ((key == "autoscale") && (val! == (AUTOSCALEDFLT ? "1" : "0")))
-            || ((key == "graphlast") && (val! == (GRAPHLASTDFLT ? "1" : "0"))) {
-            vo.optDict.removeValue(forKey: key)
-            return true
-        }
-
-        return super.cleanOptDictDflts(key)
-    }
-
+    
+    
     func checkVOs() -> Bool {
         for valo in MyTracker.valObjTable {
             if valo.vtype != VOT_FUNC {
@@ -762,23 +723,9 @@ extension voFunction {
         }
         return false
     }
-
-    func noVarsAlert() {
-        rTracker_resource.alert("No variables for function", msg: "A function needs variables to work on.\n\nPlease add a value (like a number, or anything other than a function) to your tracker before trying to create a function.", vc: nil)
-    }
+    
 
     // MARK: -
-
-
-    override func voDrawOptions(_ ctvovc: configTVObjVC?) {
-        ctvovcp = ctvovc
-        reloadEmptyFnArray()
-        drawSelectedPage()
-    }
-
-    // MARK: -
-
-
     // MARK: picker support
 
     //
