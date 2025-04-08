@@ -704,38 +704,50 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
           pickerContainer.isHidden = false
       }
       
-      @objc internal func dismissPicker() {
-          // Get selected row
-          let selectedRow = pickerView.selectedRow(inComponent: 0)
-          
-          // Update selection if valid
-          if selectedRow >= 0 && selectedRow < filteredValueObjs.count {
-              let selected = filteredValueObjs[selectedRow]
-              selectedValueObjIDs[currentPickerType] = selected.vid
-              
-              // Update button title
-              updateButtonTitles()
-              
-              // Update chart if necessary components are selected
-              if segmentedControl.selectedSegmentIndex == CHART_TYPE_SCATTER {
-                  if selectedValueObjIDs["xAxis"] != -1 && selectedValueObjIDs["yAxis"] != -1 {
-                      generateScatterPlotData()
-                  }
-              } else if segmentedControl.selectedSegmentIndex == CHART_TYPE_DISTRIBUTION {
-                  if selectedValueObjIDs["background"] != -1 {
-                      axisConfig.removeValue(forKey: "background")  // cause full chart reset
-                      generateDistributionPlotData()
-                  }
-              } else {
-                  if selectedValueObjIDs["pieData"] != -1 {
-                      generatePieChartData()
-                  }
-              }
-          }
-          
-          // Hide picker
-          pickerContainer.isHidden = true
-      }
+    @objc internal func dismissPicker() {
+        // Get selected row
+        let selectedRow = pickerView.selectedRow(inComponent: 0)
+        
+        // Update selection if valid
+        if selectedRow >= 0 && selectedRow < filteredValueObjs.count {
+            let selected = filteredValueObjs[selectedRow]
+            let previousSelection = selectedValueObjIDs[currentPickerType]
+            selectedValueObjIDs[currentPickerType] = selected.vid
+            
+            // Update button title
+            updateButtonTitles()
+            
+            // Update chart if necessary components are selected
+            if segmentedControl.selectedSegmentIndex == CHART_TYPE_SCATTER {
+                if selectedValueObjIDs["xAxis"] != -1 && selectedValueObjIDs["yAxis"] != -1 {
+                    // Check if we're changing a fundamental axis, and if so, clear the axis config
+                    if currentPickerType == "xAxis" && previousSelection != selected.vid {
+                        axisConfig.removeValue(forKey: "xAxis")
+                        analyzeScatterData() // Recalculate axis scales with full data range
+                    } else if currentPickerType == "yAxis" && previousSelection != selected.vid {
+                        axisConfig.removeValue(forKey: "yAxis")
+                        analyzeScatterData() // Recalculate axis scales with full data range
+                    } else {
+                        generateScatterPlotData() // Just update with current config
+                    }
+                }
+            } else if segmentedControl.selectedSegmentIndex == CHART_TYPE_DISTRIBUTION {
+                if selectedValueObjIDs["background"] != -1 {
+                    if currentPickerType == "background" && previousSelection != selected.vid {
+                        axisConfig.removeValue(forKey: "background")  // cause full chart reset
+                    }
+                    generateDistributionPlotData()
+                }
+            } else {
+                if selectedValueObjIDs["pieData"] != -1 {
+                    generatePieChartData()
+                }
+            }
+        }
+        
+        // Hide picker
+        pickerContainer.isHidden = true
+    }
       
       @objc internal func cancelPicker() {
           // Hide picker without saving selection
