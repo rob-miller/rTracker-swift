@@ -85,6 +85,7 @@
 		D48F9E7F119AA02A00B37C93 /* valueObj.swift in Sources */ = {isa = PBXBuildFile; fileRef = D48F9E7E119AA02A00B37C93 /* valueObj.swift */; };
 		D48F9FB2119B4CA600B37C93 /* addValObjController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D48F9FB0119B4CA600B37C93 /* addValObjController.swift */; };
 		D494D5B52DA567C500298132 /* healthKitData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D494D5B42DA567B800298132 /* healthKitData.swift */; };
+		D494D5B72DA569FD00298132 /* trackerObjDbCsv.swift in Sources */ = {isa = PBXBuildFile; fileRef = D494D5B62DA569E200298132 /* trackerObjDbCsv.swift */; };
 		D49854B012312A400009E458 /* useTrackerController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D49854AE12312A400009E458 /* useTrackerController.swift */; };
 		D49A7C5E29DDE7B300A4F4C0 /* atomicTestSet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D49A7C5D29DDE7B300A4F4C0 /* atomicTestSet.swift */; };
 		D49F29462ACC8CC800B11560 /* rTrackerUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D49F29452ACC8CC800B11560 /* rTrackerUITests.swift */; };
@@ -252,6 +253,7 @@
 		D48F9E7E119AA02A00B37C93 /* valueObj.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = valueObj.swift; sourceTree = "<group>"; };
 		D48F9FB0119B4CA600B37C93 /* addValObjController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = addValObjController.swift; sourceTree = "<group>"; };
 		D494D5B42DA567B800298132 /* healthKitData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = healthKitData.swift; sourceTree = "<group>"; };
+		D494D5B62DA569E200298132 /* trackerObjDbCsv.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = trackerObjDbCsv.swift; sourceTree = "<group>"; };
 		D49854AE12312A400009E458 /* useTrackerController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = useTrackerController.swift; sourceTree = "<group>"; };
 		D49A7C5D29DDE7B300A4F4C0 /* atomicTestSet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = atomicTestSet.swift; sourceTree = "<group>"; };
 		D49F29432ACC8CC400B11560 /* rTrackerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = rTrackerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -587,6 +589,7 @@
 				D4A314A91189BB6A00F062AC /* tObjBase.swift */,
 				D482D271114FEB5E00CE6BC8 /* trackerList.swift */,
 				D482D275114FEB7500CE6BC8 /* trackerObj.swift */,
+				D494D5B62DA569E200298132 /* trackerObjDbCsv.swift */,
 				D4A700CC13798874005E0E23 /* togd.swift */,
 			);
 			name = "trackerObj classes";
@@ -877,6 +880,7 @@
 				D49A7C5E29DDE7B300A4F4C0 /* atomicTestSet.swift in Sources */,
 				D487D7741260A77800298C1D /* configTVObjVC.swift in Sources */,
 				D4BBB58012672C94000F8467 /* datePickerVC.swift in Sources */,
+				D494D5B72DA569FD00298132 /* trackerObjDbCsv.swift in Sources */,
 				D4B6AE68127EC33500C036ED /* voNumber.swift in Sources */,
 				D4B6AE6D127EC34D00C036ED /* voText.swift in Sources */,
 				D4620057182C046E00F6F2C2 /* notifyReminder.swift in Sources */,
