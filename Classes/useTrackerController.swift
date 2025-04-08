@@ -1,7 +1,7 @@
 //  Converted to Swift 5.7.2 by Swiftify v5.7.25331 - https://swiftify.com/
 ///************
 /// useTrackerController.swift
-/// Copyright 2010-2021 Robert T. Miller
+/// Copyright 2010-2025 Robert T. Miller
 /// Licensed under the Apache License, Version 2.0 (the "License");
 /// you may not use this file except in compliance with the License.
 /// You may obtain a copy of the License at
@@ -20,7 +20,7 @@
 //  this screen presents the list of value objects for a specified tracker
 //
 //  Created by Robert Miller on 03/09/2010.
-//  Copyright 2010 Robert T. Miller. All rights reserved.
+//  Copyright 2010-2025 Robert T. Miller. All rights reserved.
 //
 
 ///************
@@ -70,28 +70,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     private var loadingData = false
     private var viewLoadfinished = false
     
-    /*
-    var prevDateBtn: UIBarButtonItem?
-    var postDateBtn: UIBarButtonItem?
-    var currDateBtn: UIBarButtonItem?
-    var calBtn: UIBarButtonItem?
-    var searchBtn: UIBarButtonItem?
-    var delBtn: UIBarButtonItem?
-    var skip2EndBtn: UIBarButtonItem?
-    //var flexibleSpaceButtonItem: UIBarButtonItem?
-    var fixed1SpaceButtonItem: UIBarButtonItem?
-    var saveBtn: UIBarButtonItem?
-    var menuBtn: UIBarButtonItem?
-    */
     var gt: UIViewController?
-    //n
-    //updateToolBar
-    //targD
-    //doGT
-    //returnFromGraph
-    //rejectTracker
-    //- (BOOL) automaticallyForwardAppearanceAndRotationMethodsToChildViewControllers;
-
 
     var alreadyReturning = false // graphTrackerVC viewWillTransitionToSize() called when we dismissVieControllerAnimated() below, so don't call a second time
     var emCancel = "Cancel"
@@ -175,12 +154,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         tracker?.saveTempTrackerData()
 
     }
-/*
-    override func loadView() {
-        // Ensure that we don't load an .xib file for this viewcontroller
-        view = UIView()
-    }
-*/
+
     // Implement viewDidLoad to do additional setup after loading the view, typically from a nib.
     override func viewDidLoad() {
 
@@ -189,10 +163,6 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         //DBGLog(@"utc: viewDidLoad dpvc=%d", (self.dpvc == nil ? 0 : 1));
         fwdRotations = true
         needSave = false
-
-        //for (valueObj *vo in self.tracker.valObjTable) {
-        //	[vo display];
-        //}
 
         keyboardIsShown = false
 
@@ -370,47 +340,10 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     }
 
     override func didReceiveMemoryWarning() {
-        // Releases the view if it doesn't have a superview.
         super.didReceiveMemoryWarning()
 
-        // Release any cached data, images, etc that aren't in use.
     }
 
-    /*
-    - (void)viewDidUnload {
-    	// Release any retained subviews of the main view.
-    	// e.g. self.myOutlet = nil;
-
-        DBGLog(@"utc unload %@",self.tracker.trackerName);
-
-    	UIView *haveView = [self.view viewWithTag:kViewTag2];
-    	if (haveView) 
-    		[haveView removeFromSuperview];
-    	self.dpvc = nil;
-        self.dpr = nil;
-    	self.table = nil;
-
-    	self.title = nil;
-    	self.prevDateBtn = nil;
-    	self.currDateBtn = nil;
-    	self.postDateBtn = nil;
-    	self.delBtn = nil;
-    	self.calBtn = nil;
-
-    	self.fixed1SpaceButtonItem = nil;
-    	self.flexibleSpaceButtonItem = nil;
-
-    	self.toolbarItems = nil;
-    	self.navigationItem.rightBarButtonItem = nil;	
-    	self.navigationItem.leftBarButtonItem = nil;
-
-    	self.dpr.action = DPA_CANCEL;
-
-    	self.tracker.vc = nil;
-
-    	[super viewDidUnload];
-    }
-    */
 
     func setViewMode() {
         rTracker_resource.setViewMode(self)
@@ -558,7 +491,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 navigationController?.popViewController(animated: true)
             }
         }
-        //[self updateTrackerTableView];  // need for ios5 after set date in graph and return
+
         tableView!.reloadData()
         didSave = false
 
@@ -610,33 +543,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             name: UIResponder.keyboardWillHideNotification,
             object: nil)
 
-        /* 
-             // failed effort to use default back button
-            if ([self.navigationController.viewControllers indexOfObject:self]==NSNotFound) {
-                // back button was pressed.  We know this is true because self is no longer
-                // in the navigation stack.
-            }
-             */
-
         super.viewWillDisappear(animated)
     }
-
-    /*
-     // failed effort to use default back button
-     - (void)willMoveToParentViewController:(UIViewController *)parent {
-         if (parent == nil) {
-             DBGLog(@"will move to parent view controller");
-             if (self.needSave) {
-                 self.alertResponse=CSLEAVE;
-                 [self alertLeaving];
-                 return; // don't disappear yet...
-             } else {
-                 [self leaveTracker];
-             }
-
-         }
-    }
-    */
 
     func rejectTracker() {
         DBGLog(String("rejecting input tracker \(tracker!.toid) \(tracker!.trackerName)  prevTID= \(tracker!.prevTID)"))
@@ -654,85 +562,13 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     }
 
     // MARK: view rotation methods
-    /*
-     // Override to allow orientations other than the default portrait orientation.
-    - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
 
-        // only for pre ios 6.0
-
-        // Return YES for supported orientations
-    	switch (interfaceOrientation) {
-    		case UIInterfaceOrientationPortrait:
-    			DBGLog(@"utc should rotate to interface orientation portrait?");
-    			break;
-    		case UIInterfaceOrientationPortraitUpsideDown:
-    			DBGLog(@"utc should rotate to interface orientation portrait upside down?");
-    			break;
-    		case UIInterfaceOrientationLandscapeLeft:
-    			DBGLog(@"utc should rotate to interface orientation landscape left?");
-
-                if ( SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"5.0") ) {//if 5
-                    [self doGT];
-                }
-
-    			break;
-    		case UIInterfaceOrientationLandscapeRight:
-    			DBGLog(@"utc should rotate to interface orientation landscape right?");
-
-                if ( SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"5.0") ) { //if 5
-                    [self doGT];
-                }
-
-    			break;
-    		default:
-    			DBGWarn(@"utc rotation query but can't tell to where?");
-    			break;			
-    	}
-
-        return (interfaceOrientation != UIInterfaceOrientationPortraitUpsideDown );
-    }
-    */
-    /*
-    - (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation {
-    	switch (fromInterfaceOrientation) {
-    		case UIInterfaceOrientationPortrait:
-    			DBGLog(@"utc did rotate from interface orientation portrait");
-
-                //if ( SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"6.0") ) {
-                    [self doGT];
-                //}
-
-    			break;
-    		case UIInterfaceOrientationPortraitUpsideDown:
-    			DBGLog(@"utc did rotate from interface orientation portrait upside down");
-                [self doGT];
-    			break;
-    		case UIInterfaceOrientationLandscapeLeft:
-    			DBGLog(@"utc did rotate from interface orientation landscape left");
-    			break;
-    		case UIInterfaceOrientationLandscapeRight:
-    			DBGLog(@"utc did rotate from interface orientation landscape right");
-    			break;
-    		default:
-    			DBGWarn(@"utc did rotate but can't tell from where");
-    			break;			
-    	}
-    }
-    */
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
         if isViewLoaded && view.window != nil {
 
             coordinator.animate(alongsideTransition: { context in
                 let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
                 let orientation = windowScene!.interfaceOrientation
-                /*
-                //UIInterfaceOrientation orientation = [[UIApplication sharedApplication] statusBarOrientation];
-                let firstWindow = UIApplication.shared.windows.first
-                let windowScene = firstWindow?.windowScene
-                let orientation = windowScene?.interfaceOrientation
-                */
-                
-                // do whatever  -- willRotateTo
 
                 switch orientation {
                 case .portrait:
@@ -754,13 +590,6 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             }) { [self] context in
                 let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
                 let orientation = windowScene!.interfaceOrientation
-                /*
-                //UIInterfaceOrientation orientation = [[UIApplication sharedApplication] statusBarOrientation];
-                let firstWindow = UIApplication.shared.windows.first
-                let windowScene = firstWindow?.windowScene
-                let orientation = windowScene?.interfaceOrientation
-                 */
-                // do whatever -- didRotateTo
                 switch orientation {
                 case .portrait:
                     DBGLog("utc did rotate to interface orientation portrait")
@@ -801,9 +630,6 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
         self.gt = gt
 
-        //gt.modalPresentationStyle = UIModalPresentationFullScreen;
-        //self.modalPresentationStyle = UIModalPresentationFullScreen;
-
         fwdRotations = false
         if let gt {
             present(gt, animated: true)
@@ -824,56 +650,9 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         DBGLog("graph down")
     }
 
-    /*
-
-    - (void)willAnimateRotationToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation duration:(NSTimeInterval)duration {
-    	switch (interfaceOrientation) {
-    		case UIInterfaceOrientationPortrait:
-    			DBGLog(@"utc will animate rotation to interface orientation portrait duration: %f sec",duration);
-    			break;
-    		case UIInterfaceOrientationPortraitUpsideDown:
-    			DBGLog(@"utc will animate rotation to interface orientation portrait upside down duration: %f sec", duration);
-    			break;
-    		case UIInterfaceOrientationLandscapeLeft:
-    			DBGLog(@"utc will animate rotation to interface orientation landscape left duration: %f sec", duration);
-
-                if ( SYSTEM_VERSION_LESS_THAN(@"5.0") ) {// if not 5
-                    [self doGT];
-                }
-
-    			break;
-    		case UIInterfaceOrientationLandscapeRight:
-    			DBGLog(@"utc will animate rotation to interface orientation landscape right duration: %f sec", duration);
-
-                if ( SYSTEM_VERSION_LESS_THAN(@"5.0") ) { // if not 5
-                    [self doGT];
-                }
-
-    			break;
-    		default:
-    			DBGWarn(@"utc will animate rotation but can't tell to where. duration: %f sec", duration);
-    			break;			
-    	}
-    }
-    */
-
 
     // MARK: -
     // MARK: keyboard notifications
-
-    /*
-    - (void)textFieldDidBeginEditing:(UITextField *)textField
-    {
-    	DBGLog(@"utc: tf begin editing");
-    }
-
-    - (void)textFieldDidEndEditing:(UITextField *)textField
-    {
-    	DBGLog(@"utc: tf end editing");
-    }
-
-    //UITextField *activeField;
-    */
 
     @objc func keyboardWillShow(_ n: Notification?) {
         if let sv = tracker?.activeControl?.superview {
@@ -899,50 +678,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     // MARK: -
     // MARK: top toolbar button factories
-    //- (void)testAction:(id)sender {
-    //	DBGLog(@"test button pressed");
-    /*
-     *  fn= period[full tank]:(delta[odometer]/postSum[fuel])
-     *
-     *  keywords
-     *      period(x)	x= non-null vo | time interval string : define begin,end timestamps; default if not spec'd is each pair of dates
-     *			-> gen array T0[] and array T1[]
-     *		delta(x)	x= non-null vo : return vo(time1) - vo(time0)
-     *			-> ('select val where id=%id and date=%t1' | vo.value) - 'select val where id=%id and date=%t0'
-     *		postsum(x)	x= vo : return sum of vo(>time0)...vo(=time1)
-     *			-> 'select val where id=%id and date > %t0 and date <= %t1' ... sum
-     *		presum(x)	x= vo : return sum of vo(=time0)...vo(<time1)
-     *			-> 'select val where id=%id and date >= %t0 and date < %t1' ... sum
-     *		sum(x)		x= vo : return sum of vo(=time0)...vo(=time1)
-     *			-> 'select val where id=%id and date >= %t0 and date <= %t1' ... sum
-     *		avg(x)      x= vo : return avg of vo(=time0)...vo(=time1)
-     *			-> 'select val where id=%id and date > %t0 and date <= %t1' ... avg
-     *		
-     * -> vo => convert to vid
-     * -> separately define period: none | event pair | event + (plus,minus,centered) time interval 
-     *                            : event = vo not null or hour / week day / month day
-     *
-     * ... can't do plus/minus/centered, value will be plotted on T1
-     */
-    //NSString *myfn = @"period[full tank]:(delta[odometer]/postSum[fuel])";
-    //	
-    //}
-
-    /*
-     - (UIBarButtonItem*)testBtn {
-     if (testBtn == nil) {
-     testBtn = [[UIBarButtonItem alloc]
-     initWithTitle:@"test"
-     style:UIBarButtonItemStylePlain
-     target:self
-     action:@selector(testAction:)];
-     }
-
-     return testBtn;
-
-     }
-     */
-
+    
     var _saveBtn: UIBarButtonItem?
     var saveBtn: UIBarButtonItem {
         if _saveBtn == nil {
@@ -1012,7 +748,6 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     }
 
     func updateToolBar() {
-        //[self setToolbarItems:nil animated:YES];
 
         var tbi: [AnyHashable] = []
 
@@ -1064,8 +799,6 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             tbi.append(fixed1SpaceButtonItem)
         }
 
-        //[tbi addObject:[self testBtn]];
-
         setToolbarItems(tbi as? [UIBarButtonItem], animated: true)
     }
 
@@ -1096,12 +829,6 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             } else if CSSHOWCAL == alertResponse {
                 alertResponse = 0
                 btnCal()
-                /*
-                             // failed effort to use default back button
-                             } else if (CSLEAVE==self.alertResponse) {
-                             [self leaveTracker];
-                             //[super viewWillDisappear:YES];
-                             */
             }
         }
     }
@@ -1148,23 +875,6 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
         present(alert, animated: true)
     }
-
-    /*
-     // failed effort to use default back button
-    - (void) alertLeaving {
-
-        UIAlertView *alert;
-        alert = [[UIAlertView alloc]
-                 initWithTitle:[self.tracker.trackerName stringByAppendingString:@" modified"]
-                 message:@"Save this record before leaving?"
-                 delegate:self
-                 cancelButtonTitle:@"Discard"
-                 otherButtonTitles: @"Save",nil];
-
-        [alert show];
-
-    }
-    */
 
     func setTrackerDate(_ targD: Int) {
 
@@ -1248,20 +958,15 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         }
 
         if tracker!.optDict["savertn"] as? String ?? "1" == "0" {
-            // default:1
-            // do not return to tracker list after save, so generate clear form
-            //if !(toolbarItems?.contains(postDateBtn) ?? false) {
+
             tracker!.resetData()
-            //}
+            
             updateToolBar()
             updateTrackerTableView()
             needSave = false
             showSaveBtn()
         } else {
             leaveTracker()
-            // added here after removing from leaveTracker
-            // but FAILED
-            // [self.navigationController popViewControllerAnimated:YES];
         }
     }
 
@@ -1311,11 +1016,9 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         if (tpriv > PRIVDFLT) || (vprivmax > PRIVDFLT) {
             privAlert(tpriv, vpm: vprivmax)
         }
-
     }
 
     @IBAction func btnAccept() {
-
 
         DBGLog("accepting tracker")
         if tracker!.prevTID != 0 {
@@ -1450,34 +1153,6 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     // MARK: -
     // MARK: UIBar button getters
-    /*
-
-    - (UIBarButtonItem *) prevDateBtn {
-    	if (_prevDateBtn == nil) {
-    		_prevDateBtn = [[UIBarButtonItem alloc]
-    					   initWithTitle:@"<-" // @"Prev"    // @"<"
-    					   style:UIBarButtonItemStylePlain
-    					   target:self
-    					   action:@selector(btnPrevDate)];
-            _prevDateBtn.tintColor = [UIColor darkGrayColor];
-    	}
-    	return _prevDateBtn;
-    }
-
-    - (UIBarButtonItem *) postDateBtn {
-    	if (_postDateBtn == nil) {
-    		_postDateBtn = [[UIBarButtonItem alloc]
-    					   initWithTitle:@"->" // @"Next"    //@">"
-    					   style:UIBarButtonItemStylePlain
-    					   target:self
-    					   action:@selector(btnPostDate)];
-            _postDateBtn.tintColor = [UIColor darkGrayColor];
-    	}
-
-    	return _postDateBtn;
-    }
-
-    */
 
     var _currDateBtn: UIBarButtonItem?
     var currDateBtn: UIBarButtonItem {
@@ -1734,182 +1409,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     }
     
 
-    /*
-    // MARK: -
-    // MARK: mail support
-
-     func handleExportTracker(_ buttonTitle: String?) {
-
-         if emCancel == buttonTitle {
-             DBGLog("cancelled")
-         } else if emItunesExport == buttonTitle {
-             iTunesExport()
-         } else if emDuplicate == buttonTitle {
-             duplicateEntry()
-         } else {
-             openMail(buttonTitle)
-         }
-
-     }
-     
    
-     @IBAction func btnMenu() {
-
-         //int prevD = (int)[self.tracker prevDate];
-         let postD = tracker!.postDate()
-         let lastD = tracker!.lastDate()
-         let currD = Int(tracker!.trackerDate?.timeIntervalSince1970 ?? 0)
-         /*
-              DBGLog(@"prevD = %d %@",prevD,[NSDate dateWithTimeIntervalSince1970:prevD]);
-              DBGLog(@"currD = %d %@",currD,[NSDate dateWithTimeIntervalSince1970:currD]);
-              DBGLog(@"postD = %d %@",postD,[NSDate dateWithTimeIntervalSince1970:postD]);
-              DBGLog(@"lastD = %d %@",lastD,[NSDate dateWithTimeIntervalSince1970:lastD]);
-              */
-         _currDateBtn = nil
-
-         let title = "\(tracker!.trackerName ?? "") tracker"
-         let msg: String? = nil
-         // NSString *btn5 = (postD != 0 || (lastD == currD)) ? emDuplicate : nil;
-
-         let alert = UIAlertController(
-             title: title,
-             message: msg,
-             preferredStyle: .alert)
-
-         let ecsvAction = UIAlertAction(title: emEmailCsv, style: .default, handler: { [self] action in
-             handleExportTracker(emEmailCsv)
-         })
-         let etAction = UIAlertAction(title: emEmailTracker, style: .default, handler: { [self] action in
-             handleExportTracker(emEmailTracker)
-         })
-         let etdAction = UIAlertAction(title: emEmailTrackerData, style: .default, handler: { [self] action in
-             handleExportTracker(emEmailTrackerData)
-         })
-         let iteAction = UIAlertAction(title: emItunesExport, style: .default, handler: { [self] action in
-             handleExportTracker(emItunesExport)
-         })
-         let cancelAction = UIAlertAction(title: emCancel, style: .default, handler: { [self] action in
-             handleExportTracker(emCancel)
-         })
-         if MFMailComposeViewController.canSendMail() {
-             alert.addAction(ecsvAction)
-             alert.addAction(etAction)
-             alert.addAction(etdAction)
-         }
-         alert.addAction(iteAction)
-         if postD != 0 || (lastD == currD) {
-             let dupAction = UIAlertAction(title: emDuplicate, style: .default, handler: { [self] action in
-                 handleExportTracker(emDuplicate)
-             })
-             alert.addAction(dupAction)
-         }
-         alert.addAction(cancelAction)
-
-         present(alert, animated: true)
-
-     }
-
-     
-    func attachTrackerData(_ mailer: MFMailComposeViewController?, key: String?) -> Bool {
-        var result: Bool
-        var fp = tracker!.getPath(RTRKext)
-        var mimetype = "application/rTracker"
-        var fname = (tracker!.trackerName ?? "") + RTRKext
-
-        if key == emEmailCsv {
-            result = tracker!.writeCSV()
-            if result {
-                fp = tracker!.getPath(CSVext)
-                mimetype = "text/csv"
-                fname = (tracker!.trackerName ?? "") + CSVext
-            }
-        } else if key == emEmailTrackerData {
-            result = tracker!.writeRtrk(true)
-        } else if key == emEmailTracker {
-            result = tracker!.writeRtrk(false)
-        } else {
-            DBGLog(String("no match for key \(key)"))
-            result = false
-        }
-
-        if result {
-            var fileData: Data? = nil
-            do {
-                fileData = try NSData(contentsOfFile: fp ?? "", options: .uncached) as Data?
-            } catch {
-            }
-            if nil != fileData {
-                if let fileData {
-                    mailer?.addAttachmentData(fileData, mimeType: mimetype, fileName: fname)
-                }
-            } else {
-                result = false
-            }
-        }
-
-        return result
-    }
-
-    func openMail(_ btnTitle: String?) {
-
-        let mailer = MFMailComposeViewController()
-        mailer.mailComposeDelegate = self
-        if tracker!.optDict["dfltEmail"] != nil {
-            let toRecipients = [(tracker!.optDict)["dfltEmail"]]
-            mailer.setToRecipients(toRecipients.compactMap { $0 } as? [String])
-        }
-        var emailBody: String?
-        var ext: String?
-
-        if emEmailCsv == btnTitle {
-            if rTracker_resource.getRtcsvOutput() {
-                emailBody = (tracker!.trackerName ?? "") + " tracker data file in rtCSV format attached.  Generated by <a href=\"http://rob-miller.github.io/rTracker/rTracker/iPhone/pages/rTracker-main.html\">rTracker</a>."
-            } else {
-                emailBody = (tracker!.trackerName ?? "") + " tracker data file in CSV format attached.  Generated by <a href=\"http://rob-miller.github.io/rTracker/rTracker/iPhone/pages/rTracker-main.html\">rTracker</a>."
-            }
-            mailer.setSubject((tracker!.trackerName ?? "") + " tracker CSV data")
-            ext = CSVext
-        } else {
-            if emEmailTrackerData == btnTitle {
-                emailBody = (tracker!.trackerName ?? "") + " tracker with data attached.  Open with <a href=\"http://rob-miller.github.io/rTracker/rTracker/iPhone/pages/rTracker-main.html\">rTracker</a>."
-                mailer.setSubject((tracker!.trackerName ?? "") + " tracker with data")
-            } else {
-                emailBody = (tracker!.trackerName ?? "") + " tracker attached.  Open with <a href=\"http://rob-miller.github.io/rTracker/rTracker/iPhone/pages/rTracker-main.html\">rTracker</a>."
-                mailer.setSubject((tracker!.trackerName ?? "") + " tracker")
-            }
-            ext = RTRKext
-        }
-
-        mailer.setMessageBody(emailBody ?? "", isHTML: true)
-        if attachTrackerData(mailer, key: btnTitle) {
-            present(mailer, animated: true)
-        }
-        #if RELEASE
-        _ = rTracker_resource.deleteFile(atPath: tracker!.getPath(ext))
-        #else
-        DBGErr(String("leaving rtrk at path: (tracker.getPath(ext))"))
-        #endif
-
-    }
-
-    func mailComposeController(_ controller: MFMailComposeViewController, didFinishWith result: MFMailComposeResult, error: Error?) {
-        switch result {
-        case .cancelled:
-            DBGLog("Mail cancelled: you cancelled the operation and no email message was queued.")
-        case .saved:
-            DBGLog("Mail saved: you saved the email message in the drafts folder.")
-        case .sent:
-            DBGLog("Mail send: the email message is queued in the outbox. It is ready to send.")
-        case .failed:
-            DBGLog("Mail failed: the email message was not saved or queued, possibly due to an error.")
-        default:
-            DBGLog("Mail not sent.")
-        }
-        // Remove the mail view
-        dismiss(animated: true)
-    }
-*/
-    
     // MARK: -
     // MARK: Table view methods
 
@@ -1923,25 +1423,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         return tracker!.valObjTable.count
     }
 
-    //#define MARGIN 7.0f
-
     let CHECKBOX_WIDTH = 40.0
 
-
-    /*
-    // Add to tableView:willDisplayCell:forRowAtIndexPath: method
-    func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
-        //super.tableView(tableView, willDisplay: cell, forRowAt: indexPath)
-        
-        // Check if this cell needs a control update
-        if pendingVOUpdates.contains(indexPath.row),
-           let vo = tracker?.valObjTable[indexPath.row] {
-            vo.vos?.updateControlInCell(cell)
-            pendingVOUpdates.remove(indexPath.row)
-        }
-    }
-    */
-    
     // Customize the appearance of table view cells.
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let row = indexPath.row
@@ -1993,6 +1476,4 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 let CSCANCEL = 1
 let CSSETDATE = 2
 let CSSHOWCAL = 3
-//#define CSLEAVE     4
 
-//#import "trackerCalViewController.h"
