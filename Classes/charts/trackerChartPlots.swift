@@ -629,7 +629,7 @@ extension TrackerChart {
             // Assign values to categories
             for category in categories {
                 if category == "no entry" {
-                    categoryColors[category] = UIColor.systemGreen
+                    categoryValues[category] = Int.min
                     continue
                 }
                 
@@ -658,7 +658,7 @@ extension TrackerChart {
             }
             
             // Find min and max values
-            let filteredValues = categoryValues.values
+        let filteredValues = categoryValues.values.filter { $0 != Int.min }
             if !filteredValues.isEmpty {
                 let minCategoryValue = filteredValues.min() ?? 0
                 let maxCategoryValue = filteredValues.max() ?? 1
@@ -666,8 +666,12 @@ extension TrackerChart {
                 
                 // Assign colors based on normalized value
                 for (category, value) in categoryValues {
-                    let normalizedValue = Double(value - minCategoryValue) / Double(categoryValueRange)
-                    categoryColors[category] = getColorGradient(normalizedValue: normalizedValue)
+                    if category == "no entry" {
+                        categoryColors[category] = UIColor.systemGreen
+                    } else {
+                        let normalizedValue = Double(value - minCategoryValue) / Double(categoryValueRange)
+                        categoryColors[category] = getColorGradient(normalizedValue: normalizedValue)
+                    }
                 }
             }
             
