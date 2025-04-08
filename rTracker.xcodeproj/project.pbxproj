@@ -84,6 +84,7 @@
 		D48E98672A23E65700AC5ACB /* voTBacc2.xib in Resources */ = {isa = PBXBuildFile; fileRef = D48E98602A22831200AC5ACB /* voTBacc2.xib */; };
 		D48F9E7F119AA02A00B37C93 /* valueObj.swift in Sources */ = {isa = PBXBuildFile; fileRef = D48F9E7E119AA02A00B37C93 /* valueObj.swift */; };
 		D48F9FB2119B4CA600B37C93 /* addValObjController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D48F9FB0119B4CA600B37C93 /* addValObjController.swift */; };
+		D494D5B52DA567C500298132 /* healthKitData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D494D5B42DA567B800298132 /* healthKitData.swift */; };
 		D49854B012312A400009E458 /* useTrackerController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D49854AE12312A400009E458 /* useTrackerController.swift */; };
 		D49A7C5E29DDE7B300A4F4C0 /* atomicTestSet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D49A7C5D29DDE7B300A4F4C0 /* atomicTestSet.swift */; };
 		D49F29462ACC8CC800B11560 /* rTrackerUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D49F29452ACC8CC800B11560 /* rTrackerUITests.swift */; };
@@ -250,6 +251,7 @@
 		D48E98602A22831200AC5ACB /* voTBacc2.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = voTBacc2.xib; path = Resources/xib/voTBacc2.xib; sourceTree = SOURCE_ROOT; };
 		D48F9E7E119AA02A00B37C93 /* valueObj.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = valueObj.swift; sourceTree = "<group>"; };
 		D48F9FB0119B4CA600B37C93 /* addValObjController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = addValObjController.swift; sourceTree = "<group>"; };
+		D494D5B42DA567B800298132 /* healthKitData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = healthKitData.swift; sourceTree = "<group>"; };
 		D49854AE12312A400009E458 /* useTrackerController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = useTrackerController.swift; sourceTree = "<group>"; };
 		D49A7C5D29DDE7B300A4F4C0 /* atomicTestSet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = atomicTestSet.swift; sourceTree = "<group>"; };
 		D49F29432ACC8CC400B11560 /* rTrackerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = rTrackerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -360,6 +362,7 @@
 				D4CA92BD2D2EF2DF00554F55 /* filePickerVC.swift */,
 				D4620056182C046E00F6F2C2 /* notifyReminder.swift */,
 				D41AA9022D26CDD5001393C8 /* healthkitSupport.swift */,
+				D494D5B42DA567B800298132 /* healthKitData.swift */,
 				D46F7C941BA89E3A00CC768B /* numField.swift */,
 				D49A7C5D29DDE7B300A4F4C0 /* atomicTestSet.swift */,
 			);
@@ -895,6 +898,7 @@
 				D4CA92BB2D2B115400554F55 /* ahViewController.swift in Sources */,
 				D40DC290133BEC3F00023D5D /* rTracker-resource.swift in Sources */,
 				D43EE368133CBF8D00737E76 /* CSVParser.swift in Sources */,
+				D494D5B52DA567C500298132 /* healthKitData.swift in Sources */,
 				D4A700CD13798874005E0E23 /* togd.swift in Sources */,
 				D4A700D01379928E005E0E23 /* vogd.swift in Sources */,
 				D4F02398137BFF7F0097AC16 /* gtTitleV.swift in Sources */,
