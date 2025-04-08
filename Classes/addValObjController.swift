@@ -62,7 +62,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
     var parentTrackerObj: trackerObj? // this makes a retain cycle....
     var graphTypes: [AnyHashable]?
     var voOptDictStash: [String : String]?
-    // UI element properties 
+    // UI element properties
     @IBOutlet var labelField: UITextField!
     @IBOutlet var votPicker: UIPickerView!
     @IBOutlet var infoBtn: UIButton!
@@ -123,10 +123,10 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
              */
         /*
              UIBarButtonItem *setupBtn = [[UIBarButtonItem alloc]
-        								initWithTitle:@"Setup"
-        								style:UIBarButtonItemStylePlain
-        								target:self
-        								action:@selector(btnSetup)];
+                                        initWithTitle:@"Setup"
+                                        style:UIBarButtonItemStylePlain
+                                        target:self
+                                        action:@selector(btnSetup)];
             */
 
         //self.toolbarItems = @[setupBtn];
@@ -185,9 +185,9 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
         labelField.delegate = self
         labelField.returnKeyType = .done
         //[self.labelField addTarget:self
-        //			  action:@selector(labelFieldDone:)
-        //	forControlEvents:UIControlEventEditingDidEndOnExit];
-        //	DBGLog(@"frame: %f %f %f %f",self.labelField.frame.origin.x, self.labelField.frame.origin.y, self.labelField.frame.size.width, self.labelField.frame.size.height);
+        //              action:@selector(labelFieldDone:)
+        //    forControlEvents:UIControlEventEditingDidEndOnExit];
+        //    DBGLog(@"frame: %f %f %f %f",self.labelField.frame.origin.x, self.labelField.frame.origin.y, self.labelField.frame.size.width, self.labelField.frame.size.height);
 
         // set graph paper background, unseen but still there if darkMode
 
@@ -229,24 +229,24 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
 
     /*
     - (void)viewDidUnload {
-    	// Release any retained subviews of the main view.
-    	// e.g. self.myOutlet = nil;
+        // Release any retained subviews of the main view.
+        // e.g. self.myOutlet = nil;
 
-    	DBGLog(@"avoc didUnload");
+        DBGLog(@"avoc didUnload");
 
-    	self.votPicker = nil;
-    	self.labelField = nil;
-    	self.tempValObj = nil;
-    	self.graphTypes = nil;
-    	self.parentTrackerObj = nil;
+        self.votPicker = nil;
+        self.labelField = nil;
+        self.tempValObj = nil;
+        self.graphTypes = nil;
+        self.parentTrackerObj = nil;
 
-    	self.navigationItem.rightBarButtonItem = nil;
-    	self.navigationItem.leftBarButtonItem = nil;
-    	//[self setToolbarItems:nil
-    	//			 animated:NO];
-    	self.title = nil;
+        self.navigationItem.rightBarButtonItem = nil;
+        self.navigationItem.leftBarButtonItem = nil;
+        //[self setToolbarItems:nil
+        //             animated:NO];
+        self.title = nil;
 
-    	[super viewDidUnload];
+        [super viewDidUnload];
     }
     */
 
@@ -298,11 +298,20 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
     }
 
     @IBAction func btnSave() {
-        //DBGLog(@"addVObjC: btnSave was pressed!");
-
         if (labelField.text?.count ?? 0) == 0 {
             rTracker_resource.alert("Save Item", msg: "Please set a name for this value to save", vc: self)
             return
+        }
+        
+        // ADD: Check for duplicate names
+        let newName = labelField.text ?? ""
+        if let parentObj = parentTrackerObj {
+            for vo in parentObj.valObjTable {
+                if vo.valueName == newName && vo.vid != tempValObj?.vid {
+                    rTracker_resource.alert("Duplicate Name", msg: "A value with this name already exists. Please choose a different name.", vc: self)
+                    return
+                }
+            }
         }
         
         if (VOT_CHOICE == tempValObj!.vtype) {
@@ -311,14 +320,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
                 return
             }
         }
-        /*
-        if VOT_FUNC == tempValObj!.vtype {
-            if tempValObj!.optDict["frep0"] == nil {
-                rTracker_resource.alert("Save Function", msg: "Please configure function range (configure button at bottom)", vc: self)
-                return
-            }
-        }
-         */
+
         voOptDictStash = nil
 
         tempValObj!.valueName = labelField.text // in case neglected to 'done' keyboard
@@ -379,7 +381,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
         }
 
         #if DEBUGLOG
-        let selected = rTracker_resource.vtypeNames()[row]// [self.parentTrackerObj.votArray objectAtIndex:row];
+        let selected = rTracker_resource.vtypeNames()[row]
         DBGLog(String("save label: \(tempValObj!.valueName) id: \(Int(tempValObj!.vid)) row: \(UInt(row)) = \(selected)"))
         #endif
 
