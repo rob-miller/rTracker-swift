@@ -86,6 +86,7 @@
 		D48F9FB2119B4CA600B37C93 /* addValObjController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D48F9FB0119B4CA600B37C93 /* addValObjController.swift */; };
 		D494D5B52DA567C500298132 /* healthKitData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D494D5B42DA567B800298132 /* healthKitData.swift */; };
 		D494D5B72DA569FD00298132 /* trackerObjDbCsv.swift in Sources */ = {isa = PBXBuildFile; fileRef = D494D5B62DA569E200298132 /* trackerObjDbCsv.swift */; };
+		D494D5B92DA56DB700298132 /* voFunctionConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = D494D5B82DA56DAE00298132 /* voFunctionConfig.swift */; };
 		D49854B012312A400009E458 /* useTrackerController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D49854AE12312A400009E458 /* useTrackerController.swift */; };
 		D49A7C5E29DDE7B300A4F4C0 /* atomicTestSet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D49A7C5D29DDE7B300A4F4C0 /* atomicTestSet.swift */; };
 		D49F29462ACC8CC800B11560 /* rTrackerUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D49F29452ACC8CC800B11560 /* rTrackerUITests.swift */; };
@@ -254,6 +255,7 @@
 		D48F9FB0119B4CA600B37C93 /* addValObjController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = addValObjController.swift; sourceTree = "<group>"; };
 		D494D5B42DA567B800298132 /* healthKitData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = healthKitData.swift; sourceTree = "<group>"; };
 		D494D5B62DA569E200298132 /* trackerObjDbCsv.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = trackerObjDbCsv.swift; sourceTree = "<group>"; };
+		D494D5B82DA56DAE00298132 /* voFunctionConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = voFunctionConfig.swift; sourceTree = "<group>"; };
 		D49854AE12312A400009E458 /* useTrackerController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = useTrackerController.swift; sourceTree = "<group>"; };
 		D49A7C5D29DDE7B300A4F4C0 /* atomicTestSet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = atomicTestSet.swift; sourceTree = "<group>"; };
 		D49F29432ACC8CC400B11560 /* rTrackerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = rTrackerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -569,6 +571,7 @@
 				D4B6AEB5127EE24D00C036ED /* voState.swift */,
 				D4CB672E18B3FF7100096490 /* voInfo.swift */,
 				D4B6AE8E127EC3BE00C036ED /* voFunction.swift */,
+				D494D5B82DA56DAE00298132 /* voFunctionConfig.swift */,
 				D4B6AE76127EC36E00C036ED /* voSlider.swift */,
 				D4B6AE89127EC3AA00C036ED /* voImage.swift */,
 				D4B6AE82127EC39800C036ED /* voBoolean.swift */,
@@ -876,6 +879,7 @@
 				D417E3112A2121570093564A /* TSQCalendarCell.m in Sources */,
 				D4E5FDD8125283B1004BB4EC /* graphTrackerVC.swift in Sources */,
 				D4E5FE4612529300004BB4EC /* graphTrackerV.swift in Sources */,
+				D494D5B92DA56DB700298132 /* voFunctionConfig.swift in Sources */,
 				D47D169119028FBE006563B9 /* notifyReminderVC2.swift in Sources */,
 				D49A7C5E29DDE7B300A4F4C0 /* atomicTestSet.swift in Sources */,
 				D487D7741260A77800298C1D /* configTVObjVC.swift in Sources */,
