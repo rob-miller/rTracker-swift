@@ -432,7 +432,7 @@ class privacyV: UIView {
     var ssValLab: UILabel? {
         let lfx = frame.origin.x + (frame.size.width * (TICTACHRZFRAC / 2.0))            // x= same as clearBtn
         let lfy = frame.size.height * ((1.0 - TICTACVRTFRAC) - (1.0 - TICTACHGTFRAC))           // y = same as saveBtn
-        let lfsize = "100".size(withAttributes: [NSAttributedString.Key.font: PrefBodyFont])
+        let lfsize = "1000".size(withAttributes: [NSAttributedString.Key.font: PrefBodyFont])
         if _ssValLab == nil {
             var lframe = CGRect(x:lfx, y:lfy, width:lfsize.width, height:lfsize.height)
             lframe.origin.x -= lframe.size.width / 2.0
