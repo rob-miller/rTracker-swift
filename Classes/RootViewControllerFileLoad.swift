@@ -95,7 +95,7 @@ extension RootViewController {
             return !matches.isEmpty
         } catch {
             // If there's an error reading the file or processing the regex, return false
-            print(error.localizedDescription)
+            DBGWarn(error.localizedDescription)
             return false
         }
     }

@@ -536,7 +536,7 @@ class voNumber: voState, UITextFieldDelegate {
                         // This line will help you set a conditional breakpoint
                         if Calendar.current.isDate(date, inSameDayAs: DateComponents(calendar: .current, year: 2025, month: 3, day: 23).date!) {
                             // Set your breakpoint on this line
-                            print("Breakpoint will trigger here")
+                            DBGLog("Breakpoint will trigger here")
                         }
                          */
                         

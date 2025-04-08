@@ -1063,12 +1063,6 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
             }
         }
         
-        //NSUInteger row = [indexPath row];
-        //DBGLog(@"selected row %d : %@", row, [self.tlist.topLayoutNames objectAtIndex:row]);
-        
-        //print("Navigation controller: \(String(describing: self.navigationController))")
-        //print("Top controller: \(String(describing: self.navigationController?.topViewController))")
-        
         tableView.cellForRow(at: indexPath)?.isSelected = false
         openTracker(tlist.getTIDfromIndex(indexPath.row), rejectable: false)
 

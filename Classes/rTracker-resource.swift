@@ -183,7 +183,7 @@ class rTracker_resource: NSObject {
         
         // Construct the target URL in the app's Documents/Inbox directory
         guard let documentsDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
-            print("Failed to locate the Documents directory.")
+            DBGWarn("Failed to locate the Documents directory.")
             return
         }
         let inboxDirectory = documentsDirectory.appendingPathComponent("Inbox")
@@ -194,7 +194,7 @@ class rTracker_resource: NSObject {
             do {
                 try fileManager.createDirectory(at: inboxDirectory, withIntermediateDirectories: true, attributes: nil)
             } catch {
-                print("Failed to create the Inbox directory: \(error)")
+                DBGWarn("Failed to create the Inbox directory: \(error)")
                 return
             }
         }
@@ -206,9 +206,9 @@ class rTracker_resource: NSObject {
                 try fileManager.removeItem(at: targetURL)
             }
             try fileManager.copyItem(at: sourceURL, to: targetURL)
-            print("File copied successfully to \(targetURL.path)")
+            DBGLog("File copied successfully to \(targetURL.path)")
         } catch {
-            print("Failed to copy the file: \(error)")
+            DBGWarn("Failed to copy the file: \(error)")
         }
     }
     

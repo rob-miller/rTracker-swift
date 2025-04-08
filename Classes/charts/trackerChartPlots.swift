@@ -372,7 +372,7 @@ extension TrackerChart {
                 return (categoryValues[a] ?? 0) > (categoryValues[b] ?? 0)
             }
             
-            print(sortedCategories)
+            DBGLog("\(sortedCategories)")
             drawCategoryLegend(
                 in: chartView,
                 categories: sortedCategories,

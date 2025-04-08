@@ -574,7 +574,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
                     vo?.optDict["otValue"] = updatedValue
                     vo?.optDict["otCurrent"] = updatedOtCurrent ? "1" : "0"
                     if let button = scroll.subviews.first(where: { $0 is UIButton && $0.accessibilityIdentifier == "configtv_otSelBtn" }) as? UIButton {
-                        print("otSelect view returned: \(updatedTracker ?? "nil") \(updatedValue ?? "nil") optDict is \(vo?.optDict["otTracker"] ?? "nil")  \(vo?.optDict["otValue"] ?? "nil")")
+                        DBGLog("otSelect view returned: \(updatedTracker ?? "nil") \(updatedValue ?? "nil") optDict is \(vo?.optDict["otTracker"] ?? "nil")  \(vo?.optDict["otValue"] ?? "nil")")
                         DispatchQueue.main.async {
                             let source = self.vo?.optDict["otTracker"] ?? ""
                             let value = self.vo?.optDict["otValue"] ?? ""
@@ -622,7 +622,6 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
     func configSwitch(_ frame: CGRect, key: String, state: Bool, addsv: Bool) -> CGRect {
         // Switch control
         let switchControl = UISwitch(frame: frame)
-        // print(switchControl.intrinsicContentSize)
         // Set the switch state
         switchControl.isOn = state
 

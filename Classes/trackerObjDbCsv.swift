@@ -1095,16 +1095,6 @@ extension trackerObj {
 
             DBGErr(String("problem writing file \(fname)"))
             result = false
-            
-            /*
-            let foo = dictFromTO() as NSDictionary?
-            do {
-                let plistData = try PropertyListSerialization.data(fromPropertyList: (dictFromTO() as NSDictionary?), format: .xml, options: 0)
-                try plistData.write(to: URL(fileURLWithPath: fpath))
-            } catch {
-                print("Error writing plist to file: \(error)")
-            }
-             */
 
         } else {
             //[rTracker_resource protectFile:fpath];
