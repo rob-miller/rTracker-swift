@@ -1,7 +1,7 @@
 //  Converted to Swift 5.7.2 by Swiftify v5.7.25331 - https://swiftify.com/
 ///************
 /// rTracker-resource.swift
-/// Copyright 2011-2021 Robert T. Miller
+/// Copyright 2011-2025 Robert T. Miller
 /// Licensed under the Apache License, Version 2.0 (the "License");
 /// you may not use this file except in compliance with the License.
 /// You may obtain a copy of the License at
@@ -18,7 +18,7 @@
 //  rTracker
 //
 //  Created by Rob Miller on 24/03/2011.
-//  Copyright 2011 Robert T. Miller. All rights reserved.
+//  Copyright 2011-2025 Robert T. Miller. All rights reserved.
 //
 
 import AudioToolbox
@@ -41,25 +41,15 @@ let LABELMINHEIGHT = 31.0  // uiswitch minimum intrinsic height
 func minLabelHeight(_ height : CGFloat) -> CGFloat {
     return max(height, LABELMINHEIGHT)
 }
-// Sample code from iOS 7 Transistion Guide
-// Loading Resources Conditionally
-//NSUInteger DeviceSystemMajorVersion();
-//#define kIS_LESS_THAN_IOS7 (DeviceSystemMajorVersion() < 7)
-//#define kIS_LESS_THAN_IOS8 (DeviceSystemMajorVersion() < 8)
-
-
 
 var keyboardIsShown = false
 var currKeyboardView: UIView? = nil
 var currKeyboardSaveFrame = CGRect.zero
 var resigningActive = false
 var loadingDemos = false
-//---------------------------
-    var hasAmPm = false
-//---------------------------
-    // MARK: -
-    // MARK: activity indicator support
-    var activityIndicator: UIActivityIndicatorView? = nil
+
+var hasAmPm = false
+var activityIndicator: UIActivityIndicatorView? = nil
 var outerView: UIView?
 var captionLabel: UILabel?
 var activityIndicatorGoing = false
@@ -71,38 +61,12 @@ var localProgValCurr: Float = 0.0
 var localView: UIView?
 var localNavItem: UINavigationItem?
 var localDisable = false
-//---------------------------
-    // MARK: -
-    // MARK: option settings to remember
-    var separateDateTimePicker = SDTDFLT
+
+var separateDateTimePicker = SDTDFLT
 var rtcsvOutput = RTCSVOUTDFLT
 var savePrivate = SAVEPRIVDFLT
 var acceptLicense = ACCEPTLICENSEDFLT
-/*
-     // can't set more than 4 :-(
 
-    static NSUInteger SCICount=SCICOUNTDFLT;
-
-    + (NSUInteger)getSCICount {
-        return SCICount;
-    }
-    + (void)setSCICount:(NSUInteger)saveSCICount {
-        SCICount = saveSCICount;
-    }
-    */
-
-    /*
-    static BOOL hideRTimes=HIDERTIMESDFLT;
-
-     + (BOOL)getHideRTimes {
-    	return hideRTimes;
-    }
-
-    + (void)setHideRTimes:(BOOL)hideRT {
-    	hideRTimes = hideRT;
-    	DBGLog(@"updateHideRTimes:%d",hideRTimes);
-    }
-    */
 var toldAboutSwipe = false
 var toldAboutSwipe2 = false
 var toldAboutNotifications = false
@@ -121,11 +85,6 @@ var bgColor: UIColor? = nil
 var bgImage: UIImage? = nil
 
 
-//#define SAFE_DISPATCH_SYNC(code) if ([NSThread isMainThread]) { code } else { dispatch_sync(dispatch_get_main_queue(), ^(void){ code }); }
-/*
-func safeDispatchSync(_ block: () -> ()) {
-}
-*/
 
 // found syntax for this here :
 // https://stackoverflow.com/questions/5225130/grand-central-dispatch-gcd-vs-performselector-need-a-better-explanation/5226271#5226271
@@ -138,9 +97,6 @@ func safeDispatchSync(_ block: () -> Void) {
     }
 }
 
-
-//---------------------------
-
 // Sample code from iOS 7 Transistion Guide
 // Loading Resources Conditionally
 var _deviceSystemMajorVersion = {
@@ -151,7 +107,6 @@ return _deviceSystemMajorVersion
 
 
 func DeviceSystemMajorVersion() -> Int {
-    // `dispatch_once()` call was converted to a static variable initializer
     return _deviceSystemMajorVersion
 }
 
@@ -170,10 +125,6 @@ class rTracker_resource: NSObject {
     
     var vhHKchange = false  // signify vo healthkit source changed and need to wipe data if saved later
     
-    //+ (void) safeDispatchSync:(dispatch_block_t) block ;
-
-    //---------------------------
-
     // For UIKit-based apps
     class func getSafeAreaInsets() -> UIEdgeInsets {
         // Get the active window scene
@@ -262,14 +213,6 @@ class rTracker_resource: NSObject {
     }
     
     class func protectFile(_ fp: String?) -> Bool {
-        // not needed because NSFileProtectionComplete enabled at app level
-
-        /*
-            NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
-            [dict setObject:NSFileProtectionComplete forKey:NSFileProtectionKey];
-            if (![[NSFileManager defaultManager] setAttributes:dict ofItemAtPath:fp error:&err]) {
-            */
-
         do {
             try FileManager.default.setAttributes([
                 .protectionKey: FileProtectionType.complete
@@ -289,10 +232,6 @@ class rTracker_resource: NSObject {
 
     }
 
-    //---------------------------
-
-    // from http://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/TextLayout/Tasks/CountLines.html
-    // Text Layout Programming Guide: Counting Lines of Text
     class func countLines(_ str: String?) -> Int {
 
         var numberOfLines: Int
@@ -310,7 +249,6 @@ class rTracker_resource: NSObject {
         return numberOfLines
     }
 
-    //---------------------------
 
     class func rtmx_getCheckButton(_ frame: CGRect) -> UIButton? {
         let _checkButton = UIButton(type: .custom)
@@ -401,14 +339,10 @@ class rTracker_resource: NSObject {
             w.makeKeyAndVisible()
             vcCpy = w.rootViewController
         }
-        //dispatch_async(dispatch_get_main_queue(), ^(void){
+
         if let alert {
             vcCpy?.present(alert, animated: true)
         }
-        //});
-        //});
-
-
     }
 
     class func topViewController(_ base: UIViewController? = UIApplication.shared.connectedScenes.filter({$0.activationState == .foregroundActive}).map({$0 as? UIWindowScene}).compactMap({$0}).first?.windows.filter({$0.isKeyWindow}).first?.rootViewController) -> UIViewController? {
@@ -426,13 +360,10 @@ class rTracker_resource: NSObject {
         return base
     }
 
-
-
     class func alert(_ title: String?, msg: String?, vc: UIViewController?) {
         var alert: UIAlertController?
         var vcCpy = vc
         safeDispatchSync({
-            //[rTracker_resource alert_mt:title msg:msg vc:vc];
 
             alert = UIAlertController(
                 title: title,
@@ -448,17 +379,6 @@ class rTracker_resource: NSObject {
             alert?.addAction(defaultAction)
 
             if nil == vcCpy {
-                /*
-                let w = UIWindow(frame: UIScreen.main.bounds)
-                w.rootViewController = UIViewController()
-                w.windowLevel = UIWindow.Level(UIWindow.Level.alert.rawValue + 1)
-                w.makeKeyAndVisible()
-                 */
-                /*
-                let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
-                let window = windowScene!.windows.first
-                let rootViewController = window!.rootViewController
-                 */
                 vcCpy = topViewController()  // rootViewController
             }
             //dispatch_async(dispatch_get_main_queue(), ^(void){
@@ -467,31 +387,11 @@ class rTracker_resource: NSObject {
                     vcCpy?.present(alert, animated: true)
                 }
             }
-            //});
-
         })
-
-    }
-    /*
-    class func dismissAlertController(_ alertController: UIAlertController) {
-        alertController.dismiss(animated: true, completion: nil)
     }
 
-    class func doQuickAlert(title: String, msg: String, delay: Int, vc: UIViewController) {
-        let alert = UIAlertController(title: title, message: msg, preferredStyle: .alert)
-        vc.present(alert, animated: true, completion: nil)
-        //perform(#selector(dismissAlertController(_:)), with: alert, afterDelay: TimeInterval(delay))
-         DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-             dismissAlertController(alert)
-         }
-
-    }
-     */
-    //---------------------------
     // MARK: -
     // MARK: navcontroller view transition
-
-    // from http://freelancemadscience.squarespace.com/fmslabs_blog/2010/10/13/changing-the-transition-animation-for-an-uinavigationcontrol.html
 
     class func myNavPushTransition(_ navc: UINavigationController?, vc: UIViewController?, animOpt: Int) {
         if let view = navc?.view {
@@ -521,8 +421,6 @@ class rTracker_resource: NSObject {
                 })
         }
     }
-
-    //---------------------------
 
     class func colorSet() -> [UIColor] {
         return [
@@ -600,13 +498,7 @@ class rTracker_resource: NSObject {
 
 
         activityIndicator = UIActivityIndicatorView(style: .large)
-        //activityIndicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray ];
-        //activityIndicator.frame = CGRectMake(0.0, 0.0, 60.0, 60.0);
         activityIndicator?.frame = CGRect(x: 65, y: 40, width: activityIndicator?.bounds.size.width ?? 0.0, height: activityIndicator?.bounds.size.height ?? 0.0)
-
-        //activityIndicator.backgroundColor = [UIColor blackColor];
-
-        //activityIndicator.center = outerView.center;
 
         if let activityIndicator {
             outerView?.addSubview(activityIndicator)
@@ -623,8 +515,6 @@ class rTracker_resource: NSObject {
             outerView?.addSubview(captionLabel)
         }
 
-        //[activityIndicator performSelectorOnMainThread:@selector(startAnimating) withObject:nil waitUntilDone:YES];
-
         if let outerView {
             view?.addSubview(outerView)
         }
@@ -635,8 +525,6 @@ class rTracker_resource: NSObject {
     class func finishActivityIndicator(_ view: UIView?, navItem: UINavigationItem?, disable: Bool) {
         DBGLog("stop spinner")
 
-        //if (! activityIndicatorGoing) return;  // race condition, may not be set yet so ignore
-
         safeDispatchSync({
             if disable {
                 //[navItem setHidesBackButton:NO animated:YES];
@@ -644,10 +532,7 @@ class rTracker_resource: NSObject {
                 view?.isUserInteractionEnabled = true
             }
 
-            //[activityIndicator stopAnimating];
-            //activityIndicator?.performSelector(onMainThread: #selector(stopAnimating), with: nil, waitUntilDone: true)
             activityIndicator?.stopAnimating()
-
 
             outerView?.removeFromSuperview()
 
@@ -657,7 +542,6 @@ class rTracker_resource: NSObject {
             activityIndicatorGoing = false
         })
         DBGLog("not spinning")
-
     }
 
     class func startProgressBar(_ view: UIView?, navItem: UINavigationItem?, disable: Bool, yloc: CGFloat) {
@@ -669,35 +553,20 @@ class rTracker_resource: NSObject {
             navItem?.rightBarButtonItem?.isEnabled = false
         }
 
-        //progressBar = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault ];
         progressBar = UIProgressView(progressViewStyle: .bar)
         var pbFrame = progressBar?.frame
         let vFrame = view?.frame
         pbFrame?.size.width = vFrame?.size.width ?? 0.0
 
-        //pbFrame.origin.y = 70.0;
         pbFrame?.origin.y = yloc
         DBGLog(String("progressbar yloc= \(yloc)"))
 
-        //pbFrame.size.height = 550;
         progressBar?.frame = pbFrame ?? CGRect.zero
 
-        //progressBar.center = view.center;
         progressBarGoing = true
         if let progressBar {
             view?.addSubview(progressBar)
         }
-        //[view bringSubviewToFront:progressBar];
-        //[progressBar startAnimating];
-
-        /*
-            [[NSNotificationCenter defaultCenter] addObserver:self 
-                                                     selector:@selector(updateProgressBar) 
-                                                         name:rtProgressBarUpdateNotification 
-                                                       object:nil];
-
-          */
-        //DBGLog(@"progressBar started");
     }
 
     class func setProgressVal(_ progressVal: Float) {
@@ -707,7 +576,6 @@ class rTracker_resource: NSObject {
 
     @objc class func updateProgressBar() {
         progressBar?.progress = localProgressVal
-        //DBGLog(@"progress bar updated: %f",localProgressVal);
     }
 
     //+ (void) updateProgressBar;
@@ -719,24 +587,19 @@ class rTracker_resource: NSObject {
     class func bumpProgressBar() {
         localProgValCurr += 1.0
         self.setProgressVal(localProgValCurr / localProgValTotal)
-        //DBGLog(@"setprogress %f", (localProgValCurr/localProgValTotal));
+
     }
 
     @objc class func doFinishProgressBar() {
         if localDisable {
-            //[localNavItem setHidesBackButton:NO animated:YES];
             localNavItem?.leftBarButtonItem?.isEnabled = true
             localNavItem?.rightBarButtonItem?.isEnabled = true
             localView?.isUserInteractionEnabled = true
         }
 
-        //[progressBar stopAnimating];
-
         progressBar?.removeFromSuperview()
         progressBar = nil
         progressBarGoing = false
-        //DBGLog(@"progressbar finished");
-
 
     }
 
@@ -756,7 +619,6 @@ class rTracker_resource: NSObject {
 
     class func setSeparateDateTimePicker(_ sdt: Bool) {
         separateDateTimePicker = sdt
-        //DBGLog(@"updateSeparateDateTimePicker:%d",separateDateTimePicker);
     }
 
     class func getRtcsvOutput() -> Bool {
@@ -765,7 +627,6 @@ class rTracker_resource: NSObject {
 
     class func setRtcsvOutput(_ rtcsvOut: Bool) {
         rtcsvOutput = rtcsvOut
-        //DBGLog(@"updateRtcsvOutput:%d",rtcsvOutput);
     }
 
     class func getSavePrivate() -> Bool {
@@ -774,7 +635,6 @@ class rTracker_resource: NSObject {
 
     class func setSavePrivate(_ savePriv: Bool) {
         savePrivate = savePriv
-        //DBGLog(@"updateSavePrivate:%d",savePrivate);
     }
 
     class func getAcceptLicense() -> Bool {
@@ -783,7 +643,6 @@ class rTracker_resource: NSObject {
 
     class func setAcceptLicense(_ acceptLic: Bool) {
         acceptLicense = acceptLic
-        //DBGLog(@"updateAcceptLicense:%d",acceptLicense);
     }
 
     class func getToldAboutSwipe() -> Bool {
@@ -814,22 +673,12 @@ class rTracker_resource: NSObject {
     }
 
     class func setNotificationsEnabled() {
-        // if ([[UIApplication sharedApplication] respondsToSelector:@selector(currentUserNotificationSettings)]) {
-        //safeDispatchSync(^{
         let center = UNUserNotificationCenter.current()
         center.getNotificationSettings(completionHandler: { settings in
             if settings.authorizationStatus == .authorized {
                 notificationsEnabled = true
             }
         })
-        // UIUserNotificationType types = [[[UIApplication sharedApplication] currentUserNotificationSettings] types];
-        // return (types & UIUserNotificationTypeAlert);
-        // }
-        // else {
-        // iOS 14 minimum now
-        //    return [[UIApplication sharedApplication] isRegisteredForRemoteNotifications];
-        // }
-        //});
     }
 
     class func getNotificationsEnabled() -> Bool {
@@ -922,7 +771,6 @@ class rTracker_resource: NSObject {
     // MARK: -
     // MARK: sql
 
-
     class func fromSqlStr(_ instr: String?) -> String? {
         let outstr = instr?.replacingOccurrences(of: "''", with: "'")
         //DBGLog(@"in: %@  out: %@",instr,outstr);
@@ -948,8 +796,6 @@ class rTracker_resource: NSObject {
         } else {
             return text?.replacingOccurrences(of: "-", with: "")
         }
-
-        //return [text stringByAppendingString:@"-"];
     }
 
     class func rrConfigTextField(_ frame: CGRect, key: String?, target: Any?, delegate: Any?, action: Selector, num: Bool, place: String?, text: String?) -> UITextField? {
@@ -1018,34 +864,6 @@ class rTracker_resource: NSObject {
         return rtf
     }
 
-    //---------------------------------------
-    /*
-    + (CGSize)frameSizeForAttributedString:(NSAttributedString *)attributedString width:(CGFloat)width {
-        CTTypesetterRef typesetter = CTTypesetterCreateWithAttributedString((CFAttributedStringRef)attributedString);
-        //CGFloat width = YOUR_FIXED_WIDTH;
-
-        CFIndex offset = 0, length;
-        CGFloat y = 0;
-        do {
-            length = CTTypesetterSuggestLineBreak(typesetter, offset, width);
-            CTLineRef line = CTTypesetterCreateLine(typesetter, CFRangeMake(offset, length));
-
-            CGFloat ascent, descent, leading;
-            CTLineGetTypographicBounds(line, &ascent, &descent, &leading);
-
-            CFRelease(line);
-
-            offset += length;
-            y += ascent + descent + leading;
-        } while (offset < [attributedString length]);
-
-        CFRelease(typesetter);
-
-        return CGSizeMake(width, ceil(y));
-    }
-     */
-    //---------------------------------------
-
     // MARK: -
     // MARK: keyboard support
     
@@ -1082,7 +900,6 @@ class rTracker_resource: NSObject {
     }
 
     @objc class func willShowKeyboard(_ n: Notification?, vwTarg: UIView?, vwScroll: UIView? = nil) {
-        //var n = n
 
         guard let vwTarg = vwTarg else {
             return
@@ -1102,10 +919,8 @@ class rTracker_resource: NSObject {
         // get the size of the keyboard
         let boundsValue = userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue //FrameBeginUserInfoKey
         let keyboardOrigin = boundsValue?.cgRectValue.origin
-        //let keyboardSize = boundsValue?.cgRectValue.size
 
         var viewFrame = vwS.frame
-        //let topk = (viewFrame?.size.height ?? 0.0) - (keyboardSize?.height ?? 0.0) // - viewFrame.origin.y;
         let topk = keyboardOrigin!.y // + keyboardSize!.height
         
         //if var boty = calculateScreenOffset(of: vwTarg) {
@@ -1179,58 +994,6 @@ class rTracker_resource: NSObject {
     // MARK: -
     // MARK: launchImage support
 
-    // figure out launchImage
-    /*
-    static BOOL getOrientEnabled=false;
-
-    +(void) enableOrientationData
-    {
-        if (getOrientEnabled) return;
-        //[[UIDevice currentDevice] beginGeneratingDeviceOrientationNotifications];
-        getOrientEnabled=true;
-    }
-    +(void) disableOrientationData
-    {
-        if (! getOrientEnabled) return;
-        //[[UIDevice currentDevice] endGeneratingDeviceOrientationNotifications];
-        getOrientEnabled=false;
-    }
-    */
-    class func isDeviceiPhone() -> Bool {
-        //if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone)
-
-        if UIDevice.current.userInterfaceIdiom == .phone {
-            return true
-        }
-
-        return false
-    }
-
-    //+(void)enableOrientationData;
-    //+(void)disableOrientationData;
-    class func isDeviceiPhone4() -> Bool {
-        let size = UIScreen.main.bounds.size
-        // iphone6+  414, 736
-        // iphone6   375, 667
-        // iphone 5s 320, 568
-        // iphone 5  320, 568
-        // iphone 4s 320, 480
-
-
-        if (size.height == 480 && size.width == 320) || (size.height == 320 && size.width == 480) {
-            return true
-        }
-
-        return false
-    }
-
-    class func isDeviceRetina() -> Bool {
-        if UIScreen.main.responds(to: #selector(CADisplayLink.init(target:selector:))) && (UIScreen.main.scale == 2.0) {
-            return true
-        } else {
-            return false
-        }
-    }
 
     class func getKeyWindowFrame() -> CGRect {
         var rframe: CGRect = CGRect.zero
@@ -1277,87 +1040,7 @@ class rTracker_resource: NSObject {
 
     class func getLaunchImageName() -> String? {
         return "LaunchScreenImg.png"
-
-        /* no longer needed with story board
-            NSArray *allPngImageNames = [[NSBundle mainBundle] pathsForResourcesOfType:@"png"
-                                                    inDirectory:nil];
-
-            for (NSString *imgName in allPngImageNames){
-                DBGLog(@"imgName %@", imgName);
-                // Find launch images
-                if ([imgName containsString:@"LaunchImage"]){
-                    UIImage *img = [UIImage imageNamed:imgName];
-                    // Has image same scale and dimensions as our current device's screen?
-                    if (img.scale == [UIScreen mainScreen].scale && CGSizeEqualToSize(img.size, [UIScreen mainScreen].bounds.size)) {
-                        DBGLog(@"Found launch image for current device %@", img.description);
-                        return imgName; //break;
-                    }
-                }
-            }
-
-            DBGLog(@"fail on launchimage name");
-            return(@"LaunchScreenImg.png");
-             */
     }
-
-    ///***********************
-    /// 640x1136   LaunchImage-568h@2x.png                iphone 5 retina
-    /// LaunchImage-700-568h@2x.png
-    /// LaunchImage-700-Landscape@2x~ipad.png
-    /// LaunchImage-700-Landscape~ipad.png
-    /// LaunchImage-700-Portrait@2x~ipad.png
-    /// LaunchImage-700-Portrait~ipad.png
-    /// LaunchImage-700@2x.png
-    /// 2048x1496  LaunchImage-Landscape@2x~ipad.png      ipad landscape retina
-    /// 1024x768   LaunchImage-Landscape~ipad.png         ipad landscape
-    /// 1536x2008  LaunchImage-Portrait@2x~ipad.png       ipad portrait retina
-    /// 768x1004   LaunchImage-Portrait~ipad.png          ipad portrait
-    /// 768x1024
-    /// 320x480    LaunchImage.png                        iphone 3gs
-    /// 640x960    LaunchImage@2x.png                     iphone retina
-    /// 750x1334   LaunchImage-800-667h@2x.png            iPhone 6
-    /// 1242x2208  LaunchImage-800-Portrait-736h@3x.png   iPhone 6 Plus Portrait
-    /// iphone6+  414, 736
-    /// iphone6   375, 667
-    /// iphone 5s 320, 568
-    /// iphone 5  320, 568
-    /// iphone 4s 320, 480
-    /// ipad retina 768, 1024
-    /// ipad air    768, 1024
-    /// ipad2       768, 1024
-    /// LaunchImage-568h@2x.png
-    /// LaunchImage-700-568h@2x.png
-    /// LaunchImage-700-Landscape@2x~ipad.png
-    /// LaunchImage-700-Landscape~ipad.png
-    /// LaunchImage-700-Portrait@2x~ipad.png
-    /// LaunchImage-700-Portrait~ipad.png
-    /// LaunchImage-700@2x.png
-    /// LaunchImage-800-667h@2x.png
-    /// LaunchImage-800-Landscape-736h@3x.png
-    /// LaunchImage-800-Portrait-736h@3x.png
-    /// LaunchImage-Landscape@2x~ipad.png
-    /// LaunchImage-Landscape~ipad.png
-    /// LaunchImage-Portrait@2x~ipad.png
-    /// LaunchImage-Portrait~ipad.png
-    /// LaunchImage.png
-    /// LaunchImage@2x.png
-    /// image name :
-    /// The LaunchImages are special, and aren't actually an asset catalog on the device. If you look using iFunBox/iExplorer/etc (or on the simulator, or in the build directory) you can see the final names, and then write code to use them
-    /// /Default-568h@2x.png
-    /// /Default-667h-Landscap@2x.png
-    /// /Default-667h@2x.png
-    /// /Default-736h-Landscape@3x.png
-    /// /Default-736h@3x.png
-    /// /Default-iphone.png
-    /// /Default-Landscape-ipad.png
-    /// /Default-Landscape@2x-ipad.png
-    /// /Default-Portrait-ipad.png
-    /// /Default-Portrait@2x-ipad.png
-    /// /Default.png
-    /// /Default@2x-iphone.png
-    /// /Default@2x.png
-    /// /Default~iphone.png
-    ///***********************
 
     // copied from http://www.creativepulse.gr/en/blog/2013/how-to-find-the-visible-width-and-height-in-an-ios-app
     class func getVisibleSize(of viewController: UIViewController?) -> CGSize {
@@ -1407,75 +1090,6 @@ class rTracker_resource: NSObject {
         return result
     }
 
-    
-    class func rtmx_get_visible_size(_ vc: UIViewController?) -> CGSize {
-        var result: CGSize = CGSize.zero
-
-        var size = UIScreen.main.bounds.size
-        let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
-        let orientation = windowScene!.interfaceOrientation
-        /*
-        // UIInterfaceOrientation orientation = [[UIApplication sharedApplication] statusBarOrientation];
-        let firstWindow = UIApplication.shared.windows.first
-        let windowScene = firstWindow?.windowScene
-        let orientation = windowScene?.interfaceOrientation
-         */
-        //if (UIInterfaceOrientationIsLandscape(vc.interfaceOrientation)) {
-        if orientation.isLandscape {
-            result.width = size.height
-            result.height = size.width
-        } else {
-            result.width = size.width
-            result.height = size.height
-        }
-
-        //DBGLog(@"gvs entry:  w= %f  h= %f",result.width, result.height);
-
-        let rvc = (vc?.navigationController?.viewControllers)?[0]
-
-        if vc == rvc {
-            let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
-            /*
-            let firstWindow = UIApplication.shared.windows.first
-            let windowScene = firstWindow?.windowScene
-             */
-            let uisbm = windowScene!.statusBarManager
-
-            //size = [[UIApplication sharedApplication] statusBarFrame].size;
-            size = uisbm?.statusBarFrame.size ?? CGSize.zero
-            result.height -= CGFloat(min(size.width, size.height))
-
-            //DBGLog(@"statusbar h= %f curr height= %f",size.height,result.height);
-        }
-
-        if vc?.navigationController != nil {
-            if vc == rvc {
-                size = vc?.navigationController?.navigationBar.frame.size ?? CGSize.zero
-                result.height -= CGFloat(min(size.width, size.height))
-                //DBGLog(@"navigationbar h= %f curr height= %f",size.height,result.height);
-            }
-            if vc?.navigationController?.toolbar != nil {
-                size = vc?.navigationController?.toolbar.frame.size ?? CGSize.zero
-                result.height -= CGFloat(min(size.width, size.height))
-                //DBGLog(@"toolbar h= %f curr height= %f",size.height,result.height);
-            }
-        }
-
-        if #available(iOS 11.0, *) {
-            let sai = UIApplication.shared.delegate?.window??.safeAreaInsets
-            result.height -= sai?.bottom ?? 0.0
-        }
-
-        if vc?.tabBarController != nil {
-            size = vc?.tabBarController?.tabBar.frame.size ?? CGSize.zero
-            result.height -= CGFloat(min(size.width, size.height))
-            //DBGLog(@"tabbar h= %f curr height= %f",size.height,result.height);
-        }
-
-        //DBGLog(@"gvs exit:  w= %f  h= %f",result.width, result.height);
-
-        return result
-    }
 
     class func get_screen_size(_ vc: UIViewController?) -> CGSize {
         var result: CGSize = CGSize.zero
@@ -1483,13 +1097,7 @@ class rTracker_resource: NSObject {
         let size = UIScreen.main.bounds.size
         let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
         let orientation = windowScene!.interfaceOrientation
-        /*
-        //UIInterfaceOrientation orientation = [[UIApplication sharedApplication] statusBarOrientation];
-        let firstWindow = UIApplication.shared.windows.first
-        let windowScene = firstWindow?.windowScene
-        let orientation = windowScene?.interfaceOrientation
-         */
-        //if (UIInterfaceOrientationIsLandscape(vc.interfaceOrientation)) {
+
         if orientation.isLandscape {
             result.width = size.height
             result.height = size.width
