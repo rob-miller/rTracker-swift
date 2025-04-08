@@ -171,8 +171,6 @@ class voNumber: voState, UITextFieldDelegate {
         // force recreate
         _dtf = nil
         
-        //if (![self.vo.value isEqualToString:dtf.text]) {
-
         var targD = Date()  // now
         if vo.value == "" {
             if (vo.optDict["nswl"] == "1") /* && ![to hasData] */ {  // nswl = number start with last
@@ -293,16 +291,45 @@ class voNumber: voState, UITextFieldDelegate {
         return minLabelHeight(super.voTVCellHeight())
     }
     
+    private func convertHrsMinsToDecimal(_ timeString: String) -> String {
+        // Split the string on colon
+        let components = timeString.components(separatedBy: ":")
+        
+        // If not in HH:MM format, return original string
+        guard components.count == 2,
+              let hours = Int(components[0].trimmingCharacters(in: .whitespaces)),
+              let minutes = Int(components[1].trimmingCharacters(in: .whitespaces)),
+              minutes < 60 else {
+            return timeString
+        }
+        
+        // Convert to total minutes (e.g., 1:30 -> 90)
+        let totalMinutes = (hours * 60) + minutes
+        return String(totalMinutes)
+    }
+    
     override func update(_ instr: String) -> String {
         // confirm textfield not forgotten
         if ((nil == _dtf) /* NOT self.dtf as we want to test if is instantiated */) || !(instr == "") {
             return instr
         }
-        var cpy: String?
-        safeDispatchSync({ [self] in
-            cpy = dtf.text ?? ""
-        })
-        return cpy!
+        
+        //
+        if Thread.isMainThread {
+            if vo.optDict["hrsmins"] == "1" {
+                return convertHrsMinsToDecimal(dtf.text ?? "")
+            } else {
+                return dtf.text ?? ""
+            }
+        } else {
+            return DispatchQueue.main.sync { [self] in
+                if vo.optDict["hrsmins"] == "1" {
+                    return convertHrsMinsToDecimal(dtf.text ?? "")
+                } else {
+                    return dtf.text ?? ""
+                }
+            }
+        }
     }
 
     override func voGraphSet() -> [String] {
