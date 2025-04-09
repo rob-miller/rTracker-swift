@@ -282,9 +282,9 @@ extension TrackerChart {
                 // Store the actual data in a dictionary accessible by objectForKey
                 let userData = ["x": x, "y": y, "date": date, "colorValue": point["color"] as? Double as Any] as [String : Any]
                 //objc_setAssociatedObject(pointView, &AssociatedKeys.pointData, userData, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-                if let key = AssociatedKeys.pointData {
-                    objc_setAssociatedObject(pointView, key, userData, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-                }
+                let key = AssociatedKeys.pointData
+                objc_setAssociatedObject(pointView, key, userData, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+                
             }
         }
     }
@@ -700,6 +700,14 @@ extension TrackerChart {
                 lineLayer.strokeColor = categoryColors[category]?.cgColor ?? UIColor.black.cgColor
                 lineLayer.fillColor = UIColor.clear.cgColor
                 lineLayer.lineWidth = 2
+                
+                // Check visibility state and set initial opacity
+                let isVisible = legendItemVisibility[category] ?? true
+                lineLayer.opacity = isVisible ? 1.0 : 0.0
+                
+                // Store the category name with the layer for animation purposes
+                objc_setAssociatedObject(lineLayer, AssociatedKeys.legendCategory, category, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+                
                 selectionView.layer.addSublayer(lineLayer)
             }
         }
@@ -865,104 +873,120 @@ extension TrackerChart {
     
     
     internal func drawCategoryLegend(
-        in view: UIView,
-        categories: [String],
-        colors: [String: UIColor]
-    ) {
-        let itemHeight: CGFloat = 15
-        let padding: CGFloat = 5
-        
-        let legendHeight: CGFloat = CGFloat(categories.count) * (itemHeight + padding)
-        
-        let legendView = UIView(frame: CGRect(
-            x: view.bounds.width - legendWidth - legendRightMargin,
-            y: legendTopMargin + 10,
-            width: legendWidth,
-            height: legendHeight
-        ))
-        legendView.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.8)
-        legendView.layer.cornerRadius = 5
-        legendView.layer.borderWidth = 0.5
-        legendView.layer.borderColor = UIColor.systemGray.cgColor
-        view.addSubview(legendView)
-        
-        // Iterate through categories in their original order
-        for (index, category) in categories.enumerated() {
-            // Create container for each legend item to handle tap events
-            let itemContainer = UIView(frame: CGRect(
-                x: 0,
-                y: CGFloat(index) * (itemHeight + padding),
+            in view: UIView,
+            categories: [String],
+            colors: [String: UIColor]
+        ) {
+            let itemHeight: CGFloat = 15
+            let padding: CGFloat = 5
+            
+            let legendHeight: CGFloat = CGFloat(categories.count) * (itemHeight + padding)
+            
+            let legendView = UIView(frame: CGRect(
+                x: view.bounds.width - legendWidth - legendRightMargin,
+                y: legendTopMargin + 10,
                 width: legendWidth,
-                height: itemHeight + padding
+                height: legendHeight
             ))
-            itemContainer.isUserInteractionEnabled = true
-            legendView.addSubview(itemContainer)
+            legendView.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.8)
+            legendView.layer.cornerRadius = 5
+            legendView.layer.borderWidth = 0.5
+            legendView.layer.borderColor = UIColor.systemGray.cgColor
+            view.addSubview(legendView)
             
-            // Color indicator
-            let colorView = UIView(frame: CGRect(
-                x: 10,
-                y: padding,
-                width: 10,
-                height: 10
-            ))
-            
-            // If item is hidden, use a lighter color
-            let isVisible = legendItemVisibility[category] ?? true
-            if isVisible {
-                colorView.backgroundColor = colors[category] ?? .black
-            } else {
-                colorView.backgroundColor = (colors[category] ?? .black).withAlphaComponent(0.3)
+            // Iterate through categories in their original order
+            for (index, category) in categories.enumerated() {
+                // Create container for each legend item to handle tap events
+                let itemContainer = UIView(frame: CGRect(
+                    x: 0,
+                    y: CGFloat(index) * (itemHeight + padding),
+                    width: legendWidth,
+                    height: itemHeight + padding
+                ))
+                itemContainer.isUserInteractionEnabled = true
+                legendView.addSubview(itemContainer)
+                
+                // Check visibility state
+                let isVisible = legendItemVisibility[category] ?? true
+                
+                // Color indicator
+                let colorView = UIView(frame: CGRect(
+                    x: 10,
+                    y: padding,
+                    width: 10,
+                    height: 10
+                ))
+                
+                // If item is hidden, use a much lighter color and add strikethrough
+                if isVisible {
+                    colorView.backgroundColor = colors[category] ?? .black
+                    colorView.alpha = 1.0
+                } else {
+                    colorView.backgroundColor = (colors[category] ?? .black).withAlphaComponent(0.3)
+                    colorView.alpha = 0.4
+                }
+                
+                colorView.layer.cornerRadius = 5
+                itemContainer.addSubview(colorView)
+                
+                // Label
+                let label = UILabel(frame: CGRect(
+                    x: 30,
+                    y: 0,
+                    width: legendWidth - 40,
+                    height: itemHeight
+                ))
+                
+                // Create attributed string with strikethrough if disabled
+                let attributedText: NSAttributedString
+                if isVisible {
+                    attributedText = NSAttributedString(string: category)
+                    label.textColor = .label
+                    label.alpha = 1.0
+                } else {
+                    // Add strikethrough for disabled items
+                    let attributes: [NSAttributedString.Key: Any] = [
+                        .strikethroughStyle: NSUnderlineStyle.single.rawValue,
+                        .strikethroughColor: UIColor.systemGray,
+                        .foregroundColor: UIColor.systemGray
+                    ]
+                    attributedText = NSAttributedString(string: category, attributes: attributes)
+                    label.alpha = 0.5
+                }
+                
+                label.attributedText = attributedText
+                label.font = UIFont.systemFont(ofSize: 10)
+                label.adjustsFontSizeToFitWidth = true
+                label.minimumScaleFactor = 0.7
+                
+                itemContainer.addSubview(label)
+                
+                // Add tap gesture recognizer
+                let tapGesture = UITapGestureRecognizer(target: self, action: #selector(legendItemTapped(_:)))
+                itemContainer.addGestureRecognizer(tapGesture)
+                
+                // Store the category name using the ObjectAssociation pattern
+                objc_setAssociatedObject(itemContainer, AssociatedKeys.legendCategory, category, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
             }
             
-            colorView.layer.cornerRadius = 5
-            itemContainer.addSubview(colorView)
-            
-            // Label
-            let label = UILabel(frame: CGRect(
-                x: 30,
-                y: 0,
-                width: legendWidth - 40,
-                height: itemHeight
+            // Add title
+            let selectionVO = tracker?.valObjTable.first { $0.vid == selectedValueObjIDs["selection"] }
+            let titleLabel = UILabel(frame: CGRect(
+                x: legendView.frame.minX,
+                y: legendView.frame.minY - 20,
+                width: legendWidth,
+                height: 15
             ))
-            label.text = category
-            label.font = UIFont.systemFont(ofSize: 10)
-            label.adjustsFontSizeToFitWidth = true
-            label.minimumScaleFactor = 0.7
-            
-            // If item is hidden, use a lighter text
-            if !isVisible {
-                label.textColor = .systemGray
-            }
-            
-            itemContainer.addSubview(label)
-            
-            // Add tap gesture recognizer
-            let tapGesture = UITapGestureRecognizer(target: self, action: #selector(legendItemTapped(_:)))
-            itemContainer.addGestureRecognizer(tapGesture)
-            
-            // Store the category name as a tag on the view
-            // Since we can't store strings directly as tags, use the ObjectAssociation pattern
-            objc_setAssociatedObject(itemContainer, &AssociatedKeys.legendCategory, category, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+            titleLabel.text = selectionVO?.valueName ?? "Categories"
+            titleLabel.textAlignment = .center
+            titleLabel.font = UIFont.systemFont(ofSize: 10)
+            view.addSubview(titleLabel)
         }
         
-        // Add title
-        let selectionVO = tracker?.valObjTable.first { $0.vid == selectedValueObjIDs["selection"] }
-        let titleLabel = UILabel(frame: CGRect(
-            x: legendView.frame.minX,
-            y: legendView.frame.minY - 20,
-            width: legendWidth,
-            height: 15
-        ))
-        titleLabel.text = selectionVO?.valueName ?? "Categories"
-        titleLabel.textAlignment = .center
-        titleLabel.font = UIFont.systemFont(ofSize: 10)
-        view.addSubview(titleLabel)
-    }
-    
     // Handle tap events on legend items
     @objc internal func legendItemTapped(_ sender: UITapGestureRecognizer) {
         guard let itemView = sender.view,
-              let category = objc_getAssociatedObject(itemView, &AssociatedKeys.legendCategory) as? String else {
+              let category = objc_getAssociatedObject(itemView, AssociatedKeys.legendCategory) as? String else {
             return
         }
         
@@ -970,41 +994,136 @@ extension TrackerChart {
         let generator = UIImpactFeedbackGenerator(style: .light)
         generator.impactOccurred()
         
+        // Animate the tap with a quick scale effect
+        UIView.animate(withDuration: 0.1, animations: {
+            itemView.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
+        }) { _ in
+            UIView.animate(withDuration: 0.1) {
+                itemView.transform = CGAffineTransform.identity
+            }
+        }
+        
         // Toggle visibility state
-        let currentVisibility = legendItemVisibility[category] ?? true
-        legendItemVisibility[category] = !currentVisibility
+        let currentVisibility = self.legendItemVisibility[category] ?? true
+        self.legendItemVisibility[category] = !currentVisibility
         
         // Update the distribution plot
-        updateDistributionPlotWithVisibility()
+        self.updateDistributionPlotWithVisibility()
     }
     
     // Update distribution plot with current visibility settings
     internal func updateDistributionPlotWithVisibility() {
-        // Only update if we're on the distribution chart type
-        guard segmentedControl.selectedSegmentIndex == CHART_TYPE_DISTRIBUTION else {
-            return
+            // Only update if we're on the distribution chart type
+            guard segmentedControl.selectedSegmentIndex == CHART_TYPE_DISTRIBUTION else {
+                return
+            }
+            
+            guard let selectionData = chartData["selectionData"] as? [String: [Double]] else {
+                return
+            }
+            
+            // Create a filtered version of selectionData based on visibility
+            var filteredSelectionData: [String: [Double]] = [:]
+            
+            for (category, values) in selectionData {
+                let isVisible = legendItemVisibility[category] ?? true
+                if isVisible {
+                    filteredSelectionData[category] = values
+                }
+            }
+            
+            // Store the filtered data
+            chartData["filteredSelectionData"] = filteredSelectionData
+            
+            // First, update the legend to reflect the new visibility state
+            // Find and remove the current legend
+            for subview in chartView.subviews {
+                // Check if this is the legend view by its position
+                 if subview.frame.origin.x == chartView.bounds.width - legendWidth - legendRightMargin &&
+                    subview.frame.origin.y == legendTopMargin + 10 {
+                     // Found the legend view
+                     subview.removeFromSuperview()
+                     
+                     // Also remove the title label which is just above the legend
+                     for otherSubview in chartView.subviews {
+                         if let titleLabel = otherSubview as? UILabel,
+                            titleLabel.frame.origin.y == subview.frame.origin.y - 20 {
+                             titleLabel.removeFromSuperview()
+                             break
+                         }
+                     }
+                     break
+                 }
+            }
+            
+            // Get category data for redrawing the legend
+            if let originalSelectionData = chartData["selectionData"] as? [String: [Double]], !originalSelectionData.isEmpty {
+                let categoryData = generateCategoryColors(originalSelectionData.keys)
+                let categoryColors = categoryData.colors
+                let categoryValues = categoryData.values
+                
+                // Sort categories by their values (higher values first)
+                let sortedCategories = Array(originalSelectionData.keys).sorted { (a, b) -> Bool in
+                    return (categoryValues[a] ?? 0) > (categoryValues[b] ?? 0)
+                }
+                
+                // Redraw the legend with updated visibility states
+                drawCategoryLegend(
+                    in: chartView,
+                    categories: sortedCategories,
+                    colors: categoryColors
+                )
+            }
+            
+            // Then, animate visibility changes for the lines
+            animateVisibilityChanges()
         }
         
-        guard let selectionData = chartData["selectionData"] as? [String: [Double]] else {
-            return
-        }
-        
-        // Create a filtered version of selectionData based on visibility
-        var filteredSelectionData: [String: [Double]] = [:]
-        
-        for (category, values) in selectionData {
-            let isVisible = legendItemVisibility[category] ?? true
-            if isVisible {
-                filteredSelectionData[category] = values
+        // Animate the visibility changes of category lines
+        internal func animateVisibilityChanges() {
+            // First, find all line layers in the chart view
+            var lineLayers: [String: CAShapeLayer] = [:]
+            
+            for subview in chartView.subviews {
+                // Look for the selection view where we add line layers
+                if subview.tag == 1001 {
+                    for layer in subview.layer.sublayers ?? [] {
+                        if let lineLayer = layer as? CAShapeLayer {
+                            // Get category from associated object
+                            if let category = objc_getAssociatedObject(lineLayer, AssociatedKeys.legendCategory) as? String {
+                                lineLayers[category] = lineLayer
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if lineLayers.isEmpty {
+                // If we can't find existing lines (first render), just render the filtered data
+                renderDistributionPlotWithFiltered()
+                return
+            }
+            
+            // Animate each line's opacity based on visibility
+            for (category, isVisible) in legendItemVisibility {
+                if let layer = lineLayers[category] {
+                    // Create opacity animation
+                    let opacityAnimation = CABasicAnimation(keyPath: "opacity")
+                    opacityAnimation.fromValue = layer.opacity
+                    opacityAnimation.toValue = isVisible ? 1.0 : 0.0
+                    opacityAnimation.duration = 0.3
+                    opacityAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                    opacityAnimation.fillMode = .forwards
+                    opacityAnimation.isRemovedOnCompletion = false
+                    
+                    // Apply animation
+                    layer.add(opacityAnimation, forKey: "opacityAnimation")
+                    
+                    // Update final opacity value
+                    layer.opacity = isVisible ? 1.0 : 0.0
+                }
             }
         }
-        
-        // Store the filtered data
-        chartData["filteredSelectionData"] = filteredSelectionData
-        
-        // Redraw the chart with filtered data
-        renderDistributionPlotWithFiltered()
-    }
     
     internal func renderPieChart() {
         // Clear existing subviews except noDataLabel

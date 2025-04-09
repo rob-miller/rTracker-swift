@@ -807,10 +807,23 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     }
     
     internal struct AssociatedKeys {
-        // Use a static void pointer instead of a string
-        static var pointData = UnsafeRawPointer(bitPattern: 1)
-        static var legendCategory = UnsafeRawPointer(bitPattern: 2)
+        // Static objects to use as unique keys
+        static let pointDataKey = NSString("pointDataKey")
+        static let legendCategoryKey = NSString("legendCategoryKey")
+        
+        // Use these directly, no need for & prefix
+        static var pointData: UnsafeRawPointer {
+            return UnsafeRawPointer(Unmanaged.passUnretained(pointDataKey).toOpaque())
+        }
+        static var legendCategory: UnsafeRawPointer {
+            return UnsafeRawPointer(Unmanaged.passUnretained(legendCategoryKey).toOpaque())
+        }
     }
+    // Use:
+    // objc_setAssociatedObject(lineLayer, AssociatedKeys.legendCategory, category, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+
+    // And when getting:
+    // objc_getAssociatedObject(lineLayer, AssociatedKeys.legendCategory) as? String
      
     
     @objc internal func showPointDetails(_ sender: UITapGestureRecognizer) {
@@ -822,8 +835,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
          */
         
         guard let pointView = sender.view,
-              let key = AssociatedKeys.pointData,
-              let pointData = objc_getAssociatedObject(pointView, key) as? [String: Any] else {
+              let pointData = objc_getAssociatedObject(pointView, AssociatedKeys.pointData) as? [String: Any] else {
             return
         }
         
