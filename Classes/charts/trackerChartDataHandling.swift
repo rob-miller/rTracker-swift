@@ -171,7 +171,9 @@ extension TrackerChart {
         var selectionData: [String: [Double]] = [:]
         
         // Reset legendItemVisibility when generating new data
-        legendItemVisibility = [:]
+        if !saveLegendItemVisibility {
+            legendItemVisibility = [:]
+        }
         
         // If selection is specified, fetch and organize by categories
         if selectionID != -1 {
@@ -197,9 +199,13 @@ extension TrackerChart {
         ]
         
         // Initialize all legends as visible
-        for category in selectionData.keys {
-            legendItemVisibility[category] = true
+        if !saveLegendItemVisibility {
+            for category in selectionData.keys {
+                legendItemVisibility[category] = true
+            }
         }
+        
+        saveLegendItemVisibility = false  // one-shot use
         
         // Render the chart
         renderDistributionPlotWithFiltered()
@@ -616,17 +622,19 @@ extension TrackerChart {
         if let valueObj = tracker.valObjTable.first(where: { $0.vid == pieDataID }) {
             switch valueObj.vtype {
             case VOT_BOOLEAN:
+                // For boolean, we'll only have "True" and "False" (which includes no entry)
                 valueCounts["True"] = 0
                 valueCounts["False"] = 0
-                //valueCounts["No Entry"] = 0  // no entry for bool is false
                 
                 for (_, value) in data {
                     let boolValue = value >= 0.5
                     let key = boolValue ? "True" : "False"
                     valueCounts[key]? += 1
                 }
-                // Calculate no entries
-                valueCounts["False"]! += totalPossibleEntries - (valueCounts["True"]! + valueCounts["False"]!)
+                
+                // Add the remaining entries to "False" since they weren't marked as "True"
+                let recordedEntries = valueCounts["True"]! + valueCounts["False"]!
+                valueCounts["False"]! += totalPossibleEntries - recordedEntries
                 
             case VOT_CHOICE:
                 let categories = fetchChoiceCategories(forID: pieDataID)
@@ -645,12 +653,6 @@ extension TrackerChart {
                         DBGLog("no category for \(value)")
                         DBGLog("valueObj: \(valueObj)")
                     }
-                    
-                    /*
-                    if let category = categories[Int(value)] {
-                        valueCounts[category]? += 1
-                    }
-                     */
                 }
                 
                 // Calculate no entries
@@ -662,12 +664,7 @@ extension TrackerChart {
             }
         }
         
-        // Remove "No Entry" category if it's 0
-        if let noEntryCount = valueCounts["No Entry"], noEntryCount == 0 {
-            valueCounts.removeValue(forKey: "No Entry")
-        }
-        
-        // Store the data for rendering
+        // Store the complete data
         chartData["pieData"] = valueCounts
         
         // Calculate total for percentages
@@ -681,6 +678,7 @@ extension TrackerChart {
         // Trigger chart update
         renderPieChart()
     }
+
     
     internal func getEligibleValueObjs(for configType: String) -> [valueObj] {
         guard let tracker = tracker else { return [] }

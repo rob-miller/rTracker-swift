@@ -814,7 +814,7 @@ extension TrackerChart {
         // Create gradient view
         let gradientView = UIView(frame: CGRect(
             x: view.bounds.width - legendWidth - legendRightMargin,
-            y: legendTopMargin,
+            y: legendTopMargin + 4,
             width: legendWidth,
             height: legendHeight
         ))
@@ -833,10 +833,11 @@ extension TrackerChart {
         gradientView.layer.masksToBounds = true
         view.addSubview(gradientView)
         
+        let minMaxLabelYoffset: CGFloat = 1
         // Add min label
         let minLabel = UILabel(frame: CGRect(
             x: gradientView.frame.minX,
-            y: gradientView.frame.maxY + 5,
+            y: gradientView.frame.maxY + minMaxLabelYoffset,
             width: 50,
             height: 15
         ))
@@ -848,7 +849,7 @@ extension TrackerChart {
         // Add max label
         let maxLabel = UILabel(frame: CGRect(
             x: gradientView.frame.maxX - 50,
-            y: gradientView.frame.maxY + 5,
+            y: gradientView.frame.maxY + minMaxLabelYoffset,
             width: 50,
             height: 15
         ))
@@ -861,7 +862,7 @@ extension TrackerChart {
         let colorVO = tracker?.valObjTable.first { $0.vid == selectedValueObjIDs["color"] }
         let titleLabel = UILabel(frame: CGRect(
             x: gradientView.frame.minX,
-            y: gradientView.frame.minY - 20,
+            y: gradientView.frame.minY - 16,
             width: legendWidth,
             height: 15
         ))
@@ -1125,6 +1126,42 @@ extension TrackerChart {
             }
         }
     
+    // Add this method to the TrackerChart extension in trackerChartPlots.swift
+    @objc internal func toggleNoEntryInPieChart(_ sender: UITapGestureRecognizer) {
+        // Check if we have a "No Entry" category to toggle
+        if let valueCounts = chartData["pieData"] as? [String: Int],
+           let valueObj = selectedValueObjIDs["pieData"].flatMap({ id in
+               tracker?.valObjTable.first(where: { $0.vid == id })
+           }) {
+            
+            // Boolean data doesn't separate "No Entry" from "False"
+            if valueObj.vtype == VOT_BOOLEAN {
+                // For boolean do nothing
+                return
+            }
+            
+            // Only toggle if there's a "No Entry" category
+            if valueCounts["No Entry"] != nil {
+                // Toggle the state
+                showNoEntryInPieChart.toggle()
+                
+                // Add haptic feedback
+                let generator = UIImpactFeedbackGenerator(style: .medium)
+                generator.impactOccurred()
+                
+                // This is critical - remove any existing gesture recognizers from the previous view
+                // before generating the new pie chart to avoid conflicts
+                if let existingPieView = chartView.viewWithTag(2001) {
+                    existingPieView.gestureRecognizers?.forEach { existingPieView.removeGestureRecognizer($0) }
+                }
+                
+                // Regenerate the pie chart with the new setting
+                renderPieChart()
+            }
+        }
+    }
+    
+    // Modify the renderPieChart method to include tap gesture and apply the filter
     internal func renderPieChart() {
         // Clear existing subviews except noDataLabel
         for subview in chartView.subviews {
@@ -1133,8 +1170,31 @@ extension TrackerChart {
             }
         }
         
-        guard let valueCounts = chartData["pieData"] as? [String: Int],
+        guard var valueCounts = chartData["pieData"] as? [String: Int],
               !valueCounts.isEmpty else {
+            noDataLabel.isHidden = false
+            return
+        }
+        
+        // Get valueObj type and prepare colors
+        let valueObj = selectedValueObjIDs["pieData"].flatMap { pieDataID in
+            tracker?.valObjTable.first(where: { $0.vid == pieDataID })
+        }
+        
+        // Check if we have a value object to determine if this is boolean data
+        let isBooleanData = valueObj?.vtype == VOT_BOOLEAN
+        
+        // For boolean data, never filter out "No Entry" (it's already handled as part of "False")
+        let hasNoEntry = valueCounts["No Entry"] != nil
+        
+        // Filter out "No Entry" if hidden and this is not boolean data
+        if !showNoEntryInPieChart && hasNoEntry && !isBooleanData {
+            valueCounts.removeValue(forKey: "No Entry")
+        }
+        
+        // Check if filtered data is empty
+        if valueCounts.isEmpty {
+            noDataLabel.text = "No data available"
             noDataLabel.isHidden = false
             return
         }
@@ -1146,32 +1206,32 @@ extension TrackerChart {
         let size = min(chartView.bounds.width, chartView.bounds.height) - padding * 2
         let center = CGPoint(x: chartView.bounds.width / 2, y: chartView.bounds.height / 2)
         
-        // Create pie chart view
+        // Create pie chart view with tag to identify it
         let pieChartView = UIView(frame: CGRect(x: 0, y: 0, width: chartView.bounds.width, height: chartView.bounds.height))
+        pieChartView.tag = 2001 // Use a specific tag to identify the pie chart view
         chartView.addSubview(pieChartView)
+        
+        // Add tap gesture to toggle "No Entry" visibility
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(toggleNoEntryInPieChart(_:)))
+        pieChartView.addGestureRecognizer(tapGesture)
+        pieChartView.isUserInteractionEnabled = true
         
         // Calculate total for percentages
         let total = Double(valueCounts.values.reduce(0, +))
-        
-        // Get valueObj type and prepare colors
-        let valueObj = selectedValueObjIDs["pieData"].flatMap { pieDataID in
-            tracker?.valObjTable.first(where: { $0.vid == pieDataID })
-        }
         
         var entries: [(key: String, value: Int, color: UIColor)] = []
         
         if let vo = valueObj {
             switch vo.vtype {
             case VOT_BOOLEAN:
-                // Fixed boolean colors
+                // Fixed boolean colors - only True and False for boolean data
                 let booleanColors: [String: UIColor] = [
-                    "True": UIColor(red: 1.0, green: 0.0, blue: 0.0, alpha: 1.0),
-                    "False": UIColor(red: 0.0, green: 0.0, blue: 1.0, alpha: 1.0),
-                    "No Entry": UIColor.systemGray
+                    "True": UIColor(red: 1.0, green: 0.0, blue: 0.0, alpha: 1.0), // Red
+                    "False": UIColor(red: 0.0, green: 0.0, blue: 1.0, alpha: 1.0)  // Blue
                 ]
                 
-                // Fixed order for boolean
-                let orderedKeys = ["True", "False", "No Entry"]
+                // For boolean, we only have True and False (no separate "No Entry")
+                let orderedKeys = ["True", "False"]
                 entries = orderedKeys.compactMap { key in
                     if let count = valueCounts[key] {
                         return (key, count, booleanColors[key] ?? .systemGray)
@@ -1183,6 +1243,19 @@ extension TrackerChart {
                 let colorSet = rTracker_resource.colorSet()
                 var choiceColors: [String: UIColor] = [:]
                 
+                // Get ordered keys from valueObj's optDict - ensuring consistent order
+                var orderedKeys: [String] = []
+                let categoryMap = fetchChoiceCategories(forID: vo.vid)
+                
+                // Get the categoryMap values in ascending order of keys
+                let sortedCategories = categoryMap.sorted { $0.key < $1.key }
+                for (_, category) in sortedCategories {
+                    orderedKeys.append(category)
+                }
+                
+                // Add "No Entry" at the end
+                orderedKeys.append("No Entry")
+                
                 // Build color mapping from valueObj's optDict
                 for i in 0..<CHOICES {
                     if let choiceName = vo.optDict["c\(i)"] {
@@ -1192,25 +1265,37 @@ extension TrackerChart {
                 }
                 choiceColors["No Entry"] = .systemGray
                 
-                // Create entries maintaining original order from valueCounts
-                entries = valueCounts.map { (key, value) in
-                    (key, value, choiceColors[key] ?? .systemGray)
+                // Create entries in our defined order
+                entries = orderedKeys.compactMap { key in
+                    if let count = valueCounts[key] {
+                        return (key, count, choiceColors[key] ?? .systemGray)
+                    }
+                    return nil
                 }
                 
             default:
-                // Use default color generation for other types
-                let colors = generatePieChartColors(count: valueCounts.count)
-                entries = Array(valueCounts.enumerated().map { (index, entry) in
-                    (entry.key, entry.value, colors[index])
-                })
+                // Use consistent colors with consistent ordering
+                let sortedKeys = Array(valueCounts.keys).sorted()
+                let colors = generateConsistentColors(keys: sortedKeys)
+                
+                entries = sortedKeys.compactMap { key in
+                    if let count = valueCounts[key] {
+                        return (key, count, colors[key] ?? .systemGray)
+                    }
+                    return nil
+                }
             }
         }
         
-        // Draw segments
-        var startAngle: CGFloat = -.pi / 2 // Start from top
+        // Draw segments - always start from top (-π/2) and go clockwise
+        var currentAngle: CGFloat = -.pi / 2 // Start from top
+        
+        // Use a consistent starting point for each segment
         for (key, value, color) in entries {
             let percentage = Double(value) / total
-            let endAngle = startAngle + CGFloat(percentage * 2 * .pi)
+            let segmentSize = CGFloat(percentage * 2 * .pi)
+            let startAngle = currentAngle
+            let endAngle = startAngle + segmentSize
             
             // Create segment path
             let path = UIBezierPath()
@@ -1225,10 +1310,13 @@ extension TrackerChart {
             segmentLayer.strokeColor = UIColor.white.cgColor
             segmentLayer.lineWidth = 1
             
+            // Store the key name with the layer for potential interaction
+            objc_setAssociatedObject(segmentLayer, AssociatedKeys.legendCategory, key, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+            
             pieChartView.layer.addSublayer(segmentLayer)
             
             // Add label
-            let labelAngle = startAngle + CGFloat(percentage * .pi)
+            let labelAngle = startAngle + segmentSize/2 // Center of segment
             let labelRadius = size / 2 * 0.7 // Position label at 70% of radius
             let labelPoint = CGPoint(
                 x: center.x + cos(labelAngle) * labelRadius,
@@ -1239,8 +1327,12 @@ extension TrackerChart {
             label.text = "\(key)\n\(Int(percentage * 100))%"
             label.numberOfLines = 2
             label.textAlignment = .center
-            label.font = UIFont.systemFont(ofSize: 12)
+            label.font = UIFont.systemFont(ofSize: 12, weight: .medium)
             label.sizeToFit()
+            
+            // Determine if we should use dark or light text based on segment color
+            let brightness = color.getBrightness()
+            label.textColor = brightness > 0.6 ? .black : .white
             
             // Center label around calculated point
             label.frame = CGRect(
@@ -1252,8 +1344,36 @@ extension TrackerChart {
             
             pieChartView.addSubview(label)
             
-            startAngle = endAngle
+            // Move to next segment position
+            currentAngle += segmentSize
         }
+    }
+    
+    private func generateConsistentColors(keys: [String]) -> [String: UIColor] {
+        var colorMap: [String: UIColor] = [:]
+        
+        // Handle "No Entry" separately
+        let regularKeys = keys.filter { $0 != "No Entry" }
+        
+        // Assign consistent colors based on hash of key
+        for (index, key) in regularKeys.enumerated() {
+            // Use both key and its position for consistency
+            var hasher = Hasher()
+            hasher.combine(key)
+            hasher.combine(index)
+            let hash = hasher.finalize()
+            
+            // Use hash to generate a consistent hue
+            let hueValue = abs(CGFloat(hash % 100) / 100.0)
+            colorMap[key] = UIColor(hue: hueValue, saturation: 0.7, brightness: 0.9, alpha: 1.0)
+        }
+        
+        // Always use gray for "No Entry"
+        if keys.contains("No Entry") {
+            colorMap["No Entry"] = .systemGray
+        }
+        
+        return colorMap
     }
     
     private func generatePieChartColors(count: Int) -> [UIColor] {
@@ -1314,5 +1434,20 @@ extension TrackerChart {
         
         // Update axis configurations if they exist
         updateChartData()
+    }
+}
+
+
+extension UIColor {
+    func getBrightness() -> CGFloat {
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        
+        getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        
+        // Using perceived brightness formula
+        return ((red * 299) + (green * 587) + (blue * 114)) / 1000
     }
 }

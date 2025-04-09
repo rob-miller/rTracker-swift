@@ -70,9 +70,11 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     internal var selectionButton: UIButton!
     // track legend item visibility
     internal var legendItemVisibility: [String: Bool] = [:]
+    internal var saveLegendItemVisibility = false
     
     // Pie chart configuration
     internal var pieDataButton: UIButton!
+    internal var showNoEntryInPieChart: Bool = true
     
     // Date range sliders
     internal var startDateSlider: UISlider!
@@ -737,6 +739,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
                 if selectedValueObjIDs["background"] != -1 {
                     if currentPickerType == "background" && previousSelection != selected.vid {
                         axisConfig.removeValue(forKey: "background")  // cause full chart reset
+                        saveLegendItemVisibility = true  // but keep choices for segmented data shown
                     }
                     generateDistributionPlotData()
                 }
@@ -1226,6 +1229,7 @@ extension TrackerChart {
                 if self.segmentedControl.selectedSegmentIndex == self.CHART_TYPE_SCATTER {
                     self.generateScatterPlotData()
                 } else if self.segmentedControl.selectedSegmentIndex == self.CHART_TYPE_DISTRIBUTION {
+                    self.saveLegendItemVisibility = true  // keep choices for just date range change
                     self.generateDistributionPlotData()
                 } else {
                     self.generatePieChartData()
