@@ -170,6 +170,9 @@ extension TrackerChart {
         // Initialize container for selection data
         var selectionData: [String: [Double]] = [:]
         
+        // Reset legendItemVisibility when generating new data
+        legendItemVisibility = [:]
+        
         // If selection is specified, fetch and organize by categories
         if selectionID != -1 {
             processSelectionData(
@@ -186,16 +189,21 @@ extension TrackerChart {
             "type": "distribution",
             "backgroundValues": backgroundValues,
             "selectionData": selectionData,
+            "filteredSelectionData": selectionData, // Initialize filtered data with all data
             "binCount": binCount,
             "minValue": paddedMinValue,
             "maxValue": paddedMaxValue,
             "binWidth": binWidth
         ]
         
+        // Initialize all legends as visible
+        for category in selectionData.keys {
+            legendItemVisibility[category] = true
+        }
+        
         // Render the chart
-        renderDistributionPlot()
+        renderDistributionPlotWithFiltered()
     }
-
     
     // Extract the selection data processing into a separate method
     internal func processSelectionData(

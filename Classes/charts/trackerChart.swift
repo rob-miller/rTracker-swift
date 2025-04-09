@@ -68,6 +68,8 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     // Distribution plot configuration
     internal var backgroundButton: UIButton!
     internal var selectionButton: UIButton!
+    // track legend item visibility
+    internal var legendItemVisibility: [String: Bool] = [:]
     
     // Pie chart configuration
     internal var pieDataButton: UIButton!
@@ -807,6 +809,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     internal struct AssociatedKeys {
         // Use a static void pointer instead of a string
         static var pointData = UnsafeRawPointer(bitPattern: 1)
+        static var legendCategory = UnsafeRawPointer(bitPattern: 2)
     }
      
     
@@ -1002,11 +1005,6 @@ extension TrackerChart {
     // MARK: - UI Actions
     
     @objc internal func chartTypeChanged(_ sender: UISegmentedControl) {
-
-        
-        //selectedStartDate = earliestDate
-        //selectedEndDate = latestDate
-        
         if sender.selectedSegmentIndex == CHART_TYPE_SCATTER {
             setupScatterPlotConfig()
             
@@ -1069,7 +1067,6 @@ extension TrackerChart {
         
         // Make sure date labels are updated
         updateDateLabels()
-
     }
     
     @objc internal func dateRangeLockChanged(_ sender: UISwitch) {

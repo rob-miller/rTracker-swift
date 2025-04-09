@@ -381,6 +381,101 @@ extension TrackerChart {
         }
     }
     
+    // Modified version of renderDistributionPlot that uses filteredSelectionData
+    internal func renderDistributionPlotWithFiltered() {
+        // Clear existing content
+        for subview in chartView.subviews {
+            if subview != noDataLabel {
+                subview.removeFromSuperview()
+            }
+        }
+        
+        guard chartData["type"] as? String == "distribution",
+              let backgroundValues = chartData["backgroundValues"] as? [Double],
+              !backgroundValues.isEmpty else {
+            noDataLabel.text = "No distribution data available"
+            noDataLabel.isHidden = false
+            return
+        }
+        
+        noDataLabel.isHidden = true
+        
+        // Get graph dimensions
+        let graphWidth = chartView.bounds.width - leftMargin - rightMargin
+        let graphHeight = chartView.bounds.height - topMargin - bottomMargin - extraBottomSpace
+        
+        // Extract bin configuration
+        let binCount = chartData["binCount"] as? Int ?? 10
+        let paddedMinValue = chartData["minValue"] as? Double ?? (backgroundValues.min() ?? 0)
+        let paddedMaxValue = chartData["maxValue"] as? Double ?? (backgroundValues.max() ?? 1)
+        let binWidth = chartData["binWidth"] as? Double ?? ((paddedMaxValue - paddedMinValue) / Double(binCount))
+        
+        // Create bins for background data
+        var backgroundBins = Array(repeating: 0, count: binCount)
+        for value in backgroundValues {
+            let binIndex = Int((value - paddedMinValue) / binWidth)
+            if binIndex >= 0 && binIndex < binCount {
+                backgroundBins[binIndex] += 1
+            }
+        }
+        
+        // Normalize background bins
+        let totalBackgroundCount = Double(backgroundValues.count)
+        let normalizedBackgroundBins = backgroundBins.map { Double($0) / totalBackgroundCount }
+        
+        // Process selection data if available - use filtered data
+        let selectionData = chartData["filteredSelectionData"] as? [String: [Double]] ?? [:]
+        
+        // Calculate bins for each selection category
+        let selectionBins = calculateSelectionBins(
+            selectionData: selectionData,
+            binCount: binCount,
+            paddedMinValue: paddedMinValue,
+            binWidth: binWidth
+        )
+        
+        // Draw axes and grid
+        drawDistributionAxes(
+            graphWidth: graphWidth,
+            graphHeight: graphHeight,
+            paddedMinValue: paddedMinValue,
+            paddedMaxValue: paddedMaxValue,
+            binCount: binCount,
+            normalizedBackgroundBins: normalizedBackgroundBins,
+            selectionBins: selectionBins
+        )
+        
+        // Draw histogram and selection lines
+        drawDistributionHistogram(
+            graphWidth: graphWidth,
+            graphHeight: graphHeight,
+            binCount: binCount,
+            normalizedBackgroundBins: normalizedBackgroundBins,
+            selectionBins: selectionBins
+        )
+        
+        // Draw legend for categories - use the original selectionData to show all possible categories
+        if let originalSelectionData = chartData["selectionData"] as? [String: [Double]], !originalSelectionData.isEmpty {
+            let categoryData = generateCategoryColors(originalSelectionData.keys)
+            let categoryColors = categoryData.colors
+            let categoryValues = categoryData.values
+            
+            // Sort categories by their values (higher values first)
+            let sortedCategories = Array(originalSelectionData.keys).sorted { (a, b) -> Bool in
+                return (categoryValues[a] ?? 0) > (categoryValues[b] ?? 0)
+            }
+            
+            drawCategoryLegend(
+                in: chartView,
+                categories: sortedCategories,
+                colors: categoryColors
+            )
+        }
+    }
+    
+    
+    
+    
     // MARK: - Chart Data Generation and Rendering
     
     internal func updateChartData() {
@@ -611,72 +706,72 @@ extension TrackerChart {
     }
     
     internal func generateCategoryColors(_ categories: Dictionary<String, [Double]>.Keys) -> (colors: [String: UIColor], values: [String: Int]) {
-            var categoryColors: [String: UIColor] = [:]
-            var categoryValues: [String: Int] = [:]
-            
-            // Check if this is a VOT_CHOICE selection and fetch categories once
-            var choiceLabelToValue: [String: Int]? = nil
-            if let selectionID = selectedValueObjIDs["selection"],
-               let vo = self.tracker?.getValObj(selectionID),
-               vo.vtype == VOT_CHOICE {
-                let categoryMap = fetchChoiceCategories(forID: selectionID)
-                // Create inverted map from label to value
-                choiceLabelToValue = categoryMap.reduce(into: [:]) { result, pair in
-                    result[pair.value] = pair.key
-                }
-            }
+        var categoryColors: [String: UIColor] = [:]
+        var categoryValues: [String: Int] = [:]
         
-            // Assign values to categories
-            for category in categories {
-                if category == "no entry" {
-                    categoryValues[category] = Int.min
+        // Check if this is a VOT_CHOICE selection and fetch categories once
+        var choiceLabelToValue: [String: Int]? = nil
+        if let selectionID = selectedValueObjIDs["selection"],
+           let vo = self.tracker?.getValObj(selectionID),
+           vo.vtype == VOT_CHOICE {
+            let categoryMap = fetchChoiceCategories(forID: selectionID)
+            // Create inverted map from label to value
+            choiceLabelToValue = categoryMap.reduce(into: [:]) { result, pair in
+                result[pair.value] = pair.key
+            }
+        }
+        
+        // Assign values to categories
+        for category in categories {
+            if category == "no entry" {
+                categoryValues[category] = Int.min
+                continue
+            }
+            
+            if let choiceMap = choiceLabelToValue {
+                // Handle VOT_CHOICE categories
+                if let value = choiceMap[category] {
+                    categoryValues[category] = value
                     continue
                 }
-                
-                if let choiceMap = choiceLabelToValue {
-                    // Handle VOT_CHOICE categories
-                    if let value = choiceMap[category] {
-                        categoryValues[category] = value
-                        continue
-                    }
-                }
-                
-                // Handle other category types
-                if let numValue = Int(category) {
-                    categoryValues[category] = numValue
-                } else if category == "true" {
-                    categoryValues[category] = 1
-                } else if category == "false" {
-                    categoryValues[category] = 0
-                } else if category == "low" {
-                    categoryValues[category] = 0
-                } else if category == "medium" {
-                    categoryValues[category] = 1
-                } else if category == "high" {
-                    categoryValues[category] = 2
-                }
             }
             
-            // Find min and max values
-        let filteredValues = categoryValues.values.filter { $0 != Int.min }
-            if !filteredValues.isEmpty {
-                let minCategoryValue = filteredValues.min() ?? 0
-                let maxCategoryValue = filteredValues.max() ?? 1
-                let categoryValueRange = max(1, maxCategoryValue - minCategoryValue)
-                
-                // Assign colors based on normalized value
-                for (category, value) in categoryValues {
-                    if category == "no entry" {
-                        categoryColors[category] = UIColor.systemGreen
-                    } else {
-                        let normalizedValue = Double(value - minCategoryValue) / Double(categoryValueRange)
-                        categoryColors[category] = getColorGradient(normalizedValue: normalizedValue)
-                    }
-                }
+            // Handle other category types
+            if let numValue = Int(category) {
+                categoryValues[category] = numValue
+            } else if category == "true" {
+                categoryValues[category] = 1
+            } else if category == "false" {
+                categoryValues[category] = 0
+            } else if category == "low" {
+                categoryValues[category] = 0
+            } else if category == "medium" {
+                categoryValues[category] = 1
+            } else if category == "high" {
+                categoryValues[category] = 2
             }
-            
-            return (categoryColors, categoryValues)
         }
+        
+        // Find min and max values
+        let filteredValues = categoryValues.values.filter { $0 != Int.min }
+        if !filteredValues.isEmpty {
+            let minCategoryValue = filteredValues.min() ?? 0
+            let maxCategoryValue = filteredValues.max() ?? 1
+            let categoryValueRange = max(1, maxCategoryValue - minCategoryValue)
+            
+            // Assign colors based on normalized value
+            for (category, value) in categoryValues {
+                if category == "no entry" {
+                    categoryColors[category] = UIColor.systemGreen
+                } else {
+                    let normalizedValue = Double(value - minCategoryValue) / Double(categoryValueRange)
+                    categoryColors[category] = getColorGradient(normalizedValue: normalizedValue)
+                }
+            }
+        }
+        
+        return (categoryColors, categoryValues)
+    }
     
     
     internal func getColorGradient(normalizedValue: Double) -> UIColor {
@@ -702,136 +797,215 @@ extension TrackerChart {
     
     // MARK: - Rendering Methods
     
-
-internal func drawColorLegend(
-    in view: UIView,
-    minValue: Double,
-    maxValue: Double
-) {
-    // Create gradient view
-    let gradientView = UIView(frame: CGRect(
-        x: view.bounds.width - legendWidth - legendRightMargin,
-        y: legendTopMargin,
-        width: legendWidth,
-        height: legendHeight
-    ))
     
-    let gradientLayer = CAGradientLayer()
-    gradientLayer.frame = gradientView.bounds
-    gradientLayer.colors = [
-        UIColor.blue.cgColor,
-        UIColor.purple.cgColor,
-        UIColor.red.cgColor
-    ]
-    gradientLayer.startPoint = CGPoint(x: 0.0, y: 0.5)
-    gradientLayer.endPoint = CGPoint(x: 1.0, y: 0.5)
-    gradientView.layer.addSublayer(gradientLayer)
-    gradientView.layer.cornerRadius = 3
-    gradientView.layer.masksToBounds = true
-    view.addSubview(gradientView)
-    
-    // Add min label
-    let minLabel = UILabel(frame: CGRect(
-        x: gradientView.frame.minX,
-        y: gradientView.frame.maxY + 5,
-        width: 50,
-        height: 15
-    ))
-    minLabel.text = String(format: "%.1f", minValue)
-    minLabel.textAlignment = .left
-    minLabel.font = UIFont.systemFont(ofSize: 10)
-    view.addSubview(minLabel)
-    
-    // Add max label
-    let maxLabel = UILabel(frame: CGRect(
-        x: gradientView.frame.maxX - 50,
-        y: gradientView.frame.maxY + 5,
-        width: 50,
-        height: 15
-    ))
-    maxLabel.text = String(format: "%.1f", maxValue)
-    maxLabel.textAlignment = .right
-    maxLabel.font = UIFont.systemFont(ofSize: 10)
-    view.addSubview(maxLabel)
-    
-    // Add title label
-    let colorVO = tracker?.valObjTable.first { $0.vid == selectedValueObjIDs["color"] }
-    let titleLabel = UILabel(frame: CGRect(
-        x: gradientView.frame.minX,
-        y: gradientView.frame.minY - 20,
-        width: legendWidth,
-        height: 15
-    ))
-    titleLabel.text = colorVO?.valueName ?? "Color"
-    titleLabel.textAlignment = .center
-    titleLabel.font = UIFont.systemFont(ofSize: 10)
-    view.addSubview(titleLabel)
-}
-
-
-internal func drawCategoryLegend(
-    in view: UIView,
-    categories: [String],
-    colors: [String: UIColor]
-) {
-    let itemHeight: CGFloat = 15
-    let padding: CGFloat = 5
-    
-    let legendHeight: CGFloat = CGFloat(categories.count) * (itemHeight + padding)
-    
-    let legendView = UIView(frame: CGRect(
-        x: view.bounds.width - legendWidth - legendRightMargin,
-        y: legendTopMargin + 10,
-        width: legendWidth,
-        height: legendHeight
-    ))
-    legendView.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.8)
-    legendView.layer.cornerRadius = 5
-    legendView.layer.borderWidth = 0.5
-    legendView.layer.borderColor = UIColor.systemGray.cgColor
-    view.addSubview(legendView)
-    
-    // Iterate through categories in their original order
-    for (index, category) in categories.enumerated() {
-        // Color indicator
-        let colorView = UIView(frame: CGRect(
-            x: 10,
-            y: CGFloat(index) * (itemHeight + padding) + padding,
-            width: 10,
-            height: 10
+    internal func drawColorLegend(
+        in view: UIView,
+        minValue: Double,
+        maxValue: Double
+    ) {
+        // Create gradient view
+        let gradientView = UIView(frame: CGRect(
+            x: view.bounds.width - legendWidth - legendRightMargin,
+            y: legendTopMargin,
+            width: legendWidth,
+            height: legendHeight
         ))
-        colorView.backgroundColor = colors[category] ?? .black
-        colorView.layer.cornerRadius = 5
-        legendView.addSubview(colorView)
         
-        // Label
-        let label = UILabel(frame: CGRect(
-            x: 30,
-            y: CGFloat(index) * (itemHeight + padding),
-            width: legendWidth - 40,
-            height: itemHeight
+        let gradientLayer = CAGradientLayer()
+        gradientLayer.frame = gradientView.bounds
+        gradientLayer.colors = [
+            UIColor.blue.cgColor,
+            UIColor.purple.cgColor,
+            UIColor.red.cgColor
+        ]
+        gradientLayer.startPoint = CGPoint(x: 0.0, y: 0.5)
+        gradientLayer.endPoint = CGPoint(x: 1.0, y: 0.5)
+        gradientView.layer.addSublayer(gradientLayer)
+        gradientView.layer.cornerRadius = 3
+        gradientView.layer.masksToBounds = true
+        view.addSubview(gradientView)
+        
+        // Add min label
+        let minLabel = UILabel(frame: CGRect(
+            x: gradientView.frame.minX,
+            y: gradientView.frame.maxY + 5,
+            width: 50,
+            height: 15
         ))
-        label.text = category
-        label.font = UIFont.systemFont(ofSize: 10)
-        label.adjustsFontSizeToFitWidth = true
-        label.minimumScaleFactor = 0.7
-        legendView.addSubview(label)
+        minLabel.text = String(format: "%.1f", minValue)
+        minLabel.textAlignment = .left
+        minLabel.font = UIFont.systemFont(ofSize: 10)
+        view.addSubview(minLabel)
+        
+        // Add max label
+        let maxLabel = UILabel(frame: CGRect(
+            x: gradientView.frame.maxX - 50,
+            y: gradientView.frame.maxY + 5,
+            width: 50,
+            height: 15
+        ))
+        maxLabel.text = String(format: "%.1f", maxValue)
+        maxLabel.textAlignment = .right
+        maxLabel.font = UIFont.systemFont(ofSize: 10)
+        view.addSubview(maxLabel)
+        
+        // Add title label
+        let colorVO = tracker?.valObjTable.first { $0.vid == selectedValueObjIDs["color"] }
+        let titleLabel = UILabel(frame: CGRect(
+            x: gradientView.frame.minX,
+            y: gradientView.frame.minY - 20,
+            width: legendWidth,
+            height: 15
+        ))
+        titleLabel.text = colorVO?.valueName ?? "Color"
+        titleLabel.textAlignment = .center
+        titleLabel.font = UIFont.systemFont(ofSize: 10)
+        view.addSubview(titleLabel)
     }
     
-    // Add title
-    let selectionVO = tracker?.valObjTable.first { $0.vid == selectedValueObjIDs["selection"] }
-    let titleLabel = UILabel(frame: CGRect(
-        x: legendView.frame.minX,
-        y: legendView.frame.minY - 20,
-        width: legendWidth,
-        height: 15
-    ))
-    titleLabel.text = selectionVO?.valueName ?? "Categories"
-    titleLabel.textAlignment = .center
-    titleLabel.font = UIFont.systemFont(ofSize: 10)
-    view.addSubview(titleLabel)
-}
-
+    
+    internal func drawCategoryLegend(
+        in view: UIView,
+        categories: [String],
+        colors: [String: UIColor]
+    ) {
+        let itemHeight: CGFloat = 15
+        let padding: CGFloat = 5
+        
+        let legendHeight: CGFloat = CGFloat(categories.count) * (itemHeight + padding)
+        
+        let legendView = UIView(frame: CGRect(
+            x: view.bounds.width - legendWidth - legendRightMargin,
+            y: legendTopMargin + 10,
+            width: legendWidth,
+            height: legendHeight
+        ))
+        legendView.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.8)
+        legendView.layer.cornerRadius = 5
+        legendView.layer.borderWidth = 0.5
+        legendView.layer.borderColor = UIColor.systemGray.cgColor
+        view.addSubview(legendView)
+        
+        // Iterate through categories in their original order
+        for (index, category) in categories.enumerated() {
+            // Create container for each legend item to handle tap events
+            let itemContainer = UIView(frame: CGRect(
+                x: 0,
+                y: CGFloat(index) * (itemHeight + padding),
+                width: legendWidth,
+                height: itemHeight + padding
+            ))
+            itemContainer.isUserInteractionEnabled = true
+            legendView.addSubview(itemContainer)
+            
+            // Color indicator
+            let colorView = UIView(frame: CGRect(
+                x: 10,
+                y: padding,
+                width: 10,
+                height: 10
+            ))
+            
+            // If item is hidden, use a lighter color
+            let isVisible = legendItemVisibility[category] ?? true
+            if isVisible {
+                colorView.backgroundColor = colors[category] ?? .black
+            } else {
+                colorView.backgroundColor = (colors[category] ?? .black).withAlphaComponent(0.3)
+            }
+            
+            colorView.layer.cornerRadius = 5
+            itemContainer.addSubview(colorView)
+            
+            // Label
+            let label = UILabel(frame: CGRect(
+                x: 30,
+                y: 0,
+                width: legendWidth - 40,
+                height: itemHeight
+            ))
+            label.text = category
+            label.font = UIFont.systemFont(ofSize: 10)
+            label.adjustsFontSizeToFitWidth = true
+            label.minimumScaleFactor = 0.7
+            
+            // If item is hidden, use a lighter text
+            if !isVisible {
+                label.textColor = .systemGray
+            }
+            
+            itemContainer.addSubview(label)
+            
+            // Add tap gesture recognizer
+            let tapGesture = UITapGestureRecognizer(target: self, action: #selector(legendItemTapped(_:)))
+            itemContainer.addGestureRecognizer(tapGesture)
+            
+            // Store the category name as a tag on the view
+            // Since we can't store strings directly as tags, use the ObjectAssociation pattern
+            objc_setAssociatedObject(itemContainer, &AssociatedKeys.legendCategory, category, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
+        
+        // Add title
+        let selectionVO = tracker?.valObjTable.first { $0.vid == selectedValueObjIDs["selection"] }
+        let titleLabel = UILabel(frame: CGRect(
+            x: legendView.frame.minX,
+            y: legendView.frame.minY - 20,
+            width: legendWidth,
+            height: 15
+        ))
+        titleLabel.text = selectionVO?.valueName ?? "Categories"
+        titleLabel.textAlignment = .center
+        titleLabel.font = UIFont.systemFont(ofSize: 10)
+        view.addSubview(titleLabel)
+    }
+    
+    // Handle tap events on legend items
+    @objc internal func legendItemTapped(_ sender: UITapGestureRecognizer) {
+        guard let itemView = sender.view,
+              let category = objc_getAssociatedObject(itemView, &AssociatedKeys.legendCategory) as? String else {
+            return
+        }
+        
+        // Add haptic feedback
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
+        
+        // Toggle visibility state
+        let currentVisibility = legendItemVisibility[category] ?? true
+        legendItemVisibility[category] = !currentVisibility
+        
+        // Update the distribution plot
+        updateDistributionPlotWithVisibility()
+    }
+    
+    // Update distribution plot with current visibility settings
+    internal func updateDistributionPlotWithVisibility() {
+        // Only update if we're on the distribution chart type
+        guard segmentedControl.selectedSegmentIndex == CHART_TYPE_DISTRIBUTION else {
+            return
+        }
+        
+        guard let selectionData = chartData["selectionData"] as? [String: [Double]] else {
+            return
+        }
+        
+        // Create a filtered version of selectionData based on visibility
+        var filteredSelectionData: [String: [Double]] = [:]
+        
+        for (category, values) in selectionData {
+            let isVisible = legendItemVisibility[category] ?? true
+            if isVisible {
+                filteredSelectionData[category] = values
+            }
+        }
+        
+        // Store the filtered data
+        chartData["filteredSelectionData"] = filteredSelectionData
+        
+        // Redraw the chart with filtered data
+        renderDistributionPlotWithFiltered()
+    }
+    
     internal func renderPieChart() {
         // Clear existing subviews except noDataLabel
         for subview in chartView.subviews {
@@ -962,7 +1136,7 @@ internal func drawCategoryLegend(
             startAngle = endAngle
         }
     }
-
+    
     private func generatePieChartColors(count: Int) -> [UIColor] {
         guard let pieDataID = selectedValueObjIDs["pieData"],
               let valueObj = tracker?.valObjTable.first(where: { $0.vid == pieDataID }) else {
