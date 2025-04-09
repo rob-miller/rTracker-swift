@@ -88,6 +88,7 @@
 		D494D5B72DA569FD00298132 /* trackerObjDbCsv.swift in Sources */ = {isa = PBXBuildFile; fileRef = D494D5B62DA569E200298132 /* trackerObjDbCsv.swift */; };
 		D494D5B92DA56DB700298132 /* voFunctionConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = D494D5B82DA56DAE00298132 /* voFunctionConfig.swift */; };
 		D494D5BD2DA572ED00298132 /* RootViewControllerFileLoad.swift in Sources */ = {isa = PBXBuildFile; fileRef = D494D5BC2DA572C900298132 /* RootViewControllerFileLoad.swift */; };
+		D494D5BF2DA7126200298132 /* trackerChartTimePlot.swift in Sources */ = {isa = PBXBuildFile; fileRef = D494D5BE2DA7124A00298132 /* trackerChartTimePlot.swift */; };
 		D49854B012312A400009E458 /* useTrackerController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D49854AE12312A400009E458 /* useTrackerController.swift */; };
 		D49A7C5E29DDE7B300A4F4C0 /* atomicTestSet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D49A7C5D29DDE7B300A4F4C0 /* atomicTestSet.swift */; };
 		D49F29462ACC8CC800B11560 /* rTrackerUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D49F29452ACC8CC800B11560 /* rTrackerUITests.swift */; };
@@ -258,6 +259,7 @@
 		D494D5B62DA569E200298132 /* trackerObjDbCsv.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = trackerObjDbCsv.swift; sourceTree = "<group>"; };
 		D494D5B82DA56DAE00298132 /* voFunctionConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = voFunctionConfig.swift; sourceTree = "<group>"; };
 		D494D5BC2DA572C900298132 /* RootViewControllerFileLoad.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootViewControllerFileLoad.swift; sourceTree = "<group>"; };
+		D494D5BE2DA7124A00298132 /* trackerChartTimePlot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = trackerChartTimePlot.swift; sourceTree = "<group>"; };
 		D49854AE12312A400009E458 /* useTrackerController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = useTrackerController.swift; sourceTree = "<group>"; };
 		D49A7C5D29DDE7B300A4F4C0 /* atomicTestSet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = atomicTestSet.swift; sourceTree = "<group>"; };
 		D49F29432ACC8CC400B11560 /* rTrackerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = rTrackerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -562,6 +564,7 @@
 				D4EE7D842D8DE57000206D26 /* trackerChart.swift */,
 				D4821EFD2D9B290000BE5A4C /* trackerChartPlots.swift */,
 				D4821EFF2D9B291F00BE5A4C /* trackerChartDataHandling.swift */,
+				D494D5BE2DA7124A00298132 /* trackerChartTimePlot.swift */,
 			);
 			path = charts;
 			sourceTree = "<group>";
@@ -912,6 +915,7 @@
 				D494D5B52DA567C500298132 /* healthKitData.swift in Sources */,
 				D4A700CD13798874005E0E23 /* togd.swift in Sources */,
 				D4A700D01379928E005E0E23 /* vogd.swift in Sources */,
+				D494D5BF2DA7126200298132 /* trackerChartTimePlot.swift in Sources */,
 				D4F02398137BFF7F0097AC16 /* gtTitleV.swift in Sources */,
 				D4F0239B137BFFA10097AC16 /* gtXAxV.swift in Sources */,
 				D424D06A2D81E84D0027C9E6 /* otViewController.swift in Sources */,

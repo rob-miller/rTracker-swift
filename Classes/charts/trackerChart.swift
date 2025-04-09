@@ -638,7 +638,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             "xAxis": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER],
             "yAxis": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER],
             "color": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_BOOLEAN, VOT_CHOICE],
-            "background": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_BOOLEAN, VOT_CHOICE],
+            "background": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_CHOICE],
             "selection": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_BOOLEAN, VOT_CHOICE],
             "pieData": [VOT_BOOLEAN, VOT_CHOICE]
         ]
