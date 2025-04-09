@@ -357,47 +357,91 @@ extension TrackerChart {
             numericByDate[date] = value
         }
         
-        // For simplicity, divide into low, medium, high based on quartiles
         if !numericData.isEmpty {
-            let values = numericData.map { $0.1 }.sorted()
-            let q1Index = values.count / 4
-            let q3Index = (values.count * 3) / 4
+            // Get unique values
+            let uniqueValues = Array(Set(numericData.map { $0.1 })).sorted()
             
-            var q1 = values[q1Index]
-            var q3 = values[q3Index]
-            
-            if (q1 == values[0] || q3 == values[values.count-1]) {  // range not found
-                // not guaranteed improvement but will break up first or last quartile if that's where all data is
-                if (q1 == values[0]) {
-                    q1 = values[findFirstGreaterThan(values, q3)]
-                    q3 = q1 + (values[values.count-1] - q1)/2
-                } else if (q3 == values[values.count-1]) {
-                    q3 = values[findLastLessThan(values, q1)]
-                    q1 = (q3 - values[0])/2
-                }
-            }
             var lowValues: [Double] = []
             var midValues: [Double] = []
             var highValues: [Double] = []
             var noEntryValues: [Double] = []
             
-            for (date, bgValue) in backgroundData {
-                if let numValue = numericByDate[date] {
-                    if numValue < q1 {
-                        lowValues.append(bgValue)
-                    } else if numValue > q3 {
-                        highValues.append(bgValue)
-                    } else {
-                        midValues.append(bgValue)
-                    }
-                } else {
+            // Handle cases based on number of unique values
+            switch uniqueValues.count {
+            case 0:
+                // All values should be "no entry"
+                for (_, bgValue) in backgroundData {
                     noEntryValues.append(bgValue)
+                }
+                
+            case 1:
+                // All values should be "medium"
+                for (date, bgValue) in backgroundData {
+                    if numericByDate[date] != nil {
+                        midValues.append(bgValue)
+                    } else {
+                        noEntryValues.append(bgValue)
+                    }
+                }
+                
+            case 2:
+                // Split into "low" and "high"
+                for (date, bgValue) in backgroundData {
+                    if let numValue = numericByDate[date] {
+                        if numValue == uniqueValues[0] {
+                            lowValues.append(bgValue)
+                        } else {
+                            highValues.append(bgValue)
+                        }
+                    } else {
+                        noEntryValues.append(bgValue)
+                    }
+                }
+                
+            default:
+                // Original quartile logic for 3 or more unique values
+                let values = numericData.map { $0.1 }.sorted()
+                let q1Index = values.count / 4
+                let q3Index = (values.count * 3) / 4
+                
+                var q1 = values[q1Index]
+                var q3 = values[q3Index]
+                
+                if (q1 == values[0] || q3 == values[values.count-1]) {
+                    if (q1 == values[0]) {
+                        q1 = values[findFirstGreaterThan(values, q3)]
+                        q3 = q1 + (values[values.count-1] - q1)/2
+                    } else if (q3 == values[values.count-1]) {
+                        q3 = values[findLastLessThan(values, q1)]
+                        q1 = (q3 - values[0])/2
+                    }
+                }
+                
+                for (date, bgValue) in backgroundData {
+                    if let numValue = numericByDate[date] {
+                        if numValue < q1 {
+                            lowValues.append(bgValue)
+                        } else if numValue > q3 {
+                            highValues.append(bgValue)
+                        } else {
+                            midValues.append(bgValue)
+                        }
+                    } else {
+                        noEntryValues.append(bgValue)
+                    }
                 }
             }
             
-            selectionData["low"] = lowValues
-            selectionData["medium"] = midValues
-            selectionData["high"] = highValues
+            // Assign the categorized values
+            if !lowValues.isEmpty {
+                selectionData["low"] = lowValues
+            }
+            if !midValues.isEmpty {
+                selectionData["medium"] = midValues
+            }
+            if !highValues.isEmpty {
+                selectionData["high"] = highValues
+            }
             selectionData["no entry"] = noEntryValues
         }
     }
