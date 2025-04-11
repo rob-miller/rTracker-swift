@@ -33,6 +33,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     internal let CHART_TYPE_SCATTER = 0
     internal let CHART_TYPE_DISTRIBUTION = 1
     internal let CHART_TYPE_PIE = 2
+    internal let CHART_TYPE_TIME = 3
     
     // Chart layout constants
     internal let leftMargin: CGFloat = 60     // Space for y-axis labels
@@ -75,6 +76,17 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     // Pie chart configuration
     internal var pieDataButton: UIButton!
     internal var showNoEntryInPieChart: Bool = true
+    
+    // Add time chart specific properties
+    // Time chart configuration
+    internal var timeSource1Button: UIButton!
+    internal var timeSource2Button: UIButton!
+    internal var timeSource3Button: UIButton!
+    internal var clearTimeSourceButton: UIButton!
+    internal var timeChartSources: [Int] = [-1, -1, -1]  // Up to 3 data sources for time chart
+    internal var selectedYAxisMode: Int = 0  // To cycle through different axis modes when tapped
+    internal var showValueLabels: Bool = false  // Toggle value labels
+    internal var currentYAxisView: UIView?  // To track current y-axis view for tapping
     
     // Date range sliders
     internal var startDateSlider: UISlider!
@@ -129,7 +141,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         setupView()
         
         // Set up date sliders - this should happen only once
-         setupDateSliders()
+        setupDateSliders()
         
         // Set up slider container
         setupSliderContainer()
@@ -158,14 +170,14 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     }
     
     /*
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
-        
-        // This is optional - only if you want to restore the toolbar state
-        // when navigating away from this screen
-        self.navigationController?.setToolbarHidden(false, animated: animated)
-    }
-    */
+     override func viewWillDisappear(_ animated: Bool) {
+     super.viewWillDisappear(animated)
+     
+     // This is optional - only if you want to restore the toolbar state
+     // when navigating away from this screen
+     self.navigationController?.setToolbarHidden(false, animated: animated)
+     }
+     */
     // MARK: - UI Setup
     
     internal func setupView() {
@@ -182,7 +194,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         scrollView.addSubview(contentView)
         
         // Create a segmented control for different chart types
-        segmentedControl = UISegmentedControl(items: ["Scatter", "Distribution", "Pie"])
+        segmentedControl = UISegmentedControl(items: ["Scatter", "Distribution", "Pie", "Time"])
         segmentedControl.selectedSegmentIndex = CHART_TYPE_SCATTER
         segmentedControl.addTarget(self, action: #selector(chartTypeChanged), for: .valueChanged)
         segmentedControl.translatesAutoresizingMaskIntoConstraints = false
@@ -229,7 +241,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
             contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
             contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor), // Same width as scroll view
-
+            
             // Segmented control
             segmentedControl.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
             segmentedControl.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
@@ -355,6 +367,40 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         updateButtonTitles()
     }
     
+    internal func setupTimeChartConfig() {
+        // Remove existing subviews
+        for subview in configContainer.subviews {
+            subview.removeFromSuperview()
+        }
+        
+        // Create buttons for data source selection
+        timeSource1Button = createConfigButton(title: "Select Data Source 1", action: #selector(selectTimeSource1))
+        timeSource2Button = createConfigButton(title: "Select Data Source 2 (Optional)", action: #selector(selectTimeSource2))
+        timeSource3Button = createConfigButton(title: "Select Data Source 3 (Optional)", action: #selector(selectTimeSource3))
+        clearTimeSourceButton = createConfigButton(title: "Clear All Sources", action: #selector(clearTimeSources))
+        
+        // Configure layout
+        let stackView = UIStackView(arrangedSubviews: [
+            timeSource1Button, timeSource2Button, timeSource3Button, clearTimeSourceButton,
+            sliderContainer
+        ])
+        stackView.axis = .vertical
+        stackView.spacing = 12
+        stackView.distribution = .fill
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        configContainer.addSubview(stackView)
+        
+        NSLayoutConstraint.activate([
+            stackView.topAnchor.constraint(equalTo: configContainer.topAnchor),
+            stackView.leadingAnchor.constraint(equalTo: configContainer.leadingAnchor),
+            stackView.trailingAnchor.constraint(equalTo: configContainer.trailingAnchor),
+            stackView.bottomAnchor.constraint(equalTo: configContainer.bottomAnchor)
+        ])
+        
+        // Update buttons with any previously selected values
+        updateButtonTitles()
+    }
+    
     internal func setupDateSliders() {
         // Create start date slider with proper interaction
         startDateSlider = UISlider()
@@ -379,7 +425,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         endDateSlider.maximumTrackTintColor = .systemGray3
         endDateSlider.thumbTintColor = .systemBlue
         endDateSlider.isContinuous = true
-
+        
         // Original labels (kept for compatibility)
         startDateLabel = UILabel()
         startDateLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -410,23 +456,23 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         endDateTextTappable.isUserInteractionEnabled = true
         endDateTextTappable.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(toggleEndDateFormat)))
         /*
-        // Add visual indicator that these labels are tappable
-        startDateTextTappable.layer.cornerRadius = 8
-        startDateTextTappable.layer.borderWidth = 1.0
-        startDateTextTappable.layer.borderColor = UIColor.systemGray4.cgColor
-        startDateTextTappable.clipsToBounds = true
-        startDateTextTappable.backgroundColor = .systemBackground
-        startDateTextTappable.textAlignment = .center
-        
-        endDateTextTappable.layer.cornerRadius = 8
-        endDateTextTappable.layer.borderWidth = 1.0
-        endDateTextTappable.layer.borderColor = UIColor.systemGray4.cgColor
-        endDateTextTappable.clipsToBounds = true
-        endDateTextTappable.backgroundColor = .systemBackground
-        endDateTextTappable.textAlignment = .center
-        */
+         // Add visual indicator that these labels are tappable
+         startDateTextTappable.layer.cornerRadius = 8
+         startDateTextTappable.layer.borderWidth = 1.0
+         startDateTextTappable.layer.borderColor = UIColor.systemGray4.cgColor
+         startDateTextTappable.clipsToBounds = true
+         startDateTextTappable.backgroundColor = .systemBackground
+         startDateTextTappable.textAlignment = .center
+         
+         endDateTextTappable.layer.cornerRadius = 8
+         endDateTextTappable.layer.borderWidth = 1.0
+         endDateTextTappable.layer.borderColor = UIColor.systemGray4.cgColor
+         endDateTextTappable.clipsToBounds = true
+         endDateTextTappable.backgroundColor = .systemBackground
+         endDateTextTappable.textAlignment = .center
+         */
     }
-
+    
     internal func setupSliderContainer() {
         sliderContainer = UIView()
         sliderContainer.translatesAutoresizingMaskIntoConstraints = false
@@ -461,12 +507,12 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         sliderContainer.addSubview(endDateTextTappable)
         
         /*
-        // Add these lines to highlight the sliderContainer for debugging
-        sliderContainer.layer.borderWidth = 2.0
-        sliderContainer.layer.borderColor = UIColor.red.cgColor
-        sliderContainer.backgroundColor = UIColor.yellow.withAlphaComponent(0.3)
-        */
-
+         // Add these lines to highlight the sliderContainer for debugging
+         sliderContainer.layer.borderWidth = 2.0
+         sliderContainer.layer.borderColor = UIColor.red.cgColor
+         sliderContainer.backgroundColor = UIColor.yellow.withAlphaComponent(0.3)
+         */
+        
         NSLayoutConstraint.activate([
             dateRangeLabel.topAnchor.constraint(equalTo: sliderContainer.topAnchor, constant: 8),
             dateRangeLabel.leadingAnchor.constraint(equalTo: sliderContainer.leadingAnchor),
@@ -496,7 +542,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             // Position start date tappable label
             //startDateTextTappable.topAnchor.constraint(equalTo: dateRangeLabel.bottomAnchor, constant: 12),
             startDateTextTappable.topAnchor.constraint(equalTo: endDateSlider.bottomAnchor, constant: 12),
-
+            
             startDateTextTappable.leadingAnchor.constraint(equalTo: sliderContainer.leadingAnchor),
             startDateTextTappable.widthAnchor.constraint(equalTo: sliderContainer.widthAnchor, multiplier: 0.45),
             startDateTextTappable.heightAnchor.constraint(equalToConstant: 30),
@@ -509,20 +555,20 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             endDateTextTappable.heightAnchor.constraint(equalToConstant: 30),
             
             /*
-            // Position original labels below sliders
-            startDateLabel.topAnchor.constraint(equalTo: endDateSlider.bottomAnchor, constant: 8),
-            startDateLabel.leadingAnchor.constraint(equalTo: sliderContainer.leadingAnchor),
-            startDateLabel.widthAnchor.constraint(equalTo: sliderContainer.widthAnchor, multiplier: 0.5),
-            
-            endDateLabel.topAnchor.constraint(equalTo: endDateSlider.bottomAnchor, constant: 8),
-            endDateLabel.trailingAnchor.constraint(equalTo: sliderContainer.trailingAnchor),
-            endDateLabel.widthAnchor.constraint(equalTo: sliderContainer.widthAnchor, multiplier: 0.5),
-            */
+             // Position original labels below sliders
+             startDateLabel.topAnchor.constraint(equalTo: endDateSlider.bottomAnchor, constant: 8),
+             startDateLabel.leadingAnchor.constraint(equalTo: sliderContainer.leadingAnchor),
+             startDateLabel.widthAnchor.constraint(equalTo: sliderContainer.widthAnchor, multiplier: 0.5),
+             
+             endDateLabel.topAnchor.constraint(equalTo: endDateSlider.bottomAnchor, constant: 8),
+             endDateLabel.trailingAnchor.constraint(equalTo: sliderContainer.trailingAnchor),
+             endDateLabel.widthAnchor.constraint(equalTo: sliderContainer.widthAnchor, multiplier: 0.5),
+             */
             
             //sliderContainer.bottomAnchor.constraint(equalTo: endDateLabel.bottomAnchor, constant: 10)
             sliderContainer.bottomAnchor.constraint(equalTo: endDateTextTappable.bottomAnchor, constant: 10)
         ])
-
+        
     }
     
     // Add new methods to toggle between date formats
@@ -543,7 +589,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         showStartDateAsRelative.toggle()
         updateDateLabels()
     }
-
+    
     @objc internal func toggleEndDateFormat(_ sender: UITapGestureRecognizer) {
         // Add haptic feedback
         let generator = UIImpactFeedbackGenerator(style: .light)
@@ -640,7 +686,10 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             "color": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_BOOLEAN, VOT_CHOICE],
             "background": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_CHOICE],
             "selection": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_BOOLEAN, VOT_CHOICE],
-            "pieData": [VOT_BOOLEAN, VOT_CHOICE]
+            "pieData": [VOT_BOOLEAN, VOT_CHOICE],
+            "timeSource1": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_BOOLEAN],
+            "timeSource2": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_BOOLEAN],
+            "timeSource3": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_BOOLEAN]
         ]
         
         // Initialize empty selections
@@ -650,7 +699,10 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             "color": -1,
             "background": -1,
             "selection": -1,
-            "pieData": -1
+            "pieData": -1,
+            "timeSource1": -1,
+            "timeSource2": -1,
+            "timeSource3": -1
         ]
         
         // Setup initial configuration based on selected chart type
@@ -663,51 +715,87 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         }
     }
     
-      @objc internal func selectXAxis() {
-          showPickerForValueObjSelection(type: "xAxis")
-      }
-      
-      @objc internal func selectYAxis() {
-          showPickerForValueObjSelection(type: "yAxis")
-      }
-      
-      @objc internal func selectColor() {
-          showPickerForValueObjSelection(type: "color")
-      }
-      
-      @objc internal func selectBackground() {
-          showPickerForValueObjSelection(type: "background")
-      }
-      
-      @objc internal func selectSelection() {
-          showPickerForValueObjSelection(type: "selection")
-      }
-      
-      @objc internal func selectPieData() {
-          showPickerForValueObjSelection(type: "pieData")
-      }
-      
-      internal func showPickerForValueObjSelection(type: String) {
-          // Store current selection type
-          currentPickerType = type
-          
-          // Get eligible valueObjs for this selection
-          filteredValueObjs = getEligibleValueObjs(for: type)
-          
-          // Update picker
-          pickerView.reloadAllComponents()
-          
-          // If a valueObj is already selected, select it in the picker
-          if let selectedID = selectedValueObjIDs[type], selectedID != -1 {
-              if let index = filteredValueObjs.firstIndex(where: { $0.vid == selectedID }) {
-                  pickerView.selectRow(index, inComponent: 0, animated: false)
-              }
-          }
-          
-          // Show picker
-          pickerContainer.isHidden = false
-      }
-      
+    @objc internal func selectXAxis() {
+        showPickerForValueObjSelection(type: "xAxis")
+    }
+    
+    @objc internal func selectYAxis() {
+        showPickerForValueObjSelection(type: "yAxis")
+    }
+    
+    @objc internal func selectColor() {
+        showPickerForValueObjSelection(type: "color")
+    }
+    
+    @objc internal func selectBackground() {
+        showPickerForValueObjSelection(type: "background")
+    }
+    
+    @objc internal func selectSelection() {
+        showPickerForValueObjSelection(type: "selection")
+    }
+    
+    @objc internal func selectPieData() {
+        showPickerForValueObjSelection(type: "pieData")
+    }
+    
+    @objc internal func selectTimeSource1() {
+        currentPickerType = "timeSource1"
+        showPickerForValueObjSelection(type: "timeSource1")
+    }
+    
+    @objc internal func selectTimeSource2() {
+        currentPickerType = "timeSource2"
+        showPickerForValueObjSelection(type: "timeSource2")
+    }
+    
+    @objc internal func selectTimeSource3() {
+        currentPickerType = "timeSource3"
+        showPickerForValueObjSelection(type: "timeSource3")
+    }
+    
+    internal func showPickerForValueObjSelection(type: String) {
+        // Store current selection type
+        currentPickerType = type
+        
+        // Get eligible valueObjs for this selection
+        filteredValueObjs = getEligibleValueObjs(for: type)
+        
+        // Update picker
+        pickerView.reloadAllComponents()
+        
+        // If a valueObj is already selected, select it in the picker
+        if let selectedID = selectedValueObjIDs[type], selectedID != -1 {
+            if let index = filteredValueObjs.firstIndex(where: { $0.vid == selectedID }) {
+                pickerView.selectRow(index, inComponent: 0, animated: false)
+            }
+        }
+        
+        // Show picker
+        pickerContainer.isHidden = false
+    }
+    
+    internal func showPickerForTimeValueObjSelection(sourceIndex: Int) {
+        // Store current selection type
+        currentPickerType = "timeSource\(sourceIndex + 1)"
+        
+        // Get eligible valueObjs for time chart
+        filteredValueObjs = getEligibleValueObjsForTimeChart()
+        
+        // Update picker
+        pickerView.reloadAllComponents()
+        
+        // If a valueObj is already selected, select it in the picker
+        if timeChartSources[sourceIndex] != -1 {
+            if let index = filteredValueObjs.firstIndex(where: { $0.vid == timeChartSources[sourceIndex] }) {
+                pickerView.selectRow(index, inComponent: 0, animated: false)
+            }
+        }
+        
+        // Show picker
+        pickerContainer.isHidden = false
+    }
+    
     @objc internal func dismissPicker() {
         // Get selected row
         let selectedRow = pickerView.selectedRow(inComponent: 0)
@@ -717,9 +805,6 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             let selected = filteredValueObjs[selectedRow]
             let previousSelection = selectedValueObjIDs[currentPickerType]
             selectedValueObjIDs[currentPickerType] = selected.vid
-            
-            // Update button title
-            updateButtonTitles()
             
             // Update chart if necessary components are selected
             if segmentedControl.selectedSegmentIndex == CHART_TYPE_SCATTER {
@@ -743,23 +828,40 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
                     }
                     generateDistributionPlotData()
                 }
-            } else {
+            } else if segmentedControl.selectedSegmentIndex == CHART_TYPE_PIE {
                 if selectedValueObjIDs["pieData"] != -1 {
                     generatePieChartData()
                 }
+            } else if segmentedControl.selectedSegmentIndex == CHART_TYPE_TIME {
+                // Handle time chart source selection
+                if currentPickerType == "timeSource1" {
+                    timeChartSources[0] = selected.vid
+                } else if currentPickerType == "timeSource2" {
+                    timeChartSources[1] = selected.vid
+                } else if currentPickerType == "timeSource3" {
+                    timeChartSources[2] = selected.vid
+                }
+
+                // Update chart if at least one source is selected
+                if timeChartSources.contains(where: { $0 != -1 }) {
+                    generateTimeChartData()
+                }
             }
+            
+            // Update button title
+            updateButtonTitles()
         }
         
         // Hide picker
         pickerContainer.isHidden = true
     }
-      
-      @objc internal func cancelPicker() {
-          // Hide picker without saving selection
-          pickerContainer.isHidden = true
-      }
-      
-
+    
+    @objc internal func cancelPicker() {
+        // Hide picker without saving selection
+        pickerContainer.isHidden = true
+    }
+    
+    
     internal func updateButtonTitles() {
         // Update scatter plot button titles
         if segmentedControl.selectedSegmentIndex == CHART_TYPE_SCATTER {
@@ -798,6 +900,38 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             } else {
                 selectionButton.setTitle("Select Segmentation Data", for: .normal)
             }
+        } else if segmentedControl.selectedSegmentIndex == CHART_TYPE_TIME {
+            // Update time chart source buttons
+            for i in 0..<3 {
+                let sourceID = timeChartSources[i]
+                if sourceID != -1 {
+                    let sourceVO = tracker?.valObjTable.first { $0.vid == sourceID }
+                    let buttonTitle = sourceVO?.valueName ?? "Source \(i+1)"
+                    
+                    switch i {
+                    case 0:
+                        timeSource1Button.setTitle(buttonTitle, for: .normal)
+                    case 1:
+                        timeSource2Button.setTitle(buttonTitle, for: .normal)
+                    case 2:
+                        timeSource3Button.setTitle(buttonTitle, for: .normal)
+                    default:
+                        break
+                    }
+                } else {
+                    // Set default titles for unselected sources
+                    switch i {
+                    case 0:
+                        timeSource1Button.setTitle("Select Data Source 1", for: .normal)
+                    case 1:
+                        timeSource2Button.setTitle("Select Data Source 2 (Optional)", for: .normal)
+                    case 2:
+                        timeSource3Button.setTitle("Select Data Source 3 (Optional)", for: .normal)
+                    default:
+                        break
+                    }
+                }
+            }
         } else {
             // Update pie chart button title
             if let pieID = selectedValueObjIDs["pieData"], pieID != -1 {
@@ -824,17 +958,17 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     }
     // Use:
     // objc_setAssociatedObject(lineLayer, AssociatedKeys.legendCategory, category, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-
+    
     // And when getting:
     // objc_getAssociatedObject(lineLayer, AssociatedKeys.legendCategory) as? String
-     
+    
     
     @objc internal func showPointDetails(_ sender: UITapGestureRecognizer) {
         /*
-        guard let pointView = sender.view,
-              let pointData = objc_getAssociatedObject(pointView, &AssociatedKeys.pointData) as? [String: Any] else {
-            return
-        }
+         guard let pointView = sender.view,
+         let pointData = objc_getAssociatedObject(pointView, &AssociatedKeys.pointData) as? [String: Any] else {
+         return
+         }
          */
         
         guard let pointView = sender.view,
@@ -932,7 +1066,7 @@ internal struct AssociatedKeys {
 
 extension TrackerChart {
     
- 
+    
     // Update date labels with current date values
     internal func updateDateLabels() {
         // Set default dates if not set yet
@@ -1005,9 +1139,9 @@ extension TrackerChart {
         startDateLabel.text = startDateStr
         endDateLabel.text = endDateStr
     }
-   
+    
     // MARK: - Utility Functions
-
+    
     internal func formatDaysAgo(_ days: Int) -> String {
         if days == 0 {
             return "Today"
@@ -1016,7 +1150,7 @@ extension TrackerChart {
         }
         return "\(days) days ago"
     }
-
+    
     // MARK: - UI Actions
     
     @objc internal func chartTypeChanged(_ sender: UISegmentedControl) {
@@ -1052,6 +1186,22 @@ extension TrackerChart {
                     // Ensure we're using the current date range
                     generateDistributionPlotData()
                 }
+            } else {
+                // Clear the chart and show instruction
+                for subview in chartView.subviews {
+                    if subview != noDataLabel {
+                        subview.removeFromSuperview()
+                    }
+                }
+                noDataLabel.text = "Configure chart options below"
+                noDataLabel.isHidden = false
+            }
+        } else if sender.selectedSegmentIndex == CHART_TYPE_TIME {
+            setupTimeChartConfig()
+            
+            // Check if any data sources are selected for time chart
+            if timeChartSources.contains(where: { $0 != -1 }) {
+                generateTimeChartData()
             } else {
                 // Clear the chart and show instruction
                 for subview in chartView.subviews {
@@ -1214,7 +1364,7 @@ extension TrackerChart {
         // Remove the tracking check - now we update during sliding too
         updateChartDataWithDebounce()
     }
-
+    
     // Add this method for debounced updates
     internal func updateChartDataWithDebounce() {
         // Cancel any existing work item
@@ -1231,6 +1381,11 @@ extension TrackerChart {
                 } else if self.segmentedControl.selectedSegmentIndex == self.CHART_TYPE_DISTRIBUTION {
                     self.saveLegendItemVisibility = true  // keep choices for just date range change
                     self.generateDistributionPlotData()
+                } else if self.segmentedControl.selectedSegmentIndex == self.CHART_TYPE_TIME {
+                    // Handle time chart updates
+                    if self.timeChartSources.contains(where: { $0 != -1 }) {
+                        self.generateTimeChartData()
+                    }
                 } else {
                     self.generatePieChartData()
                 }
@@ -1261,7 +1416,7 @@ extension TrackerChart {
             }
         }
     }
-        
-
-        
+    
+    
+    
 }

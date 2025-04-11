@@ -655,7 +655,7 @@ extension TrackerChart {
         
         // Get total number of entries in date range
         let totalCountSQL = "SELECT COUNT(*) FROM trkrData WHERE date >= \(startTimestamp) AND date <= \(endTimestamp) AND minpriv <= \(privacyValue)"
-        let totalPossibleEntries = tracker.toQry2Int(sql: totalCountSQL) ?? 0
+        let totalPossibleEntries = tracker.toQry2Int(sql: totalCountSQL)
         
         // Fetch data for the selected value object
         let data = fetchDataForValueObj(id: pieDataID, startTimestamp: startTimestamp, endTimestamp: endTimestamp)
