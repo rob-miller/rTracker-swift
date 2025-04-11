@@ -162,10 +162,10 @@ class voSlider: voState {
             if vo.optDict["slidrswlb"] == "1" {
                 let to = vo.parentTracker
                 var sql = String(format: "select count(*) from voData where id=%ld and date<%d", Int(vo.vid), Int(to.trackerDate!.timeIntervalSince1970))
-                let v = to.toQry2Int(sql:sql) ?? 0
+                let v = to.toQry2Int(sql:sql)
                 if v > 0 {
                     sql = String(format: "select val from voData where id=%ld and date<%d order by date desc limit 1;", Int(vo.vid), Int(to.trackerDate!.timeIntervalSince1970))
-                    sliderCtl?.value = to.toQry2Float(sql:sql) ?? 0.0
+                    sliderCtl?.value = to.toQry2Float(sql:sql)
                 }
             } else {
                 sliderCtl?.setValue(Float(sdflt), animated: false)

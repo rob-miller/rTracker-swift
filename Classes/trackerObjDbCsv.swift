@@ -15,7 +15,7 @@ extension trackerObj {
         var sql = "create table if not exists trkrInfo (field text, val text, unique ( field ) on conflict replace);"
         toExecSql(sql:sql)
         sql = "select count(*) from trkrInfo;"
-        c = super.toQry2Int(sql:sql)!
+        c = super.toQry2Int(sql:sql)
         if c == 0 {
             // init clean db
             sql = "create table if not exists voConfig (id int, rank int, type int, name text, color int, graphtype int, priv int, unique (id) on conflict replace);"
@@ -101,7 +101,7 @@ extension trackerObj {
     
     func getDateCount() -> Int {
         let sql = "select count(*) from trkrData where minpriv <= \(privacyValue);"
-        let rv = toQry2Int(sql:sql)!
+        let rv = toQry2Int(sql:sql)
         return rv
     }
     
@@ -673,7 +673,7 @@ extension trackerObj {
             } else {
                 sql = "select date from voData order by date desc limit 1"
             }
-            let lastInt = toQry2Int(sql:sql)!
+            let lastInt = toQry2Int(sql:sql)
             if lastInt != 0 {
                 lastEntryDate = Date(timeIntervalSince1970: TimeInterval(lastInt))
                 var addUnits = nr?.everyVal ?? 0
@@ -792,41 +792,43 @@ extension trackerObj {
     // MARK: query tracker methods
 
     func dateNearest(_ targ: Int) -> Int {
-        var sql = String(format: "select date from trkrData where date <= %ld and minpriv <= %d order by date desc limit 1;", targ, privacyValue)
-        var rslt = toQry2Int(sql:sql)!
-        if 0 == rslt {
-            sql = String(format: "select date from trkrData where date > %ld and minpriv <= %d order by date desc limit 1;", targ, privacyValue)
-            rslt = toQry2Int(sql:sql)!
+        // First try to find the nearest date before or equal to target
+        let sqlBefore = "SELECT MAX(date) FROM trkrData WHERE date <= \(targ) AND minpriv <= \(privacyValue)"
+        
+        var rslt = toQry2Int(sql: sqlBefore)
+        if rslt == 0 {
+            // If no date found before target, find the nearest date after target
+            let sqlAfter = "SELECT MIN(date) FROM trkrData WHERE date > \(targ) AND minpriv <= \(privacyValue)"
+            rslt = toQry2Int(sql: sqlAfter)
         }
-
         return rslt
     }
 
     func prevDate() -> Int {
-        let sql = "select date from trkrData where date < \(Int(trackerDate?.timeIntervalSince1970 ?? 0)) and minpriv <= \(privacyValue) order by date desc limit 1;"
-        let rslt = toQry2Int(sql:sql)!
+        let sql = "select max(date) from trkrData where date < \(Int(trackerDate?.timeIntervalSince1970 ?? 0)) and minpriv <= \(privacyValue);"
+        let rslt = toQry2Int(sql:sql)
         DBGLog(String("curr: \(trackerDate) prev: \(Date(timeIntervalSince1970: TimeInterval(rslt)))"))
 
         return rslt
     }
 
     func postDate() -> Int {
-        let sql = "select date from trkrData where date > \(Int(trackerDate?.timeIntervalSince1970 ?? 0)) and minpriv <= \(privacyValue) order by date asc limit 1;"
-        let rslt = toQry2Int(sql:sql)!
+        let sql = "select min(date) from trkrData where date > \(Int(trackerDate?.timeIntervalSince1970 ?? 0)) and minpriv <= \(privacyValue);"
+        let rslt = toQry2Int(sql:sql)
 
         return rslt
     }
 
     func lastDate() -> Int {
-        let sql = "select date from trkrData where minpriv <= \(privacyValue) order by date desc limit 1;"
-        let rslt = toQry2Int(sql:sql)!
+        let sql = "select max(date) from trkrData where minpriv <= \(privacyValue);"
+        let rslt = toQry2Int(sql:sql)
 
         return rslt
     }
 
     func firstDate() -> Int {
-        let sql = "select date from trkrData where minpriv <= \(privacyValue) order by date asc limit 1;"
-        let rslt = toQry2Int(sql:sql)!
+        let sql = "select min(date) from trkrData where minpriv <= \(privacyValue);"
+        let rslt = toQry2Int(sql:sql)
 
         return rslt
     }
@@ -961,7 +963,7 @@ extension trackerObj {
 
     func countEntries() -> Int {
         let sql = "select count(*) from trkrData;"
-        let r = toQry2Int(sql:sql)!
+        let r = toQry2Int(sql:sql)
 
         return r
     }
@@ -1155,7 +1157,7 @@ extension trackerObj {
             
             var sql = "select minpriv from trkrData where date = \(tdi);"
             let dbmp = toQry2Int(sql: sql)
-            if dbmp == nil || dbmp! > mp {
+            if dbmp > mp {
                 sql = String(format: "insert or replace into trkrData (date, minpriv) values (%d,%ld);", tdi, mp)
                 toExecSql(sql:sql)
             }

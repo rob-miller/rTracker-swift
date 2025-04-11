@@ -232,8 +232,7 @@ class notifyReminder: NSObject {
         var sql = "select rid, monthDays, weekDays, everyMode, everyVal, start, until, times, flags, tid, vid, saveDate, msg from reminders where \(sqlWhere ?? "")"
         //let arr = [Int](repeating: 0, count: 12)
         var flags: UInt = 0
-        let ias = to.toQry2I12aS1(sql: sql)
-        let (arr, str) = ias!
+        let (arr, str) = to.toQry2I12aS1(sql: sql)
         
         //DBGLog(@"read msg: %@",tmp);
         if 0 != arr[0] {

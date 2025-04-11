@@ -98,9 +98,9 @@ class trackerList: tObjBase {
                 toExecSql(sql:sql)
                 sql = String(format: "insert into info (name, val) values ('rtdb_version',%i);", RTDB_VERSION) // upgraded now
                 toExecSql(sql:sql)
-                sql = String(format: "insert into info (name, val) values ('demos_version',%i);", demosVer!)
+                sql = String(format: "insert into info (name, val) values ('demos_version',%i);", demosVer)
                 toExecSql(sql:sql)
-                sql = String(format: "insert into info (name, val) values ('samples_version',%i);", samplesVer!)
+                sql = String(format: "insert into info (name, val) values ('samples_version',%i);", samplesVer)
                 toExecSql(sql:sql)
             }
         }
@@ -197,14 +197,14 @@ class trackerList: tObjBase {
             DBGLog("rank not found")
         } else {
             sql = String(format: "select count(*) from toplevel where rank=%li;", rank)
-            if 1 < toQry2Int(sql:sql)! {
+            if 1 < toQry2Int(sql:sql) {
                 DBGLog(String("too many at rank \(rank)"))
                 rank = 0
             }
         }
         if rank == 0 {
             sql = "select max(rank) from toplevel;" // so put at end
-            rank = toQry2Int(sql:sql)! + 1
+            rank = toQry2Int(sql:sql) + 1
             DBGLog(String("rank adjust, set to \(rank)"))
         }
 

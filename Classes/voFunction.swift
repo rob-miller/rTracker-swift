@@ -411,7 +411,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             // also FREPDFLT  -- no value specified
             // use last entry
             sql = String(format: "select date from trkrData where date < %ld order by date desc limit 1;", maxdate)
-            epDate = to.toQry2Int(sql:sql)!
+            epDate = to.toQry2Int(sql:sql)
             //DBGLog(@"ep %d ->entry: %@", ndx, [self qdate:epDate] );
         } else if ep! >= 0 {
             // ep is vid
@@ -419,7 +419,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             #if FUNCTIONDBG
             DBGLog(String("get ep qry: \(sql)"))
             #endif
-            epDate = to.toQry2Int(sql:sql)!
+            epDate = to.toQry2Int(sql:sql)
             #if FUNCTIONDBG
             DBGLog(String("ep \(ndx) ->vo \(vo.valueName): \(qdate(epDate))"))
             DBGLog(String("ep \(ndx) ->vo \(vo.valueName): \(qdate(epDate))"))
@@ -585,7 +585,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                 let nullV1 = (nil == sv1 || ("" == sv1))
                 let v1 = Double(sv1 ?? "") ?? 0.0
                 sql = String(format: "select count(val) from voData where id=%ld and date >=%ld and date <%d;", vid, epd0, epd1)
-                var ci = to.toQry2Int(sql:sql)!
+                var ci = to.toQry2Int(sql:sql)
                 #if FUNCTIONDBG
                 DBGLog(String("v1= \(v1) nullV1=\(nullV1) vid=\(vid) \(vo.parentTracker.trackerName):\(vo.valueName)"))
                 #endif
@@ -601,13 +601,13 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                     // with per calendar date calcs, epd0 may not match a datapoint
                     // - so get val coming into this time segment or skip for beginning - rtm 17.iii.13
                     sql = String(format: "select count(val) from voData where id=%ld and date>=%ld;", vid, epd0)
-                    ci = to.toQry2Int(sql:sql)! // slightly different for delta
+                    ci = to.toQry2Int(sql:sql) // slightly different for delta
                     if 0 == ci {
                         return nil // skip for beginning
                     }
                     if isFn1ArgElapsed(currTok) {
                         sql = String(format: "select date from voData where id=%ld and date>=%ld order by date asc limit 1;", vid, epd0)
-                        let d0 = to.toQry2Int(sql:sql)!
+                        let d0 = to.toQry2Int(sql:sql)
                         result = Double(epd1) - Double(d0)
                         DBGLog(String("elapsed unit: epd0= \(epd0) d0= \(d0) epd1=\(epd1) rslt= \(result)"))
                         switch currTok {
@@ -631,7 +631,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                         DBGLog(String("elapsed unit: final result = \(result)"))
                     }
                     sql = String(format: "select val from voData where id=%ld and date>=%ld order by date asc limit 1;", vid, epd0) // desc->asc 22.ii.2016 to match <= -> >= change 25.01.16
-                    let v0 = to.toQry2Double(sql:sql)!
+                    let v0 = to.toQry2Double(sql:sql)
                     #if FUNCTIONDBG
                     DBGLog(String("delta/on_ratio/no_ratio: v0= \(v0)"))
                     #endif
@@ -667,14 +667,14 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                     if c == 0.0 {
                         // else denom is number of entries between epd0 to epd1 
                         sql = String(format: "select count(val) from voData where id=%ld and val <> '' and date >=%ld and date <%d;", vid, epd0, epd1)
-                        c = Double(to.toQry2Float(sql:sql)! + (nullV1 ? 0.0 : 1.0)) // +1 for current on screen
+                        c = Double(to.toQry2Float(sql:sql) + (nullV1 ? 0.0 : 1.0)) // +1 for current on screen
                     }
 
                     if c == 0.0 {
                         return nil
                     }
                     sql = String(format: "select sum(val) from voData where id=%ld and date >=%ld and date <%d;", vid, epd0, epd1)
-                    let v = Double(to.toQry2Float(sql:sql)!)
+                    let v = Double(to.toQry2Float(sql:sql))
                     result = (v + v1) / c
                     #if FUNCTIONDBG
                     DBGLog(String("avg: v= \(v) v1= \(v1) (v+v1)= \(v + v1) c= \(c) rslt= \(result) "))
@@ -687,7 +687,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                         result = v1
                     } else {
                         sql = String(format: "select min(val) from voData where id=%ld and date >=%ld and date <%d;", vid, epd0, epd1)
-                        result = Double(to.toQry2Float(sql:sql)!)
+                        result = Double(to.toQry2Float(sql:sql))
                         if !nullV1 && v1 < result {
                             result = v1
                         }
@@ -702,7 +702,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                         result = v1
                     } else {
                         sql = String(format: "select max(val) from voData where id=%ld and date >=%ld and date <%d;", vid, epd0, epd1)
-                        result = Double(to.toQry2Float(sql:sql)!)
+                        result = Double(to.toQry2Float(sql:sql))
                         if !nullV1 && v1 > result {
                             result = v1
                         }
@@ -712,7 +712,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                     #endif
                 case FN1ARGCOUNT:
                     sql = String(format: "select count(val) from voData where id=%ld and date >=%ld and date <%d;", vid, epd0, epd1)
-                    result = Double(to.toQry2Float(sql:sql)!)
+                    result = Double(to.toQry2Float(sql:sql))
                     if !nullV1 {
                         result += 1.0
                     }
@@ -723,7 +723,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                     let ep0def = Int(self.vo.optDict["frep0"]!)
                     let ep0delta = (ep0def == FREPENTRY ? 0 : ep0def == FREPHOURS ? (60*60) : (60*60*24)) / 2
                     sql = String(format: "select val from voData where id=%ld and date >=%ld and date <%d limit 1;", vid, epd0-ep0delta, epd0+ep0delta)
-                    result = Double(to.toQry2Float(sql:sql)!)
+                    result = Double(to.toQry2Float(sql:sql))
                     #if FUNCTIONDBG
                     DBGLog(String("delay: result= \(result)"))
                     #endif
@@ -768,7 +768,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                     default:
                         break
                     }
-                    result = Double(to.toQry2Float(sql:sql)!)
+                    result = Double(to.toQry2Float(sql:sql))
                     if currTok != FN1ARGPRESUM {
                         result += v1
                     }

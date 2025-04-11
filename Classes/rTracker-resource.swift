@@ -771,8 +771,8 @@ class rTracker_resource: NSObject {
     // MARK: -
     // MARK: sql
 
-    class func fromSqlStr(_ instr: String?) -> String? {
-        let outstr = instr?.replacingOccurrences(of: "''", with: "'")
+    class func fromSqlStr(_ instr: String) -> String {
+        let outstr = instr.replacingOccurrences(of: "''", with: "'")
         //DBGLog(@"in: %@  out: %@",instr,outstr);
         return outstr
     }

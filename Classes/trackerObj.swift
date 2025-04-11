@@ -267,8 +267,10 @@ class trackerObj: tObjBase {
         let currDate = Int(trackerDate?.timeIntervalSince1970 ?? 0)
         
         let sql = "select max(date) from voFNstatus where stat = \(fnStatus.fnData.rawValue)"  // any vid will do
-        var nextDate = toQry2Int(sql: sql) ?? firstDate()
-
+        var nextDate = toQry2Int(sql: sql)
+        if nextDate == 0 {  // fn not run yet
+            nextDate = firstDate()
+        }
         if 0 == nextDate {
             // no data yet for this tracker so do not generate a 0 value in database
             completion?();
@@ -574,7 +576,7 @@ class trackerObj: tObjBase {
         DBGLog(String("to optdict: \(optDict)"))
 
         sql = "select max(date) from trkrData"
-        lastDbDate = toQry2Int(sql:sql)!
+        lastDbDate = toQry2Int(sql:sql)
         
         //self.trackerName = [self.optDict objectForKey:@"name"];
 
@@ -791,7 +793,7 @@ class trackerObj: tObjBase {
         var sql: String
         if 0 != inVid {
             sql = "select count(*) from voConfig where id=\(inVid)"
-            if 0 < toQry2Int(sql:sql)! {
+            if 0 < toQry2Int(sql:sql) {
                 sql = "update voConfig set name=\"\(name)\" where id=\(inVid)"
                 toExecSql(sql:sql)
                 return inVid
@@ -803,7 +805,7 @@ class trackerObj: tObjBase {
         }
         sql = "select max(rank) from voConfig"
 
-        let rank = toQry2Int(sql:sql)! + 1
+        let rank = toQry2Int(sql:sql) + 1
 
         sql = String(format: "insert into voConfig (id, rank, type, name, color, graphtype,priv) values (%ld, %ld, %d, '%@', %d, %d, %d);", vid, rank, 0, rTracker_resource.toSqlStr(name), 0, 0, MINPRIV)
         toExecSql(sql:sql)

@@ -491,7 +491,7 @@ class valueObj: NSObject, UITextFieldDelegate {
                     // handle slider option 'starts with last'
                     let to = parentTracker
                     var sql = String(format: "select count(*) from voData where id=%ld and date<%d", vid, Int(to.trackerDate!.timeIntervalSince1970))
-                    let v = to.toQry2Int(sql:sql) ?? 0
+                    let v = to.toQry2Int(sql:sql)
                     if v > 0 {
                         sql = String(format: "select val from voData where id=%ld and date<%d order by date desc limit 1;", vid, Int(to.trackerDate!.timeIntervalSince1970))
                         sdflt = to.toQry2Float(sql:sql)

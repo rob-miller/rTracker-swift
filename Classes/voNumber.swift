@@ -177,7 +177,7 @@ class voNumber: voState, UITextFieldDelegate {
                 // only if new entry
                 let to = vo.parentTracker
                 var sql = String(format: "select count(*) from voData where id=%ld and date<%d", Int(vo.vid), Int(to.trackerDate!.timeIntervalSince1970))
-                let v = to.toQry2Int(sql:sql)!
+                let v = to.toQry2Int(sql:sql)
                 if v > 0 {
                     sql = String(format: "select val from voData where id=%ld and date<%d order by date desc limit 1;", Int(vo.vid), Int(to.trackerDate!.timeIntervalSince1970))
                     let r = to.toQry2Str(sql:sql)
@@ -409,7 +409,7 @@ class voNumber: voState, UITextFieldDelegate {
         
         let sql = "select max(date) from voHKstatus where id = \(Int(vo.vid)) and stat = \(hkStatus.hkData.rawValue)"
         let lastDate = to.toQry2Int(sql: sql)
-        DBGLog("lastDate is \(Date(timeIntervalSince1970:TimeInterval(lastDate!)))")
+        DBGLog("lastDate is \(Date(timeIntervalSince1970:TimeInterval(lastDate)))")
         rthk.getHealthKitDates(for: srcName, lastDate: lastDate) { hkDates in
             DBGLog("hk dates for \(srcName), ahAvg is \(self.vo.optDict["ahAvg"] ?? "1")")
             let existingDatesQuery = """

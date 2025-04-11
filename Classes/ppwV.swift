@@ -103,24 +103,24 @@ class ppwV: UIView, UITextFieldDelegate {
     }
 
     private var _topTF: UITextField?
-    var topTF: UITextField? {
+    var topTF: UITextField {
         if nil == _topTF {
             _topTF = UITextField(frame: genFrame(0.4))
             //[topTF setHidden:TRUE];
-            _topTF?.backgroundColor = .systemBackground
-            _topTF?.returnKeyType = .done
-            _topTF?.autocapitalizationType = .none
-            _topTF?.clearButtonMode = .whileEditing
-            _topTF?.delegate = self
-            _topTF?.layer.cornerRadius = 4
-            _topTF?.borderStyle = .line
-            _topTF?.accessibilityIdentifier = "ppwtf"
+            _topTF!.backgroundColor = .systemBackground
+            _topTF!.returnKeyType = .done
+            _topTF!.autocapitalizationType = .none
+            _topTF!.clearButtonMode = .whileEditing
+            _topTF!.delegate = self
+            _topTF!.layer.cornerRadius = 4
+            _topTF!.borderStyle = .line
+            _topTF!.accessibilityIdentifier = "ppwtf"
 
             if let _topTF {
                 addSubview(_topTF)
             }
         }
-        return _topTF
+        return _topTF!
     }
 
     private var _cancelBtn: UIButton?
@@ -279,7 +279,7 @@ class ppwV: UIView, UITextFieldDelegate {
             //[UIView setAnimationDuration:kAnimationDuration];
             UIView.animate(withDuration: 0.2, animations: { [self] in
                 hide()
-                topTF?.resignFirstResponder()
+                topTF.resignFirstResponder()
             })
         } else {
 
@@ -287,7 +287,7 @@ class ppwV: UIView, UITextFieldDelegate {
 
             //	[self.topLabel setHidden:TRUE];
             //	[self.topTF setHidden:TRUE];
-            topTF?.resignFirstResponder()
+            topTF.resignFirstResponder()
         }
         //if (animated) {
         //	[UIView commitAnimations];
@@ -303,7 +303,7 @@ class ppwV: UIView, UITextFieldDelegate {
         ok = okState
         cancel = cancelState
         //[self.topLabel setHidden:FALSE];
-        topTF?.text = ""
+        topTF.text = ""
         //[self.topTF setHidden:FALSE];
         //[self.cancelBtn setHidden:FALSE];
     }
@@ -317,7 +317,7 @@ class ppwV: UIView, UITextFieldDelegate {
             self.show()
         }) {(_) in
             // Code to be executed after the animation completes
-            self.topTF?.becomeFirstResponder()
+            self.topTF.becomeFirstResponder()
         }
             
 
@@ -328,7 +328,7 @@ class ppwV: UIView, UITextFieldDelegate {
         //DBGLog(@"ppwv check pass");
         setUpPass(okState, cancel: cancelState)
         topLabel?.text = "Please enter password:"
-        topTF?.addTarget(self, action: #selector(testp), for: .editingDidEnd)
+        topTF.addTarget(self, action: #selector(testp), for: .editingDidEnd)
         cancelBtn?.addTarget(self, action: #selector(cancelp), for: .touchDown)
 
         showPassRqstr()
@@ -341,7 +341,7 @@ class ppwV: UIView, UITextFieldDelegate {
         setUpPass(okState, cancel: cancelState)
 
         topLabel?.text = SetPassTxt
-        topTF?.addTarget(self, action: #selector(setp), for: .editingDidEnd)
+        topTF.addTarget(self, action: #selector(setp), for: .editingDidEnd)
         cancelBtn?.addTarget(self, action: #selector(cancelp), for: .touchDown)
 
         showPassRqstr()
@@ -359,7 +359,7 @@ class ppwV: UIView, UITextFieldDelegate {
     @objc func changePAction() {
         //[self.topTF resignFirstResponder];
         //DBGLog(@"change p to .%@.",self.topTF.text);
-        if !dbTestPass(topTF?.text) {
+        if !dbTestPass(topTF.text) {
             // skip if the same (spurious editingdidend event on start)
             setp()
             topLabel?.text = "password changed"
@@ -371,8 +371,8 @@ class ppwV: UIView, UITextFieldDelegate {
         //DBGLog(@"ppwv change pass");
         setUpPass(okState, cancel: cancelState)
         cpSetTopLabel()
-        topTF?.removeTarget(self, action: nil, for: .editingDidEnd)
-        topTF?.addTarget(self, action: #selector(changePAction), for: .editingDidEnd)
+        topTF.removeTarget(self, action: nil, for: .editingDidEnd)
+        topTF.addTarget(self, action: #selector(changePAction), for: .editingDidEnd)
 
         //[UIView beginAnimations:nil context:NULL];
         //[UIView setAnimationDuration:kAnimationDuration];
@@ -402,18 +402,21 @@ class ppwV: UIView, UITextFieldDelegate {
     }
 
     func dbTestPass(_ `try`: String?) -> Bool {
+        
+        guard let `try` = `try` else { return false }
+        
         let sql = "select val from priv0 where key=0;"
         // no empty or whitespace only passwords
-        if !((`try`?.trimmingCharacters(in: .whitespaces).count ?? 0) > 0) {
+        if !((`try`.trimmingCharacters(in: .whitespaces).count) > 0) {
             return false
         }
 
-        let dbPass = rTracker_resource.fromSqlStr(tob?.toQry2Str(sql:sql))
+        let dbPass = rTracker_resource.fromSqlStr(tob!.toQry2Str(sql:sql))
         if dbPass == "" {
             return false // if here then dbquery failed
         }
 
-        if `try` == rTracker_resource.fromSqlStr(tob?.toQry2Str(sql:sql)) {
+        if `try` == rTracker_resource.fromSqlStr(tob!.toQry2Str(sql:sql)) {
             return true
         } else {
             return false
@@ -438,12 +441,12 @@ class ppwV: UIView, UITextFieldDelegate {
     // MARK: button Actions
 
     @objc func setp() {
-        DBGLog(String("enter tf= .\(topTF?.text ?? "")."))
-        if !((topTF?.text?.trimmingCharacters(in: .whitespaces).count ?? 0) > 0) {
+        DBGLog(String("enter tf= .\(topTF.text)."))
+        if !((topTF.text?.trimmingCharacters(in: .whitespaces).count ?? 0) > 0) {
             // "" not valid password, or cancel
             nextState = cancel
         } else {
-            dbSetPass(topTF?.text)
+            dbSetPass(topTF.text)
             nextState = ok
         }
         if (topLabel?.text != ChangePassTxt) && (topLabel?.text != SetPassTxt) {
@@ -457,20 +460,20 @@ class ppwV: UIView, UITextFieldDelegate {
     }
 
     @objc func cancelp() {
-        topTF?.text = ""
-        topTF?.resignFirstResponder() // closing topTF triggers setp action above
+        topTF.text = ""
+        topTF.resignFirstResponder() // closing topTF triggers setp action above
     }
 
     @objc func testp() {
         //DBGLog(@"testp: %@",self.topTF.text);
-        if dbTestPass(topTF?.text) {
+        if dbTestPass(topTF.text) {
             nextState = ok
         } else {
             nextState = cancel
             hide()
         }
 
-        topTF?.resignFirstResponder() // ???
+        topTF.resignFirstResponder() // ???
 
         //[self.parent performSelector:self.parentAction];
         let imp = parent!.method(for: parentAction)

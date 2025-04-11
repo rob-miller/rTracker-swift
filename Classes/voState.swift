@@ -93,7 +93,8 @@ class voState: NSObject, voProtocol {
             xvid = xvo.vid
         } else {
             xto = trackerObj(tlist.getTIDfromNameDb(xtName)[0])
-            guard let tempxvid = xto.toQry2Int(sql: "select id from voConfig where name = '\(xvName)'") else {
+            let tempxvid = xto.toQry2Int(sql: "select id from voConfig where name = '\(xvName)'")
+            if tempxvid == 0 {
                 DBGErr("no xvid for other tracker \(xtName) valueObj \(xvName)")
                 return
             }
@@ -104,7 +105,7 @@ class voState: NSObject, voProtocol {
         let xcd = vo.optDict["otCurrent"] == "1"
 
         var sql = "select max(date) from voOTstatus where id = \(Int(vo.vid)) and stat = \(otStatus.otData.rawValue)"
-        let lastDate = to.toQry2Int(sql: sql) ?? 0
+        let lastDate = to.toQry2Int(sql: sql)
         
         
         let myDates = to.toQry2AryI(sql:"select date from trkrData where date > \(lastDate) order by date asc")
@@ -118,7 +119,8 @@ class voState: NSObject, voProtocol {
             } else {
                 sql = "select val from voData where id = \(xvid) and date <= \(md)"
             }
-            if let xval = xto.toQry2Str(sql: sql) {
+            let xval = xto.toQry2Str(sql: sql)
+            if xval != "" {
                 sql = "insert into voData (id, date, val) values (\(self.vo.vid), \(md), '\(xval)')"
                 to.toExecSql(sql: sql)
                 sql = "insert into voOTstatus (id, date, stat) values (\(self.vo.vid), \(md), \(otStatus.otData.rawValue))"
@@ -291,7 +293,8 @@ class voState: NSObject, voProtocol {
                 return xvo?.value ?? ""
             } else {
                 let xto = trackerObj(tlist.getTIDfromNameDb(xtName)[0])
-                if let xvid = xto.toQry2Int(sql: "select id from voConfig where name = '\(xvName)'") {
+                let xvid = xto.toQry2Int(sql: "select id from voConfig where name = '\(xvName)'")
+                if xvid != 0 {
                     let to = vo.parentTracker
                     let td = to.trackerDate!.timeIntervalSince1970
                     var rslt = ""
@@ -299,11 +302,11 @@ class voState: NSObject, voProtocol {
                         let pd = to.prevDate()
                         if pd != 0 {
                             let sql = "select val from voData where id = \(xvid) and date <= \(td) and date >= \(pd)"
-                            rslt = xto.toQry2Str(sql: sql) ?? ""
+                            rslt = xto.toQry2Str(sql: sql)
                         }
                     } else {
                         let sql = "select val from voData where id = \(xvid) and date <= \(td)"
-                        rslt = xto.toQry2Str(sql: sql) ?? ""
+                        rslt = xto.toQry2Str(sql: sql)
                     }
                     return rslt
                 }

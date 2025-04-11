@@ -569,12 +569,12 @@ class privacyV: UIView {
 
     func dbTestKey(_ `try`: Int) -> Int {
         let sql = "select lvl from priv1 where key=\(`try`);"
-        return tob!.toQry2Int(sql:sql)!
+        return tob!.toQry2Int(sql:sql)
     }
 
     func dbTestLvl(_ `try`: Int) -> Bool {
         let sql = "select count(*) from priv1 where lvl=\(`try`);"
-        return tob!.toQry2Int(sql:sql)! != 0
+        return tob!.toQry2Int(sql:sql) != 0
     }
     
     func dbSetKey(_ key: Int, level lvl: Int) {
@@ -597,7 +597,7 @@ class privacyV: UIView {
     
     func dbGetKey(_ lvl: Int) -> UInt {
         let sql = "select key from priv1 where lvl=\(lvl);"
-        return UInt(tob!.toQry2Int(sql: sql)!)
+        return UInt(tob!.toQry2Int(sql: sql))
     }
 
     func dbGetAdjacentKey(_ lvl: Int, nxt: Bool) -> (Int, Int) {

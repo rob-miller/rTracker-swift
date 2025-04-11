@@ -66,7 +66,7 @@ class vogd: NSObject {
         let myTracker = vo.parentTracker
         let myTOGD = myTracker.togd!
         let sql = String(format: "select %@(val collate CMPSTRDBL) from voData where id=%ld and val != '' and date >= %d and date <= %d;", targ, Int(vo.vid), myTOGD.firstDate, myTOGD.lastDate)
-        return myTracker.toQry2Double(sql:sql) ?? 0.0
+        return myTracker.toQry2Double(sql:sql)
     }
 
     func initAsNum(_ inVO: valueObj) -> vogd {
