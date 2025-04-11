@@ -128,9 +128,96 @@ extension TrackerChart {
         
         // Draw color legend if needed
         if useColorMap {
-            drawColorLegend(in: chartView, minValue: minColor, maxValue: maxColor)
+            // Check if the color variable is boolean
+            if let colorID = selectedValueObjIDs["color"],
+               let colorVO = tracker?.valObjTable.first(where: { $0.vid == colorID }),
+               colorVO.vtype == VOT_BOOLEAN {
+                // Draw boolean legend
+                drawBooleanColorLegend(in: chartView)
+            } else {
+                // Draw continuous gradient legend
+                drawColorLegend(in: chartView, minValue: minColor, maxValue: maxColor)
+            }
         }
     }
+    
+    internal func drawBooleanColorLegend(in view: UIView) {
+        // Create a legend container
+        let legendView = UIView(frame: CGRect(
+            x: view.bounds.width - legendWidth - legendRightMargin,
+            y: legendTopMargin + 4,
+            width: legendWidth,
+            height: legendHeight * 2 + 0 // Give more height for two items
+        ))
+        legendView.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.8)
+        legendView.layer.cornerRadius = 5
+        legendView.layer.borderWidth = 0.5
+        legendView.layer.borderColor = UIColor.systemGray.cgColor
+        view.addSubview(legendView)
+        
+        // Colors for true and no entry (treated as false)
+        let trueColor = UIColor.systemRed
+        let noEntryColor = UIColor.systemBlue
+        
+        // True indicator
+        let trueIndicator = UIView(frame: CGRect(
+            x: 10,
+            y: 5,
+            width: 10,
+            height: 10
+        ))
+        trueIndicator.backgroundColor = trueColor
+        trueIndicator.layer.cornerRadius = 5
+        legendView.addSubview(trueIndicator)
+        
+        // True label
+        let trueLabel = UILabel(frame: CGRect(
+            x: 30,
+            y: 0,
+            width: legendWidth - 40,
+            height: 20
+        ))
+        trueLabel.text = "True"
+        trueLabel.font = UIFont.systemFont(ofSize: 12)
+        legendView.addSubview(trueLabel)
+        
+        // No Entry indicator (treated as False)
+        let noEntryIndicator = UIView(frame: CGRect(
+            x: 10,
+            y: 25,
+            width: 10,
+            height: 10
+        ))
+        noEntryIndicator.backgroundColor = noEntryColor
+        noEntryIndicator.layer.cornerRadius = 5
+        legendView.addSubview(noEntryIndicator)
+        
+        // No Entry label
+        let noEntryLabel = UILabel(frame: CGRect(
+            x: 30,
+            y: 20,
+            width: legendWidth - 40,
+            height: 20
+        ))
+        noEntryLabel.text = "False"
+        noEntryLabel.font = UIFont.systemFont(ofSize: 12)
+        legendView.addSubview(noEntryLabel)
+        
+        // Add title label
+        let colorVO = tracker?.valObjTable.first { $0.vid == selectedValueObjIDs["color"] }
+        let titleLabel = UILabel(frame: CGRect(
+            x: legendView.frame.minX,
+            y: legendView.frame.minY - 18,
+            width: legendWidth,
+            height: 15
+        ))
+        titleLabel.text = colorVO?.valueName ?? "Color"
+        titleLabel.textAlignment = .center
+        titleLabel.font = UIFont.systemFont(ofSize: 10)
+        view.addSubview(titleLabel)
+    }
+
+
     
     internal func drawScatterAxes(
         graphWidth: CGFloat,
@@ -255,17 +342,35 @@ extension TrackerChart {
             // Determine color
             var pointColor: UIColor
             if useColorMap, let colorValue = point["color"] as? Double {
-                let normalizedColorValue = (colorValue - minColor) / colorRange
-                pointColor = getColorGradient(normalizedValue: normalizedColorValue)
-            } else {
-                // Adapt color based on current interface style
-                if self.traitCollection.userInterfaceStyle == .dark {
-                    pointColor = UIColor.white  // White points on dark background
+                // Check if color variable is boolean
+                if let colorID = selectedValueObjIDs["color"],
+                   let colorVO = tracker?.valObjTable.first(where: { $0.vid == colorID }),
+                   colorVO.vtype == VOT_BOOLEAN {
+                    // For boolean, we use red for true values, and points without a value (no entry)
+                    // will use the default color logic below (treated as "false")
+                    pointColor = colorValue >= 0.5 ? UIColor.systemRed : UIColor.systemBlue
                 } else {
-                    pointColor = UIColor.black  // Black points on light background
+                    // Use gradient for continuous values
+                    let normalizedColorValue = (colorValue - minColor) / colorRange
+                    pointColor = getColorGradient(normalizedValue: normalizedColorValue)
+                }
+            } else {
+                // Check if we're using a boolean color and this point has no color value
+                // This means it's a "no entry" which we want to treat as "false"
+                if useColorMap,
+                   let colorID = selectedValueObjIDs["color"],
+                   let colorVO = tracker?.valObjTable.first(where: { $0.vid == colorID }),
+                   colorVO.vtype == VOT_BOOLEAN {
+                    pointColor = UIColor.systemBlue  // Treat as "false"
+                } else {
+                    // Adapt color based on current interface style for other cases
+                    if self.traitCollection.userInterfaceStyle == .dark {
+                        pointColor = UIColor.white  // White points on dark background
+                    } else {
+                        pointColor = UIColor.black  // Black points on light background
+                    }
                 }
             }
-            
             // Create point view
             let pointSize: CGFloat = 8
             let pointView = UIView(frame: CGRect(x: xPos - pointSize/2, y: yPos - pointSize/2, width: pointSize, height: pointSize))
