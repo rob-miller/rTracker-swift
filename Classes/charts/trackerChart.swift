@@ -82,7 +82,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     internal var timeSource1Button: UIButton!
     internal var timeSource2Button: UIButton!
     internal var timeSource3Button: UIButton!
-    internal var clearTimeSourceButton: UIButton!
+    //internal var clearTimeSourceButton: UIButton!
     internal var timeChartSources: [Int] = [-1, -1, -1]  // Up to 3 data sources for time chart
     internal var selectedYAxisMode: Int = 0  // To cycle through different axis modes when tapped
     internal var showValueLabels: Bool = false  // Toggle value labels
@@ -301,6 +301,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         updateButtonTitles()
     }
     
+    // Update setupDistributionPlotConfig to indicate Selection is optional
     internal func setupDistributionPlotConfig() {
         // Remove existing subviews
         for subview in configContainer.subviews {
@@ -309,7 +310,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         
         // Create buttons for Background and Selection
         backgroundButton = createConfigButton(title: "Select Background Data", action: #selector(selectBackground))
-        selectionButton = createConfigButton(title: "Select Segmentation Data", action: #selector(selectSelection))
+        selectionButton = createConfigButton(title: "Select Segmentation Data (Optional)", action: #selector(selectSelection))
         
         // Configure layout - no longer using fillEqually distribution
         let stackView = UIStackView(arrangedSubviews: [
@@ -326,10 +327,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             stackView.topAnchor.constraint(equalTo: configContainer.topAnchor),
             stackView.leadingAnchor.constraint(equalTo: configContainer.leadingAnchor),
             stackView.trailingAnchor.constraint(equalTo: configContainer.trailingAnchor),
-            stackView.bottomAnchor.constraint(equalTo: configContainer.bottomAnchor),
-            
-            // Set a fixed height constraint for the slider container
-            //sliderContainer.heightAnchor.constraint(equalToConstant: 120)  // Increased height for sliders
+            stackView.bottomAnchor.constraint(equalTo: configContainer.bottomAnchor)
         ])
         
         // Update buttons with any previously selected values
@@ -377,11 +375,11 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         timeSource1Button = createConfigButton(title: "Select Data Source 1", action: #selector(selectTimeSource1))
         timeSource2Button = createConfigButton(title: "Select Data Source 2 (Optional)", action: #selector(selectTimeSource2))
         timeSource3Button = createConfigButton(title: "Select Data Source 3 (Optional)", action: #selector(selectTimeSource3))
-        clearTimeSourceButton = createConfigButton(title: "Clear All Sources", action: #selector(clearTimeSources))
+        //clearTimeSourceButton = createConfigButton(title: "Clear All Sources", action: #selector(clearTimeSources))
         
         // Configure layout
         let stackView = UIStackView(arrangedSubviews: [
-            timeSource1Button, timeSource2Button, timeSource3Button, clearTimeSourceButton,
+            timeSource1Button, timeSource2Button, timeSource3Button, //clearTimeSourceButton,
             sliderContainer
         ])
         stackView.axis = .vertical
@@ -796,6 +794,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         pickerContainer.isHidden = false
     }
     
+    // Update dismissPicker to handle "None" selection
     @objc internal func dismissPicker() {
         // Get selected row
         let selectedRow = pickerView.selectedRow(inComponent: 0)
@@ -804,7 +803,32 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         if selectedRow >= 0 && selectedRow < filteredValueObjs.count {
             let selected = filteredValueObjs[selectedRow]
             let previousSelection = selectedValueObjIDs[currentPickerType]
-            selectedValueObjIDs[currentPickerType] = selected.vid
+            
+            // Check if "None" was selected (vid = -2)
+            if selected.vid == -2 {
+                // Special handling for "None" option
+                if currentPickerType.hasPrefix("timeSource") {
+                    // For time sources, update the corresponding timeChartSources array
+                    let sourceIndex = Int(currentPickerType.dropFirst("timeSource".count))! - 1
+                    if sourceIndex >= 0 && sourceIndex < timeChartSources.count {
+                        timeChartSources[sourceIndex] = -1 // Set to -1 to indicate "none"
+                    }
+                } else {
+                    // For other fields, set to -1 to indicate "none selected"
+                    selectedValueObjIDs[currentPickerType] = -1
+                }
+            } else {
+                // Normal selection
+                selectedValueObjIDs[currentPickerType] = selected.vid
+                
+                // Update timeChartSources if this is a time source selection
+                if currentPickerType.hasPrefix("timeSource") {
+                    let sourceIndex = Int(currentPickerType.dropFirst("timeSource".count))! - 1
+                    if sourceIndex >= 0 && sourceIndex < timeChartSources.count {
+                        timeChartSources[sourceIndex] = selected.vid
+                    }
+                }
+            }
             
             // Update chart if necessary components are selected
             if segmentedControl.selectedSegmentIndex == CHART_TYPE_SCATTER {
@@ -833,18 +857,18 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
                     generatePieChartData()
                 }
             } else if segmentedControl.selectedSegmentIndex == CHART_TYPE_TIME {
-                // Handle time chart source selection
-                if currentPickerType == "timeSource1" {
-                    timeChartSources[0] = selected.vid
-                } else if currentPickerType == "timeSource2" {
-                    timeChartSources[1] = selected.vid
-                } else if currentPickerType == "timeSource3" {
-                    timeChartSources[2] = selected.vid
-                }
-
                 // Update chart if at least one source is selected
                 if timeChartSources.contains(where: { $0 != -1 }) {
                     generateTimeChartData()
+                } else {
+                    // If all sources are cleared, reset the chart view
+                    for subview in chartView.subviews {
+                        if subview != noDataLabel {
+                            subview.removeFromSuperview()
+                        }
+                    }
+                    noDataLabel.text = "Configure chart options below"
+                    noDataLabel.isHidden = false
                 }
             }
             
@@ -862,6 +886,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     }
     
     
+    // Update the updateButtonTitles method to handle "None" selection
     internal func updateButtonTitles() {
         // Update scatter plot button titles
         if segmentedControl.selectedSegmentIndex == CHART_TYPE_SCATTER {
@@ -898,7 +923,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
                 let selVO = tracker?.valObjTable.first { $0.vid == selID }
                 selectionButton.setTitle(selVO?.valueName ?? "Segmentation Data", for: .normal)
             } else {
-                selectionButton.setTitle("Select Segmentation Data", for: .normal)
+                selectionButton.setTitle("Select Segmentation Data (Optional)", for: .normal)
             }
         } else if segmentedControl.selectedSegmentIndex == CHART_TYPE_TIME {
             // Update time chart source buttons
@@ -924,9 +949,9 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
                     case 0:
                         timeSource1Button.setTitle("Select Data Source 1", for: .normal)
                     case 1:
-                        timeSource2Button.setTitle("Select Data Source 2 (Optional)", for: .normal)
+                        timeSource2Button.setTitle("Data Source 2 (Optional)", for: .normal)
                     case 2:
-                        timeSource3Button.setTitle("Select Data Source 3 (Optional)", for: .normal)
+                        timeSource3Button.setTitle("Data Source 3 (Optional)", for: .normal)
                     default:
                         break
                     }
@@ -1024,13 +1049,25 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         return filteredValueObjs[row].valueName
     }
     
+    // Update pickerView delegate methods to show "None" as a distinct option
     func pickerView(_ pickerView: UIPickerView, attributedTitleForRow row: Int, forComponent component: Int) -> NSAttributedString? {
         guard row < filteredValueObjs.count else { return nil }
-        let title = filteredValueObjs[row].valueName ?? "Unknown"
+        let valueObj = filteredValueObjs[row]
+        
+        // Special handling for "None" option
+        if valueObj.vid == -2 {
+            return NSAttributedString(
+                string: "None",
+                attributes: [.foregroundColor: UIColor.systemRed]
+            )
+        }
+        
+        // Regular handling for normal value objects
+        let title = valueObj.valueName ?? "Unknown"
         
         // Format the title based on type
         let typeString: String
-        switch filteredValueObjs[row].vtype {
+        switch valueObj.vtype {
         case VOT_NUMBER:
             typeString = " (Number)"
         case VOT_SLIDER:
@@ -1056,17 +1093,8 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         
         return attributedTitle
     }
-}
 
-// For storing associated objects with UIView
-internal struct AssociatedKeys {
-    static var pointData = "pointData"
-}
-
-
-extension TrackerChart {
-    
-    
+ 
     // Update date labels with current date values
     internal func updateDateLabels() {
         // Set default dates if not set yet

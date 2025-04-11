@@ -724,9 +724,93 @@ extension TrackerChart {
     }
 
     
+    // Update getEligibleValueObjs to add a "None" option
     internal func getEligibleValueObjs(for configType: String) -> [valueObj] {
         guard let tracker = tracker else { return [] }
         
+        // Create a dummy "None" value object using the proper initializer
+         let noneVO = valueObj(
+             data: tracker,
+             in_vid: -2,            // Use -2 as a special ID for "None" (-1 is already used for unselected state)
+             in_vtype: VOT_INFO,          // Use -1 as a special type for "None"
+             in_vname: "None",      // Display name
+             in_vcolor: 0,
+             in_vgraphtype: 0,
+             in_vpriv: 0
+         )
+        
+        // Skip adding "None" for time chart sources that are already None
+        // This check prevents adding multiple "None" entries when a source is already None
+        if configType.hasPrefix("timeSource") {
+            let sourceIndex = Int(configType.dropFirst("timeSource".count))! - 1
+            if sourceIndex >= 0 && sourceIndex < timeChartSources.count && timeChartSources[sourceIndex] == -1 {
+                // If this time source is already None, don't add the None option
+            } else {
+                // Add None option for time chart sources
+                var results: [valueObj] = [noneVO]
+                
+                // Get allowed types for this configuration
+                let allowedTypes = allowedValueObjTypes[configType] ?? []
+                
+                // Filter valueObjs based on type and privacy
+                let eligibleVOs = tracker.valObjTable.filter { vo in
+                    // Check if type is allowed
+                    guard allowedTypes.contains(vo.vtype) else { return false }
+                    
+                    // Check privacy settings (if applicable)
+                    let privacy = vo.optDict["privacy"] ?? "0"
+                    return Int(privacy) ?? 0 <= privacyValue
+                }
+                
+                // Further filter based on exclusions (for X and Y axes)
+                let filtered: [valueObj]
+                if configType == "xAxis" {
+                    // Exclude Y axis selection from X options
+                    filtered = eligibleVOs.filter { $0.vid != selectedValueObjIDs["yAxis"] }
+                } else if configType == "yAxis" {
+                    // Exclude X axis selection from Y options
+                    filtered = eligibleVOs.filter { $0.vid != selectedValueObjIDs["xAxis"] }
+                } else {
+                    filtered = eligibleVOs
+                }
+                
+                results.append(contentsOf: filtered)
+                return results
+            }
+        } else if configType == "color" || configType == "selection" {
+            // Add None option for these optional fields
+            var results: [valueObj] = [noneVO]
+            
+            // Get allowed types for this configuration
+            let allowedTypes = allowedValueObjTypes[configType] ?? []
+            
+            // Filter valueObjs based on type and privacy
+            let eligibleVOs = tracker.valObjTable.filter { vo in
+                // Check if type is allowed
+                guard allowedTypes.contains(vo.vtype) else { return false }
+                
+                // Check privacy settings (if applicable)
+                let privacy = vo.optDict["privacy"] ?? "0"
+                return Int(privacy) ?? 0 <= privacyValue
+            }
+            
+            // Further filter based on exclusions (for X and Y axes)
+            let filtered: [valueObj]
+            if configType == "xAxis" {
+                // Exclude Y axis selection from X options
+                filtered = eligibleVOs.filter { $0.vid != selectedValueObjIDs["yAxis"] }
+            } else if configType == "yAxis" {
+                // Exclude X axis selection from Y options
+                filtered = eligibleVOs.filter { $0.vid != selectedValueObjIDs["xAxis"] }
+            } else {
+                filtered = eligibleVOs
+            }
+            
+            results.append(contentsOf: filtered)
+            return results
+        }
+        
+        // For required fields, proceed with the original implementation
         // Get allowed types for this configuration
         let allowedTypes = allowedValueObjTypes[configType] ?? []
         
@@ -736,8 +820,6 @@ extension TrackerChart {
             guard allowedTypes.contains(vo.vtype) else { return false }
             
             // Check privacy settings (if applicable)
-            // This assumes there's a property to check privacy or a way to query it
-            // Implement the actual privacy check based on your data model
             let privacy = vo.optDict["privacy"] ?? "0"
             return Int(privacy) ?? 0 <= privacyValue
         }

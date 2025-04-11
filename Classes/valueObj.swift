@@ -37,6 +37,8 @@ let VOT_BOOLEAN = 5
 let VOT_FUNC = 6
 let VOT_INFO = 7
 
+let VOT_NONE = 8
+
 let VOT_MAX = 7
 
 // image not yet
@@ -218,23 +220,22 @@ class valueObj: NSObject, UITextFieldDelegate {
                 tvos = voTextBox(vo: self)
                 //value = [[NSMutableString alloc] initWithCapacity:96];
                 //[self.value setString:@""];
+            case VOT_NONE:
+                // Claude's hack for charts to have a 'None' datasource 
+                fallthrough
             case VOT_INFO:
                 tvos = voInfo(vo: self)
                 vcolor = -1
-                //value = [[NSMutableString alloc] initWithCapacity:1];
-                //[self.value setString:@"0"];
+                
             default:
                 dbgNSAssert(false, String(format:"valueObj init vtype %ld not supported", vt))
                 tvos = voNumber(vo: self) // to clear analyzer worry
                 _vtype = VOT_NUMBER // consistency if we get here
             }
-            // vos = nil
+
             vos = tvos //as voState //as? (voState & voProtocol)
-            //var tval: String?
-            //tval = String(repeating: "\0", count: vos?.getValCap() ?? 0)
-            // value = nil
             _value = ""
-            //[self.value release];   // clear retain count from alloc + retain
+
         }
     }
     var vpriv = 0
@@ -278,12 +279,6 @@ class valueObj: NSObject, UITextFieldDelegate {
         return _switchUseVO
     }
 
- //, retrievedData;
-    /*
-    override convenience init() {
-        self.init(data: nil, in_vid: 0, in_vtype: 0, in_vname: "", in_vcolor: 0, in_vgraphtype: 0, in_vpriv: 0)
-    }
-     */
     init(
         data parentTO: trackerObj,
         in_vid: Int,
@@ -293,7 +288,6 @@ class valueObj: NSObject, UITextFieldDelegate {
         in_vgraphtype: Int,
         in_vpriv: Int
     ) {
-        //DBGLog(@"init vObj with args vid: %d vtype: %d vname: %@",in_vid, in_vtype, in_vname);
         parentTracker = parentTO
         super.init()
         //self.useVO = YES;
@@ -307,12 +301,7 @@ class valueObj: NSObject, UITextFieldDelegate {
     }
 
     init(dict parentTO: trackerObj, dict: [AnyHashable : Any]?) {
-        /*
-            DBGLog(@"init vObj with dict vid: %d vtype: %d vname: %@",
-                   [(NSNumber*) [dict objectForKey:@"vid"] integerValue],
-                   [(NSNumber*) [dict objectForKey:@"vtype"] integerValue],
-                   (NSString*) [dict objectForKey:@"valueName"]);
-             */
+
         parentTracker = parentTO
         super.init()
         useVO = true
