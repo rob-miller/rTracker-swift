@@ -501,7 +501,7 @@ class valueObj: NSObject, UITextFieldDelegate {
     // MARK: utility methods
 
     func describe(_ od: Bool) {
-        #if DEBUGLOG
+#if DEBUGLOG
         if od {
             DBGLog(String("value id \(vid) name \(valueName ?? "") type \(vtype) value >\(value)< optDict:"))
             for (key, value) in optDict {
@@ -510,7 +510,7 @@ class valueObj: NSObject, UITextFieldDelegate {
         } else {
             DBGLog(String("value id \(vid) name \(valueName ?? "") type \(vtype) value >\(value)<"))
         }
-        #endif
+#endif
     }
 
     //+ (NSArray *) graphsForVOT:(NSInteger)vot;

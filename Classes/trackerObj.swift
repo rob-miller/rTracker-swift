@@ -1042,6 +1042,7 @@ class trackerObj: tObjBase {
     // MARK: utility methods
 
     func describe() {
+#if DEBUGLOG
         DBGLog(String("tracker id \(super.toid) name \(trackerName ?? "") dbName \(dbName ?? "")"))
         DBGLog(
             String("db ver \(optDict["rtdb_version"] ?? "") fn ver \(optDict["rtfn_version"] ?? "") created by rt ver \(optDict["rt_version"] ?? "") build \(optDict["rt_build"] ?? "")"))
@@ -1049,6 +1050,7 @@ class trackerObj: tObjBase {
         for vo in valObjTable {
             vo.describe(false)
         }
+#endif
     }
 
 

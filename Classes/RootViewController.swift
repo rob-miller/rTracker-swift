@@ -1038,7 +1038,8 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         }
 
         let to = trackerObj(tid)
-        to.describe()
+        // debug only
+        // to.describe()
 
         let utc = useTrackerController()
         utc.tracker = to
