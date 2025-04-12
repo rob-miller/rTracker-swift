@@ -28,7 +28,7 @@ import UIKit
 let SAVERTNDFLT = true
 
 // to config textfield default values
-// #define PRIVDFLT		0  //note: already in valObj.h
+// #define PRIVDFLT        0  //note: already in valObj.h
 
 // max days for graph, 0= no limit
 let GRAPHMAXDAYSDFLT = 0
@@ -167,11 +167,11 @@ class trackerObj: tObjBase {
         _nextColor = 0
 
         /*  move to utc
-        		[[NSNotificationCenter defaultCenter] addObserver:self 
-        												 selector:@selector(trackerUpdated:) 
-        													 name:rtValueUpdatedNotification 
-        												   object:nil];
-        		*/
+                [[NSNotificationCenter defaultCenter] addObserver:self
+                                                         selector:@selector(trackerUpdated:)
+                                                             name:rtValueUpdatedNotification
+                                                           object:nil];
+                */
         //DBGLog(@"init trackerObj New");
         goRecalculate = false
         swipeEnable = true
@@ -246,47 +246,68 @@ class trackerObj: tObjBase {
         return rslt
     }
 
-    func loadFNdata(dispatchGroup: DispatchGroup?, completion: (() -> Void)? = nil) -> Bool {
+    private func processFnData(dispatchGroup: DispatchGroup? = nil, forceAll: Bool = false, completion: (() -> Void)? = nil) -> Bool {
         let localGroup = DispatchGroup()
-        // do at tracker level because need to load all valueObjs and may have multiple functions
         var rslt = false
         
-        // leave early if no functions here
+        // Check if we have any functions
         var haveFn = false
-        for vo: valueObj in valObjTable {
+        for vo in valObjTable {
             if VOT_FUNC == vo.vtype {
                 haveFn = true
                 break
             }
         }
-        if (!haveFn) {
-            completion?();
+        if !haveFn {
+            completion?()
             return rslt
         }
         
         let currDate = Int(trackerDate?.timeIntervalSince1970 ?? 0)
         
-        let sql = "select max(date) from voFNstatus where stat = \(fnStatus.fnData.rawValue)"  // any vid will do
-        var nextDate = toQry2Int(sql: sql)
-        if nextDate == 0 {  // fn not run yet
-            nextDate = firstDate()
+        // Determine start date based on mode
+        var nextDate: Int
+        if forceAll {
+            nextDate = firstDate() // Always start from beginning for setFnVals
+        } else {
+            let sql = "select max(date) from voFNstatus where stat = \(fnStatus.fnData.rawValue)"
+            nextDate = toQry2Int(sql: sql)
+            if nextDate == 0 || (optDict["dirtyFns"] as? String) == "1" {
+                nextDate = firstDate()
+            }
         }
+        
         if 0 == nextDate {
             // no data yet for this tracker so do not generate a 0 value in database
-            completion?();
+            completion?()
             return rslt
         }
         
         dispatchGroup?.enter()
+        
+        var ndx: Float = 1.0
+        let all = Float(getDateCount())
+        
         repeat {
             _ = loadData(nextDate)
             
-            for vo: valueObj in valObjTable {
-                vo.vos?.setFnVal(nextDate, dispatchGroup: localGroup)  // this writes to the db
+            for vo in valObjTable {
+                if dispatchGroup != nil {
+                    vo.vos?.setFnVal(nextDate, dispatchGroup: localGroup)  // async with dispatch group
+                } else {
+                    vo.vos?.setFnVal(nextDate)  // sync without dispatch group
+                }
             }
+            
+            // Only show progress if no dispatch group (sync operation)
+            if dispatchGroup == nil {
+                rTracker_resource.setProgressVal(ndx / all)
+                ndx += 1.0
+            }
+            
             nextDate = postDate()
         } while (nextDate != 0) // iterate through dates
-
+        
         for vo in valObjTable {
             vo.vos?.doTrimFnVals()
         }
@@ -294,8 +315,15 @@ class trackerObj: tObjBase {
         // restore current date
         _ = loadData(currDate)
         
+        // Clear dirty flag regardless
+        optDict.removeValue(forKey: "dirtyFns")
+        let sql = "delete from trkrInfo where field='dirtyFns';"
+        toExecSql(sql:sql)
+        
+        
         rslt = true
-        // Wait for our local operations to complete before calling completion
+        
+        // Wait for local operations to complete before calling completion
         localGroup.notify(queue: .main) {
             completion?()
             dispatchGroup?.leave()
@@ -303,57 +331,13 @@ class trackerObj: tObjBase {
         
         return rslt
     }
-    
+
+    func loadFNdata(dispatchGroup: DispatchGroup?, completion: (() -> Void)? = nil) -> Bool {
+        return processFnData(dispatchGroup: dispatchGroup, forceAll: false, completion: completion)
+    }
+
     func setFnVals(completion: (() -> Void)? = nil) {
-        
-        // leave early if no functions here
-        var haveFn = false
-        for vo: valueObj in valObjTable {
-            if VOT_FUNC == vo.vtype {
-                haveFn = true
-                break
-            }
-        }
-        if (!haveFn) { return }
-                
-        let currDate = Int(trackerDate?.timeIntervalSince1970 ?? 0)
-        var nextDate = firstDate()
-
-        if 0 == nextDate {
-            // no data yet for this tracker so do not generate a 0 value in database
-            return
-        }
-
-        var ndx: Float = 1.0
-        let all = Float(getDateCount())
-
-        repeat {
-            _ = loadData(nextDate)
-            
-            for vo: valueObj in valObjTable {
-                    vo.vos?.setFnVal(nextDate)  // this writes to the db
-            }
-
-            rTracker_resource.setProgressVal(ndx / all)
-
-            ndx += 1.0
-            nextDate = postDate()
-        } while (nextDate != 0) // iterate through dates
-
-        for vo in valObjTable {
-            if VOT_FUNC == vo.vtype {
-                vo.vos?.doTrimFnVals()
-            }
-        }
-
-        // restore current date
-        _ = loadData(currDate)
-        
-        optDict.removeValue(forKey: "dirtyFns")
-        let sql = "delete from trkrInfo where field='dirtyFns';"
-        toExecSql(sql:sql)
-        
-        completion?()
+        _ = processFnData(forceAll: true, completion: completion)
     }
     
     func sortVoTable(byArray arr: [AnyHashable]?) {
@@ -369,37 +353,6 @@ class trackerObj: tObjBase {
             return idx1 < idx2
         }
     }
-    
-    /*
-    func sortVoTable(byArray arr: [AnyHashable]?) {
-        var dict: [AnyHashable : Any] = [:]
-        var ndx1 = 0
-        var ndx2 = 0
-        var c = 0
-        var c2 = 0
-
-        for vo in valObjTable {
-            dict[NSNumber(value: vo.vid)] = NSNumber(value: ndx1)
-            ndx1 += 1
-        }
-
-        c = valObjTable.count
-        c2 = arr?.count ?? 0
-        ndx1 = 0; ndx2 = 0
-        while ndx1 < c && ndx2 < c2 {
-            let currVid = valObjTable[ndx1].vid
-            let targVid = (arr?[ndx2] as? valueObj)?.vid ?? 0
-            //DBGLog(@"ndx2: %d  targVid:%d",ndx2,targVid);
-            if currVid != targVid {
-                let targNdx = Int((dict[NSNumber(value: targVid)] as? NSNumber)?.uintValue ?? 0)
-                valObjTable.swapAt(ndx1, targNdx)
-                dict[NSNumber(value: currVid)] = NSNumber(value: targNdx)
-                dict[NSNumber(value: targVid)] = NSNumber(value: ndx1)
-            }
-            ndx1 += 1; ndx2 += 1
-        }
-    }
-     */
     
     func voSet(fromDict vo: valueObj?, dict: [AnyHashable : Any]?) {
         vo?.setOptDict((dict?["optDict"] as? [String : String])!)
@@ -634,7 +587,7 @@ class trackerObj: tObjBase {
 
     }
 
-    // 
+    //
     // load tracker config, valObjs from supplied dictionary
     // self.trackerName from dictionary:optDict:trackerName
     //
@@ -879,7 +832,7 @@ class trackerObj: tObjBase {
         saveToOptDict()
 
         var vids: [String] = []
-        // put valobjs in state for saving 
+        // put valobjs in state for saving
         for vo in valObjTable {
             if vo.vid <= 0 {
                 let old = vo.vid
