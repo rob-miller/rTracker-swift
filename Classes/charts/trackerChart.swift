@@ -840,6 +840,10 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
                     } else if currentPickerType == "yAxis" && previousSelection != selected.vid {
                         axisConfig.removeValue(forKey: "yAxis")
                         analyzeScatterData() // Recalculate axis scales with full data range
+                    } else if currentPickerType == "color" && previousSelection != selected.vid {
+                        // Add this condition to clear color axis config when color is changed
+                        axisConfig.removeValue(forKey: "colorAxis")
+                        analyzeScatterData() // Recalculate axis scales including color scale
                     } else {
                         generateScatterPlotData() // Just update with current config
                     }
