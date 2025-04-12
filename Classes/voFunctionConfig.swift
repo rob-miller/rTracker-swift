@@ -837,8 +837,6 @@ extension voFunction {
         // convert token to str
         if isFn(tok) {
             return String("\(fnStrDict[NSNumber(value: tok)]!)")
-            //tok = (tok * -1) -1;
-            //return [self.fnStrs objectAtIndex:tok];
         } else {
             for valo in MyTracker.valObjTable {
                 if valo.vid == tok {
@@ -850,10 +848,39 @@ extension voFunction {
         }
     }
 
-    func fndRowTitle(_ row: Int) -> String? {
+    func fndRowTitle(_ row: Int) -> String {
         return fnTokenToStr(fnTitles[row].intValue) // get nsnumber(tok) from fnTitles, convert to int, convert to str to be placed in specified picker rox
     }
 
+    func fnTokenToAttrStr(_ tok: Int) -> NSAttributedString {
+        // convert token to str
+        if isFn(tok) {
+            return NSAttributedString(
+                string: String("\(fnStrDict[NSNumber(value: tok)]!)"),
+                attributes: [.foregroundColor: UIColor.systemBlue]
+            )
+
+        } else {
+            for valo in MyTracker.valObjTable {
+                if valo.vid == tok {
+                    return NSAttributedString(
+                        string: valo.valueName!,
+                        attributes: [.foregroundColor: UIColor.systemGreen]
+                    )
+                }
+            }
+            dbgNSAssert(false, "fnTokenToStr failed to find valObj")
+            return NSAttributedString(
+                string: "unknown vid",
+                attributes: [.foregroundColor: UIColor.systemRed]
+            )
+        }
+    }
+
+    func fndRowAttrTitle(_ row: Int) -> NSAttributedString {
+        return fnTokenToAttrStr(fnTitles[row].intValue) // get nsnumber(tok) from fnTitles, convert to int, convert to str to be placed in specified picker rox
+    }
+    
     func fnrRowCount(_ component: Int) -> Int {
        // only allow time offset for previous side of range
         if component == 1 {
@@ -894,6 +921,17 @@ extension voFunction {
         }
     }
 
+    func pickerView(_ pickerView: UIPickerView, attributedTitleForRow row: Int, forComponent component: Int) -> NSAttributedString? {
+        if fnSegNdx == FNSEGNDX_RANGEBLD {
+            return NSAttributedString(
+                string: fnrRowTitle(row),
+                attributes: [.foregroundColor: UIColor.label]
+            )
+        } else {
+            return fndRowAttrTitle(row)
+        }
+    }
+        
     func update(forPickerRowSelect row: Int, inComponent component: Int) {
         if fnSegNdx == FNSEGNDX_RANGEBLD {
             ((ctvovcp?.wDict)?["frPkr"] as? UIPickerView)?.reloadComponent(component != 0 ? 0 : 1)
