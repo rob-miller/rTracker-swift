@@ -41,13 +41,9 @@ class voBoolean: voState {
     private var localCtvovc: configTVObjVC?
 
     @objc func boolBtnAction(_ bSwitch: UIButton?) {
-        // default is unchecked or nil // 25.i.14 use assigned val // was "so only certain is if =1" ?
+        // default is unchecked or nil
         if vo.value == "" {
             let bv = vo.optDict["boolval"]
-            //if (nil == bv) {
-            //bv = BOOLVALDFLTSTR;
-            //[self.vo.optDict setObject:bv forKey:@"boolval"];
-            //}
             vo.value = bv!
             rTracker_resource.setSwitch(self.bSwitch!, colr: rTracker_resource.colorSet()[Int(vo.optDict["btnColr"]!)!])
             if "1" == vo.optDict["setstrackerdate"] {
