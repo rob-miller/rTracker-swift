@@ -304,6 +304,9 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         return _votWoSelf!
     }
 
+    private var lastEpd0: Int = -1
+    private var lastCalcValue: String = ""
+
     //@property (nonatomic, retain) NSNumber *foo;
     func saveFnArray() {
         // note this converts NSNumbers to NSStrings
@@ -533,18 +536,6 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
 
         FnErr = false
 
-        #if FUNCTIONDBG
-        // print our complete function
-        //var i: Int
-        var outstr = ""
-        for i in 0..<maxc {
-            let object = fnArray[i] 
-            outstr = outstr + " \(object)"
-            
-        }
-        DBGLog(String("fndbg \(vo.valueName ?? "") calcFnValueWithCurrent fnArray= \(outstr)"))
-        #endif
-        
         var epd1: Int
         if to.trackerDate == nil {
             // current tracker entry no date set so epd1=now
@@ -553,6 +544,19 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             // set epd1 to date of current (this) tracker entry
             epd1 = Int(to.trackerDate?.timeIntervalSince1970 ?? 0)
         }
+        
+#if FUNCTIONDBG
+        // print our complete function
+        //var i: Int
+        var outstr = ""
+        for i in 0..<maxc {
+            let object = fnArray[i]
+            outstr = outstr + " \(object)"
+            
+        }
+        DBGLog(String("fndbg \(vo.valueName ?? "") calcFnValueWithCurrent fnArray= \(outstr)"))
+        DBGLog("epd0 \(Date(timeIntervalSince1970: TimeInterval(epd0)))  epd1 \(Date(timeIntervalSince1970: TimeInterval(epd1)))  trackerDate \(self.MyTracker.trackerDate)")
+#endif
 
         var result = 0.0
 
@@ -573,8 +577,6 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             if isFn1Arg(currTok) {
                 // currTok is function taking 1 argument, so get it
                 if currFnNdx >= maxc {
-                    // <--- added from line 462
-                    //DBGErr(@"1-arg fn missing arg: %@",self.fnArray);
                     FnErr = true
                     return NSNumber(value: result) // crashlytics report past array bounds at next line, so at least return without crashing
                 }
@@ -655,19 +657,20 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                         break
                     }
                 case FN1ARGAVG:
-                    // below (calculate via sqlite) works but need to include any current but unsaved value
-                    //to.sql = [NSString stringWithFormat:@"select avg(val) from voData where id=%d and date >=%d and date <%d;",
-                    //		  vid,epd0,epd1];
-                    //result = [to toQry2Float:sql];  // --> + v1;
-
                     var c = Double(vo.optDict["frv0"] ?? "") ?? 0 // if ep has assoc value, then avg is over that num with date/time range already determined
                     // in other words, is it avg over 'frv' number of hours/days/weeks then that is our denominator
                     // 25.iii.2025 this is incorrect if there are not frv0 db entries to average over... except there is avg sex/last 4 days (/4) and avg deep sleep last 4 days (/entry count)
-                    //var c = 0.0
+
+                    sql = String(format: "select count(val) from voData where id=%ld and val <> '' and date >=%ld and date <%d;", vid, epd0, epd1)
+                    let count = Double(to.toQry2Float(sql:sql) + (nullV1 ? 0.0 : 1.0)) // +1 for current on screen
+                    
+                    if count == 0.0 {
+                        // nothing in db to average and nullV1 so no current
+                        return nil
+                    }
                     if c == 0.0 {
                         // else denom is number of entries between epd0 to epd1 
-                        sql = String(format: "select count(val) from voData where id=%ld and val <> '' and date >=%ld and date <%d;", vid, epd0, epd1)
-                        c = Double(to.toQry2Float(sql:sql) + (nullV1 ? 0.0 : 1.0)) // +1 for current on screen
+                        c = count
                     }
 
                     if c == 0.0 {
@@ -752,16 +755,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                         // (date<%d) because add in v1 below
                         // 24.ii.2016 below does not really work, was created when start date was exact match to one to skip -- but with e.g. 'current-3 weeks' need to skip earliest value
                         sql = String(format: "select total(val) from voData where id=%ld and date >%ld and date <%d;", vid, epd0, epd1)
-                        /*
-                                                     // except
-                                                    sql = [NSString stringWithFormat:@"select date from voData where id=%ld and date >=%ld and date <%d limit 1;",(long)vid,(long)epd0,epd1];
-                                                    int firstDate = [to toQry2Int:sql];
-                                                    if (firstDate) {
-                                                        sql = [NSString stringWithFormat:@"select total(val) from voData where id=%ld and date >%d and date <%d;",(long)vid,firstDate,epd1];
-                                                    } else {
-                                                        sql = @"select 0";
-                                                    }
-                                                     */
+
                         #if FUNCTIONDBG
                         DBGLog("postsum: set sql")
                         #endif
@@ -944,16 +938,6 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         // search back for start endpoint that is ok
         let ep0start = Int(MyTracker.trackerDate!.timeIntervalSince1970)
         let ep0date = getEpDate(0, maxdate: ep0start) // start with immed prev to curr record set
-        /*
-            if (ep0date != 0) {
-                [MyTracker loadData:ep0date];   // set values for initial checkEP test
-                while((ep0date != 0) && (![self checkEP:0])) {
-                    ep0date = [self getEpDate:0 maxdate:ep0date];  // not ok, back one more
-                    [MyTracker loadData:ep0date];
-                }
-                [MyTracker loadData:ep0start];   // reset from search
-            }
-          */
 
         if ep0date == 0 {
             // start endpoint not ok
@@ -966,17 +950,29 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             }
         }
 
+        if ep0date == lastEpd0 && !lastCalcValue.isEmpty {
+            DBGLog("fn \(vo.valueName!) update using cached value \(lastCalcValue)")
+            return lastCalcValue
+        }
+        
         currFnNdx = 0
 
         let val = calcFunctionValue(withCurrent: ep0date)
+        
         #if FUNCTIONDBG
         DBGLog(String("fndbg fn update val= \(val)"))
         #endif
         if let val {
             let nddp = vo.optDict["fnddp"]
             let ddp = (nddp == nil ? FDDPDFLT : Int(nddp!))
-            return String(format: String(format: "%%0.%df", ddp!), val.floatValue)
+            lastCalcValue = String(format: String(format: "%%0.%df", ddp!), val.floatValue)
+            lastEpd0 = ep0date
+            return lastCalcValue
+        } else {
+            lastEpd0 = -1
+            lastCalcValue = ""  // empty
         }
+        
         #if FUNCTIONDBG
         DBGLog(String("fndbg fn update returning: \(instr)"))
         #endif
