@@ -166,12 +166,6 @@ class trackerObj: tObjBase {
         valObjTable = []
         _nextColor = 0
 
-        /*  move to utc
-                [[NSNotificationCenter defaultCenter] addObserver:self
-                                                         selector:@selector(trackerUpdated:)
-                                                             name:rtValueUpdatedNotification
-                                                           object:nil];
-                */
         //DBGLog(@"init trackerObj New");
         goRecalculate = false
         swipeEnable = true
@@ -890,9 +884,6 @@ class trackerObj: tObjBase {
     func getValObj(_ qVid: Int) -> valueObj? {
         var rvo: valueObj? = nil
 
-        //NSEnumerator *e = [self.valObjTable objectEnumerator];
-        //valueObj *vo;
-        //while (vo = (valueObj *) [e nextObject]) {
         for vo in valObjTable {
             if vo.vid == qVid {
                 rvo = vo
@@ -935,7 +926,7 @@ class trackerObj: tObjBase {
         var sql = String(format: "select count(*) from trkrData where date = %ld and minpriv <= %d;", iDate, privacyValue)
         let c = toQry2Int(sql:sql)
         if c != 0 {
-            trackerDate = qDate // from convenience method above, so do the retain
+            trackerDate = qDate 
             sql = String(format: "select id, val from voData where date = %ld;", iDate)
             let isa = toQry2AryIS(sql: sql)
 
@@ -951,7 +942,7 @@ class trackerObj: tObjBase {
                     } else {
                         vo.useVO = true
                     }
-                    vo.value = dbVal // results not saved for func so not in db table to be read here
+                    vo.value = dbVal
                 }
             }
 
@@ -1064,13 +1055,14 @@ class trackerObj: tObjBase {
         DBGLog(String("tracker id \(super.toid) name \(trackerName) dbname \(dbName) recalculateFns"))
 
         rTracker_resource.setProgressVal(0.0)
+        for vo in valObjTable {
+            if vo.vtype == VOT_FUNC {
+                vo.vos?.clearFNdata()  // wipe db values so vo.value read forced to update
+            }
+        }
         setFnVals()
 
         if goRecalculate {
-            optDict.removeValue(forKey: "dirtyFns")
-            let sql = "delete from trkrInfo where field='dirtyFns';"
-            toExecSql(sql:sql)
-
             goRecalculate = false
         }
 
