@@ -453,10 +453,9 @@ extension voFunction {
         frame.origin.x = MARGIN
         frame.origin.y -= 3 * MARGIN // I DO NOT UNDERSTAND THIS!!!!!
 
-        _ = ctvovcp?.configActionBtn(frame, key: "fdaBtn", label: "Add", target: self, action: #selector(btnAdd(_:)))
-        frame.origin.x = -1.0
         _ = ctvovcp?.configActionBtn(frame, key: "fddBtn", label: "Delete", target: self, action: #selector(btnDelete(_:)))
-
+        frame.origin.x = -1.0
+        _ = ctvovcp?.configActionBtn(frame, key: "fdaBtn", label: "Add", target: self, action: #selector(btnAdd(_:)))
     }
 
     // MARK: -
