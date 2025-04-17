@@ -246,7 +246,7 @@ class valueObj: NSObject, UITextFieldDelegate {
     var value: String {
         get {
             dbgNSAssert(vos != nil, "accessing vo.value with nil vos")
-            _value = vos?.update(_value)
+            _value = vos?.update(_value)  // update with textfield contents if _value is empty
             return _value!
         }
         set {

@@ -928,7 +928,9 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         let ep0start = Int(MyTracker.trackerDate!.timeIntervalSince1970)
         let ep0date = getEpDate(0, maxdate: ep0start) // start with immed prev to curr record set
 
-        print("ep0start \(Date(timeIntervalSince1970: TimeInterval(ep0start)))   ep0date \(Date(timeIntervalSince1970: TimeInterval(ep0date)))")
+#if FUNCTIONDBG
+        DBGLog("ep0start \(Date(timeIntervalSince1970: TimeInterval(ep0start)))   ep0date \(Date(timeIntervalSince1970: TimeInterval(ep0date)))")
+#endif
         
         if ep0date == 0 {
             // start endpoint not ok - no prior date

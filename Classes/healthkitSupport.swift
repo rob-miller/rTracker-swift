@@ -427,7 +427,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                         if specifiedUnit == HKUnit.hour() {
                             processedValue /= 60.0
                         }
-                        return processedValue > 0 ? HealthQueryResult(date: sample.startDate, value: processedValue, unit: specifiedUnit) : nil
+                        return processedValue > 0 ? HealthQueryResult(date: sample.startDate, value: processedValue, unit: specifiedUnit) : nil  // return contactMap processing to results
                     }
                 case .discreteEquivalentContinuousLevel:
                     fallthrough
