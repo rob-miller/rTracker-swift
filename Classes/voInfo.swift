@@ -148,7 +148,7 @@ class voInfo: voState {
         return super.cleanOptDictDflts(key)
     }
 
-    override func update(_ instr: String) -> String {
+    override func update(_ instr: String?) -> String {
         let retval = vo.optDict["infoval"]
         if let retval {
             return retval

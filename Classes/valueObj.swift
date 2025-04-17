@@ -136,7 +136,7 @@ enum fnStatus: Int {
 protocol voProtocol: AnyObject {
     func getValCap() -> Int
     func getNumVal() -> Double
-    func update(_ instr: String) -> String
+    func update(_ instr: String?) -> String
     func voDisplay(_ bounds: CGRect) -> UIView
     func voTVCell(_ tableView: UITableView) -> UITableViewCell
     func voTVCellHeight() -> CGFloat
@@ -160,6 +160,7 @@ protocol voProtocol: AnyObject {
     func clearHKdata()
     func clearOTdata()
     func clearFNdata()
+    func setFNrecalc()
 }
 
 //extern const NSInteger kViewTag;
@@ -245,10 +246,7 @@ class valueObj: NSObject, UITextFieldDelegate {
     var value: String {
         get {
             dbgNSAssert(vos != nil, "accessing vo.value with nil vos")
-            if _value == nil {
-                _value = ""
-            }
-            _value = vos?.update(_value!)
+            _value = vos?.update(_value)
             return _value!
         }
         set {

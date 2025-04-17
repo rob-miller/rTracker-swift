@@ -430,21 +430,14 @@ class voSlider: voState {
         super.voDrawOptions(ctvovc)
     }
 
-    override func update(_ instr: String) -> String {
+    override func update(_ instr: String?) -> String {
         // place holder so fn can update on access
         if vo.useVO {
-            return instr
+            return instr ?? ""
         }
         return ""
     }
 
-    /*
-    - (void) transformVO:(NSMutableArray *)xdat ydat:(NSMutableArray *)ydat dscale:(double)dscale height:(CGFloat)height border:(float)border firstDate:(int)firstDate {
-
-        [self transformVO_num:xdat ydat:ydat dscale:dscale height:height border:border firstDate:firstDate];
-
-    }
-    */
     override func newVOGD() -> vogd {
         return vogd(vo).initAsNum(vo)
     }

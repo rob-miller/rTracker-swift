@@ -123,6 +123,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         for vo in tracker!.valObjTable {
             if VOT_FUNC == vo.vtype || vo.optDict["otTracker"] ?? "" == tracker?.trackerName {
                 vo.display = nil // always redisplay
+                vo.vos?.setFNrecalc()  // no caching, recompute function
                 iparr.append(IndexPath(index: 0).appending(n))
             } else if (inVO?.vid == vo.vid) && (nil == vo.display) {
                 iparr.append(IndexPath(index: 0).appending(n))
@@ -257,11 +258,13 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                     // now can compute fn results
                     _ = self.tracker!.loadFNdata(dispatchGroup: dispatchGroup, completion:{
                         // now load ot data that look at self
-                        _ = self.tracker!.loadOTdata(otSelf:true, dispatchGroup: dispatchGroup)
+                        _ = self.tracker!.loadOTdata(otSelf:true, dispatchGroup: dispatchGroup, completion: {
+                            dispatchGroup.leave()
+                        })
                     })
                 })
             })
-            dispatchGroup.leave()
+            
             
             // Notify when all operations are completed
             dispatchGroup.notify(queue: .main) {

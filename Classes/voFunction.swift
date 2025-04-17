@@ -306,6 +306,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
 
     private var lastEpd0: Int = -1
     private var lastCalcValue: String = ""
+    private var fnDirty = false
 
     //@property (nonatomic, retain) NSNumber *foo;
     func saveFnArray() {
@@ -413,12 +414,12 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         if nep == nil || ep == FREPENTRY {
             // also FREPDFLT  -- no value specified
             // use last entry
-            sql = String(format: "select date from trkrData where date < %ld order by date desc limit 1;", maxdate)
+            sql = "select max(date) from trkrData where date < \(maxdate);"
             epDate = to.toQry2Int(sql:sql)
             //DBGLog(@"ep %d ->entry: %@", ndx, [self qdate:epDate] );
         } else if ep! >= 0 {
             // ep is vid
-            sql = String(format: "select date from voData where id=%ld and date < %ld and val <> 0 and val <> '' order by date desc limit 1;", ep!, maxdate) // add val<>0,<>"" 5.vii.12
+            sql = "select max(date) from voData where id=\(ep!) and date < |(maxdate) and val <> 0 and val <> '';"
             #if FUNCTIONDBG
             DBGLog(String("get ep qry: \(sql)"))
             #endif
@@ -912,9 +913,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
     }
 
     //- (NSString*) currFunctionValue {
-    override func update(_ instr: String) -> String {
-        var instr = instr
-        instr = ""
+    override func update(_ instr: String?) -> String {
         let pto = vo.parentTracker
 
         if nil == pto.tDb {
@@ -922,25 +921,27 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         }
 
         if !checkEP(1) {
-            return instr
+            return ""
         }
-
 
         // search back for start endpoint that is ok
         let ep0start = Int(MyTracker.trackerDate!.timeIntervalSince1970)
         let ep0date = getEpDate(0, maxdate: ep0start) // start with immed prev to curr record set
 
+        print("ep0start \(Date(timeIntervalSince1970: TimeInterval(ep0start)))   ep0date \(Date(timeIntervalSince1970: TimeInterval(ep0date)))")
+        
         if ep0date == 0 {
-            // start endpoint not ok
-            var ep: Int?
-            let nep = vo.optDict["frep0"]
-            ep = (nep != nil ? Int(nep!) : nil)
-            if !(nep == nil || ep! == FREPENTRY) {
+            // start endpoint not ok - no prior date
+            if let nep = vo.optDict["frep0"], let ep = Int(nep), ep != FREPENTRY {
                 // allow to go through if just looking for previous entry and this is first
-                return instr
+                return instr ?? ""
             }
         }
 
+        if instr?.isEmpty == false && !fnDirty {
+            return instr ?? ""
+        }
+        
         if ep0date == lastEpd0 && !lastCalcValue.isEmpty {
             DBGLog("fn \(vo.valueName!) update using cached value \(lastCalcValue)")
             return lastCalcValue
@@ -967,7 +968,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         #if FUNCTIONDBG
         DBGLog(String("fndbg fn update returning: \(instr)"))
         #endif
-        return instr
+        return instr ?? ""
     }
 
     override func voDisplay(_ bounds: CGRect) -> UIView {
@@ -1094,8 +1095,10 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
 
     override func setFnVal(_ tDate: Int, dispatchGroup: DispatchGroup?) {
         dispatchGroup?.enter()
-        // if don't track vo's in fnstatus then cannot delete independently
+        // track vo's in fnstatus so can delete independently
         var sql: String
+        // vo.value is computed for this tracker date from loaded tracker data when we read it here because reading calls update()
+        // but db must be cleared for vot_function s or will just get db value
         if vo.value == "" {
             // if value is empty we should not have data in db
             sql = "delete from voData where id = \(vo.vid) and date = \(tDate);"
@@ -1118,6 +1121,12 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         to.toExecSql(sql: sql)
         sql = "delete from voFNstatus where id = \(vo.vid)"
         to.toExecSql(sql: sql)
+    }
+    
+    override func setFNrecalc() {
+        // force recaclulation, no cached value
+        lastCalcValue = ""
+        fnDirty = true
     }
     
     override func doTrimFnVals() {

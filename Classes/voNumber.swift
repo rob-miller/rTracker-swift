@@ -30,7 +30,8 @@ class voNumber: voState, UITextFieldDelegate {
 
     private var _dtf: UITextField?
     lazy var rthk = rtHealthKit.shared
-    
+    private static var healthKitCache: [String: String] = [:]  // Cache by "sourceName-date"
+
     var dtf: UITextField {
         if _dtf?.frame.size.width != vosFrame.size.width {
             _dtf = nil // first time around thinks size is 320, handle larger devices
@@ -155,13 +156,7 @@ class voNumber: voState, UITextFieldDelegate {
     override func resetData() {
         if nil != _dtf {
             // not self as don't want to instantiate prematurely
-            if Thread.isMainThread {
-                dtf.text = ""
-            } else {
-                DispatchQueue.main.async(execute: { [self] in
-                    dtf.text = ""
-                })
-            }
+            safeDispatchSync({dtf.text = ""})
         }
         vo.useVO = true
     }
@@ -196,13 +191,18 @@ class voNumber: voState, UITextFieldDelegate {
                 if let unitString = vo.optDict["ahUnit"] {
                     unit = HKUnit(from: unitString)
                 }
+                let cacheKey = "\(vo.optDict["ahSource"]!)-\(Int(targD.timeIntervalSince1970))"
+                if let cachedValue = Self.healthKitCache[cacheKey] {
+                    dtf.text = cachedValue
+                    return dtf
+                }
                 rthk.performHealthQuery(
                     displayName: vo.optDict["ahSource"]!,
                     targetDate: Int(targD.timeIntervalSince1970),
                     specifiedUnit: unit
                 ) { results in
                     if results.isEmpty {
-                        DispatchQueue.main.async {
+                        safeDispatchSync {
                             self.dtf.text = ""
                         }
                     } else {
@@ -244,6 +244,7 @@ class voNumber: voState, UITextFieldDelegate {
                         DBGLog("\(formattedValue)")
                         DispatchQueue.main.async {
                             self.dtf.text = "\(formattedValue)"
+                            Self.healthKitCache[cacheKey] = formattedValue
                             self.vo.vos?.addExternalSourceOverlay(to: self.dtf)  // no taps
                         }
                     }
@@ -283,7 +284,7 @@ class voNumber: voState, UITextFieldDelegate {
         //DBGLog(@"dtf: vo val= %@  dtf.text= %@", self.vo.value, self.dtf.text);
         //}
 
-        DBGLog(String("number voDisplay: \(dtf.text)"))
+        //DBGLog(String("number voDisplay: \(dtf.text)"))
         return dtf
     }
 
@@ -308,28 +309,24 @@ class voNumber: voState, UITextFieldDelegate {
         return String(totalMinutes)
     }
     
-    override func update(_ instr: String) -> String {
-        // confirm textfield not forgotten
-        if ((nil == _dtf) /* NOT self.dtf as we want to test if is instantiated */) || !(instr == "") {
+    override func update(_ instr: String?) -> String {
+        if let instr, !instr.isEmpty {
             return instr
         }
         
-        //
-        if Thread.isMainThread {
-            if vo.optDict["hrsmins"] == "1" {
-                return convertHrsMinsToDecimal(dtf.text ?? "")
-            } else {
-                return dtf.text ?? ""
-            }
-        } else {
-            return DispatchQueue.main.sync { [self] in
-                if vo.optDict["hrsmins"] == "1" {
-                    return convertHrsMinsToDecimal(dtf.text ?? "")
-                } else {
-                    return dtf.text ?? ""
-                }
-            }
+        guard _dtf != nil else {
+            return ""
         }
+        var text: String = ""
+        safeDispatchSync { [self] in
+            text = dtf.text ?? ""
+        }
+        
+        if text.isEmpty {
+            return ""
+        }
+        
+        return vo.optDict["hrsmins"] == "1" ? convertHrsMinsToDecimal(text) : text
     }
 
     override func voGraphSet() -> [String] {

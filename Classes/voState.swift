@@ -49,11 +49,11 @@ class voState: NSObject, voProtocol {
         return Double(vo.value) ?? 0
     }
     
-    func update(_ instr: String) -> String {
+    func update(_ instr: String?) -> String {
         // place holder so fn can update on access; also confirm textfield updated
         // added return "" if disabled 30.vii.13
         if vo.useVO {
-            return instr
+            return instr ?? ""
         } else {
             return ""
         }
@@ -166,6 +166,9 @@ class voState: NSObject, voProtocol {
     }
 
     func clearFNdata() {
+    }
+    
+    func setFNrecalc() {
     }
     
     func setOptDictDflts() {

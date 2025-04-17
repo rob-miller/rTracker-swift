@@ -151,16 +151,17 @@ class voText: voState, UITextFieldDelegate {
         return dtf
     }
 
-    override func update(_ instr: String) -> String {
-        // confirm textfield not forgotten
-        if ((nil == _dtf) /* NOT self.dtf as we want to test if is instantiated */) || !(instr == "") {
-            return instr
+    override func update(_ instr: String?) -> String {
+        // Return input string if textfield isn't instantiated yet or if input string is non-empty
+        if (nil == _dtf) || (instr?.isEmpty == false) {  /* NOT self.dtf as we want to test if is instantiated */
+            return instr ?? ""
         }
-        var cpy: String?
-        safeDispatchSync({ [self] in
-            cpy = dtf.text ?? ""
-        })
-        return cpy!
+        
+        var textFieldContent: String = ""
+        safeDispatchSync { [self] in
+            textFieldContent = dtf.text ?? ""
+        }
+        return textFieldContent
     }
 
     // MARK: -
