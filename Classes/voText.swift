@@ -113,7 +113,7 @@ class voText: voState, UITextFieldDelegate {
     }
 
     override func resetData() {
-        if nil != _dtf {
+        if nil != _dtf  && !vo.parentTracker.loadingDbData {
             // not self, do not instantiate
             if Thread.isMainThread {
                 dtf.text = ""

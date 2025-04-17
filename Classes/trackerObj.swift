@@ -156,6 +156,8 @@ class trackerObj: tObjBase {
     var csvHeaderDict: [String : [String]] = [:]
     var csvChoiceDict: [String : Int] = [:]
 
+    var loadingDbData = false
+    
     override init() {
         togd = nil
         super.init()

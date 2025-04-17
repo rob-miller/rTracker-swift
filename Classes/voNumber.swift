@@ -31,7 +31,8 @@ class voNumber: voState, UITextFieldDelegate {
     private var _dtf: UITextField?
     lazy var rthk = rtHealthKit.shared
     private static var healthKitCache: [String: String] = [:]  // Cache by "sourceName-date"
-
+    let noHKdataMsg = "No HealthKit data available"
+    
     var dtf: UITextField {
         if _dtf?.frame.size.width != vosFrame.size.width {
             _dtf = nil // first time around thinks size is 320, handle larger devices
@@ -154,7 +155,7 @@ class voNumber: voState, UITextFieldDelegate {
     }
 
     override func resetData() {
-        if nil != _dtf {
+        if nil != _dtf && !vo.parentTracker.loadingDbData {
             // not self as don't want to instantiate prematurely
             safeDispatchSync({dtf.text = ""})
         }
@@ -164,7 +165,7 @@ class voNumber: voState, UITextFieldDelegate {
     override func voDisplay(_ bounds: CGRect) -> UIView {
         vosFrame = bounds
         // force recreate
-        _dtf = nil
+        //_dtf = nil
         
         var targD = Date()  // now
         if vo.value == "" {
@@ -203,7 +204,7 @@ class voNumber: voState, UITextFieldDelegate {
                 ) { results in
                     if results.isEmpty {
                         safeDispatchSync {
-                            self.dtf.text = ""
+                            self.dtf.text = self.noHKdataMsg
                         }
                     } else {
                         var result = results.last!
@@ -241,11 +242,12 @@ class voNumber: voState, UITextFieldDelegate {
                             // Otherwise, format to two decimal places
                             formattedValue = String(format: "%.2f", result.value)
                         }
-                        DBGLog("\(formattedValue)")
+
                         DispatchQueue.main.async {
                             self.dtf.text = "\(formattedValue)"
                             Self.healthKitCache[cacheKey] = formattedValue
                             self.vo.vos?.addExternalSourceOverlay(to: self.dtf)  // no taps
+                            DBGLog("\(self.vo.valueName!) dtf= \(formattedValue)")
                         }
                     }
                 }
@@ -262,7 +264,6 @@ class voNumber: voState, UITextFieldDelegate {
                 }
             } else {
                 dtf.text = ""
-                //DBGLog(@"reset dtf.txt to empty");
             }
         } else {
             DispatchQueue.main.async { [self] in
@@ -310,6 +311,7 @@ class voNumber: voState, UITextFieldDelegate {
     }
     
     override func update(_ instr: String?) -> String {
+        // if input string non-empty then return that, otherwise return the current text of the text field
         if let instr, !instr.isEmpty {
             return instr
         }
@@ -322,7 +324,7 @@ class voNumber: voState, UITextFieldDelegate {
             text = dtf.text ?? ""
         }
         
-        if text.isEmpty {
+        if text.isEmpty || text == noHKdataMsg {
             return ""
         }
         
@@ -387,6 +389,7 @@ class voNumber: voState, UITextFieldDelegate {
     }
     
     override func loadHKdata(dispatchGroup: DispatchGroup?) {
+        // loads into database, not for current tracker record
         let to = vo.parentTracker
 
         guard let srcName = vo.optDict["ahSource"] else {
@@ -622,13 +625,6 @@ class voNumber: voState, UITextFieldDelegate {
                     secondHKDispatchGroup.leave() // Leave the group after this query is processed
                 }
             }
-            
-            // this seems to conflict with other simultaneous updates and deletes more than it should
-            //if self.vo.optDict["ahPrevD"] ?? "0" == "1" {
-                // possibly a day-1 entry should be removed
-                //sql = "delete from trkrdata where date not in (select date from voData)"
-                //to.toExecSql(sql: sql)
-            //}
             
             secondHKDispatchGroup.notify(queue: .main) {[self] in
                 // ensure trkrData has lowest priv if just added a lower privacy valuObj to a trkrData entry

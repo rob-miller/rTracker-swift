@@ -68,7 +68,6 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     var hkDataSource = false
     var otDataSource = false
     private var loadingData = false
-    private var viewLoadfinished = false
     
     var gt: UIViewController?
 
@@ -239,7 +238,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             needSave = true
             showSaveBtn()
         } else {
-            // otherwise see if can load data from healthkit
+            // otherwise see if can load data from healthkit and other sources
             let dispatchGroup = DispatchGroup()
 
             // Show the spinner
@@ -249,6 +248,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             self.view.addSubview(activityIndicator)
 
             self.loadingData = true
+            self.tracker!.loadingDbData = true
             
             // Load HealthKit data first
             dispatchGroup.enter()
@@ -276,6 +276,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 DBGLog("HealthKit and Othertracker data loaded.")
                 self.tableView?.reloadData()
                 self.loadingData = false
+                self.tracker!.loadingDbData = false
             }
         }
 
@@ -284,13 +285,11 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             refreshControl.addTarget(self, action: #selector(handlePullDownAction), for: .valueChanged)
             tableView!.refreshControl = refreshControl
         }
-        viewLoadfinished = true
     }
 
     @objc func handlePullDownAction() {
         DBGLog("Refresh initiated")
         if loadingData { return }
-        if !viewLoadfinished { return }
         
         let dispatchGroup = DispatchGroup()
         
