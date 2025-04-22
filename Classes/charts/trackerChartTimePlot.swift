@@ -550,6 +550,11 @@ extension TrackerChart {
         
         // Draw legend
         drawTimeChartLegend(sourcesData: sourcesData)
+        
+        // Ensure the axes (and therefore the Y-axis view) sit on top so they receive taps
+        if let axesView = chartView.viewWithTag(2002) {
+            chartView.bringSubviewToFront(axesView)
+        }
     }
 
     // Draw the axes for the time chart
@@ -843,7 +848,8 @@ extension TrackerChart {
         let seriesColors: [UIColor] = [
             UIColor.systemBlue,
             UIColor.systemGreen,
-            UIColor.systemRed
+            UIColor.systemRed,
+            UIColor.systemOrange
         ]
         
         // Shared y-axis range (if applicable)
@@ -1229,7 +1235,8 @@ extension TrackerChart {
         let seriesColors: [UIColor] = [
             UIColor.systemBlue,
             UIColor.systemGreen,
-            UIColor.systemRed
+            UIColor.systemRed,
+            UIColor.systemOrange
         ]
         
         // Calculate legend height based on number of sources

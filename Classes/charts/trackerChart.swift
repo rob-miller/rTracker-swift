@@ -82,8 +82,10 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     internal var timeSource1Button: UIButton!
     internal var timeSource2Button: UIButton!
     internal var timeSource3Button: UIButton!
+    internal var timeSource4Button: UIButton!
     //internal var clearTimeSourceButton: UIButton!
-    internal var timeChartSources: [Int] = [-1, -1, -1]  // Up to 3 data sources for time chart
+    
+    internal var timeChartSources: [Int] = [-1, -1, -1, -1]  // Up to 4 data sources for time chart
     internal var selectedYAxisMode: Int = 0  // To cycle through different axis modes when tapped
     internal var showValueLabels: Bool = false  // Toggle value labels
     internal var currentYAxisView: UIView?  // To track current y-axis view for tapping
@@ -278,8 +280,9 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         
         // Configure layout - no longer using fillEqually distribution
         let stackView = UIStackView(arrangedSubviews: [
-            xAxisButton, yAxisButton, colorButton,
-            sliderContainer
+            sliderContainer,
+            xAxisButton, yAxisButton, colorButton
+            
         ])
         stackView.axis = .vertical
         stackView.spacing = 12
@@ -314,8 +317,9 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         
         // Configure layout - no longer using fillEqually distribution
         let stackView = UIStackView(arrangedSubviews: [
-            backgroundButton, selectionButton,
-            sliderContainer
+            sliderContainer,
+            backgroundButton, selectionButton
+            
         ])
         stackView.axis = .vertical
         stackView.spacing = 12
@@ -345,8 +349,9 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         
         // Configure layout
         let stackView = UIStackView(arrangedSubviews: [
-            pieDataButton,
-            sliderContainer
+            sliderContainer,
+            pieDataButton
+            
         ])
         stackView.axis = .vertical
         stackView.spacing = 12
@@ -375,12 +380,18 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         timeSource1Button = createConfigButton(title: "Select Data Source 1", action: #selector(selectTimeSource1))
         timeSource2Button = createConfigButton(title: "Select Data Source 2 (Optional)", action: #selector(selectTimeSource2))
         timeSource3Button = createConfigButton(title: "Select Data Source 3 (Optional)", action: #selector(selectTimeSource3))
+        timeSource4Button = createConfigButton(title: "Select Data Source 4 (Optional)", action: #selector(selectTimeSource4))
         //clearTimeSourceButton = createConfigButton(title: "Clear All Sources", action: #selector(clearTimeSources))
         
         // Configure layout
         let stackView = UIStackView(arrangedSubviews: [
-            timeSource1Button, timeSource2Button, timeSource3Button, //clearTimeSourceButton,
-            sliderContainer
+            sliderContainer,
+            timeSource1Button,
+            timeSource2Button,
+            timeSource3Button,
+            timeSource4Button,
+            //clearTimeSourceButton
+            
         ])
         stackView.axis = .vertical
         stackView.spacing = 12
@@ -687,7 +698,8 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             "pieData": [VOT_BOOLEAN, VOT_CHOICE],
             "timeSource1": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_BOOLEAN],
             "timeSource2": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_BOOLEAN],
-            "timeSource3": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_BOOLEAN]
+            "timeSource3": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_BOOLEAN],
+            "timeSource4": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_BOOLEAN]
         ]
         
         // Initialize empty selections
@@ -700,7 +712,8 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             "pieData": -1,
             "timeSource1": -1,
             "timeSource2": -1,
-            "timeSource3": -1
+            "timeSource3": -1,
+            "timeSource4": -1
         ]
         
         // Setup initial configuration based on selected chart type
@@ -750,6 +763,11 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     @objc internal func selectTimeSource3() {
         currentPickerType = "timeSource3"
         showPickerForValueObjSelection(type: "timeSource3")
+    }
+    
+    @objc internal func selectTimeSource4() {
+        currentPickerType = "timeSource4"
+        showPickerForValueObjSelection(type: "timeSource4")
     }
     
     internal func showPickerForValueObjSelection(type: String) {
@@ -931,7 +949,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             }
         } else if segmentedControl.selectedSegmentIndex == CHART_TYPE_TIME {
             // Update time chart source buttons
-            for i in 0..<3 {
+            for i in 0..<4 {
                 let sourceID = timeChartSources[i]
                 if sourceID != -1 {
                     let sourceVO = tracker?.valObjTable.first { $0.vid == sourceID }
@@ -944,6 +962,8 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
                         timeSource2Button.setTitle(buttonTitle, for: .normal)
                     case 2:
                         timeSource3Button.setTitle(buttonTitle, for: .normal)
+                    case 3:
+                        timeSource4Button.setTitle(buttonTitle, for: .normal)
                     default:
                         break
                     }
@@ -956,6 +976,8 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
                         timeSource2Button.setTitle("Data Source 2 (Optional)", for: .normal)
                     case 2:
                         timeSource3Button.setTitle("Data Source 3 (Optional)", for: .normal)
+                    case 3:
+                        timeSource4Button.setTitle("Data Source 4 (Optional)", for: .normal)
                     default:
                         break
                     }
