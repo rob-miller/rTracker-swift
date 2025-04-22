@@ -316,6 +316,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         }
     }
 
+    // Modified handleSleepAnalysisQuery function
     private func handleSleepAnalysisQuery(
         startDate: Date,
         endDate: Date,
@@ -341,8 +342,18 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
             }
             
             guard let categorySamples = samples as? [HKCategorySample] else {
-                DBGLog("No category samples found.")
-                completion([])
+                // No data was found - this could be because there's no data or because there's 0 time in this state
+                // For sleep categories, we need to determine if there was any sleep data at all for this time period
+                self.checkForAnySleepData(startDate: startDate, endDate: endDate) { hasSleepData in
+                    if hasSleepData && self.isSleepCategoryQuery(queryConfig) {
+                        // Sleep data exists, but no data for this specific category - this means 0 minutes
+                        let result = HealthQueryResult(date: startDate, value: 0.0, unit: specifiedUnit)
+                        completion([result])
+                    } else {
+                        // No sleep data at all exists for this period
+                        completion([])
+                    }
+                }
                 return
             }
             
@@ -354,81 +365,89 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                 let segmentCount = self.countSleepSegments(
                     samples: categorySamples,
                     targetValue: HKCategoryValueSleepAnalysis.asleepDeep.rawValue,
-                    allowedGapValues: [ HKCategoryValueSleepAnalysis.asleepCore.rawValue: TimeInterval(MAXSLEEPSEGMENTGAP * 60)],  // 12 minutes of Core sleep
+                    allowedGapValues: [ HKCategoryValueSleepAnalysis.asleepCore.rawValue: TimeInterval(MAXSLEEPSEGMENTGAP * 60)],
                     maxGapMinutes: MAXSLEEPSEGMENTGAP,
                     minDurationMinutes: MINSLEEPSEGMENTDURATION
                 )
-                if segmentCount > 0 {
-                    results.append(HealthQueryResult(
-                        date: startDate,
-                        value: Double(segmentCount),
-                        unit: specifiedUnit
-                    ))
-                }
+                // Always add a result with the count (which might be 0)
+                results.append(HealthQueryResult(
+                    date: startDate,
+                    value: Double(segmentCount),
+                    unit: specifiedUnit
+                ))
                 
             case "Sleep - REM Segments":
                 let segmentCount = self.countSleepSegments(
                     samples: categorySamples,
                     targetValue: HKCategoryValueSleepAnalysis.asleepREM.rawValue,
                     allowedGapValues: [
-                        HKCategoryValueSleepAnalysis.asleepCore.rawValue: TimeInterval(MAXSLEEPSEGMENTGAP * 60),  // 12 minutes of Core sleep
-                        HKCategoryValueSleepAnalysis.awake.rawValue: TimeInterval(2 * 60)          // 2 minutes of Awake
+                        HKCategoryValueSleepAnalysis.asleepCore.rawValue: TimeInterval(MAXSLEEPSEGMENTGAP * 60),
+                        HKCategoryValueSleepAnalysis.awake.rawValue: TimeInterval(2 * 60)
                     ],
-                    maxGapMinutes: MAXSLEEPSEGMENTGAP,  // For backward compatibility
+                    maxGapMinutes: MAXSLEEPSEGMENTGAP,
                     minDurationMinutes: MINSLEEPSEGMENTDURATION
                 )
-                if segmentCount > 0 {
-                    results.append(HealthQueryResult(
-                        date: startDate,
-                        value: Double(segmentCount),
-                        unit: specifiedUnit
-                    ))
-                }
+                // Always add a result with the count (which might be 0)
+                results.append(HealthQueryResult(
+                    date: startDate,
+                    value: Double(segmentCount),
+                    unit: specifiedUnit
+                ))
                 
             case "Sleep - Cycles":
                 let cycleCount = self.countSleepCycles(
                     samples: categorySamples,
                     minSegmentMinutes: MINSLEEPSEGMENTDURATION
                 )
-                if cycleCount > 0 {
-                    results.append(HealthQueryResult(
-                        date: startDate,
-                        value: Double(cycleCount),
-                        unit: specifiedUnit
-                    ))
-                }
+                // Always add a result with the count (which might be 0)
+                results.append(HealthQueryResult(
+                    date: startDate,
+                    value: Double(cycleCount),
+                    unit: specifiedUnit
+                ))
                 
             case "Sleep - Transitions":
                 let transitionCount = self.countSleepTransitions(samples: categorySamples)
-                if transitionCount > 0 {
-                    results.append(HealthQueryResult(
-                        date: startDate,
-                        value: Double(transitionCount),
-                        unit: specifiedUnit
-                    ))
-                }
+                // Always add a result with the count (which might be 0)
+                results.append(HealthQueryResult(
+                    date: startDate,
+                    value: Double(transitionCount),
+                    unit: specifiedUnit
+                ))
                 
             default:
-                // Handle regular sleep analysis metrics (using original code)
+                // Handle regular sleep analysis metrics
                 switch queryConfig.aggregationStyle {
                 case .cumulative:
                     var totalValue = categorySamples.reduce(0.0) { total, sample in
                         total + (queryConfig.customProcessor?(sample) ?? 0)
                     }
-                    if totalValue > 0 {
-                        if specifiedUnit == HKUnit.hour() {
-                            totalValue /= 60.0
-                        }
-                        results.append(HealthQueryResult(date: startDate, value: totalValue, unit: specifiedUnit))
+                    
+                    // Always create a result, even if totalValue is 0
+                    if specifiedUnit == HKUnit.hour() {
+                        totalValue /= 60.0
                     }
+                    results.append(HealthQueryResult(date: startDate, value: totalValue, unit: specifiedUnit))
+                    
                 case .discreteArithmetic:
-                    results = categorySamples.compactMap { sample in
-                        var processedValue = queryConfig.customProcessor?(sample) ?? 0
-                        if specifiedUnit == HKUnit.hour() {
-                            processedValue /= 60.0
+                    if !categorySamples.isEmpty {
+                        results = categorySamples.compactMap { sample in
+                            var processedValue = queryConfig.customProcessor?(sample) ?? 0
+                            if specifiedUnit == HKUnit.hour() {
+                                processedValue /= 60.0
+                            }
+                            return HealthQueryResult(date: sample.startDate, value: processedValue, unit: specifiedUnit)
                         }
-                        return processedValue > 0 ? HealthQueryResult(date: sample.startDate, value: processedValue, unit: specifiedUnit) : nil  // return contactMap processing to results
+                    } else if self.isSleepCategoryQuery(queryConfig) {
+                        // For sleep data with discrete arithmetic but no samples, still add a 0 result
+                        // if we know there's sleep data in general
+                        self.checkForAnySleepData(startDate: startDate, endDate: endDate) { hasSleepData in
+                            if hasSleepData {
+                                results.append(HealthQueryResult(date: startDate, value: 0.0, unit: specifiedUnit))
+                            }
+                        }
                     }
+                    
                 case .discreteEquivalentContinuousLevel:
                     fallthrough
                 case .discreteTemporallyWeighted:
@@ -444,6 +463,28 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         healthStore.execute(query)
     }
 
+    // Helper function to check if any sleep data exists for the time period
+    private func checkForAnySleepData(startDate: Date, endDate: Date, completion: @escaping (Bool) -> Void) {
+        guard let categoryType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
+            completion(false)
+            return
+        }
+        
+        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [])
+        let query = HKSampleQuery(sampleType: categoryType, predicate: predicate, limit: 1, sortDescriptors: nil) { (_, samples, _) in
+            DispatchQueue.main.async {
+                completion(samples?.count ?? 0 > 0)
+            }
+        }
+        
+        healthStore.execute(query)
+    }
+
+    // Helper function to check if a query is for a sleep category
+    private func isSleepCategoryQuery(_ queryConfig: HealthDataQuery) -> Bool {
+        return queryConfig.identifier == "HKCategoryTypeIdentifierSleepAnalysis"
+    }
+    
     // Helper method to count sleep cycles (Deep followed by REM)
     private func countSleepCycles(samples: [HKCategorySample], minSegmentMinutes: Int) -> Int {
         guard !samples.isEmpty else {
