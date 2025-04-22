@@ -419,7 +419,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             //DBGLog(@"ep %d ->entry: %@", ndx, [self qdate:epDate] );
         } else if ep! >= 0 {
             // ep is vid
-            sql = "select max(date) from voData where id=\(ep!) and date < |(maxdate) and val <> 0 and val <> '';"
+            sql = "select max(date) from voData where id=\(ep!) and date < \(maxdate) and val <> 0 and val <> '';"
             #if FUNCTIONDBG
             DBGLog(String("get ep qry: \(sql)"))
             #endif
