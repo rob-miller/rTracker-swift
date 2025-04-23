@@ -551,11 +551,13 @@ extension TrackerChart {
             }
             
             DBGLog("\(sortedCategories)")
+            /*
             drawCategoryLegend(
                 in: chartView,
                 categories: sortedCategories,
                 colors: categoryColors
             )
+            */
             
             // show averages
             drawDistributionAverages(
@@ -659,11 +661,13 @@ extension TrackerChart {
                 return (categoryValues[a] ?? 0) > (categoryValues[b] ?? 0)
             }
             
+            /*
             drawCategoryLegend(
                 in: chartView,
                 categories: sortedCategories,
                 colors: categoryColors
             )
+             */
             
             // averages/counts respecting current visibility (filteredSelectionData)
             let filteredSelData = chartData["filteredSelectionData"] as? [String: [Double]] ?? [:]
@@ -934,11 +938,14 @@ extension TrackerChart {
             }
             
             // Update the legend without recreating it
+            
+            /*
             drawCategoryLegend(
                 in: chartView,
                 categories: sortedCategories,
                 colors: categoryColors
             )
+            */
             
             // Update averages/counts respecting current visibility
             let filteredSelData = chartData["filteredSelectionData"] as? [String: [Double]] ?? [:]
