@@ -48,6 +48,9 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     internal let legendRightMargin: CGFloat = 15
     internal let legendTopMargin: CGFloat = 15
     
+    internal let TAG_LEGEND_VIEW = 5001
+    internal let TAG_LEGEND_TITLE = 5002
+    
     // MARK: - Properties
     
     // Reference to the tracker
@@ -266,149 +269,8 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             configContainer.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16)
         ])
     }
-    
-    internal func setupScatterPlotConfig() {
-        // Remove existing subviews
-        for subview in configContainer.subviews {
-            subview.removeFromSuperview()
-        }
-        
-        // Create buttons for X, Y, and Color selection
-        xAxisButton = createConfigButton(title: "Select X Axis", action: #selector(selectXAxis))
-        yAxisButton = createConfigButton(title: "Select Y Axis", action: #selector(selectYAxis))
-        colorButton = createConfigButton(title: "Select Color (Optional)", action: #selector(selectColor))
-        
-        // Configure layout - no longer using fillEqually distribution
-        let stackView = UIStackView(arrangedSubviews: [
-            sliderContainer,
-            xAxisButton, yAxisButton, colorButton
-            
-        ])
-        stackView.axis = .vertical
-        stackView.spacing = 12
-        stackView.distribution = .fill  // Changed from fillEqually to fill
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-        configContainer.addSubview(stackView)
-        
-        NSLayoutConstraint.activate([
-            stackView.topAnchor.constraint(equalTo: configContainer.topAnchor),
-            stackView.leadingAnchor.constraint(equalTo: configContainer.leadingAnchor),
-            stackView.trailingAnchor.constraint(equalTo: configContainer.trailingAnchor),
-            stackView.bottomAnchor.constraint(equalTo: configContainer.bottomAnchor),
-            
-            // Set a fixed height constraint for the slider container
-            //sliderContainer.heightAnchor.constraint(equalToConstant: 120)  // Increased height for sliders
-        ])
-        
-        // Update buttons with any previously selected values
-        updateButtonTitles()
-    }
-    
-    // Update setupDistributionPlotConfig to indicate Selection is optional
-    internal func setupDistributionPlotConfig() {
-        // Remove existing subviews
-        for subview in configContainer.subviews {
-            subview.removeFromSuperview()
-        }
-        
-        // Create buttons for Background and Selection
-        backgroundButton = createConfigButton(title: "Select Background Data", action: #selector(selectBackground))
-        selectionButton = createConfigButton(title: "Select Segmentation Data (Optional)", action: #selector(selectSelection))
-        
-        // Configure layout - no longer using fillEqually distribution
-        let stackView = UIStackView(arrangedSubviews: [
-            sliderContainer,
-            backgroundButton, selectionButton
-            
-        ])
-        stackView.axis = .vertical
-        stackView.spacing = 12
-        stackView.distribution = .fill  // Changed from fillEqually to fill
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-        configContainer.addSubview(stackView)
-        
-        NSLayoutConstraint.activate([
-            stackView.topAnchor.constraint(equalTo: configContainer.topAnchor),
-            stackView.leadingAnchor.constraint(equalTo: configContainer.leadingAnchor),
-            stackView.trailingAnchor.constraint(equalTo: configContainer.trailingAnchor),
-            stackView.bottomAnchor.constraint(equalTo: configContainer.bottomAnchor)
-        ])
-        
-        // Update buttons with any previously selected values
-        updateButtonTitles()
-    }
-    
-    internal func setupPieChartConfig() {
-        // Remove existing subviews
-        for subview in configContainer.subviews {
-            subview.removeFromSuperview()
-        }
-        
-        // Create button for data selection
-        pieDataButton = createConfigButton(title: "Select Data", action: #selector(selectPieData))
-        
-        // Configure layout
-        let stackView = UIStackView(arrangedSubviews: [
-            sliderContainer,
-            pieDataButton
-            
-        ])
-        stackView.axis = .vertical
-        stackView.spacing = 12
-        stackView.distribution = .fill
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-        configContainer.addSubview(stackView)
-        
-        NSLayoutConstraint.activate([
-            stackView.topAnchor.constraint(equalTo: configContainer.topAnchor),
-            stackView.leadingAnchor.constraint(equalTo: configContainer.leadingAnchor),
-            stackView.trailingAnchor.constraint(equalTo: configContainer.trailingAnchor),
-            stackView.bottomAnchor.constraint(equalTo: configContainer.bottomAnchor)
-        ])
-        
-        // Update button with any previously selected values
-        updateButtonTitles()
-    }
-    
-    internal func setupTimeChartConfig() {
-        // Remove existing subviews
-        for subview in configContainer.subviews {
-            subview.removeFromSuperview()
-        }
-        
-        // Create buttons for data source selection
-        timeSource1Button = createConfigButton(title: "Select Data Source 1", action: #selector(selectTimeSource1))
-        timeSource2Button = createConfigButton(title: "Select Data Source 2 (Optional)", action: #selector(selectTimeSource2))
-        timeSource3Button = createConfigButton(title: "Select Data Source 3 (Optional)", action: #selector(selectTimeSource3))
-        timeSource4Button = createConfigButton(title: "Select Data Source 4 (Optional)", action: #selector(selectTimeSource4))
-        //clearTimeSourceButton = createConfigButton(title: "Clear All Sources", action: #selector(clearTimeSources))
-        
-        // Configure layout
-        let stackView = UIStackView(arrangedSubviews: [
-            sliderContainer,
-            timeSource1Button,
-            timeSource2Button,
-            timeSource3Button,
-            timeSource4Button,
-            //clearTimeSourceButton
-            
-        ])
-        stackView.axis = .vertical
-        stackView.spacing = 12
-        stackView.distribution = .fill
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-        configContainer.addSubview(stackView)
-        
-        NSLayoutConstraint.activate([
-            stackView.topAnchor.constraint(equalTo: configContainer.topAnchor),
-            stackView.leadingAnchor.constraint(equalTo: configContainer.leadingAnchor),
-            stackView.trailingAnchor.constraint(equalTo: configContainer.trailingAnchor),
-            stackView.bottomAnchor.constraint(equalTo: configContainer.bottomAnchor)
-        ])
-        
-        // Update buttons with any previously selected values
-        updateButtonTitles()
-    }
+
+
     
     internal func setupDateSliders() {
         // Create start date slider with proper interaction
@@ -738,37 +600,10 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         showPickerForValueObjSelection(type: "color")
     }
     
-    @objc internal func selectBackground() {
-        showPickerForValueObjSelection(type: "background")
-    }
-    
-    @objc internal func selectSelection() {
-        showPickerForValueObjSelection(type: "selection")
-    }
-    
     @objc internal func selectPieData() {
         showPickerForValueObjSelection(type: "pieData")
     }
-    
-    @objc internal func selectTimeSource1() {
-        currentPickerType = "timeSource1"
-        showPickerForValueObjSelection(type: "timeSource1")
-    }
-    
-    @objc internal func selectTimeSource2() {
-        currentPickerType = "timeSource2"
-        showPickerForValueObjSelection(type: "timeSource2")
-    }
-    
-    @objc internal func selectTimeSource3() {
-        currentPickerType = "timeSource3"
-        showPickerForValueObjSelection(type: "timeSource3")
-    }
-    
-    @objc internal func selectTimeSource4() {
-        currentPickerType = "timeSource4"
-        showPickerForValueObjSelection(type: "timeSource4")
-    }
+
     
     internal func showPickerForValueObjSelection(type: String) {
         // Store current selection type
@@ -1472,5 +1307,224 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     }
     
     
+    // MARK: data handling
     
+    // Update getEligibleValueObjs to add a "None" option
+    internal func getEligibleValueObjs(for configType: String) -> [valueObj] {
+        guard let tracker = tracker else { return [] }
+        
+        // Create a dummy "None" value object using the proper initializer
+         let noneVO = valueObj(
+             data: tracker,
+             in_vid: -2,            // Use -2 as a special ID for "None" (-1 is already used for unselected state)
+             in_vtype: VOT_INFO,          // Use -1 as a special type for "None"
+             in_vname: "None",      // Display name
+             in_vcolor: 0,
+             in_vgraphtype: 0,
+             in_vpriv: 0
+         )
+        
+        // Skip adding "None" for time chart sources that are already None
+        // This check prevents adding multiple "None" entries when a source is already None
+        if configType.hasPrefix("timeSource") {
+            let sourceIndex = Int(configType.dropFirst("timeSource".count))! - 1
+            if sourceIndex >= 0 && sourceIndex < timeChartSources.count && timeChartSources[sourceIndex] == -1 {
+                // If this time source is already None, don't add the None option
+            } else {
+                // Add None option for time chart sources
+                var results: [valueObj] = [noneVO]
+                
+                // Get allowed types for this configuration
+                let allowedTypes = allowedValueObjTypes[configType] ?? []
+                
+                // Filter valueObjs based on type and privacy
+                let eligibleVOs = tracker.valObjTable.filter { vo in
+                    // Check if type is allowed
+                    guard allowedTypes.contains(vo.vtype) else { return false }
+                    
+                    // Check privacy settings (if applicable)
+                    let privacy = vo.optDict["privacy"] ?? "0"
+                    return Int(privacy) ?? 0 <= privacyValue
+                }
+                
+                // Further filter based on exclusions (for X and Y axes)
+                let filtered: [valueObj]
+                if configType == "xAxis" {
+                    // Exclude Y axis selection from X options
+                    filtered = eligibleVOs.filter { $0.vid != selectedValueObjIDs["yAxis"] }
+                } else if configType == "yAxis" {
+                    // Exclude X axis selection from Y options
+                    filtered = eligibleVOs.filter { $0.vid != selectedValueObjIDs["xAxis"] }
+                } else {
+                    filtered = eligibleVOs
+                }
+                
+                results.append(contentsOf: filtered)
+                return results
+            }
+        } else if configType == "color" || configType == "selection" {
+            // Add None option for these optional fields
+            var results: [valueObj] = [noneVO]
+            
+            // Get allowed types for this configuration
+            let allowedTypes = allowedValueObjTypes[configType] ?? []
+            
+            // Filter valueObjs based on type and privacy
+            let eligibleVOs = tracker.valObjTable.filter { vo in
+                // Check if type is allowed
+                guard allowedTypes.contains(vo.vtype) else { return false }
+                
+                // Check privacy settings (if applicable)
+                let privacy = vo.optDict["privacy"] ?? "0"
+                return Int(privacy) ?? 0 <= privacyValue
+            }
+            
+            // Further filter based on exclusions (for X and Y axes)
+            let filtered: [valueObj]
+            if configType == "xAxis" {
+                // Exclude Y axis selection from X options
+                filtered = eligibleVOs.filter { $0.vid != selectedValueObjIDs["yAxis"] }
+            } else if configType == "yAxis" {
+                // Exclude X axis selection from Y options
+                filtered = eligibleVOs.filter { $0.vid != selectedValueObjIDs["xAxis"] }
+            } else {
+                filtered = eligibleVOs
+            }
+            
+            results.append(contentsOf: filtered)
+            return results
+        }
+        
+        // For required fields, proceed with the original implementation
+        // Get allowed types for this configuration
+        let allowedTypes = allowedValueObjTypes[configType] ?? []
+        
+        // Filter valueObjs based on type and privacy
+        let eligibleVOs = tracker.valObjTable.filter { vo in
+            // Check if type is allowed
+            guard allowedTypes.contains(vo.vtype) else { return false }
+            
+            // Check privacy settings (if applicable)
+            let privacy = vo.optDict["privacy"] ?? "0"
+            return Int(privacy) ?? 0 <= privacyValue
+        }
+        
+        // Further filter based on exclusions (for X and Y axes)
+        let filtered: [valueObj]
+        if configType == "xAxis" {
+            // Exclude Y axis selection from X options
+            filtered = eligibleVOs.filter { $0.vid != selectedValueObjIDs["yAxis"] }
+        } else if configType == "yAxis" {
+            // Exclude X axis selection from Y options
+            filtered = eligibleVOs.filter { $0.vid != selectedValueObjIDs["xAxis"] }
+        } else {
+            filtered = eligibleVOs
+        }
+        
+        return filtered
+    }
+    
+    // MARK: - Data Fetching
+    
+    internal func fetchDataForValueObj(id: Int, startTimestamp: Int, endTimestamp: Int) -> [(Date, Double)] {
+        // This would query the database for data points
+        guard id != -1, let tracker = tracker else { return [] }
+        
+        let sql = """
+        SELECT date, val FROM voData 
+        WHERE id = \(id) AND date >= \(startTimestamp) AND date <= \(endTimestamp)
+        ORDER BY date
+        """
+        
+        return tracker.toQry2AryDate(sql: sql)
+    }
+    
+    internal func fetchChoiceCategories(forID id: Int) -> [Int: String] {
+        guard let tracker = tracker else { return [:] }
+        
+        // Check if there are custom values
+        var sql = """
+        SELECT field, val FROM voInfo 
+        WHERE id = \(id) AND field LIKE 'cv%'
+        """
+        var customValues: [Int: Int] = [:]
+        
+        // Fetch custom values
+        let customValuesResults = tracker.toQry2Ary(sql: sql)
+        for result in customValuesResults {
+            if let field = result.0 as? String, let valStr = result.1 as? String, let val = Int(valStr) {
+                // Extract index from 'cv0', 'cv1', etc.
+                if let indexStr = field.dropFirst(2).first, let ndx = Int(String(indexStr)) {
+                    customValues[ndx] = val
+                }
+            }
+        }
+        
+        // query the voInfo table for choice labels
+        sql = """
+        SELECT field, val FROM voInfo 
+        WHERE id = \(id) AND field LIKE 'c%' AND val IS NOT NULL
+        """
+        
+        var categories: [Int: String] = [:]
+        
+        // Fetch categories
+        let categoryResults = tracker.toQry2Ary(sql: sql)
+        for result in categoryResults {
+            if let field = result.0 as? String, let label = result.1 as? String {
+                // Extract index from 'c0', 'c1', etc.
+                if let indexStr = field.dropFirst(1).first, let index = Int(String(indexStr)) {
+                    // Check if there's a custom value for this field
+                    if let customValue = customValues[index] {
+                        categories[customValue] = label
+                    } else {
+                        // If no custom value, assign index + 1 (so c0=1, c1=2, etc.)
+                        categories[index + 1] = label
+                    }
+                }
+            }
+        }
+        
+        return categories
+    }
+    
+
+    internal func getColorGradient(normalizedValue: Double) -> UIColor {
+        // Blue (0) to Red (1) gradient through purple
+        let clampedValue = max(0, min(1, normalizedValue))
+        
+        if clampedValue < 0.5 {
+            // Blue to Purple
+            let t = clampedValue * 2
+            let r = CGFloat(t) * 0.5
+            let g = 0.0
+            let b = 1.0
+            return UIColor(red: r, green: g, blue: b, alpha: 1.0)
+        } else {
+            // Purple to Red
+            let t = (clampedValue - 0.5) * 2
+            let r = 0.5 + CGFloat(t) * 0.5
+            let g = 0.0
+            let b = 1.0 - CGFloat(t)
+            return UIColor(red: r, green: g, blue: b, alpha: 1.0)
+        }
+    }
+    
+    internal func loadDateRanges() {
+        guard tracker != nil else { return }
+        
+        // Get date range from tracker data
+        let dateRange = fetchDateRange()
+        earliestDate = dateRange.earliest
+        latestDate = dateRange.latest
+        
+        selectedStartDate = earliestDate
+        selectedEndDate = latestDate
+        
+        // Update date labels
+        updateDateLabels()
+        
+        // Update axis configurations if they exist
+        updateChartData()
+    }
 }

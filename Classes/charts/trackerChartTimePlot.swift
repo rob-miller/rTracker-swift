@@ -11,6 +11,48 @@ import UIKit
 // MARK: - time line plot implementation
 extension TrackerChart {
     
+    
+
+    internal func setupTimeChartConfig() {
+        // Remove existing subviews
+        for subview in configContainer.subviews {
+            subview.removeFromSuperview()
+        }
+        
+        // Create buttons for data source selection
+        timeSource1Button = createConfigButton(title: "Select Data Source 1", action: #selector(selectTimeSource1))
+        timeSource2Button = createConfigButton(title: "Select Data Source 2 (Optional)", action: #selector(selectTimeSource2))
+        timeSource3Button = createConfigButton(title: "Select Data Source 3 (Optional)", action: #selector(selectTimeSource3))
+        timeSource4Button = createConfigButton(title: "Select Data Source 4 (Optional)", action: #selector(selectTimeSource4))
+        //clearTimeSourceButton = createConfigButton(title: "Clear All Sources", action: #selector(clearTimeSources))
+        
+        // Configure layout
+        let stackView = UIStackView(arrangedSubviews: [
+            sliderContainer,
+            timeSource1Button,
+            timeSource2Button,
+            timeSource3Button,
+            timeSource4Button,
+            //clearTimeSourceButton
+            
+        ])
+        stackView.axis = .vertical
+        stackView.spacing = 12
+        stackView.distribution = .fill
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        configContainer.addSubview(stackView)
+        
+        NSLayoutConstraint.activate([
+            stackView.topAnchor.constraint(equalTo: configContainer.topAnchor),
+            stackView.leadingAnchor.constraint(equalTo: configContainer.leadingAnchor),
+            stackView.trailingAnchor.constraint(equalTo: configContainer.trailingAnchor),
+            stackView.bottomAnchor.constraint(equalTo: configContainer.bottomAnchor)
+        ])
+        
+        // Update buttons with any previously selected values
+        updateButtonTitles()
+    }
+    
     internal func getEligibleValueObjsForTimeChart() -> [valueObj] {
         guard let tracker = tracker else { return [] }
         
@@ -1481,4 +1523,24 @@ extension TrackerChart {
         }
     }
     
+    
+    @objc internal func selectTimeSource1() {
+        currentPickerType = "timeSource1"
+        showPickerForValueObjSelection(type: "timeSource1")
+    }
+    
+    @objc internal func selectTimeSource2() {
+        currentPickerType = "timeSource2"
+        showPickerForValueObjSelection(type: "timeSource2")
+    }
+    
+    @objc internal func selectTimeSource3() {
+        currentPickerType = "timeSource3"
+        showPickerForValueObjSelection(type: "timeSource3")
+    }
+    
+    @objc internal func selectTimeSource4() {
+        currentPickerType = "timeSource4"
+        showPickerForValueObjSelection(type: "timeSource4")
+    }
 }
