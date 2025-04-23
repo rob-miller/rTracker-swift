@@ -394,6 +394,48 @@ extension TrackerChart {
         }
     }
     
+    internal func drawDistributionAverages(
+        backgroundValues: [Double],
+        selectionData: [String: [Double]],
+        categoryColors: [String: UIColor],
+        orderedCategories: [String]
+    ) {
+        // remove previous average labels
+        chartView.viewWithTag(3004)?.removeFromSuperview()
+        let container = UIView(frame: chartView.bounds)
+        container.tag = 3004
+        chartView.addSubview(container)
+        
+        var yPos: CGFloat = 15
+        let xPos: CGFloat = leftMargin + 10
+        let lineHeight: CGFloat = 16
+        
+        // Background average (always first)
+        if !backgroundValues.isEmpty {
+            let avg = backgroundValues.reduce(0.0, +) / Double(backgroundValues.count)
+            let lbl = UILabel(frame: CGRect(x: xPos, y: yPos, width: 220, height: lineHeight))
+            lbl.font = UIFont.systemFont(ofSize: 12)
+            lbl.textColor = .label
+            lbl.text = String(format: "Avg (all): %.2f", avg)
+            container.addSubview(lbl)
+            yPos += lineHeight
+        }
+        
+        // Follow legend order
+        for category in orderedCategories {
+            guard let values = selectionData[category], !values.isEmpty else { continue }
+            let avg = values.reduce(0.0, +) / Double(values.count)
+            let lbl = UILabel(frame: CGRect(x: xPos, y: yPos, width: 220, height: lineHeight))
+            lbl.font = UIFont.systemFont(ofSize: 12)
+            let visible = legendItemVisibility[category] ?? true
+            let baseColor = categoryColors[category] ?? UIColor.label
+            lbl.textColor = visible ? baseColor : baseColor.withAlphaComponent(0.3)
+            lbl.text = String(format: "%@: %.2f", category, avg)
+            container.addSubview(lbl)
+            yPos += lineHeight
+        }
+    }
+    
     internal func renderDistributionPlot() {
         // Clear existing content
         for subview in chartView.subviews {
@@ -482,6 +524,22 @@ extension TrackerChart {
                 in: chartView,
                 categories: sortedCategories,
                 colors: categoryColors
+            )
+            
+            // show averages
+            drawDistributionAverages(
+                backgroundValues: backgroundValues,
+                selectionData: selectionData,
+                categoryColors: categoryColors,
+                orderedCategories: sortedCategories
+            )
+        } else {
+            // show background average even when no selection data
+            drawDistributionAverages(
+                backgroundValues: backgroundValues,
+                selectionData: [:],
+                categoryColors: [:],
+                orderedCategories: []
             )
         }
     }
@@ -574,6 +632,22 @@ extension TrackerChart {
                 in: chartView,
                 categories: sortedCategories,
                 colors: categoryColors
+            )
+            // averages respecting current visibility (filteredSelectionData)
+            let filteredSelData = chartData["filteredSelectionData"] as? [String: [Double]] ?? [:]
+            drawDistributionAverages(
+                backgroundValues: backgroundValues,
+                selectionData: filteredSelData,
+                categoryColors: categoryColors,
+                orderedCategories: sortedCategories
+            )
+        } else {
+            // background only average
+            drawDistributionAverages(
+                backgroundValues: backgroundValues,
+                selectionData: [:],
+                categoryColors: [:],
+                orderedCategories: []
             )
         }
     }
@@ -998,6 +1072,7 @@ extension TrackerChart {
             legendView.layer.cornerRadius = 5
             legendView.layer.borderWidth = 0.5
             legendView.layer.borderColor = UIColor.systemGray.cgColor
+            //legendView.isUserInteractionEnabled = true
             view.addSubview(legendView)
             
             // Iterate through categories in their original order
@@ -1010,6 +1085,7 @@ extension TrackerChart {
                     height: itemHeight + padding
                 ))
                 itemContainer.isUserInteractionEnabled = true
+                //itemContainer.backgroundColor = UIColor.red.withAlphaComponent(0.1)
                 legendView.addSubview(itemContainer)
                 
                 // Check visibility state
@@ -1069,6 +1145,7 @@ extension TrackerChart {
                 
                 // Add tap gesture recognizer
                 let tapGesture = UITapGestureRecognizer(target: self, action: #selector(legendItemTapped(_:)))
+                itemContainer.isUserInteractionEnabled = true
                 itemContainer.addGestureRecognizer(tapGesture)
                 
                 // Store the category name using the ObjectAssociation pattern
