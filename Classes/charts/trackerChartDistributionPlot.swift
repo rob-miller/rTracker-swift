@@ -54,6 +54,8 @@ extension TrackerChart {
     }
     
     
+    // MARK: - Updated drawDistributionAverages Method
+
     internal func drawDistributionAverages(
         backgroundValues: [Double],
         selectionData: [String: [Double]],
@@ -70,13 +72,28 @@ extension TrackerChart {
         let xPos: CGFloat = leftMargin + 10
         let lineHeight: CGFloat = 16
         
+        // Use the current display mode (average or count)
+        let showCounts = showStatCounts
+        
         // Background average (always first)
         if !backgroundValues.isEmpty {
             let avg = backgroundValues.reduce(0.0, +) / Double(backgroundValues.count)
+            let count = backgroundValues.count
+            
             let lbl = UILabel(frame: CGRect(x: xPos, y: yPos, width: 220, height: lineHeight))
             lbl.font = UIFont.systemFont(ofSize: 12)
             lbl.textColor = .label
-            lbl.text = String(format: "Avg (all): %.2f", avg)
+            
+            if showCounts {
+                lbl.text = String(format: "Count (all): %d", count)
+            } else {
+                lbl.text = String(format: "Avg (all): %.2f", avg)
+            }
+            
+            // Make label tappable
+            lbl.isUserInteractionEnabled = true
+            lbl.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(toggleStatDisplayMode)))
+            
             container.addSubview(lbl)
             yPos += lineHeight
         }
@@ -84,15 +101,63 @@ extension TrackerChart {
         // Follow legend order
         for category in orderedCategories {
             guard let values = selectionData[category], !values.isEmpty else { continue }
+            
             let avg = values.reduce(0.0, +) / Double(values.count)
+            let count = values.count
+            
             let lbl = UILabel(frame: CGRect(x: xPos, y: yPos, width: 220, height: lineHeight))
             lbl.font = UIFont.systemFont(ofSize: 12)
             let visible = legendItemVisibility[category] ?? true
             let baseColor = categoryColors[category] ?? UIColor.label
             lbl.textColor = visible ? baseColor : baseColor.withAlphaComponent(0.3)
-            lbl.text = String(format: "%@: %.2f", category, avg)
+            
+            if showCounts {
+                lbl.text = String(format: "%@: %d", category, count)
+            } else {
+                lbl.text = String(format: "%@: %.2f", category, avg)
+            }
+            
+            // Make label tappable
+            lbl.isUserInteractionEnabled = true
+            lbl.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(toggleStatDisplayMode)))
+            
             container.addSubview(lbl)
             yPos += lineHeight
+        }
+    }
+
+    // Toggle between showing averages and counts
+    @objc internal func toggleStatDisplayMode(_ sender: UITapGestureRecognizer) {
+        // Add haptic feedback for better user experience
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
+        
+        // Toggle the display mode
+        showStatCounts.toggle()
+        
+        // Refresh the view with the new display mode
+        if segmentedControl.selectedSegmentIndex == CHART_TYPE_DISTRIBUTION {
+            if let filteredSelData = chartData["filteredSelectionData"] as? [String: [Double]],
+               let backgroundValues = chartData["backgroundValues"] as? [Double],
+               let originalSelectionData = chartData["selectionData"] as? [String: [Double]] {
+                
+                let categoryData = generateCategoryColors(originalSelectionData.keys)
+                let categoryColors = categoryData.colors
+                let categoryValues = categoryData.values
+                
+                // Sort categories by their values
+                let sortedCategories = Array(originalSelectionData.keys).sorted { (a, b) -> Bool in
+                    return (categoryValues[a] ?? 0) > (categoryValues[b] ?? 0)
+                }
+                
+                // Update the display
+                drawDistributionAverages(
+                    backgroundValues: backgroundValues,
+                    selectionData: filteredSelData,
+                    categoryColors: categoryColors,
+                    orderedCategories: sortedCategories
+                )
+            }
         }
     }
     
@@ -198,7 +263,9 @@ extension TrackerChart {
         legendView.layer.borderColor = UIColor.systemGray.cgColor
         legendView.tag = TAG_LEGEND_VIEW
         legendView.isUserInteractionEnabled = true // Ensure legend view can receive touches
+        //legendView.backgroundColor = UIColor.lightGray.withAlphaComponent(0.5)
         view.addSubview(legendView)
+        view.bringSubviewToFront(legendView)
         
         // Iterate through categories in their original order
         for (index, category) in categories.enumerated() {
@@ -210,6 +277,11 @@ extension TrackerChart {
                 height: itemHeight + padding
             ))
             itemContainer.isUserInteractionEnabled = true
+            /*
+            itemContainer.backgroundColor = UIColor.red.withAlphaComponent(0.1)
+            itemContainer.layer.borderWidth = 0.5  // Add border to see tap area
+            itemContainer.layer.borderColor = UIColor.systemGray4.cgColor
+             */
             legendView.addSubview(itemContainer)
             
             // Check visibility state
@@ -289,7 +361,7 @@ extension TrackerChart {
         titleLabel.tag = TAG_LEGEND_TITLE
         view.addSubview(titleLabel)
     }
-        
+    
     // Handle tap events on legend items
     @objc internal func legendItemTapped(_ sender: UITapGestureRecognizer) {
         DBGLog("Legend item tapped")
@@ -592,7 +664,8 @@ extension TrackerChart {
                 categories: sortedCategories,
                 colors: categoryColors
             )
-            // averages respecting current visibility (filteredSelectionData)
+            
+            // averages/counts respecting current visibility (filteredSelectionData)
             let filteredSelData = chartData["filteredSelectionData"] as? [String: [Double]] ?? [:]
             drawDistributionAverages(
                 backgroundValues: backgroundValues,
@@ -601,7 +674,7 @@ extension TrackerChart {
                 orderedCategories: sortedCategories
             )
         } else {
-            // background only average
+            // background only average/count
             drawDistributionAverages(
                 backgroundValues: backgroundValues,
                 selectionData: [:],
@@ -610,7 +683,6 @@ extension TrackerChart {
             )
         }
     }
-    
     
     internal func drawDistributionAxes(
         graphWidth: CGFloat,
@@ -868,7 +940,7 @@ extension TrackerChart {
                 colors: categoryColors
             )
             
-            // Update averages respecting current visibility
+            // Update averages/counts respecting current visibility
             let filteredSelData = chartData["filteredSelectionData"] as? [String: [Double]] ?? [:]
             let backgroundValues = chartData["backgroundValues"] as? [Double] ?? []
             
@@ -933,7 +1005,7 @@ extension TrackerChart {
             }
         }
         
-        // Also update the averages display to reflect current visibility
+        // Also update the averages/counts display to reflect current visibility
         if let backgroundValues = chartData["backgroundValues"] as? [Double],
            let filteredSelData = chartData["filteredSelectionData"] as? [String: [Double]],
            let originalSelectionData = chartData["selectionData"] as? [String: [Double]],
@@ -948,7 +1020,7 @@ extension TrackerChart {
                 return (categoryValues[a] ?? 0) > (categoryValues[b] ?? 0)
             }
             
-            // Update averages display
+            // Update averages/counts display
             drawDistributionAverages(
                 backgroundValues: backgroundValues,
                 selectionData: filteredSelData,

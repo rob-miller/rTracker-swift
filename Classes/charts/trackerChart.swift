@@ -75,6 +75,8 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     // track legend item visibility
     internal var legendItemVisibility: [String: Bool] = [:]
     internal var saveLegendItemVisibility = false
+    // For toggling between average and count display in distribution charts
+    internal var showStatCounts: Bool = false
     
     // Pie chart configuration
     internal var pieDataButton: UIButton!
