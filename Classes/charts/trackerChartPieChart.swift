@@ -105,9 +105,33 @@ extension TrackerChart {
                     }
                 }
                 
+                // Before calculating "No Entry", remove any categories with zero counts
+                let keysToRemove = valueCounts.keys.filter { key in
+                    return key != "No Entry" && valueCounts[key] == 0
+                }
+                for key in keysToRemove {
+                    valueCounts.removeValue(forKey: key)
+                }
+                
+                // Remove empty string categories
+                if let emptyCount = valueCounts[""] {
+                    DBGLog("Removing empty string category with count: \(emptyCount)")
+                    valueCounts.removeValue(forKey: "")
+                }
+                
+                DBGLog("=== Initial Pie Data Categories ===")
+                for (key, count) in valueCounts {
+                    DBGLog("Category (before No Entry calc): \"\(key)\" - Count: \(count)")
+                }
+                
                 // Calculate no entries
                 let totalEntries = valueCounts.values.reduce(0, +)
                 valueCounts["No Entry"] = totalPossibleEntries - totalEntries
+
+
+                DBGLog("Total possible entries: \(totalPossibleEntries)")
+                DBGLog("Total counted entries: \(totalEntries)")
+                DBGLog("No Entry count: \(totalPossibleEntries - totalEntries)")
                 
             default:
                 break
@@ -183,6 +207,14 @@ extension TrackerChart {
             return
         }
         
+        DBGLog("=== Pie Chart Categories and Counts ===")
+        for (key, count) in valueCounts {
+            DBGLog("Category: \"\(key)\" - Count: \(count) - Percentage: \(Double(count) / Double(valueCounts.values.reduce(0, +)) * 100)%")
+        }
+
+        // log whether we're showing "No Entry" or not
+        DBGLog("showNoEntryInPieChart: \(showNoEntryInPieChart)")
+        
         // Get valueObj type and prepare colors
         let valueObj = selectedValueObjIDs["pieData"].flatMap { pieDataID in
             tracker?.valObjTable.first(where: { $0.vid == pieDataID })
@@ -197,6 +229,13 @@ extension TrackerChart {
         // Filter out "No Entry" if hidden and this is not boolean data
         if !showNoEntryInPieChart && hasNoEntry && !isBooleanData {
             valueCounts.removeValue(forKey: "No Entry")
+            
+            DBGLog("=== After removing No Entry ===")
+            for (key, count) in valueCounts {
+                let recalculatedTotal = Double(valueCounts.values.reduce(0, +))
+                let percentage = Double(count) / recalculatedTotal * 100
+                DBGLog("Category: \"\(key)\" - Count: \(count) - Percentage: \(percentage)%")
+            }
         }
         
         // Check if filtered data is empty
@@ -294,6 +333,12 @@ extension TrackerChart {
             }
         }
         
+        // Filter out entries with zero or very small values (less than 0.1%)
+        entries = entries.filter { entry in
+            let (_, value, _) = entry
+            return value > 0 && (Double(value) / total) > 0.001
+        }
+        
         // Draw segments - always start from top (-π/2) and go clockwise
         var currentAngle: CGFloat = -.pi / 2 // Start from top
         
@@ -303,6 +348,9 @@ extension TrackerChart {
             let segmentSize = CGFloat(percentage * 2 * .pi)
             let startAngle = currentAngle
             let endAngle = startAngle + segmentSize
+            
+            DBGLog("Drawing segment for: \"\(key)\" - Value: \(value) - Percentage: \(percentage * 100)%")
+            DBGLog("  Angle range: \(startAngle) to \(endAngle) (size: \(segmentSize))")
             
             // Create segment path
             let path = UIBezierPath()
