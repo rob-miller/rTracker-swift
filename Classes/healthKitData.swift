@@ -121,7 +121,7 @@ let healthDataQueries: [HealthDataQuery] = [
         },
         aggregationType: .groupedByNight,
         aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
-        info: "This is the total time awake"
+        info: nil
     ),
     HealthDataQuery(
         identifier: "HKCategoryTypeIdentifierSleepAnalysis",
@@ -139,7 +139,7 @@ let healthDataQueries: [HealthDataQuery] = [
         },
         aggregationType: .groupedByNight,
         aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
-        info: nil
+        info: "The user is in light or intermediate sleep."
     ),
     HealthDataQuery(
         identifier: "HKCategoryTypeIdentifierSleepAnalysis",
@@ -176,6 +176,24 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationType: .groupedByNight,
         aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
         info: nil
+    ),
+    HealthDataQuery(
+        identifier: "HKCategoryTypeIdentifierSleepAnalysis",
+        displayName: "Sleep - Other",
+        categories: [HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue],
+        unit: [HKUnit.minute(), HKUnit.hour()],
+        needUnit: true,
+        aggregationStyle: .cumulative,
+        customProcessor: { sample in
+            guard let categorySample = sample as? HKCategorySample,
+                  categorySample.value == HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue else {
+                return 0
+            }
+            return categorySample.endDate.timeIntervalSince(categorySample.startDate) / 60.0
+        },
+        aggregationType: .groupedByNight,
+        aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
+        info: "The user is asleep, but the specific stage isn’t specified.  Includes Core, REM and Deep sleep, plus data from other apps."
     ),
     HealthDataQuery(
         identifier: "HKCategoryTypeIdentifierSleepAnalysis",

@@ -139,7 +139,16 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                                                     HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
                                                     NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepDeep.rawValue)
                                                 ])
-                                    case "Total":  // assume core will always be present at some point for total sleep
+                                    case "Other":
+                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                                    HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                                    NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue)
+                                                ])
+                                    case "All":  // assume core will always be present at some point for all sleep
+                                        fallthrough
+                                    case "Total":  // previous name for core + deep + rem
+                                        fallthrough
+                                    case "Core + Deep + REM":  // assume core will always be present at some point for total sleep
                                         fallthrough
                                     case "Core":
                                         predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
