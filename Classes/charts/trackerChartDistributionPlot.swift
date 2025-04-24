@@ -69,43 +69,61 @@ extension TrackerChart {
         chartView.addSubview(container)
         
         var yPos: CGFloat = 15
-        let xPos: CGFloat = leftMargin + 10
+        let leftXPos: CGFloat = leftMargin + 10
+        let rightXPos: CGFloat = chartView.bounds.width - rightMargin - 100 // Adjust width as needed
         let lineHeight: CGFloat = 16
         
         // Use the current display mode (average or count)
         let showCounts = showStatCounts
         
-        // Background average (always first)
+        // Get selection valueObj name
+        let selectionVO = tracker?.valObjTable.first { $0.vid == selectedValueObjIDs["selection"] }
+        
+        // Add valueObj name at the top
+        if let selectionName = selectionVO?.valueName {
+            let titleLbl = UILabel(frame: CGRect(x: leftXPos, y: yPos, width: 220, height: lineHeight))
+            titleLbl.font = UIFont.systemFont(ofSize: 12, weight: .medium)
+            titleLbl.textColor = .label
+            titleLbl.text = selectionName
+            
+            // Make label tappable
+            titleLbl.isUserInteractionEnabled = true
+            titleLbl.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(toggleStatDisplayMode)))
+            
+            container.addSubview(titleLbl)
+            yPos += lineHeight
+        }
+        
+        // Background average (moved to right side)
         if !backgroundValues.isEmpty {
             let avg = backgroundValues.reduce(0.0, +) / Double(backgroundValues.count)
             let count = backgroundValues.count
             
-            let lbl = UILabel(frame: CGRect(x: xPos, y: yPos, width: 220, height: lineHeight))
-            lbl.font = UIFont.systemFont(ofSize: 12)
-            lbl.textColor = .label
+            let bgLbl = UILabel(frame: CGRect(x: rightXPos, y: 15, width: 100, height: lineHeight))
+            bgLbl.font = UIFont.systemFont(ofSize: 12)
+            bgLbl.textColor = .label
             
             if showCounts {
-                lbl.text = String(format: "Count (all): %d", count)
+                bgLbl.text = String(format: "Count: %d", count)
             } else {
-                lbl.text = String(format: "Avg (all): %.2f", avg)
+                bgLbl.text = String(format: "Avg: %.2f", avg)
             }
             
             // Make label tappable
-            lbl.isUserInteractionEnabled = true
-            lbl.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(toggleStatDisplayMode)))
+            bgLbl.isUserInteractionEnabled = true
+            bgLbl.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(toggleStatDisplayMode)))
             
-            container.addSubview(lbl)
-            yPos += lineHeight
+            container.addSubview(bgLbl)
         }
         
-        // Follow legend order
+        // Follow legend order for segmentation classes
         for category in orderedCategories {
             guard let values = selectionData[category], !values.isEmpty else { continue }
             
             let avg = values.reduce(0.0, +) / Double(values.count)
             let count = values.count
             
-            let lbl = UILabel(frame: CGRect(x: xPos, y: yPos, width: 220, height: lineHeight))
+            let lbl = UILabel(frame: CGRect(x: leftXPos, y: yPos, width: 220, height: lineHeight))
             lbl.font = UIFont.systemFont(ofSize: 12)
             let visible = legendItemVisibility[category] ?? true
             let baseColor = categoryColors[category] ?? UIColor.label
@@ -1037,7 +1055,7 @@ extension TrackerChart {
         }
     }
     
-    // Mark: - Distribution Plot data handling
+    // MARK: - Distribution Plot data handling
     
     
     internal func generateDistributionPlotData() {
