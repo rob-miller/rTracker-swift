@@ -1106,7 +1106,7 @@ extension TrackerChart {
                 "min": paddedMinValue,
                 "max": paddedMaxValue,
                 "binCount": binCount,
-                "binWidth": (paddedMaxValue - paddedMinValue) / Double(max(1, binCount))
+                "binWidth": (paddedMaxValue - paddedMinValue) / Double(binCount)
             ]
             axisConfig["background"] = backgroundConfig
         }
@@ -1300,6 +1300,7 @@ extension TrackerChart {
     ) {
         // For numeric types, we create ranges or bins
         let numericData = fetchDataForValueObj(id: selectionID, startTimestamp: startTimestamp, endTimestamp: endTimestamp)
+        let selectionVO = tracker?.valObjTable.first { $0.vid == selectionID }
         
         // Create date lookup for numeric values
         var numericByDate: [Date: Double] = [:]
@@ -1308,7 +1309,31 @@ extension TrackerChart {
         }
         
         if !numericData.isEmpty {
-            // Get unique values
+            // Check if this is a function that should be treated as boolean
+            if shouldTreatAsBooleanFunction(numericData, selectionVO) {
+                var trueValues: [Double] = []
+                var falseValues: [Double] = []
+                var noEntryValues: [Double] = []
+                
+                for (date, bgValue) in backgroundData {
+                    if let numValue = numericByDate[date] {
+                        if numValue >= 0.5 {
+                            trueValues.append(bgValue)
+                        } else {
+                            falseValues.append(bgValue)
+                        }
+                    } else {
+                        noEntryValues.append(bgValue)
+                    }
+                }
+                
+                if !trueValues.isEmpty { selectionData["true"] = trueValues }
+                if !falseValues.isEmpty { selectionData["false"] = falseValues }
+                if !noEntryValues.isEmpty { selectionData["no entry"] = noEntryValues }
+                return
+            }
+            
+            // Rest of the existing function remains the same
             let uniqueValues = Array(Set(numericData.map { $0.1 })).sorted()
             
             var lowValues: [Double] = []
@@ -1396,6 +1421,16 @@ extension TrackerChart {
         }
     }
     
+    internal func shouldTreatAsBooleanFunction(_ values: [(Date, Double)], _ vo: valueObj?) -> Bool {
+        guard let vo = vo, vo.vtype == VOT_FUNC else { return false }
+        
+        // Get unique values excluding no-entry (0)
+        let uniqueValues = Set(values.map { $0.1 }).filter { $0 != 0 }
+        
+        // If we only have 1s, treat as boolean
+        return uniqueValues.isSubset(of: [1.0])
+    }
+
     internal func findChoiceCategory(forValue value: Int, inCategories categories: [Int: String]) -> String? {
         return categories[value]
     }
