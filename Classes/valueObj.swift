@@ -637,7 +637,7 @@ class valueObj: NSObject, UITextFieldDelegate {
             for i in 0..<CHOICES {
                 let key = "cv\(i)"
                 // Check if we have a choice label - if not, we've hit the end of valid choices
-                if optDict["c\(i)"] == nil {
+                if (optDict["c\(i)"] ?? "").isEmpty {
                     break
                 }
                 
