@@ -664,12 +664,12 @@ class voState: NSObject, voProtocol {
     //}
 
     func voGraphSet() -> [String] {
-        return ["dots"]
+        return ["dots", "no graph"]
     }
 
 
     class func voGraphSetNum() -> [String] {
-        return ["dots", "bar", "line", "line+dots"]
+        return ["dots", "bar", "line", "line+dots", "no graph"]
     }
 
     func updateVORefs(_ newVID: Int, old oldVID: Int) {

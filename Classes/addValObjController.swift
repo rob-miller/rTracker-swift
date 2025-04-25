@@ -107,30 +107,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
         saveBtn.accessibilityIdentifier = "avoSave"
         navigationItem.rightBarButtonItem = saveBtn
 
-
-        //[self.navigationController setToolbarHidden:YES animated:YES];
-
-        //UIButton *infoBtn = [UIButton buttonWithType:UIButtonTypeInfoLight];
-        /*
-            UIButton *infoBtn = [UIButton buttonWithType:UIButtonTypeSystem];
-            [infoBtn setTitle:@"\u2699" forState:UIControlStateNormal];   // @"⚙"
-             */
         infoBtn.titleLabel?.font = .systemFont(ofSize: 28.0)
-        /*
-            [infoBtn addTarget:self action:@selector(btnSetup) forControlEvents:UIControlEventTouchUpInside];
-            infoBtn.frame = CGRectMake(0, 0, 44, 44);
-            UIBarButtonItem *setupBtn = [[UIBarButtonItem alloc] initWithCustomView:infoBtn];
-             */
-        /*
-             UIBarButtonItem *setupBtn = [[UIBarButtonItem alloc]
-                                        initWithTitle:@"Setup"
-                                        style:UIBarButtonItemStylePlain
-                                        target:self
-                                        action:@selector(btnSetup)];
-            */
-
-        //self.toolbarItems = @[setupBtn];
-
 
         sizeVOTLabel = addValObjController.maxLabel(fromArray: rTracker_resource.vtypeNames()) //self.parentTrackerObj.votArray];
         let allGraphs = valueObj.allGraphs()
@@ -138,13 +115,9 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
 
         colorCount = rTracker_resource.colorSet().count
 
-        // no effect after ios7 self.votPicker.showsSelectionIndicator = YES;
-
         if tempValObj == nil {
             tempValObj = valueObj(parentOnly: parentTrackerObj!)
-            //self.graphTypes = nil;
             graphTypes = voState.voGraphSetNum() //[valueObj graphsForVOT:VOT_NUMBER];
-            //[self updateScrollView:(NSInteger)VOT_NUMBER];
             safeDispatchSync({ [self] in
                 votPicker.selectRow(parentTrackerObj?.nextColor ?? 0, inComponent: 1, animated: false)
             })
@@ -227,35 +200,11 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
 
     }
 
-    /*
-    - (void)viewDidUnload {
-        // Release any retained subviews of the main view.
-        // e.g. self.myOutlet = nil;
-
-        DBGLog(@"avoc didUnload");
-
-        self.votPicker = nil;
-        self.labelField = nil;
-        self.tempValObj = nil;
-        self.graphTypes = nil;
-        self.parentTrackerObj = nil;
-
-        self.navigationItem.rightBarButtonItem = nil;
-        self.navigationItem.leftBarButtonItem = nil;
-        //[self setToolbarItems:nil
-        //             animated:NO];
-        self.title = nil;
-
-        [super viewDidUnload];
-    }
-    */
-
     override func viewWillAppear(_ animated: Bool) {
 
         DBGLog("avoc: viewWillAppear")
 
         if let tempValObj {
-            //self.graphTypes = nil;
             graphTypes = tempValObj.vos?.voGraphSet()
             votPicker.reloadComponent(2) // in case added more graphtypes (eg tb count lines)
         }

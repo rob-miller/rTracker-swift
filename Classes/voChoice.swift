@@ -198,7 +198,7 @@ class voChoice: voState {
     }
 
     override func voGraphSet() -> [String] {
-        return ["dots", "bar"]
+        return ["dots", "bar", "no graph"]
     }
 
     @objc func ctfDone(_ tf: UITextField?) {

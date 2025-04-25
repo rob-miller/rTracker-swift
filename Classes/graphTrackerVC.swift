@@ -804,7 +804,7 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
     }
 
     func testSetVO(_ vo: valueObj?) -> Bool {
-        if "1" == (vo?.optDict)?["graph"] {
+        if "1" == (vo?.optDict)?["graph"] && vo?.vGraphType != VOG_NONE {
             currVO = vo
             return true
         }

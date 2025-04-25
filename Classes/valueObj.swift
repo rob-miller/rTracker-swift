@@ -514,7 +514,7 @@ class valueObj: NSObject, UITextFieldDelegate {
     //+ (NSArray *) graphsForVOT:(NSInteger)vot;
     //- (NSArray *) graphsForVOT:(NSInteger)vot;
     class func allGraphs() -> [AnyHashable]? {
-        return ["dots", "bar", "line", "line+dots", "pie"]
+        return ["dots", "bar", "line", "line+dots", "pie", "no graph"]
     }
 
     class func mapGraphType(_ gts: String?) -> Int {

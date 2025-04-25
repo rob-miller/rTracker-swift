@@ -89,7 +89,7 @@ class voBoolean: voState {
     }
 
     override func voGraphSet() -> [String] {
-        return ["dots", "bar"]
+        return ["dots", "bar", "no graph"]
     }
 
     // MARK: -

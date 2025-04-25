@@ -630,7 +630,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 cell?.accessibilityIdentifier = "\(vo?.parentTracker.trackerName ?? "tNull")_\(vo?.valueName ?? "vNull")"
                 cell?.accessoryType = .detailDisclosureButton
                 
-                if "0" == vo!.optDict["graph"] {
+                if "0" == vo!.optDict["graph"] || vo!.vGraphType == VOG_NONE {
                     let vtypeNames = rTracker_resource.vtypeNames()[vo!.vtype]
                     cell?.detailTextLabel?.text = "\(vtypeNames) - no graph"
                     
