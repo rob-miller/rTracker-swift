@@ -794,9 +794,10 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         var frame = pframe
         button.titleLabel?.font = PrefBodyFont
         if let font = button.titleLabel?.font {
-            frame.size.width = (label?.size(withAttributes: [
+            frame.size = label?.size(withAttributes: [
                 NSAttributedString.Key.font: font
-            ]).width ?? 0.0) + 4 * SPACE
+            ]) ?? CGSize.zero
+            frame.size.width += 4 * SPACE
         }
 
         if frame.origin.x == -1.0 {
@@ -804,8 +805,6 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         }
         button.frame = frame
         button.setTitle(label, for: .normal)
-        //imageButton.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
-        //imageButton.contentHorizontalAlignment = UIControlContentHorizontalAlignmentRight; //Center;
 
         if let key {
             wDict[key] = button
@@ -983,12 +982,9 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         let myPickerView = UIPickerView(frame: .zero)
         frame.size = myPickerView.sizeThatFits(.zero)
         frame.size.width = view.frame.size.width - (2 * MARGIN)
-        frame.origin.y += frame.size.height / 4 // because origin of picker is centre line
         myPickerView.frame = frame
-        //frame.size.height -= (frame.size.height/4);
 
         myPickerView.autoresizingMask = .flexibleWidth
-        // no effect after ios7 myPickerView.showsSelectionIndicator = YES;	// note this is default to NO
 
         // this view controller is the data source and delegate
         myPickerView.delegate = caller as? UIPickerViewDelegate
@@ -1000,7 +996,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         } else {
             myPickerView.accessibilityIdentifier = "\(vo!.vos!.tvn())_\(key!)"
         }
-        DBGLog("print picker acc id: \(myPickerView.accessibilityIdentifier!)")
+        DBGLog("picker acc id: \(myPickerView.accessibilityIdentifier!)")
         scroll.addSubview(myPickerView)
 
         return frame
