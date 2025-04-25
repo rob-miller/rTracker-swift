@@ -251,6 +251,7 @@ extension voFunction {
     }
 
     func voFnDefnStr(_ dbg: Bool = false, cfndx: Int? = nil) -> String? {
+        var cfndx = cfndx
         var fstr = ""
         var closePending = false //square brackets around target of Fn1Arg
         var constantPending = false // next item is a number not tok or vid
@@ -287,8 +288,25 @@ extension voFunction {
                     //[fstr appendString:[self.fnStrs objectAtIndex:ndx]];  xxx   // get str for token
                     fstr += "\(fnStrDict[NSNumber(value:i)]!)"
                     if isFn1Arg(i) {
-                        fstr += "["
-                        closePending = true
+                        // Special handling for classify operator
+                        if i == FN1ARGCLASSIFY {
+                            fstr += "["
+                            closePending = true
+                            
+                            // Skip over the classify values in display
+                            if let cfn = cfndx, cfn > ndx {
+                                // We're highlighting the current token, need to adjust
+                                // Skip over the classify values (14 entries) when advancing
+                                let tokensToSkip = 14
+                                if cfn <= ndx + tokensToSkip + 1 {
+                                    // We're within the classify values, don't highlight
+                                    cfndx = nil
+                                }
+                            }
+                        } else {
+                            fstr += "["
+                            closePending = true
+                        }
                     }
                     if FNPARENOPEN == i {
                         openParenCount += 1
@@ -355,7 +373,19 @@ extension voFunction {
                 rTracker_resource.alert("Need Value", msg: "Please set a value for the constant.", vc: nil)
                 return
             }
-
+        } else if FN1ARGCLASSIFY == ntok.intValue {
+            // Get values from text fields
+            for i in 1...7 {
+                if let tf = (ctvovcp?.wDict)?["classifyTF\(i)"] as? UITextField {
+                    let value = tf.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                    // Delete any existing value for this position
+                    vo.optDict.removeValue(forKey: "classify_\(i)")
+                    if !value.isEmpty {
+                        vo.optDict["classify_\(i)"] = value
+                    }
+                }
+            }
+            _fnArray!.append(ntok)
         } else {
             _fnArray!.append(ntok)
         }
@@ -369,11 +399,25 @@ extension voFunction {
         //  also [self.tempValObj.optDict removeObjectForKey:@"fdc"]; -- can't be sure with mult consts
         let pkr = (ctvovcp?.wDict)?["fdPkr"] as? UIPickerView
         if 0 < fnArray.count {
-            if FNCONSTANT == fnArray.last!.intValue {
+            // Check if we're deleting a classify operator
+            let currentLength = fnArray.count
+            if currentLength >= 16 && fnArray[currentLength-16].intValue == FN1ARGCLASSIFY {
+                // Remove all the classify values (token, vid, and 14 values)
+                for _ in 0..<16 {
+                    _fnArray!.removeLast()
+                }
+                
+                // Also remove classify text values from optDict
+                for i in 1...7 {
+                    let key = "classify_\(i)_text"
+                    vo.optDict.removeValue(forKey: key)
+                }
+            } else if FNCONSTANT == fnArray.last!.intValue {
                 _fnArray!.removeLast() // remove bounding token after
                 _fnArray!.removeLast() // remove constant value
+            } else {
+                _fnArray!.removeLast() // remove normal token
             }
-            _fnArray!.removeLast()
         }
         updateFnTitles()
         pkr?.reloadComponent(0)
@@ -381,68 +425,66 @@ extension voFunction {
     }
 
     func drawFuncOptsDefinition() {
+        guard let ctvovcp = ctvovcp else {
+            return
+        }
         updateFnTitles()
 
-        var frame = CGRect(x: MARGIN, y: ctvovcp?.lasty ?? 0.0, width: 0.0, height: 0.0)
+        // top of view
+        var frame = CGRect(x: MARGIN, y: MARGIN, width: 0.0, height: 0.0)
 
-        var labframe = ctvovcp?.configLabel(
+        // label for view
+        frame = ctvovcp.configLabel(
             "Function definition:",
             frame: frame,
             key: "fdLab",
             addsv: true)
 
-        frame.origin.x = MARGIN
-        frame.origin.y += MARGIN + (labframe?.size.height ?? 0.0)
-        frame.size.width = (ctvovcp?.view.frame.size.width ?? 0.0) - 2 * MARGIN // 300.0f;
-        frame.size.height = 2 * (ctvovcp?.lfHeight ?? 0.0)
-
-        let maxDim = rTracker_resource.getScreenMaxDim()
-        if maxDim > 480 {
-            if maxDim <= 568 {
-                // iphone 5
-                frame.size.height = 4 * (ctvovcp?.lfHeight ?? 0.0)
-            } else if maxDim <= 736 {
-                // iphone 6, 6+
-                frame.size.height = 6 * (ctvovcp?.lfHeight ?? 0.0)
-            } else {
-                frame.size.height = 8 * (ctvovcp?.lfHeight ?? 0.0)
-            }
-        }
-        _ = ctvovcp?.configTextView(frame, key: "fdefnTV2", text: voFnDefnStr())
-
-        frame.origin.x = 0.0
+        // textview to show function definition
+        //frame.origin.x = MARGIN
         frame.origin.y += frame.size.height + MARGIN
+        frame.size.width = ctvovcp.view.frame.size.width - 2 * MARGIN
+        let maxDim = rTracker_resource.getScreenMaxDim()
+        frame.size.height = maxDim/6
+        
+        frame = ctvovcp.configTextView(frame, key: "fdefnTV2", text: voFnDefnStr())
 
-        frame = ctvovcp?.configPicker(frame, key: "fdPkr", caller: self) ?? CGRect.zero
-        //UIPickerView *pkr = [self.ctvovcp.wDict objectForKey:@"fdPkr"];
+        // picker for function op choice
+        //frame.origin.x = MARGIN
+        frame.origin.y += frame.size.height - MARGIN  // default picker has too much vertical space for me
+        frame = ctvovcp.configPicker(frame, key: "fdPkr", caller: self)
 
-        //[pkr selectRow:[self epToRow:0] inComponent:0 animated:NO];
-        //[pkr selectRow:[self epToRow:1] inComponent:1 animated:NO];
+        // delete and add buttons
+        //frame.origin.x = MARGIN
+        frame.origin.y += frame.size.height
+        frame = ctvovcp.configActionBtn(frame, key: "fddBtn", label: "Delete", target: self, action: #selector(btnDelete(_:)))
+        frame.origin.x = -1.0  // -1 means right justify
+        frame = ctvovcp.configActionBtn(frame, key: "fdaBtn", label: "Add", target: self, action: #selector(btnAdd(_:)))
 
-        frame.origin.y += frame.size.height //+ MARGIN;
-        //frame.origin.x = MARGIN;
-        frame.size.height = labframe?.size.height ?? 0.0
-        //
-        frame.origin.x = "Add".size(withAttributes: [
-            NSAttributedString.Key.font: PrefBodyFont
-        ]).width + 3 * MARGIN
-        //frame.origin.y += frame.size.height + MARGIN;
-        labframe = ctvovcp?.configLabel(
+        // below are hidden textfields, subviews not added yet
+        // both vertically start here:
+        frame.origin.y += frame.size.height + MARGIN;
+        let startY = frame.origin.y
+        
+        // constant value label and text field -- subviews not added yet
+        frame.origin.x = 3 * MARGIN
+        
+        frame = ctvovcp.configLabel(
             "Constant value:",
             frame: frame,
             key: CLKEY,
             addsv: false)
 
-        frame.origin.x += (labframe?.size.width ?? 0.0) + SPACE
+        frame.origin.x += frame.size.width + 2*SPACE
         let tfWidth = "9999.99".size(withAttributes: [
             NSAttributedString.Key.font: PrefBodyFont
         ]).width
         frame.size.width = tfWidth
-        frame.size.height = minLabelHeight(ctvovcp?.lfHeight ?? 0.0)
+        frame.size.height = minLabelHeight(ctvovcp.lfHeight)
 
-        _ = ctvovcp?.configTextField(
+        _ = ctvovcp.configTextField(
             frame,
-            key: "fdcTF",
+            key: CTFKEY,
             target: nil,
             action: nil,
             num: true,
@@ -450,12 +492,57 @@ extension voFunction {
             text: nil,
             addsv: false)
 
+        
+        // classify fixed values and labels
+        
         frame.origin.x = MARGIN
-        frame.origin.y -= 3 * MARGIN // I DO NOT UNDERSTAND THIS!!!!!
-
-        _ = ctvovcp?.configActionBtn(frame, key: "fddBtn", label: "Delete", target: self, action: #selector(btnDelete(_:)))
-        frame.origin.x = -1.0
-        _ = ctvovcp?.configActionBtn(frame, key: "fdaBtn", label: "Add", target: self, action: #selector(btnAdd(_:)))
+        
+        // Screen width to calculate column positions
+        let screenWidth = ctvovcp.view.frame.size.width
+        
+        // Use 2 columns for the 7 text fields
+        let col1X = frame.origin.x
+        let col2X = screenWidth / 2 + frame.origin.x/2
+        
+        for i in 0...7 {
+            // Calculate position (column 1 for 0-3, column 2 for 4-7)
+            let isColumn1 = i <= 3
+            let columnX = isColumn1 ? col1X : col2X
+            // Calculate Y position within its column
+            let rowInColumn = isColumn1 ? i : i - 4
+            let yPos = startY + CGFloat(rowInColumn * 40)
+            
+            // Row label with its value
+            let frame = CGRect(x: columnX, y: yPos, width: 25, height: minLabelHeight(ctvovcp.lfHeight))
+            let labelKey = "classify\(i)Label"
+            _ = ctvovcp.configLabel(
+                "\(i):",
+                frame: frame,
+                key: labelKey,
+                addsv: false
+            )
+            
+            if i > 0 {
+                // Text field for the value
+                let tfFrame = CGRect(
+                    x: columnX + 20,
+                    y: yPos,
+                    width: (isColumn1 ? screenWidth/2 - MARGIN - 35 : screenWidth/2 - MARGIN*2 - 35),
+                    height: minLabelHeight(ctvovcp.lfHeight)
+                )
+                
+                _ = ctvovcp.configTextField(
+                    tfFrame,
+                    key: "classifyTF\(i)",
+                    target: nil,
+                    action: nil,
+                    num: false,
+                    place: nil,
+                    text: nil,
+                    addsv: false
+                )
+            }
+        }
     }
 
     // MARK: -
@@ -594,7 +681,6 @@ extension voFunction {
             return false
         }
         if fnArray.count != 0 {
-            //DBGLog(@"funcDone 0: %@",[self.vo.optDict objectForKey:@"func"]);
             saveFnArray()
             DBGLog(String("funcDone 1: \(vo.optDict["func"])"))
 
@@ -981,15 +1067,89 @@ extension voFunction {
             DBGLog(String("picker sel row \(row) \(key) now= \(vo.optDict[key])"))
         } else if fnSegNdx == FNSEGNDX_FUNCTBLD {
             //DBGLog(@"fn build row %d= %@",row,[self fndRowTitle:row]);
+            // Hide all UI elements first
+            hideConstTF()
+            hideClassifyTF()
+            
+            // Show appropriate UI based on selection
             if FNCONSTANT_TITLE == fndRowTitle(row) {
                 showConstTF()
-            } else {
-                hideConstTF()
+            } else if "classify" == fndRowTitle(row) {
+                // Show the UI and load any existing values
+                showClassifyTF()
+                loadClassifyValues()
             }
         }
 
         update(forPickerRowSelect: row, inComponent: component)
-
     }
+    
+    // MARK: - Classify function configuration
+    
 
+    
+    // Show the classify UI elements (text fields)
+    func showClassifyTF() {
+        for i in 0...7 {
+            if let aWDict = (ctvovcp?.wDict)?["classify\(i)Label"] as? UIView {
+                ctvovcp?.scroll.addSubview(aWDict)
+            }
+            if i > 0 {
+                if let vtf = (ctvovcp?.wDict)?["classifyTF\(i)"] as? UITextField {
+                    vtf.text = vo.optDict["classify_\(i)"]
+                    ctvovcp?.scroll.addSubview(vtf)
+                }
+            }
+        }
+    }
+    
+    // Remove the classify UI elements
+    func hideClassifyTF() {
+        for i in 0...7 {
+            // Remove the text fields and labels
+            ((ctvovcp?.wDict)?["classify\(i)Label"] as? UIView)?.removeFromSuperview()
+            if i > 0 {
+                ((ctvovcp?.wDict)?["classifyTF\(i)"] as? UIView)?.removeFromSuperview()
+            }
+        }
+    }
+    
+    // Load classify values from fnArray to UI
+    func loadClassifyValues() {
+        // Check if we have a classify function
+        // Classify token + vid + 14 values (7 pairs of flags and values)
+        let currentLength = fnArray.count
+        if currentLength < 16 || fnArray[currentLength-16].intValue != FN1ARGCLASSIFY {
+            return
+        }
+        
+        // Show the UI elements if not already visible
+        showClassifyTF()
+        
+        // Start with the first flag/value pair
+        var arrayIndex = currentLength - 14
+        
+        // Load the values into text fields
+        for i in 1...7 {
+            if arrayIndex < currentLength && arrayIndex + 1 < currentLength {
+                let tf = (ctvovcp?.wDict)?["classifyTF\(i)"] as? UITextField
+                let flag = fnArray[arrayIndex].doubleValue
+                let value = fnArray[arrayIndex + 1].doubleValue
+                
+                if flag == 1.0 {
+                    // Text match - load from optDict
+                    let key = "classify_\(i)"
+                    tf?.text = vo.optDict[key]
+                } else if value != 0.0 {
+                    // Numeric value - use the value directly
+                    tf?.text = String(value)
+                } else {
+                    // Empty value
+                    tf?.text = ""
+                }
+                
+                arrayIndex += 2
+            }
+        }
+    }
 }

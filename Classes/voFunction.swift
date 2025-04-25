@@ -81,6 +81,7 @@ let FN1ARGELAPSEDMINS = FN1ARGELAPSEDHOURS - 1
 let FN1ARGELAPSEDSECS = FN1ARGELAPSEDMINS - 1
 let FN1ARGDELAY = FN1ARGELAPSEDSECS - 1
 let FN1ARGROUND = FN1ARGDELAY - 1
+let FN1ARGCLASSIFY = FN1ARGROUND - 1
 
 let FNNEW1ARGLAST = FNNEW1ARGFIRST - 100
 
@@ -117,8 +118,8 @@ func isFn(_ i: Int) -> Bool {
 let FNCONSTANT_TITLE = "constant"
 
 
-let ARG1FNS = [FN1ARGDELTA,FN1ARGSUM,FN1ARGPOSTSUM,FN1ARGPRESUM,FN1ARGAVG,FN1ARGMIN,FN1ARGMAX,FN1ARGCOUNT,FN1ARGONRATIO,FN1ARGNORATIO,FN1ARGELAPSEDWEEKS,FN1ARGELAPSEDDAYS,FN1ARGELAPSEDHOURS,FN1ARGELAPSEDMINS,FN1ARGELAPSEDSECS,FN1ARGDELAY, FN1ARGROUND]
-let ARG1STRS = ["change_in","sum","post-sum","pre-sum","avg","min","max","count","old/new","new/old","elapsed_weeks","elapsed_days","elapsed_hrs","elapsed_mins","elapsed_secs", "delay", "round"]
+let ARG1FNS = [FN1ARGDELTA,FN1ARGSUM,FN1ARGPOSTSUM,FN1ARGPRESUM,FN1ARGAVG,FN1ARGMIN,FN1ARGMAX,FN1ARGCOUNT,FN1ARGONRATIO,FN1ARGNORATIO,FN1ARGELAPSEDWEEKS,FN1ARGELAPSEDDAYS,FN1ARGELAPSEDHOURS,FN1ARGELAPSEDMINS,FN1ARGELAPSEDSECS,FN1ARGDELAY, FN1ARGROUND, FN1ARGCLASSIFY]
+let ARG1STRS = ["change_in","sum","post-sum","pre-sum","avg","min","max","count","old/new","new/old","elapsed_weeks","elapsed_days","elapsed_hrs","elapsed_mins","elapsed_secs", "delay", "round", "classify"]
 let ARG1CNT = ARG1FNS.count
 
 let ARG2FNS = [FN2ARGPLUS,FN2ARGMINUS,FN2ARGTIMES,FN2ARGDIVIDE]
@@ -162,6 +163,7 @@ let FNSEGNDX_RANGEBLD = 1
 let FNSEGNDX_FUNCTBLD = 2
 
 // end functions 
+
 
 // MARK: -
     // MARK: core object methods and support
@@ -654,9 +656,29 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                             return nil
                         }
                         result = v1 / v0
+                                
                     default:
                         break
                     }
+                    
+                case FN1ARGCLASSIFY:
+                    // only 1 classify, match values stored in vo.optDict
+                    // Start with result = 0 (no match)
+                    result = 0.0
+                    for i in (1...7).reversed() {
+                        if let sv1 = sv1, let matchVal = vo.optDict["classify_\(i)"] {
+                            if let matchDbl = Double(matchVal) {
+                                if v1 > matchDbl {
+                                    result = Double(i)
+                                    break
+                                }
+                            } else if sv1.contains(matchVal) {
+                                result = Double(i)
+                                break
+                            }
+                        }
+                    }
+
                 case FN1ARGAVG:
                     // 14.iv.25  behavior change: average is over count of events, if they want per days have to do that explicitly
 
