@@ -179,7 +179,7 @@ let healthDataQueries: [HealthDataQuery] = [
     ),
     HealthDataQuery(
         identifier: "HKCategoryTypeIdentifierSleepAnalysis",
-        displayName: "Sleep - Other",
+        displayName: "Sleep",
         categories: [HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue],
         unit: [HKUnit.minute(), HKUnit.hour()],
         needUnit: true,
@@ -197,7 +197,7 @@ let healthDataQueries: [HealthDataQuery] = [
     ),
     HealthDataQuery(
         identifier: "HKCategoryTypeIdentifierSleepAnalysis",
-        displayName: "Sleep - Total",
+        displayName: "Sleep - Specified",
         categories: [HKCategoryValueSleepAnalysis.asleepDeep.rawValue, HKCategoryValueSleepAnalysis.asleepREM.rawValue, HKCategoryValueSleepAnalysis.asleepCore.rawValue],
         unit: [HKUnit.minute(), HKUnit.hour()],
         needUnit: true,

@@ -148,6 +148,8 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                                         fallthrough
                                     case "Total":  // previous name for core + deep + rem
                                         fallthrough
+                                    case "Specified":
+                                        fallthrough
                                     case "Core + Deep + REM":  // assume core will always be present at some point for total sleep
                                         fallthrough
                                     case "Core":
@@ -194,8 +196,15 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                                         // Handle other cases
                                     }
                                 } else {
-                                    DBGErr("No suffix found in displayName: \(displayName)")
-                                    // Handle cases where there is no '-'
+                                    if displayName == "Sleep" {
+                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                                    HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                                    NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue)
+                                                ])
+                                    } else {
+                                        DBGErr("No suffix found in displayName: \(displayName)")
+                                        // Handle cases where there is no '-'
+                                    }
                                 }
                                 
                             }
@@ -813,7 +822,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                         Date(timeIntervalSince1970: TimeInterval(targetDate) - 86400) // Default to one day earlier
             
             DBGLog("startDate \(startDate)  endDate  \(endDate)")
-            DBGLog("hello")
+            //DBGLog("hello")
         } else {
             // Default time range: ±10 hours around the targetDate
             startDate = Date(timeIntervalSince1970: TimeInterval(targetDate) - 10 * 3600)
@@ -851,7 +860,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
             let lastDateString = dateFormatter.string(from: Date(timeIntervalSince1970: lastTimestamp))
 
             DBGLog("getHkDates() \(displayName) \(firstDateString) to \(lastDateString)")
-            DBGLog("hello")
+            //DBGLog("hello")
         }
 #endif
     }
