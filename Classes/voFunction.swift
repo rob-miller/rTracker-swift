@@ -715,7 +715,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                     """
                     let count = Double(to.toQry2Float(sql:sql) + (nullV1 ? 0.0 : 1.0)) // +1 for current on screen
                     
-                    if count == 0.0 {
+                    if count < 2.0 {  // at least 2 entries for average
                         // nothing in db to average and nullV1 so no current
                         return nil
                     }
