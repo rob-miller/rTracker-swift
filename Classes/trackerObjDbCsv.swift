@@ -45,9 +45,14 @@ extension trackerObj {
         // FNstatus support added later
         sql = "create table if not exists voFNstatus (id int not null, date int not null, stat int not null, unique(id, date) on conflict replace);"
         toExecSql(sql:sql)
-        sql = "create index if not exists vootndx on voFNstatus (date);"
+        sql = "create index if not exists vofnndx on voFNstatus (date);"
         toExecSql(sql:sql)
         
+        // ignoreRecords support added later
+        sql = "create table if not exists ignoreRecords (date int not null, unique(date) on conflict ignore);"
+        toExecSql(sql:sql)
+        sql = "create index if not exists voirndx on ignoreRecords (date);"
+        toExecSql(sql:sql)
     }
 
     func confirmDb() {

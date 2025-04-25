@@ -1432,10 +1432,20 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         // This would query the database for data points
         guard id != -1, let tracker = tracker else { return [] }
         
+        /*
         let sql = """
         SELECT date, val FROM voData 
         WHERE id = \(id) AND date >= \(startTimestamp) AND date <= \(endTimestamp)
         ORDER BY date
+        """
+        */
+        
+        let sql = """
+        SELECT v.date, v.val FROM voData v
+        LEFT JOIN ignoreRecords i ON v.date = i.date
+        WHERE v.id = \(id) AND v.date >= \(startTimestamp) AND v.date <= \(endTimestamp)
+        AND i.date IS NULL
+        ORDER BY v.date
         """
         
         return tracker.toQry2AryDate(sql: sql)

@@ -745,6 +745,24 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 vo.display = nil // always redisplay
             }
 
+            // Remove any existing tint view (in case state changed)
+            if let existingTintView = view.viewWithTag(1001) {
+                existingTintView.removeFromSuperview()
+            }
+            
+            // Check if record is ignored and add tint if needed
+            if isRecordIgnored() {
+                // Create a semi-transparent red overlay
+                let tintView = UIView(frame: tableView!.frame)
+                tintView.backgroundColor = UIColor.red.withAlphaComponent(0.05) // Light red tint
+                tintView.tag = 1001 // Tag to find it later
+                
+                // Add it above background but below table
+                view.insertSubview(tintView, aboveSubview: view.viewWithTag(BGTAG)!)
+                //view.sendSubviewToBack(tableView!)
+                //view.bringSubviewToFront(tintView)
+            }
+            
             tableView!.reloadData()
         })
     }
@@ -1312,6 +1330,22 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         updateTrackerTableView()
     }
 
+    func ignoreRecord() {
+        let currD = Int(tracker!.trackerDate?.timeIntervalSince1970 ?? 0)
+        if currD != 0 {
+            tracker!.toExecSql(sql: "insert into ignoreRecords (date) values (\(currD))")
+        }
+        updateTrackerTableView()
+    }
+    
+    func restoreRecord() {
+        let currD = Int(tracker!.trackerDate?.timeIntervalSince1970 ?? 0)
+        if currD != 0 {
+            tracker!.toExecSql(sql: "delete from ignoreRecords where date = \(currD)")
+        }
+        updateTrackerTableView()
+    }
+    
     var _createChartBtn: UIBarButtonItem?
     var createChartBtn: UIBarButtonItem {
         if _createChartBtn == nil {
@@ -1347,21 +1381,38 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         case shareTrackerData = "Share Tracker+Data"
         case saveToPC = "Save to app directory"
         case saveRecord = "Save unchanged record"
-        case duplicateEntry = "Duplicate Entry to Now"
+        case duplicateEntry = "Duplicate entry to Now"
+        case ignoreRecord = "ignore record in charts"
+        case restoreRecord = "restore record for charts"
         case cancel = "Cancel"
     }
     
+    func isRecordIgnored() -> Bool {
+        let currD = Int(tracker!.trackerDate?.timeIntervalSince1970 ?? 0)
+        if currD != 0 {
+            let ignored = tracker!.toQry2Int(sql: "select exists (select 1 from ignoreRecords where date = \(currD))")
+            return (ignored == 1)
+        }
+        return false
+    }
     
     @IBAction func btnMenu() {
         let alert = UIAlertController(title: tracker?.trackerName ?? "", message: nil, preferredStyle: .actionSheet)
         
-        var options: [MenuOption] = [.shareCSV, .shareTracker, .shareTrackerData, .saveToPC, .saveRecord]
+        var options: [MenuOption] = [.shareCSV, .shareTracker, .shareTrackerData, .saveToPC]
         
         let postD = tracker!.postDate()
         let lastD = tracker!.lastDate()
         let currD = Int(tracker!.trackerDate?.timeIntervalSince1970 ?? 0)
         if postD != 0 || lastD == currD {
             options.append(.duplicateEntry)
+            if isRecordIgnored() {
+                options.append(.restoreRecord)
+            } else {
+                options.append(.ignoreRecord)
+            }
+        } else {
+            options.append(.saveRecord)
         }
 
         for option in options {
@@ -1393,6 +1444,10 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             saveActions()
         case .duplicateEntry:
             duplicateEntry()
+        case .ignoreRecord:
+            ignoreRecord()
+        case .restoreRecord:
+            restoreRecord()
         case .cancel:
             break
         }
