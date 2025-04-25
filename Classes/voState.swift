@@ -127,7 +127,7 @@ class voState: NSObject, voProtocol {
                 to.toExecSql(sql: sql)
             } else {
                 DBGLog("no data for \(sql)")
-                DBGLog("hello")
+                //DBGLog("hello")
             }
             
             prevDate = md

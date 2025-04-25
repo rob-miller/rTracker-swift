@@ -65,7 +65,11 @@ class vogd: NSObject {
         }
         let myTracker = vo.parentTracker
         let myTOGD = myTracker.togd!
-        let sql = String(format: "select %@(val collate CMPSTRDBL) from voData where id=%ld and val != '' and date >= %d and date <= %d;", targ, Int(vo.vid), myTOGD.firstDate, myTOGD.lastDate)
+        let sql = """
+        SELECT \(targ)(val COLLATE CMPSTRDBL) FROM voData 
+        WHERE id = \(Int(vo.vid)) AND val != '' AND date >= \(myTOGD.firstDate) AND date <= \(myTOGD.lastDate)
+        AND date NOT IN (SELECT date FROM ignoreRecords)
+        """
         return myTracker.toQry2Double(sql:sql)
     }
 
@@ -139,7 +143,7 @@ class vogd: NSObject {
             }
             #if GRAPHDBG
             DBGLog(String("choice count \(choiceCount) minVal= \(minVal) maxVal= \(maxVal)"))
-            DBGLog("hello")
+            //DBGLog("hello")
             #endif
 
             /*
@@ -194,9 +198,12 @@ class vogd: NSObject {
         var mxdat: [NSNumber] = []
         var mydat: [NSNumber] = []
 
-        //myTracker.sql = [NSString stringWithFormat:@"select date,val from voData where id=%d and val != '' order by date;",self.vo.vid];
-        // 6.ii.2013 implement maxGraphDays
-        let sql = String(format: "select date,val from voData where id=%ld and val != '' and date >= %d and date <= %d order by date;", Int(vo.vid), myTOGD.firstDate, myTOGD.lastDate)
+        let sql = """
+        SELECT date, val FROM voData 
+        WHERE id = \(Int(vo.vid)) AND val != '' AND date >= \(myTOGD.firstDate) AND date <= \(myTOGD.lastDate)
+        AND date NOT IN (SELECT date FROM ignoreRecords)
+        ORDER BY date
+        """
         #if GRAPHDBG
         DBGLog(String("graph points sql: \(sql)"))
         #endif
@@ -249,14 +256,13 @@ class vogd: NSObject {
 
         var i1: [Int] = []
 
-        //NSMutableArray *s1 = [[NSMutableArray alloc] init];
-
-        //myTracker.sql = [NSString stringWithFormat:@"select date,val from voData where id=%d and val not NULL and val != '' and date >= %d and date <= %d order by date;",self.vo.vid,myTOGD.firstDate,myTOGD.lastDate];
-        //[myTracker toQry2AryIS:i1 s1:s1];
-        //NSEnumerator *e = [s1 objectEnumerator];
-        let sql = String(format: "select date,val from voData where id=%ld and val not NULL and val != '' and date >= %d and date <= %d order by date;", Int(vo.vid), myTOGD.firstDate, myTOGD.lastDate)
+        let sql = """
+        SELECT date, val FROM voData 
+        WHERE id = \(Int(vo.vid)) AND val NOT NULL AND val != '' AND date >= \(myTOGD.firstDate) AND date <= \(myTOGD.lastDate)
+        AND date NOT IN (SELECT date FROM ignoreRecords)
+        ORDER BY date
+        """
         i1 = myTracker.toQry2AryI(sql: sql)
-        //sql = nil;
 
         for ni in i1 {
             //DBGLog(@"i: %@  ",ni);
@@ -280,54 +286,6 @@ class vogd: NSObject {
 
     }
 
-    //- (vogd*) initAsBool:(valueObj*)vo;
-
-    // not used - boolean treated as number
-    /*
-    - (id) initAsBool:(valueObj*)inVO {
-        if ((self = [super init])) {
-
-            self.vo = inVO;
-            self.yZero = 0.0F;
-
-            trackerObj *myTracker = self.vo.parentTracker;
-            togd *myTOGD = myTracker.togd;
-
-            NSMutableArray *mxdat = [[NSMutableArray alloc] init];
-            //NSMutableArray *mydat = [[NSMutableArray alloc] init];
-
-            NSMutableArray *i1 = [[NSMutableArray alloc] init];
-           sql = [NSString stringWithFormat:@"select date from voData where id=%d and val !='' and date >= %d and date <= %d order by date;",self.vo.vid,myTOGD.firstDate,myTOGD.lastDate];
-            [myTracker toQry2AryI:i1];
-          //sql = nil;
-
-            for (NSNumber *ni in i1) {
-
-                //DBGLog(@"i: %@  ",ni);
-                double d = [ni doubleValue];		// date as int secs cast to float
-
-                d -= (double) myTOGD.firstDate;
-                d *= myTOGD.dateScale;
-                //d+= border;
-
-                [mxdat addObject:[NSNumber numberWithDouble:d]];
-
-            }
-            [i1 release];
-
-
-            self.xdat = [NSArray arrayWithArray:mxdat];
-            //ydat = [NSArray arrayWithArray:mydat];
-
-            [mxdat release];
-            //[mydat release];
-        }
-
-        return self;
-
-    }
-    */
-
     func initAsTBoxLC(_ inVO: valueObj) -> vogd {
 
         //super.init()
@@ -342,7 +300,12 @@ class vogd: NSObject {
 
         //var i2: [Int] = []
 
-        let sql = String(format: "select date,val, (LENGTH(val) - LENGTH(REPLACE(val, CHAR(10), '')) + 1) from voData where id=%ld and val not NULL and val != '' and date >= %d and date <= %d order by date;", Int(vo.vid), myTOGD.firstDate, myTOGD.lastDate)
+        let sql = """
+        SELECT date, val, (LENGTH(val) - LENGTH(REPLACE(val, CHAR(10), '')) + 1) FROM voData 
+        WHERE id = \(Int(vo.vid)) AND val NOT NULL AND val != '' AND date >= \(myTOGD.firstDate) AND date <= \(myTOGD.lastDate)
+        AND date NOT IN (SELECT date FROM ignoreRecords)
+        ORDER BY date
+        """
         let rsltISI = myTracker.toQry2AryISI(sql: sql)
         //sql = nil;
 

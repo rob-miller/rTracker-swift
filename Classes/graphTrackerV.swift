@@ -618,7 +618,7 @@ class graphTrackerV: UIScrollView {
             safeDispatchSync({ [self] in
                 AddLineTo(context, xMark, frame.size.height)
             })
-            DBGLog("mark x=\(xMark) y=0 to \(frame.size.height)")
+            //DBGLog("mark x=\(xMark) y=0 to \(frame.size.height)")
 
             context.strokePath()
         }
