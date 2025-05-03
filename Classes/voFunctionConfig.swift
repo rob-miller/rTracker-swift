@@ -889,6 +889,7 @@ extension voFunction {
         // create array fnTitles of nsnumber tokens which should be presented in picker for current list of fn being built
         fnTitles.removeAll()
         hideConstTF()
+        hideClassifyTF()
         DBGLog(String("fnArray= \(fnArray)"))
         if fnArray.count == 0 {
             // state = start
