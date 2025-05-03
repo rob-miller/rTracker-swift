@@ -80,6 +80,14 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     var emDuplicate = "duplicate entry to now"
     //BOOL keyboardIsShown=NO;
 
+    private var pullCounter = 0
+    private var refreshTimer: Timer?
+    private var isRefreshInProgress = false
+    private var refreshActivityIndicator: UIActivityIndicatorView?
+    
+    let refreshLabelId = 1002
+    let refreshLabelId2 = 1003
+    
     // MARK: -
     // MARK: core object methods and support
     
@@ -155,6 +163,23 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     }
 
+    func startRAI() {
+        DispatchQueue.main.async {
+            self.refreshActivityIndicator = UIActivityIndicatorView(style: .large)
+            if let rai = self.refreshActivityIndicator {
+                rai.center = self.view.center
+                rai.startAnimating()
+                self.view.addSubview(rai)
+            }
+        }
+    }
+    
+    func endRAI() {
+        refreshActivityIndicator?.stopAnimating()
+        refreshActivityIndicator?.removeFromSuperview()
+        refreshActivityIndicator = nil
+    }
+    
     // Implement viewDidLoad to do additional setup after loading the view, typically from a nib.
     override func viewDidLoad() {
 
@@ -242,10 +267,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             let dispatchGroup = DispatchGroup()
 
             // Show the spinner
-            let activityIndicator = UIActivityIndicatorView(style: .large)
-            activityIndicator.center = self.view.center
-            activityIndicator.startAnimating()
-            self.view.addSubview(activityIndicator)
+            startRAI()
 
             self.loadingData = true
             self.tracker!.loadingDbData = true
@@ -269,8 +291,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             // Notify when all operations are completed
             dispatchGroup.notify(queue: .main) {
                 // Stop and remove the spinner
-                activityIndicator.stopAnimating()
-                activityIndicator.removeFromSuperview()
+                self.endRAI()
 
                 // Perform any UI updates after data loading
                 DBGLog("HealthKit and Othertracker data loaded.")
@@ -282,14 +303,126 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
         if hkDataSource || otDataSource {
             let refreshControl = UIRefreshControl()
-            refreshControl.addTarget(self, action: #selector(handlePullDownAction), for: .valueChanged)
+            
+            // Add target for when pull begins
+            refreshControl.addTarget(self, action: #selector(pullToRefreshStarted), for: .valueChanged)
+            
             tableView!.refreshControl = refreshControl
         }
     }
+    
+    // Called when pull-to-refresh starts or continues
+        @objc func pullToRefreshStarted(_ refreshControl: UIRefreshControl) {
+            DispatchQueue.main.async {
+                refreshControl.endRefreshing()  // do our own indicators
+            }
+            // If we're already in a refresh operation, do nothing
+            if isRefreshInProgress || loadingData {
+                return
+            }
+            
+            // Increment the pull counter
+            pullCounter += 1
+            DBGLog("Pull counter incremented to \(pullCounter)")
+            
+            if pullCounter == 1 {
+                // First pull - light feedback and start timer
+                let feedbackGenerator = UIImpactFeedbackGenerator(style: .light)
+                feedbackGenerator.impactOccurred()
+                
+                // Cancel any existing timer
+                refreshTimer?.invalidate()
+                
+                // Start a timer for the single pull refresh
+                refreshTimer = Timer.scheduledTimer(timeInterval: 2.0, target: self, selector: #selector(handleSinglePullTimeout), userInfo: nil, repeats: false)
+                
+                // Show a new spinner during the full refresh
+                startRAI()
+                rTracker_resource.addTimedLabel(text:"Pull again to refresh all", tag:self.refreshLabelId2, sv:self.view, ti:2.0)
 
-    @objc func handlePullDownAction() {
-        DBGLog("Refresh initiated")
-        if loadingData { return }
+            } else if pullCounter >= 2 {
+                // Multiple pulls - stronger feedback and full refresh
+                let feedbackGenerator = UIImpactFeedbackGenerator(style: .heavy)
+                feedbackGenerator.impactOccurred()
+                
+                // Cancel the timer for single pull
+                refreshTimer?.invalidate()
+                refreshTimer = nil
+                
+                // Reset counter
+                pullCounter = 0
+                
+                // Show visual indicator for full refresh
+                DispatchQueue.main.async {
+                    rTracker_resource.addTimedLabel(text:"Full refresh in progress...", tag:self.refreshLabelId, sv:self.view, ti:3.0)
+                    // Start the full refresh
+                    self.isRefreshInProgress = true
+                    self.handleFullRefresh()
+                }
+            }
+        }
+    
+    
+    // Timer handler for single pull timeout
+    @objc func handleSinglePullTimeout() {
+        guard let refreshControl = tableView?.refreshControl else {
+            return
+        }
+        
+        DBGLog("Single pull timer expired, counter = \(pullCounter)")
+        
+        // If counter is still 1, it was a single pull
+        if pullCounter == 1 {
+            // Reset counter
+            pullCounter = 0
+
+            DispatchQueue.main.async {
+                // Refresh only the current record
+                self.isRefreshInProgress = true
+                self.refreshCurrentRecord(refreshControl)
+            }
+        }
+    }
+    
+    // refresh current record
+    func refreshCurrentRecord(_ refreshControl: UIRefreshControl) {
+        DBGLog("Short refresh initiated - updating current record only")
+        
+        let dispatchGroup = DispatchGroup()
+        let currentDate = Int(tracker!.trackerDate!.timeIntervalSince1970)
+        
+        DispatchQueue.main.async {
+            // Clear only the current record's HK and OT data
+            for vo in self.tracker!.valObjTable {
+                vo.vos?.clearHKdata(forDate: currentDate)
+                vo.vos?.clearOTdata(forDate: currentDate)
+                vo.vos?.clearFNdata(forDate: currentDate)
+            }
+            
+            // Load data only for the current record
+            dispatchGroup.enter()
+            _ = self.tracker!.loadHKdata(forDate: currentDate, dispatchGroup: dispatchGroup, completion: {
+                _ = self.tracker!.loadOTdata( forDate: currentDate, otSelf: false, dispatchGroup: dispatchGroup, completion: {
+                    _ = self.tracker!.loadFNdata(forDate: currentDate, dispatchGroup: dispatchGroup, completion: {
+                        _ = self.tracker!.loadOTdata(forDate: currentDate, otSelf: true, dispatchGroup: dispatchGroup)
+                    })
+                })
+            })
+            dispatchGroup.leave()
+            
+            dispatchGroup.notify(queue: .main) {
+                DBGLog("Current record data refreshed")
+                self.endRAI()
+                _ = self.tracker!.loadData(currentDate)
+                self.updateTrackerTableView()
+                self.isRefreshInProgress = false
+            }
+        }
+    }
+    
+    // full data reload
+    @objc func handleFullRefresh() {
+        DBGLog("Full Refresh initiated")
         
         let dispatchGroup = DispatchGroup()
         
@@ -299,7 +432,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             
             // delete all voData sourced from HealthKit and other trackers
             for vo in self.tracker!.valObjTable {
-                vo.vos?.clearHKdata()  // rtm really want this?  re-load all hk data
+                vo.vos?.clearHKdata()  // re-load all hk data
                 vo.vos?.clearOTdata()
                 vo.vos?.clearFNdata()
             }
@@ -325,11 +458,12 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             
             // Notify when all operations are completed
             dispatchGroup.notify(queue: .main) {
-                DBGLog("All HealthKit data loaded and SQL inserts completed.")
+                DBGLog("Full refresh completed - All HealthKit data loaded and SQL inserts completed.")
                 self.tracker?.cleanDb()
-                self.tableView!.refreshControl?.endRefreshing()
+                self.endRAI()
                 _ = self.tracker!.loadData(Int(self.tracker!.trackerDate!.timeIntervalSince1970))
                 self.updateTrackerTableView()
+                self.isRefreshInProgress = false
             }
 
         }
@@ -545,6 +679,10 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             name: UIResponder.keyboardWillHideNotification,
             object: nil)
 
+        // Remove any visual indicators
+        rTracker_resource.removeLabels(view: view, labelIds: [refreshLabelId,refreshLabelId2])
+        endRAI()
+        
         super.viewWillDisappear(animated)
     }
 
@@ -1382,7 +1520,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         case saveToPC = "Save to app directory"
         case saveRecord = "Save unchanged record"
         case duplicateEntry = "Duplicate entry to Now"
-        case ignoreRecord = "ignore record in charts"
+        case ignoreRecord = "ignore record"
         case restoreRecord = "restore record for charts"
         case cancel = "Cancel"
     }

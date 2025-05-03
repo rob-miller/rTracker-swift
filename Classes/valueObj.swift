@@ -154,12 +154,12 @@ protocol voProtocol: AnyObject {
     func resetData()
     func mapValue2Csv() -> String?
     func mapCsv2Value(_ inCsv: String) -> String
-    func loadHKdata(dispatchGroup: DispatchGroup?)
+    func loadHKdata(forDate date: Int?, dispatchGroup: DispatchGroup?)
     //func loadOTdata(dispatchGroup: DispatchGroup?)
     func setFnVal(_ tDate: Int, dispatchGroup: DispatchGroup?)
-    func clearHKdata()
-    func clearOTdata()
-    func clearFNdata()
+    func clearHKdata(forDate date: Int?)
+    func clearOTdata(forDate date: Int?)
+    func clearFNdata(forDate date: Int?)
     func setFNrecalc()
 }
 

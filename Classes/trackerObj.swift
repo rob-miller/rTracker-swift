@@ -203,13 +203,13 @@ class trackerObj: tObjBase {
         return true
     }
     
-    func loadHKdata(dispatchGroup: DispatchGroup?, completion: (() -> Void)? = nil) -> Bool {
+    func loadHKdata(forDate date: Int? = nil, dispatchGroup: DispatchGroup?, completion: (() -> Void)? = nil) -> Bool {
         dispatchGroup?.enter()
         let localGroup = DispatchGroup()
         var rslt = false
         for vo in valObjTable {
             if vo.optDict["ahksrc"] ?? "0" != "0" {
-                vo.vos?.loadHKdata(dispatchGroup: localGroup)
+                vo.vos?.loadHKdata(forDate: date, dispatchGroup: localGroup)
                 rslt = true
             }
         }
@@ -221,7 +221,7 @@ class trackerObj: tObjBase {
         return rslt
     }
 
-    func loadOTdata(otSelf: Bool = false, dispatchGroup: DispatchGroup?, completion: (() -> Void)? = nil) -> Bool {
+    func loadOTdata(forDate date: Int? = nil, otSelf: Bool = false, dispatchGroup: DispatchGroup?, completion: (() -> Void)? = nil) -> Bool {
         dispatchGroup?.enter()
         let localGroup = DispatchGroup()
         var rslt = false
@@ -230,7 +230,7 @@ class trackerObj: tObjBase {
                   let otTracker = vo.optDict["otTracker"] else { continue }
             if (otSelf && otTracker == trackerName) ||
                (!otSelf && otTracker != trackerName) {
-                vo.vos?.loadOTdata(dispatchGroup: localGroup)
+                vo.vos?.loadOTdata(forDate: date, dispatchGroup: localGroup)
                 rslt = true
             }
         }
@@ -242,7 +242,7 @@ class trackerObj: tObjBase {
         return rslt
     }
 
-    private func processFnData(dispatchGroup: DispatchGroup? = nil, forceAll: Bool = false, completion: (() -> Void)? = nil) -> Bool {
+    private func processFnData(forDate date: Int? = nil, dispatchGroup: DispatchGroup? = nil, forceAll: Bool = false, completion: (() -> Void)? = nil) -> Bool {
         let localGroup = DispatchGroup()
         var rslt = false
         
@@ -265,6 +265,8 @@ class trackerObj: tObjBase {
         var nextDate: Int
         if forceAll {
             nextDate = firstDate() // Always start from beginning for setFnVals
+        } else if let specifiedDate = date {
+            nextDate = specifiedDate
         } else {
             let sql = "select max(date) from voFNstatus where stat = \(fnStatus.fnData.rawValue)"
             nextDate = toQry2Int(sql: sql)
@@ -288,6 +290,7 @@ class trackerObj: tObjBase {
             _ = loadData(nextDate)
             
             for vo in valObjTable {
+                vo.vos?.setFNrecalc()  // do not use cached values
                 if dispatchGroup != nil {
                     vo.vos?.setFnVal(nextDate, dispatchGroup: localGroup)  // async with dispatch group
                 } else {
@@ -328,8 +331,8 @@ class trackerObj: tObjBase {
         return rslt
     }
 
-    func loadFNdata(dispatchGroup: DispatchGroup?, completion: (() -> Void)? = nil) -> Bool {
-        return processFnData(dispatchGroup: dispatchGroup, forceAll: false, completion: completion)
+    func loadFNdata(forDate date: Int? = nil, dispatchGroup: DispatchGroup?, completion: (() -> Void)? = nil) -> Bool {
+        return processFnData(forDate: date, dispatchGroup: dispatchGroup, forceAll: false, completion: completion)
     }
 
     func setFnVals(completion: (() -> Void)? = nil) {

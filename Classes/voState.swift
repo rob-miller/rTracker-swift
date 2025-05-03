@@ -62,13 +62,13 @@ class voState: NSObject, voProtocol {
     func loadConfig() {
     }
 
-    func loadHKdata(dispatchGroup: DispatchGroup?) {
+    func loadHKdata(forDate date: Int?, dispatchGroup: DispatchGroup?) {
     }
     
-    func clearHKdata() {
+    func clearHKdata(forDate date: Int? = nil) {
     }
     
-    func loadOTdata(dispatchGroup: DispatchGroup?) {
+    func loadOTdata(forDate date: Int? = nil, dispatchGroup: DispatchGroup?) {
         let to = vo.parentTracker
 
         guard let xtName = vo.optDict["otTracker"] else {
@@ -106,10 +106,20 @@ class voState: NSObject, voProtocol {
 
         var sql = "select max(date) from voOTstatus where id = \(Int(vo.vid)) and stat = \(otStatus.otData.rawValue)"
         let lastDate = to.toQry2Int(sql: sql)
-        
-        
-        let myDates = to.toQry2AryI(sql:"select date from trkrData where date > \(lastDate) order by date asc")
         var prevDate = lastDate
+        
+        var myDates: [Int]
+            
+        if let specificDate = date {
+            // If a specific date is provided, only query that date and if it exists
+            myDates = to.toQry2AryI(sql: "select date from trkrData where date = \(specificDate)")
+            prevDate = specificDate
+        } else {
+            // Original implementation - get all dates after lastDate
+            myDates = to.toQry2AryI(sql: "select date from trkrData where date > \(lastDate) order by date asc")
+        }
+        
+
         
         for md in myDates {
             if xto.toid == to.toid {  // other tracker is self so exact date match
@@ -153,19 +163,28 @@ class voState: NSObject, voProtocol {
         
     }
 
-    func clearOTdata() {
+    func clearOTdata(forDate date: Int? = nil) {
         let to = vo.parentTracker
-        var sql = "delete from voData where (id, date) in (select id, date from voOTstatus where id = \(vo.vid))"
-        to.toExecSql(sql: sql)
-        sql = "delete from voOTstatus where id = \(vo.vid)"
-        to.toExecSql(sql: sql)
+        var sql = ""
+        if let specificDate = date {
+            let haveOTdata = to.toQry2Int(sql: "select 1 from voOTstatus where id = \(vo.vid) and date = \(specificDate)")
+            if haveOTdata == 1 {
+                to.toExecSql(sql: "delete from voData where id = \(vo.vid) and date = \(specificDate)")
+                to.toExecSql(sql: "delete from voOTstatus where id = \(vo.vid) and date = \(specificDate)")
+            }
+        } else {
+            sql = "delete from voData where (id, date) in (select id, date from voOTstatus where id = \(vo.vid))"
+            to.toExecSql(sql: sql)
+            sql = "delete from voOTstatus where id = \(vo.vid)"
+            to.toExecSql(sql: sql)
+        }
     }
     
     
     func loadFNdata(dispatchGroup: DispatchGroup?) {
     }
 
-    func clearFNdata() {
+    func clearFNdata(forDate date: Int? = nil) {
     }
     
     func setFNrecalc() {

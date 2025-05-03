@@ -311,6 +311,35 @@ class rTracker_resource: NSObject {
         sw.isOn = false
 
     }
+    
+    class func addTimedLabel(text: String, tag: Int, sv: UIView, ti: TimeInterval? = nil) {
+        let label = UILabel(frame: CGRect(x: 0, y: 0, width: 200, height: 30))
+        label.center = CGPoint(x: sv.center.x, y: 100)
+        label.textAlignment = .center
+        label.text = text
+        label.backgroundColor = UIColor.systemGray.withAlphaComponent(0.7)
+        label.textColor = UIColor.white
+        label.layer.cornerRadius = 10
+        label.clipsToBounds = true
+        label.tag = tag
+        sv.addSubview(label)
+        
+        if let ti = ti {
+            Timer.scheduledTimer(withTimeInterval: ti, repeats: false) { _ in
+                if let label = sv.viewWithTag(tag) {
+                    label.removeFromSuperview()
+                }
+            }
+        }
+    }
+    
+    class func removeLabels(view: UIView, labelIds:[Int]) {
+        for lid in labelIds {
+            if let label = view.viewWithTag(lid) {
+                label.removeFromSuperview()
+            }
+        }
+    }
 
     // MARK: -
     // MARK: generic alert

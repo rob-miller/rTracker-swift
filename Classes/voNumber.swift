@@ -388,7 +388,26 @@ class voNumber: voState, UITextFieldDelegate {
         return super.cleanOptDictDflts(key)
     }
     
-    override func loadHKdata(dispatchGroup: DispatchGroup?) {
+    // Function to get the timestamp for 00:00 on the same day as a given timestamp
+    func startOfDay(fromTimestamp timestamp: Int) -> Int {
+        // Convert timestamp to Date
+        let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
+        
+        // Get calendar and components
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.year, .month, .day], from: date)
+        
+        // Create a new date with only year, month, and day components (sets time to 00:00:00)
+        if let startOfDay = calendar.date(from: components) {
+            // Convert back to timestamp (seconds)
+            return Int(startOfDay.timeIntervalSince1970)
+        }
+        
+        // Fallback in case of error (should not happen)
+        return timestamp
+    }
+
+    override func loadHKdata(forDate date: Int?, dispatchGroup: DispatchGroup?) {
         // loads into database, not for current tracker record
         let to = vo.parentTracker
 
@@ -408,15 +427,21 @@ class voNumber: voState, UITextFieldDelegate {
         hkDispatchGroup.enter()
         
         let sql = "select max(date) from voHKstatus where id = \(Int(vo.vid)) and stat = \(hkStatus.hkData.rawValue)"
-        let lastDate = to.toQry2Int(sql: sql)
+        var lastDate = to.toQry2Int(sql: sql)
+        if let specifiedDate = date {
+            lastDate = startOfDay(fromTimestamp:specifiedDate)
+            DBGLog("specifiedDate is \(specifiedDate)  \(Date(timeIntervalSince1970: TimeInterval(specifiedDate)))")
+        }
         DBGLog("lastDate is \(Date(timeIntervalSince1970:TimeInterval(lastDate)))")
         rthk.getHealthKitDates(for: srcName, lastDate: lastDate) { hkDates in
             DBGLog("hk dates for \(srcName), ahAvg is \(self.vo.optDict["ahAvg"] ?? "1")")
             let existingDatesQuery = """
             SELECT date
-            FROM trkrData
+            FROM trkrData order by date DESC
             """
-            let existingDates = Set(to.toQry2AryI(sql: existingDatesQuery))
+            
+            let existingDatesArr = to.toQry2AryI(sql: existingDatesQuery)  // for debug to look at
+            let existingDates = Set(existingDatesArr)
             
             /*
              // Filter dates that don't match within ±4 hours of existing dates
@@ -491,7 +516,7 @@ class voNumber: voState, UITextFieldDelegate {
             var sql = """
             SELECT trkrData.date
             FROM trkrData
-            WHERE NOT EXISTS (
+            WHERE (NOT EXISTS (
                 SELECT 1
                 FROM voData
                 WHERE voData.date = trkrData.date
@@ -509,8 +534,16 @@ class voNumber: voState, UITextFieldDelegate {
                 FROM voHKstatus
                 WHERE id = \(Int(vo.vid))
                   AND stat = \(hkStatus.hkData.rawValue)
+            )) OR NOT EXISTS (
+                SELECT 1 FROM voHKstatus
+                WHERE voHKstatus.date = trkrData.date
+                  AND voHKstatus.id = \(Int(vo.vid))
             );
-            """  // voHKstatus may be fail/no data or data already stored, in either case don't try to update
+            """
+            // get dates where
+            //   do not have voData and hkStatus confirms no data and only looking at new data since last update
+            //   or have trkrData entry but no hkStatus entry at all (refreshing current record)
+            
             let dateSet = to.toQry2AryI(sql: sql)
             
             DBGLog("Query complete, count is \(dateSet.count)")
@@ -647,12 +680,22 @@ class voNumber: voState, UITextFieldDelegate {
         }
     }
 
-    override func clearHKdata() {
+    override func clearHKdata(forDate date: Int? = nil) {
         let to = vo.parentTracker
-        var sql = "delete from voData where (id, date) in (select id, date from voHKstatus where id = \(vo.vid))"
-        to.toExecSql(sql: sql)
-        sql = "delete from voHKstatus where id = \(vo.vid)"
-        to.toExecSql(sql: sql)
+        var sql = ""
+        if let specificDate = date {
+            DBGLog("checking date \(specificDate) \(Date(timeIntervalSince1970: TimeInterval(specificDate)))")
+            let haveHkData = to.toQry2Int(sql: "select 1 from voHKstatus where id = \(vo.vid) and date = \(specificDate)")
+            if haveHkData == 1 {
+                to.toExecSql(sql: "delete from voData where id = \(vo.vid) and date = \(specificDate)")
+                to.toExecSql(sql: "delete from voHKstatus where id = \(vo.vid) and date = \(specificDate)")
+            }
+        } else {
+            sql = "delete from voData where (id, date) in (select id, date from voHKstatus where id = \(vo.vid))"
+            to.toExecSql(sql: sql)
+            sql = "delete from voHKstatus where id = \(vo.vid)"
+            to.toExecSql(sql: sql)
+        }
     }
     
     @objc func configAppleHealthView() {

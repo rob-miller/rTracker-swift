@@ -566,7 +566,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             
         }
         DBGLog(String("fndbg \(vo.valueName ?? "") calcFnValueWithCurrent fnArray= \(outstr)"))
-        DBGLog("epd0 \(Date(timeIntervalSince1970: TimeInterval(epd0)))  epd1 \(Date(timeIntervalSince1970: TimeInterval(epd1)))  trackerDate \(self.MyTracker.trackerDate)")
+        DBGLog("epd0 \(Date(timeIntervalSince1970: TimeInterval(epd0)))  epd1 \(Date(timeIntervalSince1970: TimeInterval(epd1)))  trackerDate \(self.MyTracker.trackerDate!)")
 #endif
 
         var result = 0.0
@@ -597,7 +597,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                 let sv1 = to.getValObj(vid)?.value
                 let nullV1 = (nil == sv1 || ("" == sv1))
                 let v1 = Double(sv1 ?? "") ?? 0.0
-                var sql = """
+                sql = """
                 SELECT count(val) FROM voData 
                 WHERE id = \(vid) AND date >= \(epd0) AND date < \(epd1)
                 AND date NOT IN (SELECT date FROM ignoreRecords)
@@ -1003,7 +1003,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             return ""
         }
 
-        if !checkEP(1) {
+        if !checkEP(1) {  // if ep1 is valobj, return "" if not valid value
             return ""
         }
 
@@ -1205,12 +1205,20 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         dispatchGroup?.leave()
     }
 
-    override func clearFNdata() {
+    override func clearFNdata(forDate date: Int? = nil) {
         let to = vo.parentTracker
-        var sql = "delete from voData where (id, date) in (select id, date from voFNstatus where id = \(vo.vid))"
-        to.toExecSql(sql: sql)
-        sql = "delete from voFNstatus where id = \(vo.vid)"
-        to.toExecSql(sql: sql)
+        if let specificDate = date {
+            let haveFNdata = to.toQry2Int(sql: "select 1 from voFNstatus where id = \(vo.vid) and date = \(specificDate)")
+            if haveFNdata == 1 {
+                to.toExecSql(sql: "delete from voData where id = \(vo.vid) and date = \(specificDate)")
+                to.toExecSql(sql: "delete from voFNstatus where id = \(vo.vid) and date = \(specificDate)")
+            }
+        } else {
+            var sql = "delete from voData where (id, date) in (select id, date from voFNstatus where id = \(vo.vid))"
+            to.toExecSql(sql: sql)
+            sql = "delete from voFNstatus where id = \(vo.vid)"
+            to.toExecSql(sql: sql)
+        }
     }
     
     override func setFNrecalc() {
