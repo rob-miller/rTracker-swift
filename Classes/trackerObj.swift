@@ -62,6 +62,7 @@ class trackerObj: tObjBase {
     var optDict: [String : Any] = [:]  // trackerObj level optDict in dtabase as text : any
 
     var valObjTable: [valueObj] = []
+    var valObjTableH: [valueObj] = []
 
     var reminders: [notifyReminder] = []
     var reminderNdx = 0
@@ -551,6 +552,7 @@ class trackerObj: tObjBase {
             valObjTable.append(vo)
         }
 
+        
         for vo in valObjTable {
             sql = String(format: "select field, val from voInfo where id=%ld;", vo.vid)
             ssa = toQry2ArySS(sql: sql)
@@ -573,6 +575,12 @@ class trackerObj: tObjBase {
             _nextColor = 0
         }
 
+        valObjTableH = []
+        for vo in valObjTable {
+            if vo.optDict["hidden"] != "1" {
+                valObjTableH.append(vo)
+            }
+        }
 
 
         //sql = nil;
@@ -627,6 +635,13 @@ class trackerObj: tObjBase {
             vo.vos?.loadConfig() // loads from vo optDict
         }
 
+        valObjTableH = []
+        for vo in valObjTable {
+            if vo.optDict["hidden"] != "1" {
+                valObjTableH.append(vo)
+            }
+        }
+        
         let rda = dict["reminders"] as? [AnyHashable]
         for rd in rda ?? [] {
             guard let rd = rd as? [AnyHashable : Any] else {
@@ -906,9 +921,6 @@ class trackerObj: tObjBase {
     func getValObjByName(_ qName: String) -> valueObj? {
         var rvo: valueObj? = nil
 
-        //NSEnumerator *e = [self.valObjTable objectEnumerator];
-        //valueObj *vo;
-        //while (vo = (valueObj *) [e nextObject]) {
         for vo in valObjTable {
             if vo.valueName == qName {
                 rvo = vo

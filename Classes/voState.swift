@@ -206,6 +206,10 @@ class voState: NSObject, voProtocol {
         if nil == vo.optDict["hrsmins"] {
             vo.optDict["hrsmins"] = HRSMINSDFLT ? "1" : "0"
         }
+        
+        if nil == vo.optDict["hidden"] {
+            vo.optDict["hidden"] = HIDDENDFLT ? "1" : "0"
+        }
     }
 
     func cleanOptDictDflts(_ key: String) -> Bool {
@@ -218,7 +222,10 @@ class voState: NSObject, voProtocol {
         if ((key == "graph") && (val == (GRAPHDFLT ? "1" : "0")))
             || ((key == "privacy") && (Int(val ?? "") ?? 0 == PRIVDFLT))
             || ((key == "otCurrent") && (val == (OTCURRDFLT ? "1" : "0")))
-            || ((key == "otsrc") && (val == (OTSRCDFLT ? "1" : "0"))) {
+            || ((key == "otsrc") && (val == (OTSRCDFLT ? "1" : "0")))
+            || ((key == "hrsmins") && (val == (HRSMINSDFLT ? "1" : "0")))
+            || ((key == "hidden") && (val == (HIDDENDFLT ? "1" : "0")))
+        {
             vo.optDict.removeValue(forKey: key)
             return true
         }

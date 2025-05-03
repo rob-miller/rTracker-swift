@@ -463,11 +463,24 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     }
 
-    /*
-    - (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
-        [self handleCheckValObjDelete:buttonIndex];
+    func reloadVOcell(_ valueObj: valueObj) {
+        if let index = tempTrackerObj?.valObjTable.firstIndex(where: { $0.vid == valueObj.vid }) {
+            // Create an IndexPath for this cell
+            let indexPath = IndexPath(row: index, section: 1)
+            // Reload just this cell
+            tableView.reloadRows(at: [indexPath], with: .automatic)
+        }
     }
-    */
+    
+    func hideValueObj(_ valueObj: valueObj) {
+        valueObj.optDict["hidden"] = "1"
+        reloadVOcell(valueObj)
+    }
+    
+    func unhideValueObj(_ valueObj: valueObj) {
+        valueObj.optDict["hidden"] = "0"
+        reloadVOcell(valueObj)
+    }
 
     // MARK: -
     // MARK: Table View Data Source Methods
@@ -490,7 +503,6 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         return Int(2)
     }
 
-    //TODO: tweak this to get section headers right ios7
     func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
         return 6.0
         /*
@@ -500,6 +512,51 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
              */
     }
 
+    func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+        let section = indexPath.section
+        let row = indexPath.row
+        
+        if section == 0 || row == (tempTrackerObj?.valObjTable.count ?? 0) {
+            return nil // No swipe actions for name field or add row
+        }
+            
+        // Create delete action
+        let deleteAction = UIContextualAction(style: .destructive, title: "Delete") { [weak self] (action, view, completion) in
+            self?.tableView(tableView, commit: .delete, forRowAt: indexPath)
+            completion(true)
+        }
+        
+        // Get the value object for this row
+        guard let vo = (tempTrackerObj?.valObjTable)?[row] as? valueObj else {
+            return UISwipeActionsConfiguration(actions: [deleteAction])
+        }
+        
+        // Check if the valueObj is already hidden
+        let isHidden = vo.optDict["hidden"] == "1"
+        
+        // Create hide/reveal action based on current state
+        let hideOrRevealAction = UIContextualAction(style: .normal, title: isHidden ? "Reveal" : "Hide") { [weak self] (action, view, completion) in
+            guard let self = self else { return completion(false) }
+            
+            if isHidden {
+                // If it's hidden, call unhide
+                self.unhideValueObj(vo)
+            } else {
+                // If it's visible, call hide
+                self.hideValueObj(vo)
+            }
+            completion(true)
+        }
+        
+        // Set appropriate background color and icon
+        hideOrRevealAction.backgroundColor = isHidden ? .systemGreen : .systemBlue
+        hideOrRevealAction.image = UIImage(systemName: isHidden ? "eye" : "eye.slash")
+        
+        // Return both actions
+        let configuration = UISwipeActionsConfiguration(actions: [deleteAction, hideOrRevealAction])
+        return configuration
+    }
+    
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         let row = indexPath.row
         let section = indexPath.section
@@ -532,7 +589,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         var cell: UITableViewCell?
         let section = indexPath.section
         if section == 0 {
-            // Name field section - code unchanged
+            // Name field section
             cell = tableView.dequeueReusableCell(withIdentifier: addTrackerController.tableViewNameCellID)
             if cell == nil {
                 cell = UITableViewCell(
@@ -582,6 +639,10 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             
             // Remove any existing icon to prevent duplication
             cell?.contentView.viewWithTag(kViewTag + 1)?.removeFromSuperview()
+            
+            cell?.backgroundColor = .clear
+            cell?.textLabel?.textColor = .label
+            cell?.detailTextLabel?.textColor = .label
             
             let row = indexPath.row
             if row == (tempTrackerObj?.valObjTable.count ?? 0) {
@@ -647,12 +708,13 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                     let colorNames = rTracker_resource.colorNames()[vo!.vcolor]
                     cell?.detailTextLabel?.text = "\(vtypeNames) - \(voGraphSet!) - \(colorNames)"
                 }
+                
+                if vo?.optDict["hidden"] == "1" {
+                    cell?.backgroundColor = UIColor(red: 0.9, green: 0.95, blue: 1.0, alpha: 0.6)
+                }
             }
-            cell?.backgroundColor = .clear
-            if #available(iOS 13.0, *) {
-                cell?.textLabel?.textColor = .label
-                cell?.detailTextLabel?.textColor = .label
-            }
+
+            
         }
         return cell!
     }
@@ -698,6 +760,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     }
 
     func tableView(_ tableview: UITableView, editingStyleForRowAt indexPath: IndexPath) -> UITableViewCell.EditingStyle {
+        // this controls the - delete or + add symbol on left side, plus enables delete edit button
         let section = indexPath.section
         if section == 0 {
             return .none
@@ -762,11 +825,8 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     func addValObj(_ vo: valueObj?) {
 
         var avc: addValObjController?
-        //if (kIS_LESS_THAN_IOS7) {
-        //    avc = [[addValObjController alloc] initWithNibName:@"addValObjController" bundle:nil ];
-        //} else {
         avc = addValObjController(nibName: "addValObjController7", bundle: nil)
-        //}
+
         avc?.parentTrackerObj = tempTrackerObj
         avc?.tempValObj = vo
         avc?.stashVals()
@@ -798,9 +858,6 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         }
 
     }
-
-    //*/
-
 
     func tableView(_ tableView: UITableView, accessoryButtonTappedForRowWith indexPath: IndexPath) {
 

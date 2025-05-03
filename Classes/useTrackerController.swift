@@ -127,7 +127,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         var iparr: [AnyHashable] = []
         var n = 0
 
-        for vo in tracker!.valObjTable {
+        for vo in tracker!.valObjTableH {
             if VOT_FUNC == vo.vtype || vo.optDict["otTracker"] ?? "" == tracker?.trackerName {
                 vo.display = nil // always redisplay
                 vo.vos?.setFNrecalc()  // no caching, recompute function
@@ -867,7 +867,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     // MARK: datepicker support
 
     func clearVoDisplay() {
-        for vo in tracker!.valObjTable {
+        for vo in tracker!.valObjTableH {
             //if (vo.vtype == VOT_FUNC)
             vo.display = nil // always redisplay
         }
@@ -879,7 +879,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         //DBGLog(@"utc: updateTrackerTableView");
         DispatchQueue.main.async(execute: { [self] in
 
-            for vo in tracker!.valObjTable {
+            for vo in tracker!.valObjTableH {
                 vo.display = nil // always redisplay
             }
 
@@ -1164,7 +1164,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         let tpriv = Int(tracker!.optDict["privacy"] as? String ?? "1") ?? 1
         var vprivmax = PRIVDFLT
 
-        for vo in tracker!.valObjTable {
+        for vo in tracker!.valObjTableH {
             vo.vpriv = Int(vo.optDict["privacy"]!)!
             if vo.vpriv > vprivmax {
                 vprivmax = vo.vpriv
@@ -1615,7 +1615,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     // Customize the number of rows in the table view.
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         //return 0;  //[rTrackerAppDelegate.topLayoutTable count];
-        return tracker!.valObjTable.count
+        return tracker!.valObjTableH.count
     }
 
     let CHECKBOX_WIDTH = 40.0
@@ -1623,7 +1623,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     // Customize the appearance of table view cells.
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let row = indexPath.row
-        let vo = (tracker!.valObjTable)[row]
+        let vo = (tracker!.valObjTableH)[row]
         //DBGLog(@"uvc table cell at index %d label %@",row,vo.valueName);
 
         return (vo.vos?.voTVCell(tableView))!
@@ -1632,18 +1632,18 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         let row = indexPath.row
-        let vo = (tracker!.valObjTable)[row]
+        let vo = (tracker!.valObjTableH)[row]
         return vo.vos?.voTVCellHeight() ?? 0.0
     }
 
     // Override to support row selection in the table view.
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
 
-        let vo = (tracker!.valObjTable)[indexPath.row]
+        let vo = (tracker!.valObjTableH)[indexPath.row]
 
         #if DEBUGLOG
         let row = indexPath.row
-        //valueObj *vo = (valueObj *) [self.tracker.valObjTable  objectAtIndex:row];
+        //valueObj *vo = (valueObj *) [self.tracker.valObjTableH  objectAtIndex:row];
         DBGLog(String("selected row \(UInt(row)): \(vo.valueName)"))
         #endif
 

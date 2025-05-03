@@ -98,6 +98,7 @@ let OTCURRDFLT = false
 let HRSMINSDFLT = false
 let GRAPHLASTDFLT = true
 let SETSTRACKERDATEDFLT = false
+let HIDDENDFLT = false
 
 // vo config textfield default values
 let SLIDRMINDFLT = 0.0
@@ -355,28 +356,6 @@ class valueObj: NSObject, UITextFieldDelegate {
     // MARK: dictionary to/from
 
     func dictFromVO() -> [String : Any]? {
-        /*
-            NSNumber *myvid = [NSNumber numberWithInteger:self.vid];
-            NSNumber *myvtype = [NSNumber numberWithInteger:self.vtype];
-            NSNumber *myvpriv = [NSNumber numberWithInteger:self.vpriv];
-            NSString *myvaluename = self.valueName;
-            NSNumber *myvcolor = [NSNumber numberWithInteger:self.vcolor];
-            NSNumber *myvgt = [NSNumber numberWithInteger:self.vGraphType];
-            NSDictionary *myoptdict = self.optDict;
-
-            DBGLog(@"vid %@  vtype %@  vpriv %@  valuename %@  vcolor %@  vgt %@  optdict  %@",
-                   myvid, myvtype, myvpriv, myvaluename,myvcolor,myvgt,myoptdict);
-
-            DBGLog(@"vid %@  vtype %@  vpriv %@  valuename %@  vcolor  %@ vgt  %@ optdict  %@",
-                   [NSNumber numberWithInteger:self.vid],
-                    [NSNumber numberWithInteger:self.vtype],
-                    [NSNumber numberWithInteger:self.vpriv],
-                    self.valueName,
-                    [NSNumber numberWithInteger:self.vcolor],
-                    [NSNumber numberWithInteger:self.vGraphType],
-                    self.optDict
-                   );
-            */
         return [
             "vid": NSNumber(value: vid),
             "vtype": NSNumber(value: vtype),
