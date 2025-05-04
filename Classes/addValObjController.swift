@@ -157,12 +157,6 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
         labelField.clearsOnBeginEditing = false
         labelField.delegate = self
         labelField.returnKeyType = .done
-        //[self.labelField addTarget:self
-        //              action:@selector(labelFieldDone:)
-        //    forControlEvents:UIControlEventEditingDidEndOnExit];
-        //    DBGLog(@"frame: %f %f %f %f",self.labelField.frame.origin.x, self.labelField.frame.origin.y, self.labelField.frame.size.width, self.labelField.frame.size.height);
-
-        // set graph paper background, unseen but still there if darkMode
 
         let bg = UIImageView(image: rTracker_resource.get_background_image(self))
         bg.tag = BGTAG

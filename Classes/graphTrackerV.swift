@@ -581,7 +581,7 @@ class graphTrackerV: UIScrollView {
     func drawGraph(_ context: CGContext) {
         //DBGLog(@"drawGraph");
         var barCount = 0
-        for vo in tracker?.valObjTable ?? [] {
+        for vo in tracker?.valObjTableH ?? [] {
             if vo.optDict["graph"] != "0" {
                 if VOG_BAR == vo.vGraphType {
                     barCount += 1
@@ -590,7 +590,7 @@ class graphTrackerV: UIScrollView {
         }
         barCount /= -2
 
-        for vo in tracker?.valObjTable ?? [] {
+        for vo in tracker?.valObjTableH ?? [] {
             if vo != gtvCurrVO {
                 if vo.optDict["graph"] != "0" {
                     //DBGLog(@"drawGraph %@",vo.valueName);

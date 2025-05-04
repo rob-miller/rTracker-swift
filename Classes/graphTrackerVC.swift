@@ -753,7 +753,7 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
 
         var maxw: CGFloat = 0.0
         var nmax, nmin, bval: NSNumber?
-        for vo in tracker?.valObjTable ?? [] {
+        for vo in tracker?.valObjTableH ?? [] {
             if "1" == vo.optDict["graph"] {
                 switch vo.vtype {
                 case VOT_NUMBER, VOT_FUNC:
@@ -814,7 +814,7 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
     func nextVO() {
         if nil == currVO {
             // no currVO set, work through list and set first one that has graph enabled
-            for vo in tracker?.valObjTable ?? [] {
+            for vo in tracker?.valObjTableH ?? [] {
                 if testSetVO(vo) {
                     return
                 }
@@ -823,13 +823,13 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
             // currVO is set, find it in list and then circle around trying to find next that has graph enabled
             var currNdx: Int? = nil
             if let currVO {
-                currNdx = tracker?.valObjTable.firstIndex(of: currVO) ?? NSNotFound
+                currNdx = tracker?.valObjTableH.firstIndex(of: currVO) ?? NSNotFound
             }
             var ndx = (currNdx ?? 0) + 1
-            var maxc = tracker?.valObjTable.count
+            var maxc = tracker?.valObjTableH.count
             while true {
                 while ndx < maxc! {
-                    if testSetVO(tracker?.valObjTable[ndx] as? valueObj) {
+                    if testSetVO(tracker?.valObjTableH[ndx] as? valueObj) {
                         return
                     }
                     ndx += 1

@@ -710,7 +710,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 }
                 
                 if vo?.optDict["hidden"] == "1" {
-                    cell?.backgroundColor = UIColor(red: 0.9, green: 0.95, blue: 1.0, alpha: 0.6)
+                    cell?.backgroundColor = hiddenColor
                 }
             }
 

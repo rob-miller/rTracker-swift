@@ -349,14 +349,13 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
     func refreshEditBtn() {
 
-        if tlist.topLayoutNames.count == 0 {
+        if tlist.topLayoutNamesH.count == 0 {
             if navigationItem.leftBarButtonItem != nil {
                 navigationItem.leftBarButtonItem = nil
             }
         } else {
             if navigationItem.leftBarButtonItem == nil {
                 navigationItem.leftBarButtonItem = editBtn
-                //[editBtn release];
             }
         }
 
@@ -934,13 +933,13 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
     // Customize the number of rows in the table view.
     public func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return tlist.topLayoutNames.count
+        return tlist.topLayoutNamesH.count
     }
 
     func pendingNotificationCount() -> Int {
         var erc = 0
         var src = 0
-        for nsn in tlist.topLayoutReminderCount {
+        for nsn in tlist.topLayoutReminderCountH {
             erc += nsn
         }
         for (tid, _) in scheduledReminderCounts {
@@ -951,9 +950,6 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
         return erc > src ? erc - src : 0
     }
-
-    // Customize the appearance of table view cells.
-    //DBGLog(@"rvc table cell at index %d label %@",[indexPath row],[tlist.topLayoutNames objectAtIndex:[indexPath row]]);
 
     static let tableViewCellIdentifier = "Cell"
 
@@ -968,22 +964,19 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
         // Configure the cell.
         let row = indexPath.row
-        if row >= tlist.topLayoutIDs.count {
-            DBGErr("getting toplevel cell for row \(row) but only \(tlist.topLayoutIDs.count) in tlist")
+        if row >= tlist.topLayoutIDsH.count {
+            DBGErr("getting toplevel cell for row \(row) but only \(tlist.topLayoutIDsH.count) in tlist")
             return cell!
         }
-        let tid = tlist.topLayoutIDs[row]
+        let tid = tlist.topLayoutIDsH[row]
         let cellLabel = NSMutableAttributedString()
 
-        let erc = tlist.topLayoutReminderCount[row]
+        let erc = tlist.topLayoutReminderCountH[row]
         let src = scheduledReminderCounts[tid] ?? 0
 
-        DBGLog(String("src: \(src)  erc:  \(erc) \(tlist.topLayoutNames[row]) (\(tid))"))
-        //NSString *formatString = @"%@";
-        //UIColor *bg = [UIColor clearColor];
+        DBGLog(String("src: \(src)  erc:  \(erc) \(tlist.topLayoutNamesH[row]) (\(tid))"))
+
         if erc != src {
-            //formatString = @"> %@";
-            //bg = [UIColor redColor];
             cellLabel.append(
                 NSAttributedString(
                     string: "➜ ",
@@ -992,10 +985,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                         .font: UIFont.boldSystemFont(ofSize: UIFont.labelFontSize)
                     ]))
         }
-        //DBGLog(@"erc= %d  src= %d",erc,src);
-        //[cellLabel appendAttributedString:
-        // [[NSAttributedString alloc]initWithString:(self.tlist.topLayoutNames)[row] attributes:@{NSForegroundColorAttributeName: [UIColor blackColor]}]] ;
-        cellLabel.append(NSAttributedString(string: tlist.topLayoutNames[row]))
+        cellLabel.append(NSAttributedString(string: tlist.topLayoutNamesH[row]))
 
         cell?.textLabel?.attributedText = cellLabel
         cell?.accessibilityIdentifier = "trkr_\(cellLabel.string)"
@@ -1006,7 +996,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         var tn: String?
         let row = indexPath.row
         if NSNotFound != row {
-            tn = tlist.topLayoutNames[row]
+            tn = tlist.topLayoutNamesH[row]
         } else {
             tn = "Sample"
         }

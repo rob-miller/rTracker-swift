@@ -371,6 +371,32 @@ class tObjBase: NSObject {
         }
     }
 
+    func toQry2AryISIII(sql: String) -> [(Int, String, Int, Int, Int)] {
+        tObjBase.performDatabaseOperation(toid: toid) { [self] in
+            
+            SQLDbg(String("toQry2AryISII: \(dbName!) => _\(sql)_"))
+            
+            var stmt: OpaquePointer?
+            if sqlite3_prepare_v2(tDb, sql, -1, &stmt, nil) == SQLITE_OK {
+                var results: [(Int, String, Int, Int, Int)] = []
+                while sqlite3_step(stmt) == SQLITE_ROW {
+                    let i1 = Int(sqlite3_column_int(stmt, 0))
+                    let s1 = String(cString: sqlite3_column_text(stmt, 1)!)
+                    let i2 = Int(sqlite3_column_int(stmt, 2))
+                    let i3 = Int(sqlite3_column_int(stmt, 3))
+                    let i4 = Int(sqlite3_column_int(stmt, 4))
+                    results.append((i1, s1, i2, i3, i4))
+                    SQLDbg(String("  rslt: \(i1) \(s1) \(i2) \(i3) \(i4)"))
+                }
+                sqlite3_finalize(stmt)
+                return results
+            } else {
+                tobPrepError(sql)
+                return [(0, "", 0, 0, 0)]
+            }
+        }
+    }
+    
     func toQry2ArySS(sql: String) -> [(String, String)] {
         tObjBase.performDatabaseOperation(toid: toid) { [self] in
             
@@ -742,6 +768,21 @@ class tObjBase: NSObject {
         }
     }
     
+    func toAddColumnINE(table: String, col: String, typ: String, dflt: String? = nil) {
+        // Check if the column already exists
+        let checkColumnSQL = "SELECT COUNT(*) FROM pragma_table_info('\(table)') WHERE name = '\(col)'"
+        let columnExistsResult = toQry2Str(sql: checkColumnSQL)
+        let columnExists = (Int(columnExistsResult) ?? 0) > 0
+        
+        if !columnExists {
+            //DBGLog("Adding 'hidden' column to toplevel table")
+            let alterTableSQL = "ALTER TABLE \(table) ADD COLUMN \(col) \(typ)\(dflt != nil ? " DEFAULT \(dflt!)" : "")"
+            toExecSql(sql: alterTableSQL)
+        } else {
+            //DBGLog("'hidden' column already exists in toplevel table")
+        }
+    }
+    
     func toQry2Str(sql: String) -> String {
         tObjBase.performDatabaseOperation(toid: toid) { [self] in
             SQLDbg(String("toQry2StrCopy: \(dbName!) => _\(sql)_"))
@@ -767,6 +808,7 @@ class tObjBase: NSObject {
             return srslt
         }
     }
+    
     func toQry2I12aS1(sql: String) -> ([Int], String) {
         tObjBase.performDatabaseOperation(toid: toid) { [self] in
             SQLDbg(String("toQry2AryI11S1: \(dbName!) => _\(sql)_"))

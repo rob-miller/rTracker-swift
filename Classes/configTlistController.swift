@@ -309,19 +309,6 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
 
         title = "Edit trackers"
 
-        /*
-         #else
-            // wipe orphans
-        	UIBarButtonItem *exportBtn = [[UIBarButtonItem alloc]
-        								  initWithTitle:@"wipe orphans"
-        								  style:UIBarButtonItemStylePlain
-        								  target:self
-        								  action:@selector(btnWipeOrphans)];
-
-        #endif
-        */
-        //NSArray *tbArray = [NSArray arrayWithObjects: exportBtn, nil];
-        //self.toolbarItems = tbArray;
         navigationController?.setToolbarHidden(true, animated: false)
         navigationItem.setRightBarButton(menuBtn, animated: false)
 
@@ -472,17 +459,8 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
             delTrackerRecords()
             tableView.reloadRows(at: [deleteIndexPath].compactMap { $0 }, with: .right)
         }
-
         deleteIndexPath = nil
-
     }
-
-    /*
-    - (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
-        [self handleCheckTrackerDelete:buttonIndex];
-    }
-
-    */
 
     // MARK: -
     // MARK: Table view methods
@@ -499,7 +477,10 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
     // Customize the appearance of table view cells.
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         //DBGLog(@"rvc table cell at index %d label %@",[indexPath row],[self.tlist.topLayoutNames objectAtIndex:[indexPath row]]);
-
+        
+        let row = indexPath.row
+        let toid = tlist?.getTIDfromIndex(row) ?? 0
+        
         var cellIdentifier: String
         if selSegNdx == SegmentMoveDelete {
             cellIdentifier = "DeleteCell"
@@ -509,10 +490,11 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
 
         let cell = tableView.dequeueReusableCell(withIdentifier: cellIdentifier) ?? UITableViewCell(style: .default, reuseIdentifier: cellIdentifier)
         cell.backgroundColor = .clear
-
+        if tlist?.isTrackerHidden(toid) ?? false {
+            cell.backgroundColor = hiddenColor
+        }
         // Configure the cell.
-        
-        let row = indexPath.row
+
         cell.textLabel?.text = tlist!.topLayoutNames[row]
         cell.textLabel?.textColor = .label
         cell.accessibilityIdentifier = "configt_\(cell.textLabel!.text!)"
@@ -546,61 +528,102 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
         tlist?.reorderDbFromTLT()
 
     }
+    
+    // Implement the swipe actions method to show both delete and hide/unhide
+    func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+        // Only show swipe actions when in Move/Delete mode
+        guard selSegNdx == SegmentMoveDelete else {
+            return nil
+        }
+        
+        // Get tracker ID for this row
+        let row = indexPath.row
+        let toid = tlist?.getTIDfromIndex(row) ?? 0
+        
+        // Create delete action
+        let deleteAction = UIContextualAction(style: .destructive, title: "Delete") { [weak self] (action, view, completion) in
+            self?.tableView(tableView, commit: .delete, forRowAt: indexPath)
+            completion(true)
+        }
+        deleteAction.backgroundColor = .systemRed
+        
+        // Check if tracker is hidden
+        let isHidden = tlist?.isTrackerHidden(toid) ?? false
+        
+        // Create hide/unhide action
+        let hideAction = UIContextualAction(style: .normal, title: isHidden ? "Reveal" : "Hide") { [weak self] (action, view, completion) in
+            if isHidden {
+                self?.tlist?.unhideTracker(toid)
+            } else {
+                self?.tlist?.hideTracker(toid)
+            }
+            tableView.reloadRows(at: [indexPath], with: .automatic)
+            completion(true)
+        }
+        hideAction.backgroundColor = isHidden ? .systemGreen : .systemBlue
+        hideAction.image = UIImage(systemName: isHidden ? "eye" : "eye.slash")
+        
+        // Configure swipe action
+        let configuration = UISwipeActionsConfiguration(actions: [deleteAction, hideAction])
+        configuration.performsFirstActionWithFullSwipe = false
+        
+        return configuration
+    }
 
     func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
-        deleteIndexPath = indexPath
-
-        let tname = (tlist?.topLayoutNames)?[indexPath.row] as? String
-
-        let toid = tlist?.getTIDfromIndex(indexPath.row) ?? 0
-        let to = trackerObj(toid)
-        let entries = to.countEntries()
-
-        let title = "Delete tracker \(tname ?? "")"
-        var msg: String?
-        let btn0 = "Cancel"
-        let btn1 = "Delete tracker"
-        var btn2: String?
-
-        if entries == 0 {
-            msg = "Tracker \(tname ?? "") has no records."
-            btn2 = nil
-        } else {
-            btn2 = "Remove records only"
-            if entries == 1 {
-                msg = "Tracker \(tname ?? "") has 1 record."
+        // Only handle delete case, hide/unhide is handled by swipe actions
+        if editingStyle == .delete {
+            deleteIndexPath = indexPath
+            
+            let tname = (tlist?.topLayoutNames)?[indexPath.row] as? String
+            
+            let toid = tlist?.getTIDfromIndex(indexPath.row) ?? 0
+            let to = trackerObj(toid)
+            let entries = to.countEntries()
+            
+            let title = "Delete tracker \(tname ?? "")"
+            var msg: String?
+            let btn0 = "Cancel"
+            let btn1 = "Delete tracker"
+            var btn2: String?
+            
+            if entries == 0 {
+                msg = "Tracker \(tname ?? "") has no records."
+                btn2 = nil
             } else {
-                msg = "Tracker \(tname ?? "") has \(entries) records."
+                btn2 = "Remove records only"
+                if entries == 1 {
+                    msg = "Tracker \(tname ?? "") has 1 record."
+                } else {
+                    msg = "Tracker \(tname ?? "") has \(entries) records."
+                }
             }
-        }
-
-        let alert = UIAlertController(
-            title: title,
-            message: msg,
-            preferredStyle: .alert)
-
-        let cancelAction = UIAlertAction(title: btn0, style: .default, handler: { [self] action in
-            handleCheckTrackerDelete(0)
-        })
-        let deleteAction = UIAlertAction(title: btn1, style: .default, handler: { [self] action in
-            handleCheckTrackerDelete(1)
-        })
-        alert.addAction(cancelAction)
-        alert.addAction(deleteAction)
-
-        if let btn2 {
-            let deleteRecordsAction = UIAlertAction(title: btn2, style: .default, handler: { [self] action in
-                handleCheckTrackerDelete(2)
+            
+            let alert = UIAlertController(
+                title: title,
+                message: msg,
+                preferredStyle: .alert)
+            
+            let cancelAction = UIAlertAction(title: btn0, style: .default, handler: { [self] action in
+                handleCheckTrackerDelete(0)
             })
-            alert.addAction(deleteRecordsAction)
+            let deleteAction = UIAlertAction(title: btn1, style: .default, handler: { [self] action in
+                handleCheckTrackerDelete(1)
+            })
+            alert.addAction(cancelAction)
+            alert.addAction(deleteAction)
+            
+            if let btn2 {
+                let deleteRecordsAction = UIAlertAction(title: btn2, style: .default, handler: { [self] action in
+                    handleCheckTrackerDelete(2)
+                })
+                alert.addAction(deleteRecordsAction)
+            }
+            
+            
+            present(alert, animated: true)
+            
         }
-
-
-        present(alert, animated: true)
-
-
-
-
     }
 
     // Override to support row selection in the table view.

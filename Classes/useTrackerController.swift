@@ -393,7 +393,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         
         DispatchQueue.main.async {
             // Clear only the current record's HK and OT data
-            for vo in self.tracker!.valObjTable {
+            for vo in self.tracker!.valObjTableH {
                 vo.vos?.clearHKdata(forDate: currentDate)
                 vo.vos?.clearOTdata(forDate: currentDate)
                 vo.vos?.clearFNdata(forDate: currentDate)
@@ -431,7 +431,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             //self.tracker!.toExecSql(sql: sql)
             
             // delete all voData sourced from HealthKit and other trackers
-            for vo in self.tracker!.valObjTable {
+            for vo in self.tracker!.valObjTableH {
                 vo.vos?.clearHKdata()  // re-load all hk data
                 vo.vos?.clearOTdata()
                 vo.vos?.clearFNdata()
@@ -1614,7 +1614,6 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     // Customize the number of rows in the table view.
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        //return 0;  //[rTrackerAppDelegate.topLayoutTable count];
         return tracker!.valObjTableH.count
     }
 

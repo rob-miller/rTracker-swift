@@ -119,7 +119,7 @@ struct otViewController: View {
             .onAppear {
                 // Set the first tracker if currentTracker is nil
                 if currentTracker == nil {
-                    let trackers = tlist.toQry2AryS(sql: "select name from toplevel where priv <= \(privacyValue)")
+                    let trackers = tlist.topLayoutNames
                     let filteredTrackers = trackers.filter { $0 != callerTrackerName }
                     if !filteredTrackers.isEmpty {
                         currentTracker = filteredTrackers[0]
@@ -131,7 +131,7 @@ struct otViewController: View {
     
     var trackerPicker: some View {
         // Get all trackers
-        let allTrackers = tlist.toQry2AryS(sql: "select name from toplevel where priv <= \(privacyValue)")
+        let allTrackers = tlist.topLayoutNames
         // Filter out the caller's tracker
         let filteredTrackers = allTrackers  // .filter { $0 != callerTrackerName }
         

@@ -35,6 +35,7 @@ let DBLRANDOM = Double(arc4random()) / 0x100000000
 
 // tag for background view to un/hide
 let BGTAG = 99
+let hiddenColor = UIColor(red: 0.9, green: 0.95, blue: 1.0, alpha: 0.6)
 
 let LABELMINHEIGHT = 31.0  // uiswitch minimum intrinsic height
 

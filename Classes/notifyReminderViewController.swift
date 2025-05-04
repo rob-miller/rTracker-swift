@@ -88,7 +88,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         if nil == _everyTrackerNames {
             _everyTrackerNames = []
             _everyTrackerNames?.append(tracker!.trackerName!)
-            for vo in tracker!.valObjTable{
+            for vo in tracker!.valObjTableH{
                 _everyTrackerNames!.append(vo.valueName!)
             }
         }
@@ -496,9 +496,9 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
             if nr!.fromLast {
                 fromLastButton.isSelected = true
                 if nr!.vid != 0 {
-                    let c = tracker?.valObjTable.count ?? 0
+                    let c = tracker?.valObjTableH.count ?? 0
                     for i in 0..<c {
-                        if nr!.vid == ((tracker!.valObjTable)[i]).vid {
+                        if nr!.vid == ((tracker!.valObjTableH)[i]).vid {
                             everyTrackerNdx = i + 1
                         }
                     }
@@ -604,7 +604,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
             nr?.everyMode = everyMode
             nr?.fromLast = fromLastButton.isSelected
             if !everyTrackerButton.isHidden {
-                nr?.vid = (everyTrackerNdx != 0 ? ((tracker?.valObjTable)?[everyTrackerNdx - 1] as? valueObj)?.vid : 0) ?? 0
+                nr?.vid = (everyTrackerNdx != 0 ? ((tracker?.valObjTableH)?[everyTrackerNdx - 1] as? valueObj)?.vid : 0) ?? 0
             }
             for i in 0..<7 {
                 if ((weekdayBtns)?[i] as? UIButton)?.isSelected ?? false {
@@ -975,7 +975,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         if lastDefaultMsg == msgTF.text {
             if !(fromLastButton.isHidden) && (fromLastButton.isSelected) {
                 if everyTrackerNdx != 0 {
-                    msgTF.text = "\(tracker?.trackerName ?? "") : \(((tracker?.valObjTable)?[everyTrackerNdx - 1] as? valueObj)?.valueName ?? "")"
+                    msgTF.text = "\(tracker?.trackerName ?? "") : \(((tracker?.valObjTableH)?[everyTrackerNdx - 1] as? valueObj)?.valueName ?? "")"
                     lastDefaultMsg = msgTF.text
                     return
                 }
