@@ -1310,7 +1310,7 @@ extension TrackerChart {
         
         if !numericData.isEmpty {
             // Check if this is a function that should be treated as boolean
-            if shouldTreatAsBooleanFunction(numericData, selectionVO) {
+            if shouldTreatFunctionAsBoolean(numericData, selectionVO) {
                 var trueValues: [Double] = []
                 var falseValues: [Double] = []
                 var noEntryValues: [Double] = []
@@ -1421,7 +1421,7 @@ extension TrackerChart {
         }
     }
     
-    internal func shouldTreatAsBooleanFunction(_ values: [(Date, Double)], _ vo: valueObj?) -> Bool {
+    internal func shouldTreatFunctionAsBoolean(_ values: [(Date, Double)], _ vo: valueObj?) -> Bool {
         guard let vo = vo, vo.vtype == VOT_FUNC else { return false }
         
         // Get unique values excluding no-entry (0)
