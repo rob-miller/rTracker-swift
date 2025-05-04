@@ -119,6 +119,9 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     internal var sliderHeightConstraint: NSLayoutConstraint!
     internal var sliderContainerHeightConstraint: NSLayoutConstraint!
     
+    // Entry count label
+    internal var entryCountLabel: UILabel!
+    
     // Data selection
     internal var selectedValueObjIDs: [String: Int] = [:]
     internal var allowedValueObjTypes: [String: [Int]] = [:]
@@ -379,6 +382,14 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         sliderContainer.addSubview(startDateTextTappable)
         sliderContainer.addSubview(endDateTextTappable)
         
+        // Create entry count label
+        entryCountLabel = UILabel()
+        entryCountLabel.translatesAutoresizingMaskIntoConstraints = false
+        entryCountLabel.font = UIFont.systemFont(ofSize: 14, weight: .medium)
+        entryCountLabel.textColor = .secondaryLabel
+        entryCountLabel.textAlignment = .center
+        sliderContainer.addSubview(entryCountLabel)
+        
         /*
          // Add these lines to highlight the sliderContainer for debugging
          sliderContainer.layer.borderWidth = 2.0
@@ -427,17 +438,12 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             endDateTextTappable.widthAnchor.constraint(equalTo: sliderContainer.widthAnchor, multiplier: 0.45),
             endDateTextTappable.heightAnchor.constraint(equalToConstant: 30),
             
-            /*
-             // Position original labels below sliders
-             startDateLabel.topAnchor.constraint(equalTo: endDateSlider.bottomAnchor, constant: 8),
-             startDateLabel.leadingAnchor.constraint(equalTo: sliderContainer.leadingAnchor),
-             startDateLabel.widthAnchor.constraint(equalTo: sliderContainer.widthAnchor, multiplier: 0.5),
-             
-             endDateLabel.topAnchor.constraint(equalTo: endDateSlider.bottomAnchor, constant: 8),
-             endDateLabel.trailingAnchor.constraint(equalTo: sliderContainer.trailingAnchor),
-             endDateLabel.widthAnchor.constraint(equalTo: sliderContainer.widthAnchor, multiplier: 0.5),
-             */
-            
+            // Position entry count label between start and end date labels
+            entryCountLabel.centerXAnchor.constraint(equalTo: sliderContainer.centerXAnchor),
+            entryCountLabel.centerYAnchor.constraint(equalTo: startDateTextTappable.centerYAnchor),
+            entryCountLabel.widthAnchor.constraint(equalTo: sliderContainer.widthAnchor, multiplier: 0.3),
+            entryCountLabel.heightAnchor.constraint(equalToConstant: 30),
+
             //sliderContainer.bottomAnchor.constraint(equalTo: endDateLabel.bottomAnchor, constant: 10)
             sliderContainer.bottomAnchor.constraint(equalTo: endDateTextTappable.bottomAnchor, constant: 10)
         ])
@@ -957,7 +963,20 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         return attributedTitle
     }
 
- 
+    internal func countEntriesBetweenDates(start: Date, end: Date) -> Int {
+        guard let tracker = tracker else { return 0 }
+        
+        let startTimestamp = Int(start.timeIntervalSince1970)
+        let endTimestamp = Int(end.timeIntervalSince1970)
+        
+        let sql = """
+        SELECT COUNT(date) FROM voData 
+        WHERE date >= \(startTimestamp) AND date <= \(endTimestamp)
+        """
+        return tracker.toQry2Int(sql: sql)
+
+    }
+    
     // Update date labels with current date values
     internal func updateDateLabels() {
         // Set default dates if not set yet
@@ -1029,6 +1048,14 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         // Keep original labels updated for compatibility (though they're hidden)
         startDateLabel.text = startDateStr
         endDateLabel.text = endDateStr
+        
+        // Update entry count label
+        if let startDate = selectedStartDate, let endDate = selectedEndDate {
+            let count = countEntriesBetweenDates(start: startDate, end: endDate)
+            entryCountLabel.text = "\(count)"
+        } else {
+            entryCountLabel.text = "0"
+        }
     }
     
     // MARK: - Utility Functions
