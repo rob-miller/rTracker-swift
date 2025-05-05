@@ -136,6 +136,18 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     internal var selectedStartDate: Date?
     internal var selectedEndDate: Date?
     
+    // zoom switch and slider
+    internal var dateRangeZoomSwitch: UISwitch!
+    internal var dateRangeZoomIcon: UIImageView!
+    internal var dateRangeZoomSlider: UISlider!
+    internal var zoomedEarliestDate: Date? // The zoomed earliest date
+    internal var isDateRangeZoomed: Bool = false // Track the zoom state
+    internal var dateRangeZoomContainer: UIView! // Container for zoom slider
+    // height constraint property
+    internal var zoomContainerHeightConstraint: NSLayoutConstraint!
+    // track whether zoom is applied (separate from UI visibility)
+    internal var isZoomActive: Bool = false
+    
     // Chart data
     internal var chartData: [String: Any] = [:]
     
@@ -358,6 +370,19 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         dateRangeLabel.text = "Date Range"
         dateRangeLabel.font = UIFont.boldSystemFont(ofSize: 14)
         
+        // Create zoom icon
+        dateRangeZoomIcon = UIImageView(image: UIImage(systemName: "magnifyingglass"))
+        dateRangeZoomIcon.translatesAutoresizingMaskIntoConstraints = false
+        dateRangeZoomIcon.tintColor = .secondaryLabel
+        dateRangeZoomIcon.contentMode = .scaleAspectFit
+        dateRangeZoomIcon.alpha = 0.5 // Greyed out initially
+        
+        // Create zoom switch
+        dateRangeZoomSwitch = UISwitch()
+        dateRangeZoomSwitch.translatesAutoresizingMaskIntoConstraints = false
+        dateRangeZoomSwitch.isOn = false
+        dateRangeZoomSwitch.addTarget(self, action: #selector(dateRangeZoomChanged), for: .valueChanged)
+        
         // Create lock icon
         dateRangeLockIcon = UIImageView(image: UIImage(systemName: "lock"))
         dateRangeLockIcon.translatesAutoresizingMaskIntoConstraints = false
@@ -372,23 +397,67 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         dateRangeLockSwitch.isEnabled = false // Disabled initially
         dateRangeLockSwitch.addTarget(self, action: #selector(dateRangeLockChanged), for: .valueChanged)
         
-        sliderContainer.addSubview(dateRangeLabel)
-        sliderContainer.addSubview(dateRangeLockIcon)
-        sliderContainer.addSubview(dateRangeLockSwitch)
-        sliderContainer.addSubview(startDateSlider)
-        sliderContainer.addSubview(endDateSlider)
-        //sliderContainer.addSubview(startDateLabel)
-        //sliderContainer.addSubview(endDateLabel)
-        sliderContainer.addSubview(startDateTextTappable)
-        sliderContainer.addSubview(endDateTextTappable)
-        
         // Create entry count label
         entryCountLabel = UILabel()
         entryCountLabel.translatesAutoresizingMaskIntoConstraints = false
         entryCountLabel.font = UIFont.systemFont(ofSize: 14, weight: .medium)
         entryCountLabel.textColor = .secondaryLabel
         entryCountLabel.textAlignment = .center
+        
+        
+        // Create a special container just for the configurable elements
+        let configControlsContainer = UIView()
+        configControlsContainer.translatesAutoresizingMaskIntoConstraints = false
+        sliderContainer.addSubview(configControlsContainer)
+        
+        
+        sliderContainer.addSubview(dateRangeLabel)
+        sliderContainer.addSubview(dateRangeZoomIcon)
+        sliderContainer.addSubview(dateRangeZoomSwitch)
+        sliderContainer.addSubview(dateRangeLockIcon)
+        sliderContainer.addSubview(dateRangeLockSwitch)
+        sliderContainer.addSubview(startDateSlider)
+        sliderContainer.addSubview(endDateSlider)
+        sliderContainer.addSubview(startDateTextTappable)
+        sliderContainer.addSubview(endDateTextTappable)
         sliderContainer.addSubview(entryCountLabel)
+        
+        
+        
+        
+        // Create zoom range slider container (hidden initially)
+        dateRangeZoomContainer = UIView()
+        dateRangeZoomContainer.translatesAutoresizingMaskIntoConstraints = false
+        dateRangeZoomContainer.isHidden = true
+        //sliderContainer.addSubview(dateRangeZoomContainer)
+
+        // Add the dynamic elements to the config container
+        configControlsContainer.addSubview(dateRangeZoomContainer)
+        
+        // Create zoom slider
+        dateRangeZoomSlider = UISlider()
+        dateRangeZoomSlider.translatesAutoresizingMaskIntoConstraints = false
+        dateRangeZoomSlider.minimumValue = 0
+        dateRangeZoomSlider.maximumValue = 1
+        dateRangeZoomSlider.value = 0
+        dateRangeZoomSlider.addTarget(self, action: #selector(zoomSliderChanged), for: .valueChanged)
+        dateRangeZoomSlider.minimumTrackTintColor = .systemOrange
+        dateRangeZoomSlider.maximumTrackTintColor = .systemGray3
+        dateRangeZoomSlider.thumbTintColor = .systemOrange
+        dateRangeZoomContainer.addSubview(dateRangeZoomSlider)
+        
+        // Label for zoom slider
+        let zoomSliderLabel = UILabel()
+        zoomSliderLabel.translatesAutoresizingMaskIntoConstraints = false
+        zoomSliderLabel.text = "Start Date Offset"
+        zoomSliderLabel.font = UIFont.systemFont(ofSize: 12)
+        zoomSliderLabel.textColor = .secondaryLabel
+        dateRangeZoomContainer.addSubview(zoomSliderLabel)
+
+        
+        // Create zoom container height constraint
+        zoomContainerHeightConstraint = dateRangeZoomContainer.heightAnchor.constraint(equalToConstant: 0)
+        zoomContainerHeightConstraint.isActive = true // Initially collapsed
         
         /*
          // Add these lines to highlight the sliderContainer for debugging
@@ -407,21 +476,27 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             dateRangeLockIcon.widthAnchor.constraint(equalToConstant: 16),
             dateRangeLockIcon.heightAnchor.constraint(equalToConstant: 16),
             
+            // Position zoom icon and switch
+            dateRangeZoomIcon.centerYAnchor.constraint(equalTo: dateRangeLabel.centerYAnchor),
+            dateRangeZoomIcon.trailingAnchor.constraint(equalTo: dateRangeZoomSwitch.leadingAnchor, constant: -8),
+            dateRangeZoomIcon.widthAnchor.constraint(equalToConstant: 16),
+            dateRangeZoomIcon.heightAnchor.constraint(equalToConstant: 16),
+            
+            dateRangeZoomSwitch.centerYAnchor.constraint(equalTo: dateRangeLabel.centerYAnchor),
+            dateRangeZoomSwitch.trailingAnchor.constraint(equalTo: dateRangeLockIcon.leadingAnchor, constant: -16),
+            
             // Position lock switch
             dateRangeLockSwitch.centerYAnchor.constraint(equalTo: dateRangeLabel.centerYAnchor),
             dateRangeLockSwitch.trailingAnchor.constraint(equalTo: sliderContainer.trailingAnchor),
             
-            // Increase the spacing between elements
-            //startDateSlider.topAnchor.constraint(equalTo: startDateTextTappable.bottomAnchor, constant: 10),
+            // Regular date sliders - position after the header
             startDateSlider.topAnchor.constraint(equalTo: dateRangeLockSwitch.bottomAnchor, constant: 10),
             startDateSlider.leadingAnchor.constraint(equalTo: sliderContainer.leadingAnchor),
             startDateSlider.trailingAnchor.constraint(equalTo: sliderContainer.trailingAnchor),
             
-            // Increase the spacing between sliders
             endDateSlider.topAnchor.constraint(equalTo: startDateSlider.bottomAnchor, constant: 15),
             endDateSlider.leadingAnchor.constraint(equalTo: sliderContainer.leadingAnchor),
             endDateSlider.trailingAnchor.constraint(equalTo: sliderContainer.trailingAnchor),
-            
             
             // Position start date tappable label
             //startDateTextTappable.topAnchor.constraint(equalTo: dateRangeLabel.bottomAnchor, constant: 12),
@@ -443,11 +518,132 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             entryCountLabel.centerYAnchor.constraint(equalTo: startDateTextTappable.centerYAnchor),
             entryCountLabel.widthAnchor.constraint(equalTo: sliderContainer.widthAnchor, multiplier: 0.3),
             entryCountLabel.heightAnchor.constraint(equalToConstant: 30),
-
-            //sliderContainer.bottomAnchor.constraint(equalTo: endDateLabel.bottomAnchor, constant: 10)
-            sliderContainer.bottomAnchor.constraint(equalTo: endDateTextTappable.bottomAnchor, constant: 10)
+            
+            // Config container starts after the date labels
+            configControlsContainer.topAnchor.constraint(equalTo: startDateTextTappable.bottomAnchor, constant: 12),
+            configControlsContainer.leadingAnchor.constraint(equalTo: sliderContainer.leadingAnchor),
+            configControlsContainer.trailingAnchor.constraint(equalTo: sliderContainer.trailingAnchor),
+            configControlsContainer.bottomAnchor.constraint(equalTo: sliderContainer.bottomAnchor),
+            
+            // Position zoom container inside the config container
+            dateRangeZoomContainer.topAnchor.constraint(equalTo: configControlsContainer.topAnchor),
+            dateRangeZoomContainer.leadingAnchor.constraint(equalTo: configControlsContainer.leadingAnchor),
+            dateRangeZoomContainer.trailingAnchor.constraint(equalTo: configControlsContainer.trailingAnchor),
+            // Height constraint is managed separately
+            
+            // Zoom slider and label constraints
+            zoomSliderLabel.topAnchor.constraint(equalTo: dateRangeZoomContainer.topAnchor),
+            zoomSliderLabel.leadingAnchor.constraint(equalTo: dateRangeZoomContainer.leadingAnchor),
+            
+            dateRangeZoomSlider.topAnchor.constraint(equalTo: zoomSliderLabel.bottomAnchor, constant: 4),
+            dateRangeZoomSlider.leadingAnchor.constraint(equalTo: dateRangeZoomContainer.leadingAnchor),
+            dateRangeZoomSlider.trailingAnchor.constraint(equalTo: dateRangeZoomContainer.trailingAnchor),
+            dateRangeZoomSlider.bottomAnchor.constraint(equalTo: dateRangeZoomContainer.bottomAnchor, constant: -4),
+            
+            // Make the container bottom anchor depend on the zoom container visibility
+            sliderContainer.bottomAnchor.constraint(equalTo: dateRangeZoomContainer.bottomAnchor, constant: 10)
         ])
         
+    }
+
+    @objc internal func dateRangeZoomChanged(_ sender: UISwitch) {
+        isDateRangeZoomed = sender.isOn
+        
+        // Toggle the height constraint with animation
+        UIView.animate(withDuration: 0.4, delay: 0, options: .curveEaseInOut) {
+            // Update icon
+            self.dateRangeZoomIcon.alpha = self.isDateRangeZoomed ? 1.0 : 0.5
+            
+            // Manage height constraint
+            if self.isDateRangeZoomed {
+                self.dateRangeZoomContainer.alpha = 1.0
+                self.dateRangeZoomContainer.isHidden = false
+                self.zoomContainerHeightConstraint.constant = 50
+            } else {
+                self.dateRangeZoomContainer.alpha = 0.0
+                self.zoomContainerHeightConstraint.constant = 0
+            }
+            
+            // Force layout update
+            self.view.layoutIfNeeded() // Update the entire view hierarchy
+        } completion: { _ in
+            if !self.isDateRangeZoomed {
+                self.dateRangeZoomContainer.isHidden = true
+            }
+        }
+        
+        // This handles the zoom functionality initialization only
+        if isDateRangeZoomed && zoomedEarliestDate == nil {
+            zoomedEarliestDate = earliestDate
+            dateRangeZoomSlider.value = 0
+        }
+    }
+    
+    // handle zoom slider changes
+    @objc internal func zoomSliderChanged(_ sender: UISlider) {
+        guard let earliest = earliestDate, let latest = latestDate else { return }
+        
+        // Activate zoom when slider is moved from zero
+        if sender.value > 0 {
+            isZoomActive = true
+        } else {
+            isZoomActive = false
+        }
+        
+        // Calculate new zoomed earliest date
+        let fullRange = latest.timeIntervalSince(earliest)
+        let zoomPercentage = Double(sender.value)
+        let zoomedTimeInterval = fullRange * zoomPercentage
+        zoomedEarliestDate = earliest.addingTimeInterval(zoomedTimeInterval)
+        
+        // Update the start and end date sliders to use the new range
+        updateDateSlidersForZoomedRange()
+        
+        // Update the chart
+        updateChartDataWithDebounce()
+    }
+    
+    // Helper method to update date sliders for zoomed range
+    private func updateDateSlidersForZoomedRange() {
+        guard let zoomedEarliest = zoomedEarliestDate,
+              let latest = latestDate,
+              let currentStart = selectedStartDate,
+              let _ = selectedEndDate else { return }
+        
+        // Calculate where current selection sits in zoomed range
+        let zoomedRange = latest.timeIntervalSince(zoomedEarliest)
+        
+        // Adjust if current selections are outside zoomed range
+        if currentStart < zoomedEarliest {
+            selectedStartDate = zoomedEarliest
+        }
+        
+        // Update slider values based on new range
+        if zoomedRange > 0 {
+            startDateSlider.value = Float((selectedStartDate!.timeIntervalSince(zoomedEarliest)) / zoomedRange)
+            endDateSlider.value = Float((selectedEndDate!.timeIntervalSince(zoomedEarliest)) / zoomedRange)
+        }
+        
+        // Update date labels
+        updateDateLabels()
+    }
+    
+    // Helper to reset to full date range -- not used
+    private func resetToFullDateRange() {
+        guard let earliest = earliestDate, let latest = latestDate else { return }
+        
+        // Reset the effective earliest date
+        zoomedEarliestDate = earliest
+        
+        // Update slider values based on full range
+        let fullRange = latest.timeIntervalSince(earliest)
+        if fullRange > 0 {
+            startDateSlider.value = Float((selectedStartDate!.timeIntervalSince(earliest)) / fullRange)
+            endDateSlider.value = Float((selectedEndDate!.timeIntervalSince(earliest)) / fullRange)
+        }
+        
+        // Update date labels
+        updateDateLabels()
     }
     
     // Add new methods to toggle between date formats
@@ -1158,17 +1354,21 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     }
     
     @objc internal func dateSliderChanged(_ sender: UISlider) {
+        // Use zoomedEarliestDate instead of earliestDate if zoom is active
+        let effectiveEarliestDate = isZoomActive ? zoomedEarliestDate : earliestDate
+
         // If we don't have date ranges yet, use default range of last year
-        if earliestDate == nil || latestDate == nil {
+        if effectiveEarliestDate == nil || latestDate == nil {
             let now = Date()
             let calendar = Calendar.current
             earliestDate = calendar.date(byAdding: .year, value: -1, to: now)
             latestDate = now
+            zoomedEarliestDate = earliestDate
         }
         
-        guard let earliestDate = earliestDate, let latestDate = latestDate else { return }
+        guard let effectiveEarliestDate = effectiveEarliestDate, let latestDate = latestDate else { return }
         
-        let timeRange = max(1.0, latestDate.timeIntervalSince(earliestDate)) // Ensure non-zero range
+        let timeRange = max(1.0, latestDate.timeIntervalSince(effectiveEarliestDate)) // Ensure non-zero range
         let calendar = Calendar.current
         
         // Store previous dates for lock mode calculations
@@ -1185,7 +1385,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         if sender == startDateSlider {
             // Calculate new start date
             let startInterval = TimeInterval(sender.value) * timeRange
-            selectedStartDate = earliestDate.addingTimeInterval(startInterval)
+            selectedStartDate = effectiveEarliestDate.addingTimeInterval(startInterval)
             
             if dateRangeLockSwitch.isOn {
                 // Lock mode: Keep date range constant
@@ -1195,7 +1395,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
                     
                     // Update end slider position
                     if let endDate = selectedEndDate {
-                        let endInterval = endDate.timeIntervalSince(earliestDate)
+                        let endInterval = endDate.timeIntervalSince(effectiveEarliestDate)
                         let normalizedEndValue = Float(min(1.0, endInterval / timeRange))
                         endDateSlider.value = normalizedEndValue
                         
@@ -1207,7 +1407,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
                             
                             // Adjust start date back by daysBetweenDates
                             selectedStartDate = calendar.date(byAdding: .day, value: -daysBetweenDates, to: latestDate)
-                            let adjustedStartInterval = selectedStartDate!.timeIntervalSince(earliestDate)
+                            let adjustedStartInterval = selectedStartDate!.timeIntervalSince(effectiveEarliestDate)
                             startDateSlider.value = Float(max(0.0, min(1.0, adjustedStartInterval / timeRange)))
                         }
                     }
@@ -1221,7 +1421,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
                     if endDate < minEndDate {
                         // Push end date forward
                         selectedEndDate = minEndDate
-                        let endInterval = minEndDate.timeIntervalSince(earliestDate)
+                        let endInterval = minEndDate.timeIntervalSince(effectiveEarliestDate)
                         endDateSlider.value = Float(min(1.0, endInterval / timeRange))
                     }
                 }
@@ -1229,7 +1429,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         } else if sender == endDateSlider {
             // Calculate new end date
             let endInterval = TimeInterval(sender.value) * timeRange
-            selectedEndDate = earliestDate.addingTimeInterval(endInterval)
+            selectedEndDate = effectiveEarliestDate.addingTimeInterval(endInterval)
             
             if dateRangeLockSwitch.isOn {
                 // Lock mode: Keep date range constant
@@ -1239,19 +1439,19 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
                     
                     // Update start slider position
                     if let startDate = selectedStartDate {
-                        let startInterval = startDate.timeIntervalSince(earliestDate)
+                        let startInterval = startDate.timeIntervalSince(effectiveEarliestDate)
                         let normalizedStartValue = Float(max(0.0, startInterval / timeRange))
                         startDateSlider.value = normalizedStartValue
                         
                         // Ensure start date doesn't go below earliest date
-                        if startDate < earliestDate {
+                        if startDate < effectiveEarliestDate {
                             // Adjust both sliders to respect the boundary
                             selectedStartDate = earliestDate
                             startDateSlider.value = 0.0
                             
                             // Adjust end date forward by daysBetweenDates
-                            selectedEndDate = calendar.date(byAdding: .day, value: daysBetweenDates, to: earliestDate)
-                            let adjustedEndInterval = selectedEndDate!.timeIntervalSince(earliestDate)
+                            selectedEndDate = calendar.date(byAdding: .day, value: daysBetweenDates, to: effectiveEarliestDate)
+                            let adjustedEndInterval = selectedEndDate!.timeIntervalSince(effectiveEarliestDate)
                             endDateSlider.value = Float(min(1.0, adjustedEndInterval / timeRange))
                         }
                     }
@@ -1265,7 +1465,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
                     if startDate > minStartDate {
                         // Push start date backward
                         selectedStartDate = minStartDate
-                        let startInterval = minStartDate.timeIntervalSince(earliestDate)
+                        let startInterval = minStartDate.timeIntervalSince(effectiveEarliestDate)
                         startDateSlider.value = Float(max(0.0, startInterval / timeRange))
                     }
                 }
@@ -1559,6 +1759,9 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         
         selectedStartDate = earliestDate
         selectedEndDate = latestDate
+        
+        // Initialize zoom-related properties
+        zoomedEarliestDate = earliestDate
         
         // Update date labels
         updateDateLabels()
