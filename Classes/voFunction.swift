@@ -532,7 +532,6 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             DBGLog(String("ep \(ndx) ->offset \(ival): \(qdate(epDate))"))
             #endif
         }
-        //sql = nil;
 
         return epDate
     }
@@ -1100,6 +1099,12 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
 
     func trimFnVals(_ frep0: Int) {
         // deletes duplicate date entries depending on ep0
+        //  only called (from doTrimFnVals)
+        // if ep0 is calendar days/weeks/months/years
+        // and calOnlyLast ('only last') is true
+        
+        // this makes it so, e.g. 'total value for calendar month' only shows
+        // at end of month instead of increasing every day of the month
         
         DBGLog(String("ep= \(frep0)"))
         var sql: String
@@ -1229,7 +1234,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
     
     override func doTrimFnVals() {
         let frep0 = Int(vo.optDict["frep0"]!)!
-        if ISCALFREP(frep0) && (vo.optDict["graphlast"] != "0") && MyTracker.goRecalculate {
+        if ISCALFREP(frep0) && (vo.optDict["calOnlyLast"] != "0") && MyTracker.goRecalculate {
             trimFnVals(frep0)
         }
     }
@@ -1257,8 +1262,8 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         if nil == vo.optDict["autoscale"] {
             vo.optDict["autoscale"] = AUTOSCALEDFLT ? "1" : "0"
         }
-        if nil == vo.optDict["graphlast"] {
-            vo.optDict["graphlast"] = GRAPHLASTDFLT ? "1" : "0"
+        if nil == vo.optDict["calOnlyLast"] {
+            vo.optDict["calOnlyLast"] = CALONLYLASTDFLT ? "1" : "0"
         }
 
         return super.setOptDictDflts()
@@ -1276,7 +1281,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             || ((key == "fnddp") && (Int(val!) == FDDPDFLT))
             || ((key == "func") && (val! == ""))
             || ((key == "autoscale") && (val! == (AUTOSCALEDFLT ? "1" : "0")))
-            || ((key == "graphlast") && (val! == (GRAPHLASTDFLT ? "1" : "0"))) {
+            || ((key == "calOnlyLast") && (val! == (CALONLYLASTDFLT ? "1" : "0"))) {
             vo.optDict.removeValue(forKey: key)
             return true
         }

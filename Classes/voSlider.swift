@@ -237,9 +237,6 @@ class voSlider: voState {
         if nil == vo.optDict["integerstepsb"] {
             vo.optDict["integerstepsb"] = INTEGERSTEPSBDFLT ? "1" : "0"
         }
-        if nil == vo.optDict["defaultenabledb"] {
-            vo.optDict["defaultenabledb"] = DEFAULTENABLEDBDFLT ? "1" : "0"
-        }
 
         if nil == vo.optDict["slidrswlb"] {
             vo.optDict["slidrswlb"] = SLIDRSWLBDFLT ? "1" : "0"
@@ -262,11 +259,6 @@ class voSlider: voState {
         }
 
         if (key == "integerstepsb") && (val == (INTEGERSTEPSBDFLT ? "1" : "0")) {
-            vo.optDict.removeValue(forKey: key)
-            return true
-        }
-
-        if (key == "defaultenabledb") && (val == (DEFAULTENABLEDBDFLT ? "1" : "0")) {
             vo.optDict.removeValue(forKey: key)
             return true
         }
@@ -403,28 +395,6 @@ class voSlider: voState {
             key: "sswlBtn",
             state: (vo.optDict["slidrswlb"] == "1") /* default:0 */,
             addsv: true)
-
-
-
-        /* 
-             * need more thought here -- if slider is enabled by default, can't open and leave without asking to save ?
-             *  /
-
-            frame.origin.x = MARGIN;
-        	frame.origin.y += labframe.size.height + MARGIN;
-
-            labframe = [ctvovc configLabel:@"default enabled:" frame:frame key:@"sdeLab" addsv:YES];
-
-            frame = (CGRect) {labframe.size.width+MARGIN+SPACE, frame.origin.y,labframe.size.height,labframe.size.height};
-
-            frame = [ctvovc configCheckButton:frame
-                                  key:@"sdeBtn"
-                                state:[(self.vo.optDict)[@"defaultenabledb"] isEqualToString:@"1"] // default:0
-                                addsv:YES
-             ];
-            */
-
-
 
         ctvovc.lasty = frame.origin.y + labframe.size.height + MARGIN
         super.voDrawOptions(ctvovc)

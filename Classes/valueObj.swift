@@ -83,7 +83,6 @@ let ASFROMZERODFLT = true
 let SHRINKBDFLT = false
 let EXPORTVALBDFLT = false
 let INTEGERSTEPSBDFLT = false
-let DEFAULTENABLEDBDFLT = false
 let SLIDRSWLBDFLT = false
 let TBNLDFLT = false
 let TBNIDFLT = true
@@ -96,7 +95,7 @@ let AHPREVDDFLT = false
 let OTSRCDFLT = false
 let OTCURRDFLT = false
 let HRSMINSDFLT = false
-let GRAPHLASTDFLT = true
+let CALONLYLASTDFLT = true
 let SETSTRACKERDATEDFLT = false
 let HIDDENDFLT = false
 

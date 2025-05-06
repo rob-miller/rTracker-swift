@@ -100,18 +100,13 @@ extension voFunction {
             }
 
             if (0 == component) && (ISCALFREP(Int(vo.optDict[key]!)!)) {
-                let ckBtn = (ctvovcp?.wDict)?["graphLastBtn"] as? UISwitch // UIButton
-                let state = !(vo.optDict["graphlast"] == "0") // default:1
+                let ckBtn = (ctvovcp?.wDict)?["calOnlyLastBtn"] as? UISwitch // UIButton
+                let state = !(vo.optDict["calOnlyLast"] == "0") // default:1
                 ckBtn?.isOn = state
-                /*
-                ckBtn?.setImage(
-                    UIImage(named: state ? "checked.png" : "unchecked.png"),
-                    for: .normal)
-                */
                 if let ckBtn {
                     ctvovcp?.scroll.addSubview(ckBtn)
                 }
-                let glLab = (ctvovcp?.wDict)?["graphLastLabel"] as? UILabel
+                let glLab = (ctvovcp?.wDict)?["calOnlyLastLabel"] as? UILabel
                 if let glLab {
                     ctvovcp?.scroll.addSubview(glLab)
                 }
@@ -196,42 +191,17 @@ extension voFunction {
         labframe = ctvovcp?.configLabel(
             "only last:",
             frame: frame,
-            key: "graphLastLabel",
+            key: "calOnlyLastLabel",
             addsv: false)
 
         frame.origin.x += (labframe?.size.width ?? 0.0) + SPACE
         _ = ctvovcp?.configSwitch(
             frame,
-            key: "graphLastBtn",
-            state: !(vo.optDict["graphlast"] == "0"),
+            key: "calOnlyLastBtn",
+            state: !(vo.optDict["calOnlyLast"] == "0"),
             addsv: false)
 
         updateValTF(ep(toRow: 0), component: 0)
-
-        /*
-            labframe = [self.ctvovcp configLabel:@"+"
-                                   frame:frame
-                                     key:@"frpre1vLab"
-                                   addsv:NO ];
-
-            frame.origin.x += labframe.size.width + SPACE;
-            [self.ctvovcp configTextField:frame
-                              key:@"fr1TF"
-                           target:nil
-                           action:nil
-                              num:YES
-                            place:nil
-                             text:[self.vo.optDict objectForKey:@"frv1"]
-                            addsv:NO ];
-
-            frame.origin.x += tfWidth + 2*SPACE;
-            / *labframe =* / [self.ctvovcp configLabel:@"cal months"
-                                       frame:frame
-                                         key:@"frpost1vLab"
-                                       addsv:NO ];
-            [self updateValTF:[self epToRow:1] component:1];
-            */
-
 
     }
 
@@ -1054,8 +1024,8 @@ extension voFunction {
             ((ctvovcp?.wDict)?[pre_vkey] as? UIView)?.removeFromSuperview()
             ((ctvovcp?.wDict)?[vtfkey] as? UIView)?.removeFromSuperview()
             ((ctvovcp?.wDict)?[post_vkey] as? UIView)?.removeFromSuperview()
-            ((ctvovcp?.wDict)?["graphLastBtn"] as? UIView)?.removeFromSuperview()
-            ((ctvovcp?.wDict)?["graphLastLabel"] as? UIView)?.removeFromSuperview()
+            ((ctvovcp?.wDict)?["calOnlyLastBtn"] as? UIView)?.removeFromSuperview()
+            ((ctvovcp?.wDict)?["calOnlyLastLabel"] as? UIView)?.removeFromSuperview()
 
             if row == 0 {
                 vo.optDict[key] = "-1"  // NSNumber(value: -1)
