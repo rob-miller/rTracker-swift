@@ -69,11 +69,12 @@ class trackerList: tObjBase {
         dbName = "topLevel.sqlite3"
         getTDb()
 
-        var sql = "create table if not exists toplevel (rank integer, id integer unique, name text, priv integer, remindercount integer, hidden integer default 0);"
+        var sql = "create table if not exists toplevel (rank integer, id integer unique, name text, priv integer, remindercount integer, hidden integer default 0, streak integer default 0);"
         toExecSql(sql:sql)
 
         toAddColumnINE(table: "toplevel", col: "hidden", typ: "INTEGER", dflt: "0")
-
+        toAddColumnINE(table: "toplevel", col: "streak", typ: "INTEGER", dflt: "0")
+        
         //self.sql = @"select count(*) from toplevel;";
         //DBGLog(@"toplevel at open contains %d entries",[self toQry2Int:sql]);
 
@@ -288,6 +289,23 @@ class trackerList: tObjBase {
     func unhideTracker(_ trackerID: Int) {
         toExecSql(sql: "update toplevel set hidden=0 where id=\(trackerID)")
     }
+    
+    
+    // check if a tracker wants streak count
+    func isTrackerStreaked(_ trackerID: Int) -> Bool {
+        return toQry2Int(sql: "select streak from toplevel where id=\(trackerID)") == 1
+    }
+
+    // enable tracker streak counting
+    func streakTracker(_ trackerID: Int) {
+        toExecSql(sql: "update toplevel set streak=1 where id=\(trackerID)")
+    }
+
+    // disable tracker streak counting
+    func unstreakTracker(_ trackerID: Int) {
+        toExecSql(sql: "update toplevel set streak=0 where id=\(trackerID)")
+    }
+    
     func getPrivFromLoadedTID(_ tid: Int) -> Int {
 
         let ndx = topLayoutIDs.firstIndex(of:tid) ?? NSNotFound

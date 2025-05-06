@@ -962,6 +962,12 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
             cell?.backgroundColor = .clear // clear here so table background shows through
         }
 
+        
+        // Remove any existing streak badge (when cells are reused)
+        if let existingBadge = cell?.contentView.viewWithTag(1001) {
+            existingBadge.removeFromSuperview()
+        }
+        
         // Configure the cell.
         let row = indexPath.row
         if row >= tlist.topLayoutIDsH.count {
@@ -989,9 +995,68 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
         cell?.textLabel?.attributedText = cellLabel
         cell?.accessibilityIdentifier = "trkr_\(cellLabel.string)"
+        
+        // Only add streak badge if streak tracking is enabled for this tracker
+        if tlist.isTrackerStreaked(tid) {
+            // Get current streak count
+            let to = trackerObj(tid)
+            let streakCount = to.streakCount()
+            
+            // Only show streak badge if there's an active streak
+            if streakCount > 0 {
+                addStreakBadge(to: cell!, count: streakCount, shouldAnimate: false)
+            }
+        }
+        
         return cell!
     }
 
+    private func addStreakBadge(to cell: UITableViewCell, count: Int, shouldAnimate: Bool) {
+        // Create container view for badge
+        let badgeContainer = UIView()
+        badgeContainer.tag = 1001 // Tag to find it later
+        badgeContainer.translatesAutoresizingMaskIntoConstraints = false
+        badgeContainer.backgroundColor = UIColor.systemOrange.withAlphaComponent(0.2)
+        badgeContainer.layer.cornerRadius = 12
+        cell.contentView.addSubview(badgeContainer)
+        
+        // Create flame icon
+        let flameLabel = UILabel()
+        flameLabel.text = "🔥"
+        flameLabel.font = UIFont.systemFont(ofSize: 14)
+        flameLabel.translatesAutoresizingMaskIntoConstraints = false
+        badgeContainer.addSubview(flameLabel)
+        
+        // Create count label
+        let countLabel = UILabel()
+        countLabel.text = "\(count)"
+        countLabel.font = UIFont.boldSystemFont(ofSize: 12)
+        countLabel.textColor = .systemOrange
+        countLabel.translatesAutoresizingMaskIntoConstraints = false
+        badgeContainer.addSubview(countLabel)
+        
+        // Layout constraints
+        NSLayoutConstraint.activate([
+            badgeContainer.trailingAnchor.constraint(equalTo: cell.contentView.trailingAnchor, constant: -16),
+            badgeContainer.centerYAnchor.constraint(equalTo: cell.contentView.centerYAnchor),
+            
+            flameLabel.leadingAnchor.constraint(equalTo: badgeContainer.leadingAnchor, constant: 6),
+            flameLabel.centerYAnchor.constraint(equalTo: badgeContainer.centerYAnchor),
+            
+            countLabel.leadingAnchor.constraint(equalTo: flameLabel.trailingAnchor, constant: 2),
+            countLabel.trailingAnchor.constraint(equalTo: badgeContainer.trailingAnchor, constant: -6),
+            countLabel.centerYAnchor.constraint(equalTo: badgeContainer.centerYAnchor)
+        ])
+        
+        // Animate if needed
+        if shouldAnimate {
+            badgeContainer.transform = CGAffineTransform(scaleX: 0.1, y: 0.1)
+            UIView.animate(withDuration: 0.3, delay: 0, usingSpringWithDamping: 0.6, initialSpringVelocity: 0.5, options: [], animations: {
+                badgeContainer.transform = CGAffineTransform.identity
+            })
+        }
+    }
+    
     public func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         var tn: String?
         let row = indexPath.row

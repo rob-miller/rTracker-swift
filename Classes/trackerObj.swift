@@ -662,6 +662,37 @@ class trackerObj: tObjBase {
         trackerDate = Date()
         DBGLog(String("loadConfigFromDict finished loading \(trackerName)"))
     }
+    
+    func streakCount() -> Int {
+        let queryStreak = """
+            WITH daily_entries AS (
+                SELECT 
+                    date(datetime(date, 'unixepoch')) as entry_date,
+                    date(datetime(date, 'unixepoch')) as calendar_date
+                FROM trkrData
+                GROUP BY entry_date
+            ),
+            date_gaps AS (
+                SELECT 
+                    entry_date,
+                    julianday(entry_date) - 
+                    julianday(lag(entry_date, 1) OVER (ORDER BY entry_date)) as gap
+                FROM daily_entries
+                ORDER BY entry_date DESC
+            ),
+            streak_groups AS (
+                SELECT 
+                    entry_date,
+                    sum(CASE WHEN gap > 1.5 THEN 1 ELSE 0 END) 
+                        OVER (ORDER BY entry_date DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as streak_group
+                FROM date_gaps
+            )
+            SELECT count(*) as streak_count
+            FROM streak_groups
+            WHERE streak_group = 0
+        """
+        return toQry2Int(sql: queryStreak)
+    }
 
     // delete default settings from vo.optDict to save space
 
