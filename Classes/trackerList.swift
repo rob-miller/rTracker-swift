@@ -48,7 +48,10 @@ class trackerList: tObjBase {
     var topLayoutIDsH: [Int] = []
     var topLayoutPrivH: [Int] = []
     var topLayoutReminderCountH: [Int] = []
-    //@synthesize tObj;
+    
+    var hiddenDict: [Int:Int] = [:]
+    var streakDict: [Int:Int] = [:]
+
 
     ///***************************
     ///
@@ -165,6 +168,8 @@ class trackerList: tObjBase {
                     topLayoutPrivH.append(priv)
                     topLayoutReminderCountH.append(rc)
                 }
+                hiddenDict[id] = hidden
+                streakDict[id] = isTrackerStreaked(id) ? 1 : 0
             }
             //self.sql = nil;
             DBGLog(String("loadTopLayoutTable finished, priv=\(privacyValue) tlt=\(self.topLayoutNames)"))
@@ -260,11 +265,17 @@ class trackerList: tObjBase {
             let tid = topLayoutIDs[nrank]
             let priv = topLayoutPriv[nrank]
             let rc = topLayoutReminderCount[nrank]
-
+            let hidden = hiddenDict[tid] ?? 0
+            let streak = streakDict[tid] ?? 0
+            
             nrank += 1  // arrays above 0-indexed, rank in db non-0 so increment here and cover both.
             
-            //DBGLog(@" %@ id %d to rank %d",tracker,tid,nrank);
-            sql = String(format: "insert into toplevel (rank, id, name, priv,remindercount) values (%i, %ld, \"%@\", %ld, %ld);", nrank, tid, rTracker_resource.toSqlStr(tracker), priv, rc) // rank in db always non-0
+            
+            sql = """
+            insert into toplevel (rank, id, name, priv, remindercount, hidden, streak)
+            values (\(nrank), \(tid), \"\(rTracker_resource.toSqlStr(tracker))\", \(priv), \(rc), \(hidden), \(streak));
+            """
+
             toExecSql(sql:sql) // better if used bind vars, but this keeps access in tObjBase
 
         }
@@ -274,7 +285,10 @@ class trackerList: tObjBase {
         return topLayoutIDs[ndx]
     }
 
-    
+    func getTIDfromIndexH(_ ndx: Int) -> Int {
+        return topLayoutIDsH[ndx]
+    }
+
     // check if a tracker is hidden
     func isTrackerHidden(_ trackerID: Int) -> Bool {
         return toQry2Int(sql: "select hidden from toplevel where id=\(trackerID)") == 1
@@ -283,11 +297,13 @@ class trackerList: tObjBase {
     // hide a tracker
     func hideTracker(_ trackerID: Int) {
         toExecSql(sql: "update toplevel set hidden=1 where id=\(trackerID)")
+        hiddenDict[trackerID] = 1
     }
 
     // unhide a tracker
     func unhideTracker(_ trackerID: Int) {
         toExecSql(sql: "update toplevel set hidden=0 where id=\(trackerID)")
+        hiddenDict[trackerID] = 0
     }
     
     
@@ -299,11 +315,13 @@ class trackerList: tObjBase {
     // enable tracker streak counting
     func streakTracker(_ trackerID: Int) {
         toExecSql(sql: "update toplevel set streak=1 where id=\(trackerID)")
+        streakDict[trackerID] = 1
     }
 
     // disable tracker streak counting
     func unstreakTracker(_ trackerID: Int) {
         toExecSql(sql: "update toplevel set streak=0 where id=\(trackerID)")
+        streakDict[trackerID] = 0
     }
     
     func getPrivFromLoadedTID(_ tid: Int) -> Int {

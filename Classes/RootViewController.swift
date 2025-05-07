@@ -1120,7 +1120,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         }
         
         tableView.cellForRow(at: indexPath)?.isSelected = false
-        openTracker(tlist.getTIDfromIndex(indexPath.row), rejectable: false)
+        openTracker(tlist.getTIDfromIndexH(indexPath.row), rejectable: false)
 
     }
 }
