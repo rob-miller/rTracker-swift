@@ -334,7 +334,6 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         }
     }
 
-    // Modified handleSleepAnalysisQuery function
     private func handleSleepAnalysisQuery(
         startDate: Date,
         endDate: Date,
@@ -349,7 +348,105 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
             return
         }
 
-        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [])
+        // Start with base time predicate
+        var predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [])
+        
+        // Add category-specific filtering based on display name
+        let displayName = queryConfig.displayName
+        let components = displayName.split(separator: "-", maxSplits: 1, omittingEmptySubsequences: true)
+        
+        if components.count > 1 {
+            let suffix = components[1].trimmingCharacters(in: .whitespaces)
+            switch suffix {
+            case "In Bed":
+                predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                    predicate,
+                    NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.inBed.rawValue)
+                ])
+            case "Deep":
+                predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                    predicate,
+                    NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepDeep.rawValue)
+                ])
+            case "Core":
+                predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                    predicate,
+                    NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepCore.rawValue)
+                ])
+            case "REM":
+                predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                    predicate,
+                    NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepREM.rawValue)
+                ])
+            case "Other":
+                predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                    predicate,
+                    NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue)
+                ])
+            case "Awake":
+                predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                    predicate,
+                    NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.awake.rawValue)
+                ])
+            // Special cases handling
+            case "Specified", "All", "Total", "Core + Deep + REM":
+                // Create a compound OR predicate for the multiple categories
+                var categoryPredicates: [NSPredicate] = []
+                
+                // Add predicates for Core, REM, and Deep
+                categoryPredicates.append(NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepCore.rawValue))
+                categoryPredicates.append(NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepREM.rawValue))
+                categoryPredicates.append(NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepDeep.rawValue))
+                
+                // Combine these with OR and then AND with time predicate
+                let categoriesOrPredicate = NSCompoundPredicate(orPredicateWithSubpredicates: categoryPredicates)
+                predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [predicate, categoriesOrPredicate])
+            
+            case "Cycles", "Transitions":
+                // Create a compound OR predicate for all sleep stage categories
+                var categoryPredicates: [NSPredicate] = []
+                
+                // Add predicates for all relevant sleep stages
+                categoryPredicates.append(NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepCore.rawValue))
+                categoryPredicates.append(NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepREM.rawValue))
+                categoryPredicates.append(NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepDeep.rawValue))
+                categoryPredicates.append(NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.awake.rawValue))
+                
+                // Combine these with OR and then AND with time predicate
+                let categoriesOrPredicate = NSCompoundPredicate(orPredicateWithSubpredicates: categoryPredicates)
+                predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [predicate, categoriesOrPredicate])
+                
+            // Handle other specialized cases
+            case "Deep Segments", "REM Segments":
+                // For segments, we need all related categories for proper segment detection
+                var categoryPredicates: [NSPredicate] = []
+                
+                if suffix == "Deep Segments" {
+                    // For Deep segments, include Deep and Core (can have Core gaps)
+                    categoryPredicates.append(NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepDeep.rawValue))
+                    categoryPredicates.append(NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepCore.rawValue))
+                } else { // REM Segments
+                    // For REM segments, include REM, Core, and possibly Awake (can have gaps)
+                    categoryPredicates.append(NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepREM.rawValue))
+                    categoryPredicates.append(NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepCore.rawValue))
+                    categoryPredicates.append(NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.awake.rawValue))
+                }
+                
+                // Combine with OR and then AND with time predicate
+                let categoriesOrPredicate = NSCompoundPredicate(orPredicateWithSubpredicates: categoryPredicates)
+                predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [predicate, categoriesOrPredicate])
+                
+            default:
+                DBGLog("Unhandled sleep category suffix: \(suffix)")
+            }
+        } else if displayName == "Sleep" {
+            // If it's just "Sleep" with no suffix
+            predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                predicate,
+                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue)
+            ])
+        }
+        
         let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
         
         let query = HKSampleQuery(sampleType: categoryType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sortDescriptor]) { (_, samples, error) in
