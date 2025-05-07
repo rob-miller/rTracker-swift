@@ -432,8 +432,6 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
         let row = deleteIndexPath?.row ?? 0
         DBGLog(String("checkTrackerDelete: will delete row \(UInt(row)) "))
         tlist?.deleteTrackerAllRow(row)
-        //[self.deleteTableView deleteRowsAtIndexPaths:[NSArray arrayWithObject:self.deleteIndexPath]
-        //					   withRowAnimation:UITableViewRowAnimationFade];
         tableView.deleteRows(
             at: [deleteIndexPath].compactMap { $0 },
             with: .fade)
