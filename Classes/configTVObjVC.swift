@@ -562,7 +562,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
                     if let xtName = updatedTracker, !xtName.isEmpty,
                        let xvName = updatedValue, !xvName.isEmpty {
                         // Get the other tracker's privacy level
-                        let xto = trackerObj(tlist.getTIDfromNameDb(xtName)[0])
+                        let xto = trackerObj(trackerList.shared.getTIDfromNameDb(xtName)[0])
                         let xtpriv = xto.getPrivacyValue()
                         
                         // Get the other value's privacy level
@@ -740,9 +740,9 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         } else if sender == (wDict["strkBtn"] as? UISwitch) {
             // tracker enable streak reporting
             if sender.isOn {
-                tlist.streakTracker(to!.toid)
+                trackerList.shared.streakTracker(to!.toid)
             } else {
-                tlist.unstreakTracker(to!.toid)
+                trackerList.shared.unstreakTracker(to!.toid)
             }
         } else {
             dbgNSAssert(false, "ckButtonAction cannot identify switch")
@@ -1377,7 +1377,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         frame = configSwitch(
             frame,
             key: "strkBtn",
-            state: tlist.isTrackerStreaked(to.toid),
+            state: trackerList.shared.isTrackerStreaked(to.toid),
             addsv: true)
 
         

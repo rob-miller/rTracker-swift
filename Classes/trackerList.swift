@@ -25,20 +25,18 @@ import Foundation
 //import SwiftUI
 import UIKit
 
-//#import "/usr/include/sqlite3.h"
-
-
 class trackerList: tObjBase {
-    /*{
-
-        NSMutableArray *topLayoutNames;
-        NSMutableArray *topLayoutIDs;
-        NSMutableArray *topLayoutPriv;
-        NSMutableArray *topLayoutReminderCount;
-        //trackerObj *tObj;
-
-    }*/
-
+    // MARK: - Singleton
+    
+    static let shared = trackerList()
+    
+    // Private initializer to ensure singleton usage
+    private override init() {
+        super.init()
+        initTDb()
+        DBGLog("trackerList singleton initialized")
+    }
+    
     var topLayoutNames: [String] = []
     var topLayoutIDs: [Int] = []
     var topLayoutPriv: [Int] = []
@@ -114,14 +112,6 @@ class trackerList: tObjBase {
 
         sql = "create table if not exists rthealthkit (name text primary key, hkid text not null, custom_unit text default '', disabled integer default 0);"
         toExecSql(sql:sql)
-    }
-
-    //@property (nonatomic,retain) trackerObj *tObj;
-    override init() {
-        //DBGLog(@"init trackerList");
-        
-        super.init()
-        initTDb()
     }
 
     func dbgtlist() {

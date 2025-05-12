@@ -92,7 +92,7 @@ class voState: NSObject, voProtocol {
             }
             xvid = xvo.vid
         } else {
-            xto = trackerObj(tlist.getTIDfromNameDb(xtName)[0])
+            xto = trackerObj(trackerList.shared.getTIDfromNameDb(xtName)[0])
             let tempxvid = xto.toQry2Int(sql: "select id from voConfig where name = '\(xvName)'")
             if tempxvid == 0 {
                 DBGErr("no xvid for other tracker \(xtName) valueObj \(xvName)")
@@ -321,7 +321,7 @@ class voState: NSObject, voProtocol {
                 let xvo = MyTracker.getValObjByName(xvName)
                 return xvo?.value ?? ""
             } else {
-                let xto = trackerObj(tlist.getTIDfromNameDb(xtName)[0])
+                let xto = trackerObj(trackerList.shared.getTIDfromNameDb(xtName)[0])
                 let xvid = xto.toQry2Int(sql: "select id from voConfig where name = '\(xvName)'")
                 if xvid != 0 {
                     let to = vo.parentTracker

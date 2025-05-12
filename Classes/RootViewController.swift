@@ -105,7 +105,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     var _tlist: trackerList?
     var tlist: trackerList {
         if _tlist == nil {
-            _tlist = trackerList()  // Create the trackerList instance
+            _tlist = trackerList.shared  // Create the trackerList instance
             
             // Use the newly created _tlist to recover orphans and load the layout
             if _tlist!.recoverOrphans() {

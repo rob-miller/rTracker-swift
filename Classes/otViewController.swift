@@ -7,14 +7,6 @@
 //
 import SwiftUI
 
-var _tlist: trackerList?
-var tlist: trackerList {
-    if _tlist == nil {
-        _tlist = trackerList()  // Create the trackerList instance
-    }
-    return _tlist!
-}
-
 struct otViewController: View {
     var onDismiss: (String?, String?, Bool) -> Void
     @Environment(\.dismiss) var dismiss
@@ -119,7 +111,7 @@ struct otViewController: View {
             .onAppear {
                 // Set the first tracker if currentTracker is nil
                 if currentTracker == nil {
-                    let trackers = tlist.topLayoutNames
+                    let trackers = trackerList.shared.topLayoutNames
                     let filteredTrackers = trackers.filter { $0 != callerTrackerName }
                     if !filteredTrackers.isEmpty {
                         currentTracker = filteredTrackers[0]
@@ -131,7 +123,7 @@ struct otViewController: View {
     
     var trackerPicker: some View {
         // Get all trackers
-        let allTrackers = tlist.topLayoutNames
+        let allTrackers = trackerList.shared.topLayoutNames
         // Filter out the caller's tracker
         let filteredTrackers = allTrackers  // .filter { $0 != callerTrackerName }
         
@@ -156,7 +148,7 @@ struct otViewController: View {
     var valuePicker: some View {
         let valueSet: [String] = {
             if let trackerName = currentTracker {
-                let tid = tlist.getTIDfromNameDb(trackerName)[0]
+                let tid = trackerList.shared.getTIDfromNameDb(trackerName)[0]
                 let to = trackerObj(tid)
                 
                 // Get all value names
