@@ -31,11 +31,11 @@ import UIKit
 class trackerList: tObjBase {
     /*{
 
-    	NSMutableArray *topLayoutNames;
-    	NSMutableArray *topLayoutIDs;
-    	NSMutableArray *topLayoutPriv;
+        NSMutableArray *topLayoutNames;
+        NSMutableArray *topLayoutIDs;
+        NSMutableArray *topLayoutPriv;
         NSMutableArray *topLayoutReminderCount;
-    	//trackerObj *tObj;
+        //trackerObj *tObj;
 
     }*/
 
@@ -256,31 +256,43 @@ class trackerList: tObjBase {
     }
 
     func reloadFromTLT() {
-        // called when deleting tracker from TLT
-        //DBGTLIST(self);
-        var nrank = 0
-        var sql = "delete from toplevel where priv <= \(privacyValue);"
-        toExecSql(sql:sql)
-        for tracker in topLayoutNames {
-            let tid = topLayoutIDs[nrank]
-            let priv = topLayoutPriv[nrank]
-            let rc = topLayoutReminderCount[nrank]
-            let hidden = hiddenDict[tid] ?? 0
+        // First get all existing entries with higher privacy than current
+        let sql = "select rank from toplevel where priv > \(privacyValue) or hidden == 1"
+
+        let higherPrivEntries = toQry2AryI(sql: sql)
+        
+        // Create a set of ranks that need to be preserved
+        var privateRanks: Set<Int> = []
+        for entry in higherPrivEntries {
+            privateRanks.insert(entry)
+        }
+        
+        var currentRank = 1
+        for i in 0..<topLayoutNames.count {
+            let tid = topLayoutIDs[i]
+            let name = rTracker_resource.toSqlStr(topLayoutNames[i])
+            let priv = topLayoutPriv[i]
+            let rc = topLayoutReminderCount[i]
+            let hidden = hiddenDict[tid] ?? 0  // provavly can't be hidden if not in TLT
             let streak = streakDict[tid] ?? 0
             
-            nrank += 1  // arrays above 0-indexed, rank in db non-0 so increment here and cover both.
+            // Skip ranks that are used by higher privacy entries
+            while privateRanks.contains(currentRank) {
+                currentRank += 1
+            }
             
-            
-            sql = """
-            insert into toplevel (rank, id, name, priv, remindercount, hidden, streak)
-            values (\(nrank), \(tid), \"\(rTracker_resource.toSqlStr(tracker))\", \(priv), \(rc), \(hidden), \(streak));
+            // Update or insert entry
+            let upsertSql = """
+            insert or replace into toplevel 
+            (rank, id, name, priv, remindercount, hidden, streak)
+            values 
+            (\(currentRank), \(tid), "\(name)", \(priv), \(rc), \(hidden), \(streak))
             """
-
-            toExecSql(sql:sql) // better if used bind vars, but this keeps access in tObjBase
-
+            toExecSql(sql: upsertSql)
+            currentRank += 1
         }
     }
-
+    
     func getTIDfromIndex(_ ndx: Int) -> Int {
         return topLayoutIDs[ndx]
     }

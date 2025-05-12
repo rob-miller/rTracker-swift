@@ -521,6 +521,37 @@ class tObjBase: NSObject {
         }
     }
 
+    /*  not needed
+    func toQry2AryIISIIII(sql: String) -> [(Int, Int, String, Int, Int, Int, Int)] {
+        tObjBase.performDatabaseOperation(toid: toid) { [self] in
+            
+            SQLDbg(String("toQry2AryIISIII: \(dbName!) => _\(sql)_"))
+            
+            var stmt: OpaquePointer?
+            if sqlite3_prepare_v2(tDb, sql, -1, &stmt, nil) == SQLITE_OK {
+                var results: [(Int, Int, String, Int, Int, Int, Int)] = []
+                while sqlite3_step(stmt) == SQLITE_ROW {
+                    let i1 = Int(sqlite3_column_int(stmt, 0))
+                    let i2 = Int(sqlite3_column_int(stmt, 1))
+                    let s1 = String(cString: sqlite3_column_text(stmt, 2)!)
+                    let i3 = Int(sqlite3_column_int(stmt, 3))
+                    let i4 = Int(sqlite3_column_int(stmt, 4))
+                    let i5 = Int(sqlite3_column_int(stmt, 5))
+                    let i6 = Int(sqlite3_column_int(stmt, 6))
+                    results.append((i1, i2, s1, i3, i4, i5, i6))
+                    //SQLDbg(String("  rslt: \(i1) \(i2) \(s1) \(i3) \(i4) \(i5) \(i5)"))
+                }
+                sqlite3_finalize(stmt)
+                SQLDbg(String("    rslt: \(results)"))
+                return results
+            } else {
+                tobPrepError(sql)
+                return []
+            }
+        }
+    }
+    */
+    
     func toQry2AryID(sql: String) -> [(Int, Double)] {
         tObjBase.performDatabaseOperation(toid: toid) { [self] in
             
