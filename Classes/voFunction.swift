@@ -82,6 +82,7 @@ let FN1ARGELAPSEDSECS = FN1ARGELAPSEDMINS - 1
 let FN1ARGDELAY = FN1ARGELAPSEDSECS - 1
 let FN1ARGROUND = FN1ARGDELAY - 1
 let FN1ARGCLASSIFY = FN1ARGROUND - 1
+let FN1ARGNOT = FN1ARGCLASSIFY - 1
 
 let FNNEW1ARGLAST = FNNEW1ARGFIRST - 100
 
@@ -93,6 +94,19 @@ func isFn1ArgElapsed(_ i: Int) -> Bool {
 }
 
 let FNNEW2ARGFIRST = FNNEW1ARGLAST - 10
+
+// Add logical operators
+let FN2ARGAND = FNNEW2ARGFIRST - 1
+let FN2ARGOR = FN2ARGAND - 1
+let FN2ARGXOR = FN2ARGOR - 1
+let FN2ARGEQUALTO = FN2ARGXOR - 1
+let FN2ARGNOTEQUAL = FN2ARGEQUALTO - 1
+// Add comparison operators
+let FN2ARGGREATER = FN2ARGNOTEQUAL - 1
+let FN2ARGLESS = FN2ARGGREATER - 1
+let FN2ARGGREATEREQUAL = FN2ARGLESS - 1
+let FN2ARGLESSEQUAL = FN2ARGGREATEREQUAL - 1
+
 let FNNEW2ARGLAST = FNNEW2ARGFIRST - 100
 
 func isFn2ArgOp(_ i: Int) -> Bool {
@@ -108,7 +122,6 @@ func isFnTimeOp(_ i: Int) -> Bool {
     ((i <= FNTIMEFIRST) && (i >= FNTIMELAST)) || ((i <= FNNEWTIMEFIRST) && (i >= FNNEWTIMELAST))
 }
 
-
 let FNFIN = FNNEWTIMELAST
 
 func isFn(_ i: Int) -> Bool {
@@ -118,12 +131,12 @@ func isFn(_ i: Int) -> Bool {
 let FNCONSTANT_TITLE = "constant"
 
 
-let ARG1FNS = [FN1ARGDELTA,FN1ARGSUM,FN1ARGPOSTSUM,FN1ARGPRESUM,FN1ARGAVG,FN1ARGMIN,FN1ARGMAX,FN1ARGCOUNT,FN1ARGONRATIO,FN1ARGNORATIO,FN1ARGELAPSEDWEEKS,FN1ARGELAPSEDDAYS,FN1ARGELAPSEDHOURS,FN1ARGELAPSEDMINS,FN1ARGELAPSEDSECS,FN1ARGDELAY, FN1ARGROUND, FN1ARGCLASSIFY]
-let ARG1STRS = ["change_in","sum","post-sum","pre-sum","avg","min","max","count","old/new","new/old","elapsed_weeks","elapsed_days","elapsed_hrs","elapsed_mins","elapsed_secs", "delay", "round", "classify"]
+let ARG1FNS = [FN1ARGDELTA,FN1ARGSUM,FN1ARGPOSTSUM,FN1ARGPRESUM,FN1ARGAVG,FN1ARGMIN,FN1ARGMAX,FN1ARGCOUNT,FN1ARGONRATIO,FN1ARGNORATIO,FN1ARGELAPSEDWEEKS,FN1ARGELAPSEDDAYS,FN1ARGELAPSEDHOURS,FN1ARGELAPSEDMINS,FN1ARGELAPSEDSECS,FN1ARGDELAY, FN1ARGROUND, FN1ARGCLASSIFY, FN1ARGNOT]
+let ARG1STRS = ["change_in","sum","post-sum","pre-sum","avg","min","max","count","old/new","new/old","elapsed_weeks","elapsed_days","elapsed_hrs","elapsed_mins","elapsed_secs", "delay", "round", "classify", "!"]
 let ARG1CNT = ARG1FNS.count
 
-let ARG2FNS = [FN2ARGPLUS,FN2ARGMINUS,FN2ARGTIMES,FN2ARGDIVIDE]
-let ARG2STRS = ["+","-","*","/"]
+let ARG2FNS = [FN2ARGPLUS,FN2ARGMINUS,FN2ARGTIMES,FN2ARGDIVIDE, FN2ARGAND, FN2ARGOR, FN2ARGXOR, FN2ARGEQUALTO, FN2ARGNOTEQUAL, FN2ARGGREATER, FN2ARGLESS, FN2ARGGREATEREQUAL, FN2ARGLESSEQUAL]
+let ARG2STRS = ["+","-","*","/", "&", "|", "^", "==", "!=", ">", "<", ">=", "<="]
 let ARG2CNT = ARG2FNS.count
 
 let PARENFNS = [FNPARENOPEN, FNPARENCLOSE]
@@ -833,6 +846,12 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                         #if FUNCTIONDBG
                         DBGLog("postsum: set sql")
                         #endif
+                    case FN1ARGNOT:
+                        // NOT logical operation - invert truthy/falsy value
+                        result = v1 == 0.0 ? 1.0 : 0.0
+                        #if FUNCTIONDBG
+                        DBGLog(String("not: result= \(result)"))
+                        #endif
                     default:
                         break
                     }
@@ -881,6 +900,61 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                         #endif
                         return nil
                     }
+                case FN2ARGAND:
+                    // Convert to 1 or 0 - truthy values are anything non-zero
+                    let left = result != 0.0 ? 1.0 : 0.0
+                    let right = nextResult != 0.0 ? 1.0 : 0.0
+                    result = (left != 0.0 && right != 0.0) ? 1.0 : 0.0
+                    #if FUNCTIONDBG
+                    DBGLog(String("fndbg AND [\(nextResult)]: result= \(result)"))
+                    #endif
+                case FN2ARGOR:
+                    let left = result != 0.0 ? 1.0 : 0.0
+                    let right = nextResult != 0.0 ? 1.0 : 0.0
+                    result = (left != 0.0 || right != 0.0) ? 1.0 : 0.0
+                    #if FUNCTIONDBG
+                    DBGLog(String("fndbg OR [\(nextResult)]: result= \(result)"))
+                    #endif
+                case FN2ARGXOR:
+                    let left = result != 0.0 ? 1.0 : 0.0
+                    let right = nextResult != 0.0 ? 1.0 : 0.0
+                    result = (left != 0.0) != (right != 0.0) ? 1.0 : 0.0
+                    #if FUNCTIONDBG
+                    DBGLog(String("fndbg XOR [\(nextResult)]: result= \(result)"))
+                    #endif
+                case FN2ARGEQUALTO:
+                    // Compare the values for equality (using a small epsilon for floating point)
+                    let epsilon = 1e-10
+                    result = abs(result - nextResult) < epsilon ? 1.0 : 0.0
+                    #if FUNCTIONDBG
+                    DBGLog(String("fndbg EQUALTO [\(nextResult)]: result= \(result)"))
+                    #endif
+                case FN2ARGNOTEQUAL:
+                    let epsilon = 1e-10
+                    result = abs(result - nextResult) >= epsilon ? 1.0 : 0.0
+                    #if FUNCTIONDBG
+                    DBGLog(String("fndbg NOTEQUAL [\(nextResult)]: result= \(result)"))
+                    #endif
+                case FN2ARGGREATER:
+                    result = result > nextResult ? 1.0 : 0.0
+                    #if FUNCTIONDBG
+                    DBGLog(String("fndbg greater than [\(nextResult)]: result= \(result)"))
+                    #endif
+                case FN2ARGLESS:
+                    result = result < nextResult ? 1.0 : 0.0
+                    #if FUNCTIONDBG
+                    DBGLog(String("fndbg less than [\(nextResult)]: result= \(result)"))
+                    #endif
+                case FN2ARGGREATEREQUAL:
+                    result = result >= nextResult ? 1.0 : 0.0
+                    #if FUNCTIONDBG
+                    DBGLog(String("fndbg greater than or equal [\(nextResult)]: result= \(result)"))
+                    #endif
+                case FN2ARGLESSEQUAL:
+                    result = result <= nextResult ? 1.0 : 0.0
+                    #if FUNCTIONDBG
+                    DBGLog(String("fndbg less than or equal [\(nextResult)]: result= \(result)"))
+                    #endif
                 default:
                     break
                 }

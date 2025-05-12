@@ -368,14 +368,11 @@ extension voFunction {
         // i= constTok remove token and value  -- done
         //  also [self.tempValObj.optDict removeObjectForKey:@"fdc"]; -- can't be sure with mult consts
         let pkr = (ctvovcp?.wDict)?["fdPkr"] as? UIPickerView
+        DBGLog("fnArray=\(_fnArray)")
         if 0 < fnArray.count {
             // Check if we're deleting a classify operator
-            let currentLength = fnArray.count
-            if currentLength >= 16 && fnArray[currentLength-16].intValue == FN1ARGCLASSIFY {
-                // Remove all the classify values (token, vid, and 14 values)
-                for _ in 0..<16 {
-                    _fnArray!.removeLast()
-                }
+            if FN1ARGCLASSIFY == fnArray.last!.intValue {
+                _fnArray!.removeLast() // remove normal token
                 
                 // Also remove classify text values from optDict
                 for i in 1...7 {
@@ -385,6 +382,7 @@ extension voFunction {
             } else if FNCONSTANT == fnArray.last!.intValue {
                 _fnArray!.removeLast() // remove bounding token after
                 _fnArray!.removeLast() // remove constant value
+                _fnArray!.removeLast() // remove start (normal) token
             } else {
                 _fnArray!.removeLast() // remove normal token
             }
