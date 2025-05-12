@@ -323,7 +323,6 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
     private var lastCalcValue: String = ""
     private var fnDirty = false
 
-    //@property (nonatomic, retain) NSNumber *foo;
     func saveFnArray() {
         // note this converts NSNumbers to NSStrings
         // works because NSNumber returns an NSString for [description]
@@ -568,40 +567,39 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             epd1 = Int(to.trackerDate?.timeIntervalSince1970 ?? 0)
         }
         
-#if FUNCTIONDBG
+        #if FUNCTIONDBG
         // print our complete function
-        //var i: Int
         var outstr = ""
         for i in 0..<maxc {
             let object = fnArray[i]
             outstr = outstr + " \(object)"
-            
         }
         DBGLog(String("fndbg \(vo.valueName ?? "") calcFnValueWithCurrent fnArray= \(outstr)"))
         DBGLog("epd0 \(Date(timeIntervalSince1970: TimeInterval(epd0)))  epd1 \(Date(timeIntervalSince1970: TimeInterval(epd1)))  trackerDate \(self.MyTracker.trackerDate!)")
-#endif
+        #endif
 
-        var result = 0.0
+        // Change to use optional Double
+        var result: Double? = 0.0
 
         while currFnNdx < maxc {
             // recursive function, self.currFnNdx holds our current processing position
             let currTok = fnArray[currFnNdx].intValue
             #if FUNCTIONDBG
-            DBGLog(String("fndbg currFnNdx= \(currFnNdx) currTok= \(currTok) result = \(result) fn2op = \(fn2op)"))
+            DBGLog(String("fndbg currFnNdx= \(currFnNdx) currTok= \(currTok) result = \(String(describing: result)) fn2op = \(fn2op)"))
             DBGLog(String("fndbg : \(voFnDefnStr(false, cfndx: currFnNdx)!)"))
             #endif
             if fn2op && (currTok == FN2ARGPLUS || currTok == FN2ARGMINUS || currTok == FNPARENCLOSE) {
                 #if FUNCTIONDBG
-                DBGLog("fndbg +-) return result= \(result)")
+                DBGLog("fndbg +-) return result= \(String(describing: result))")
                 #endif
-                return NSNumber(value: result)  // return from recursion leaving currFnNdx=>currTok
+                return result != nil ? NSNumber(value: result!) : nil  // return from recursion leaving currFnNdx=>currTok
             }
             currFnNdx += 1
             if isFn1Arg(currTok) {
                 // currTok is function taking 1 argument, so get it
                 if currFnNdx >= maxc {
                     FnErr = true
-                    return NSNumber(value: result) // crashlytics report past array bounds at next line, so at least return without crashing
+                    return result != nil ? NSNumber(value: result!) : nil // crashlytics report past array bounds at next line, so at least return without crashing
                 }
                 vid = fnArray[currFnNdx].intValue
                 currFnNdx += 1 // get fn arg, can only be valobj vid
@@ -647,26 +645,26 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                         """
                         let d0 = to.toQry2Int(sql:sql)
                         result = Double(epd1) - Double(d0)
-                        DBGLog(String("elapsed unit: epd0= \(epd0) d0= \(d0) epd1=\(epd1) rslt= \(result)"))
+                        DBGLog(String("elapsed unit: epd0= \(epd0) d0= \(d0) epd1=\(epd1) rslt= \(String(describing: result))"))
                         switch currTok {
                         case FN1ARGELAPSEDWEEKS:
-                            result /= d(7)
+                            result = result != nil ? result! / d(7) : nil
                             fallthrough
                         case FN1ARGELAPSEDDAYS:
-                            result /= d(24)
+                            result = result != nil ? result! / d(24) : nil
                             fallthrough
                         case FN1ARGELAPSEDHOURS:
-                            result /= d(60)
+                            result = result != nil ? result! / d(60) : nil
                             fallthrough
                         case FN1ARGELAPSEDMINS:
-                            result /= d(60)
+                            result = result != nil ? result! / d(60) : nil
                             fallthrough
                         case FN1ARGELAPSEDSECS:
                             fallthrough
                         default:
                             break
                         }
-                        DBGLog(String("elapsed unit: final result = \(result)"))
+                        DBGLog(String("elapsed unit: final result = \(String(describing: result))"))
                     }
                     sql = """
                     SELECT val FROM voData 
@@ -740,7 +738,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                     let v = Double(to.toQry2Float(sql:sql))
                     result = (v + v1) / count
                     #if FUNCTIONDBG
-                    DBGLog(String("avg: v= \(v) v1= \(v1) (v+v1)= \(v + v1) c= \(count) rslt= \(result) "))
+                    DBGLog(String("avg: v= \(v) v1= \(v1) (v+v1)= \(v + v1) c= \(count) rslt= \(String(describing: result)) "))
                     //DBGLog("hello")
                     #endif
                 case FN1ARGMIN:
@@ -755,12 +753,12 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                         AND date NOT IN (SELECT date FROM ignoreRecords)
                         """
                         result = Double(to.toQry2Float(sql:sql))
-                        if !nullV1 && v1 < result {
+                        if !nullV1 && v1 < result! {
                             result = v1
                         }
                     }
                     #if FUNCTIONDBG
-                    DBGLog(String("min: result= \(result)"))
+                    DBGLog(String("min: result= \(String(describing: result))"))
                     #endif
                 case FN1ARGMAX:
                     if 0 == ci && nullV1 {
@@ -774,12 +772,12 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                         AND date NOT IN (SELECT date FROM ignoreRecords)
                         """
                         result = Double(to.toQry2Float(sql:sql))
-                        if !nullV1 && v1 > result {
+                        if !nullV1 && v1 > result! {
                             result = v1
                         }
                     }
                     #if FUNCTIONDBG
-                    DBGLog(String("max: result= \(result)"))
+                    DBGLog(String("max: result= \(String(describing: result))"))
                     #endif
                 case FN1ARGCOUNT:
                     sql = """
@@ -789,10 +787,10 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                     """
                     result = Double(to.toQry2Float(sql:sql))
                     if !nullV1 {
-                        result += 1.0
+                        result = result != nil ? result! + 1.0 : 1.0
                     }
                     #if FUNCTIONDBG
-                    DBGLog(String("count: result= \(result)"))
+                    DBGLog(String("count: result= \(String(describing: result))"))
                     #endif
                 case FN1ARGDELAY:
                     let ep0def = Int(self.vo.optDict["frep0"]!)
@@ -807,7 +805,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                     """
                     result = Double(to.toQry2Float(sql:sql))
                     #if FUNCTIONDBG
-                    DBGLog(String("delay: result= \(result)"))
+                    DBGLog(String("delay: result= \(String(describing: result))"))
                     #endif
                 default:
                     // remaining options for fn w/ 1 arg are pre/post/all sum
@@ -818,7 +816,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                         // we conditionally add in v1=(date<=%d) below so presum sql query same as sum
 
                         //to.sql = [NSString stringWithFormat:@"select total(val) from voData where id=%d and date >=%d and date <%d;",
-                        //		  vid,epd0,epd1];
+                        //          vid,epd0,epd1];
                         //break;
                         #if FUNCTIONDBG
                         DBGLog("presum: fall through")
@@ -848,143 +846,233 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                         #endif
                     case FN1ARGNOT:
                         // NOT logical operation - invert truthy/falsy value
-                        result = v1 == 0.0 ? 1.0 : 0.0
+                        result = nullV1 ? 1.0 : v1 == 0.0 ? 1.0 : nil
+
                         #if FUNCTIONDBG
-                        DBGLog(String("not: result= \(result)"))
+                        DBGLog(String("not: result= \(String(describing: result))"))
                         #endif
                     default:
                         break
                     }
                     result = Double(to.toQry2Float(sql:sql))
                     if currTok != FN1ARGPRESUM {
-                        result += v1
+                        result = result != nil ? result! + v1 : v1
                     }
                     #if FUNCTIONDBG
-                    DBGLog(String("pre/post/sum: result= \(result)"))
+                    DBGLog(String("pre/post/sum: result= \(String(describing: result))"))
                     #endif
                 }
             } else if isFn2ArgOp(currTok) {
                 // we are processing some combo of previous result and next value, currFnNdx was ++ already so get that result:
                 let nrnum = calcFunctionValue(withCurrent: epd0, fn2op: true) // currFnNdx now at next place already
-                if nil == nrnum {
-                    return nil
-                }
-                let nextResult = nrnum?.doubleValue ?? 0.0
+                let nextResult = nrnum?.doubleValue
+                
                 switch currTok {
-                // now just combine with what we have so far
-                case FN2ARGPLUS:
-                    result += nextResult
-                    #if FUNCTIONDBG
-                    DBGLog(String("fndbg plus [\(nextResult)]: result= \(result)"))
-                    #endif
-                case FN2ARGMINUS:
-                    result -= nextResult
-                    #if FUNCTIONDBG
-                    DBGLog(String("fndbg minus [\(nextResult)]: result= \(result)"))
-                    #endif
-                case FN2ARGTIMES:
-                    result *= nextResult
-                    #if FUNCTIONDBG
-                    DBGLog(String("fndbg times [\(nextResult)]: result= \(result)"))
-                    #endif
-                case FN2ARGDIVIDE:
-                    if nrnum != nil && nextResult != 0.0 {
-                        result /= nextResult
+                    // now just combine with what we have so far
+                    case FN2ARGPLUS:
+                        if result != nil && nextResult != nil {
+                            result = result! + nextResult!
+                        } else {
+                            result = nil
+                        }
                         #if FUNCTIONDBG
-                        DBGLog(String("fndbg divide [\(nextResult)]: result= \(result)"))
+                        DBGLog(String("fndbg plus [\(String(describing: nextResult))]: result= \(String(describing: result))"))
                         #endif
-                    } else {
-                        //result = nil;
+                        
+                    case FN2ARGMINUS:
+                        if result != nil && nextResult != nil {
+                            result = result! - nextResult!
+                        } else {
+                            result = nil
+                        }
                         #if FUNCTIONDBG
-                        DBGLog("divide: rdivide by zero!")
+                        DBGLog(String("fndbg minus [\(String(describing: nextResult))]: result= \(String(describing: result))"))
                         #endif
-                        return nil
-                    }
+                        
+                    case FN2ARGTIMES:
+                        if result != nil && nextResult != nil {
+                            result = result! * nextResult!
+                        } else {
+                            result = nil
+                        }
+                        #if FUNCTIONDBG
+                        DBGLog(String("fndbg times [\(String(describing: nextResult))]: result= \(String(describing: result))"))
+                        #endif
+                        
+                    case FN2ARGDIVIDE:
+                        if result != nil && nextResult != nil && nextResult != 0.0 {
+                            result = result! / nextResult!
+                            #if FUNCTIONDBG
+                            DBGLog(String("fndbg divide [\(String(describing: nextResult))]: result= \(String(describing: result))"))
+                            #endif
+                        } else {
+                            //result = nil;
+                            #if FUNCTIONDBG
+                            DBGLog("divide: rdivide by zero!")
+                            #endif
+                            return nil
+                        }
+                // Modified logical operations to handle nil values
                 case FN2ARGAND:
-                    // Convert to 1 or 0 - truthy values are anything non-zero
-                    let left = result != 0.0 ? 1.0 : 0.0
-                    let right = nextResult != 0.0 ? 1.0 : 0.0
-                    result = (left != 0.0 && right != 0.0) ? 1.0 : 0.0
+                    // Handle nil values as false
+                    // Only return true (non-nil) if both operands are truthy
+                    if result == nil || result == 0 || nextResult == nil || nextResult == 0 {
+                        // If either is falsy (nil or 0), result is false (nil)
+                        result = nil
+                    } else if result != 1 || nextResult != 1 {
+                        // If both truthy but one is not 1, return the non-1 value
+                        result = (result != 1) ? result : nextResult
+                    } else {
+                        // Both are 1, return 1
+                        result = 1.0
+                    }
                     #if FUNCTIONDBG
-                    DBGLog(String("fndbg AND [\(nextResult)]: result= \(result)"))
+                    DBGLog(String("fndbg AND [\(String(describing: nextResult))]: result= \(String(describing: result))"))
                     #endif
+                    
                 case FN2ARGOR:
-                    let left = result != 0.0 ? 1.0 : 0.0
-                    let right = nextResult != 0.0 ? 1.0 : 0.0
-                    result = (left != 0.0 || right != 0.0) ? 1.0 : 0.0
+                    // If either value is truthy (non-nil and non-zero), result is truthy
+                    if (result == nil || result == 0) && (nextResult == nil || nextResult == 0) {
+                        // Both falsy, return nil
+                        result = nil
+                    } else {
+                        // At least one is truthy
+                        // Return the first truthy value, preserving non-1 values
+                        if result != nil && result != 0 {
+                            // First operand is truthy, keep it
+                            // (result already has the value)
+                        } else {
+                            // First operand falsy, use second operand
+                            result = nextResult
+                        }
+                    }
                     #if FUNCTIONDBG
-                    DBGLog(String("fndbg OR [\(nextResult)]: result= \(result)"))
+                    DBGLog(String("fndbg OR [\(String(describing: nextResult))]: result= \(String(describing: result))"))
                     #endif
+                    
                 case FN2ARGXOR:
-                    let left = result != 0.0 ? 1.0 : 0.0
-                    let right = nextResult != 0.0 ? 1.0 : 0.0
-                    result = (left != 0.0) != (right != 0.0) ? 1.0 : 0.0
+                    // XOR is true if exactly one operand is truthy
+                    let firstTruthy = result != nil && result != 0
+                    let secondTruthy = nextResult != nil && nextResult != 0
+                    
+                    if firstTruthy != secondTruthy {
+                        // Exactly one is truthy, result is true
+                        // Return the truthy value to preserve non-1 values
+                        result = firstTruthy ? result : nextResult
+                    } else {
+                        // Both truthy or both falsy, result is false (nil)
+                        result = nil
+                    }
                     #if FUNCTIONDBG
-                    DBGLog(String("fndbg XOR [\(nextResult)]: result= \(result)"))
+                    DBGLog(String("fndbg XOR [\(String(describing: nextResult))]: result= \(String(describing: result))"))
                     #endif
+                    
                 case FN2ARGEQUALTO:
+                    let leftValue = result ?? 0.0
+                    let rightValue = nextResult ?? 0.0
+                    
                     // Compare the values for equality (using a small epsilon for floating point)
                     let epsilon = 1e-10
-                    result = abs(result - nextResult) < epsilon ? 1.0 : 0.0
+                    result = abs(leftValue - rightValue) < epsilon ? 1.0 : nil
                     #if FUNCTIONDBG
-                    DBGLog(String("fndbg EQUALTO [\(nextResult)]: result= \(result)"))
+                    DBGLog(String("fndbg EQUALTO [\(String(describing: nextResult))]: result= \(String(describing: result))"))
                     #endif
+                    
                 case FN2ARGNOTEQUAL:
+                    let leftValue = result ?? 0.0
+                    let rightValue = nextResult ?? 0.0
+                    
+                    // Compare the values
                     let epsilon = 1e-10
-                    result = abs(result - nextResult) >= epsilon ? 1.0 : 0.0
+                    result = abs(leftValue - rightValue) >= epsilon ? 1.0 : nil
                     #if FUNCTIONDBG
-                    DBGLog(String("fndbg NOTEQUAL [\(nextResult)]: result= \(result)"))
+                    DBGLog(String("fndbg NOTEQUAL [\(String(describing: nextResult))]: result= \(String(describing: result))"))
                     #endif
                 case FN2ARGGREATER:
-                    result = result > nextResult ? 1.0 : 0.0
+                    if result == nil || nextResult == nil {
+                        // Comparisons with nil return nil
+                        result = nil
+                    } else {
+                        result = result! > nextResult! ? 1.0 : nil
+                    }
                     #if FUNCTIONDBG
-                    DBGLog(String("fndbg greater than [\(nextResult)]: result= \(result)"))
+                    DBGLog(String("fndbg greater than [\(String(describing: nextResult))]: result= \(String(describing: result))"))
                     #endif
+                    
                 case FN2ARGLESS:
-                    result = result < nextResult ? 1.0 : 0.0
+                    if result == nil || nextResult == nil {
+                        result = nil
+                    } else {
+                        result = result! < nextResult! ? 1.0 : nil
+                    }
                     #if FUNCTIONDBG
-                    DBGLog(String("fndbg less than [\(nextResult)]: result= \(result)"))
+                    DBGLog(String("fndbg less than [\(String(describing: nextResult))]: result= \(String(describing: result))"))
                     #endif
+                    
                 case FN2ARGGREATEREQUAL:
-                    result = result >= nextResult ? 1.0 : 0.0
+                    if result == nil && (nextResult == nil || nextResult == 0) {
+                        // nil >= nil or nil >= 0 is true
+                        result = 1.0
+                    } else if nextResult == nil && result == 0 {
+                        // 0 >= nil is true
+                        result = 1.0
+                    } else if result == nil || nextResult == nil {
+                        // Any other comparison with nil is false
+                        result = nil
+                    } else {
+                        // Normal comparison
+                        result = result! >= nextResult! ? 1.0 : nil
+                    }
                     #if FUNCTIONDBG
-                    DBGLog(String("fndbg greater than or equal [\(nextResult)]: result= \(result)"))
+                    DBGLog(String("fndbg greater than or equal [\(String(describing: nextResult))]: result= \(String(describing: result))"))
                     #endif
+                    
                 case FN2ARGLESSEQUAL:
-                    result = result <= nextResult ? 1.0 : 0.0
+                    if result == nil && (nextResult == nil || nextResult == 0) {
+                        // nil <= nil or nil <= 0 is true
+                        result = 1.0
+                    } else if nextResult == nil && result == 0 {
+                        // 0 <= nil is true
+                        result = 1.0
+                    } else if result == nil || nextResult == nil {
+                        // Any other comparison with nil is false
+                        result = nil
+                    } else {
+                        // Normal comparison
+                        result = result! <= nextResult! ? 1.0 : nil
+                    }
                     #if FUNCTIONDBG
-                    DBGLog(String("fndbg less than or equal [\(nextResult)]: result= \(result)"))
+                    DBGLog(String("fndbg less than or equal [\(String(describing: nextResult))]: result= \(String(describing: result))"))
                     #endif
+
+                    
                 default:
                     break
                 }
             } else if currTok == FNPARENOPEN {
                 // open paren means just recurse and return the result up
                 let nrnum = calcFunctionValue(withCurrent: epd0) // currFnNdx now at next place already
-                if nil == nrnum {
-                    return nil
-                }
-                result = nrnum?.doubleValue ?? 0.0
+                result = nrnum?.doubleValue
                 #if FUNCTIONDBG
-                DBGLog(String("fndbg paren open: result= \(result)"))
+                DBGLog(String("fndbg paren open: result= \(String(describing: result))"))
                 #endif
             } else if currTok == FNPARENCLOSE {
                 // close paren means we are there, return what we have
                 #if FUNCTIONDBG
-                DBGLog(String("fndbg paren close return with result= \(result)"))
+                DBGLog(String("fndbg paren close return with result= \(String(describing: result))"))
                 #endif
-                return NSNumber(value: result)
+                return result != nil ? NSNumber(value: result!) : nil
             } else if FNCONSTANT == currTok {
                 if currFnNdx >= maxc {
                     //DBGErr(@"constant fn missing arg: %@",self.fnArray);
                     FnErr = true
-                    return NSNumber(value: result) // crashlytics report past array bounds above (1-arg) processing function, so safety check here to return without crashing
+                    return result != nil ? NSNumber(value: result!) : nil // crashlytics report past array bounds above (1-arg) processing function, so safety check here to return without crashing
                 }
                 result = fnArray[currFnNdx].doubleValue
                 currFnNdx += 1
                 currFnNdx += 1 // skip the bounding constant tok
                 #if FUNCTIONDBG
-                DBGLog(String("paren open: result= \(result)"))
+                DBGLog(String("paren open: result= \(String(describing: result))"))
                 #endif
             } else if isFnTimeOp(currTok) {
                 if 0 == epd0 {
@@ -996,36 +1084,36 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
 
                 result = Double(epd1) - Double(epd0)
                 #if FUNCTIONDBG
-                DBGLog(String("timefn: \(result) secs"))
+                DBGLog(String("timefn: \(String(describing: result)) secs"))
                 #endif
                 switch currTok {
                 case FNTIMEWEEKS:
-                    result /= 7 // 7 days /week
+                    result = result != nil ? result! / 7 : nil // 7 days /week
                     #if FUNCTIONDBG
-                    DBGLog(String("timefn: weeks : \(result)"))
+                    DBGLog(String("timefn: weeks : \(String(describing: result))"))
                     #endif
                     fallthrough
                 case FNTIMEDAYS:
-                    result /= 24 // 24 hrs / day
+                    result = result != nil ? result! / 24 : nil // 24 hrs / day
                     #if FUNCTIONDBG
-                    DBGLog(String("timefn: days \(result)"))
+                    DBGLog(String("timefn: days \(String(describing: result))"))
                     #endif
                     fallthrough
                 case FNTIMEHRS:
-                    result /= 60 // 60 mins / hr
+                    result = result != nil ? result! / 60 : nil // 60 mins / hr
                     #if FUNCTIONDBG
-                    DBGLog(String("timefn: hrs \(result)"))
+                    DBGLog(String("timefn: hrs \(String(describing: result))"))
                     #endif
                     fallthrough
                 case FNTIMEMINS:
-                    result /= 60 // 60 secs / min
+                    result = result != nil ? result! / 60 : nil // 60 secs / min
                     #if FUNCTIONDBG
-                    DBGLog(String("timefn: mins \(result)"))
+                    DBGLog(String("timefn: mins \(String(describing: result))"))
                     #endif
                     fallthrough
                 case FNTIMESECS:
                     #if FUNCTIONDBG
-                    DBGLog(String("timefn: secs \(result)"))
+                    DBGLog(String("timefn: secs \(String(describing: result))"))
                     #endif
                     fallthrough
                 default:
@@ -1033,14 +1121,14 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                     break
                 }
                 #if FUNCTIONDBG
-                DBGLog(String("timefn: \(result) final units"))
+                DBGLog(String("timefn: \(String(describing: result)) final units"))
                 #endif
             } else {
                 // remaining option is we have some vid as currTok, return its value up the chain
                 let lvo = to.getValObj(currTok)!
                 result = lvo.vos!.getNumVal()  // Double(lvo.value) ?? 0
                 #if FUNCTIONDBG
-                DBGLog(String("vid \(lvo.vid): result= \(result)"))
+                DBGLog(String("vid \(lvo.vid): result= \(String(describing: result))"))
                 #endif
                 //result = [[to getValObj:currTok].value doubleValue];
                 //self.currFnNdx++;  // on to next  // already there - postinc on read
@@ -1049,10 +1137,9 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         // swiftify oops?  currFnNdx += 1
 
         #if FUNCTIONDBG
-        DBGLog(String("fndbg \(vo.valueName ?? "") calcFnValueWithCurrent rtn: \(NSNumber(value: result))"))
+        DBGLog(String("fndbg \(vo.valueName ?? "") calcFnValueWithCurrent rtn: \(result != nil ? NSNumber(value: result!) : nil)"))
         #endif
-        return NSNumber(value: result)
-
+        return result != nil ? NSNumber(value: result!) : nil
     }
 
     func checkEP(_ ep: Int) -> Bool {
