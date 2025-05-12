@@ -183,20 +183,23 @@ class voNumber: voState, UITextFieldDelegate {
                 }
                 //sql = nil;
             } else if vo.optDict["ahksrc"] == "1" && Int(vo.parentTracker.trackerDate!.timeIntervalSince1970) > self.MyTracker.lastDbDate{
-                // apple healthkit source and trackerDate is newer than last in database (not historical)
+                // apple healthkit source and trackerDate is newer than last in database (not historical = new record)
                 if vo.optDict["ahPrevD"] ?? "0" == "1" {
                     let calendar = Calendar.current
                     targD = calendar.date(byAdding: .day, value: -1, to: targD) ?? targD
                 }
-                var unit: HKUnit? = nil
-                if let unitString = vo.optDict["ahUnit"] {
-                    unit = HKUnit(from: unitString)
-                }
+
                 let cacheKey = "\(vo.optDict["ahSource"]!)-\(Int(targD.timeIntervalSince1970))"
                 if let cachedValue = Self.healthKitCache[cacheKey] {
                     dtf.text = cachedValue
                     return dtf
                 }
+                
+                var unit: HKUnit? = nil
+                if let unitString = vo.optDict["ahUnit"] {
+                    unit = HKUnit(from: unitString)
+                }
+                
                 rthk.performHealthQuery(
                     displayName: vo.optDict["ahSource"]!,
                     targetDate: Int(targD.timeIntervalSince1970),
@@ -262,6 +265,7 @@ class voNumber: voState, UITextFieldDelegate {
                 } else {
                     self.dtf.text = ""
                 }
+                self.vo.vos?.addExternalSourceOverlay(to: self.dtf)  // no taps
             } else {
                 dtf.text = ""
             }
@@ -282,10 +286,6 @@ class voNumber: voState, UITextFieldDelegate {
             }
         }
 
-        //DBGLog(@"dtf: vo val= %@  dtf.text= %@", self.vo.value, self.dtf.text);
-        //}
-
-        //DBGLog(String("number voDisplay: \(dtf.text)"))
         return dtf
     }
 
