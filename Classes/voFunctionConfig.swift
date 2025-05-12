@@ -368,7 +368,7 @@ extension voFunction {
         // i= constTok remove token and value  -- done
         //  also [self.tempValObj.optDict removeObjectForKey:@"fdc"]; -- can't be sure with mult consts
         let pkr = (ctvovcp?.wDict)?["fdPkr"] as? UIPickerView
-        DBGLog("fnArray=\(_fnArray)")
+        DBGLog("fnArray=\(String(describing: _fnArray))")
         if 0 < fnArray.count {
             // Check if we're deleting a classify operator
             if FN1ARGCLASSIFY == fnArray.last!.intValue {
