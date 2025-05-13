@@ -188,17 +188,15 @@ class voNumber: voState, UITextFieldDelegate {
                     let calendar = Calendar.current
                     targD = calendar.date(byAdding: .day, value: -1, to: targD) ?? targD
                 }
+                
+                let haveUnit = vo.optDict["ahUnit"] == nil
+                let cacheKey = "\(vo.optDict["ahSource"]!)-\(Int(targD.timeIntervalSince1970))-\(haveUnit ? vo.optDict["ahUnit"]! : "default")"
 
-                let cacheKey = "\(vo.optDict["ahSource"]!)-\(Int(targD.timeIntervalSince1970))"
                 if let cachedValue = Self.healthKitCache[cacheKey] {
                     dtf.text = cachedValue
                     return dtf
                 }
-                
-                var unit: HKUnit? = nil
-                if let unitString = vo.optDict["ahUnit"] {
-                    unit = HKUnit(from: unitString)
-                }
+                let unit = haveUnit ? HKUnit(from: vo.optDict["ahUnit"]!) : nil
                 
                 rthk.performHealthQuery(
                     displayName: vo.optDict["ahSource"]!,
