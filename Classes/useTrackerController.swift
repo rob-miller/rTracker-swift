@@ -174,7 +174,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         }
     }
     
-    func endRAI() {
+    func endRAI() {  // end refresh activity indicator
         refreshActivityIndicator?.stopAnimating()
         refreshActivityIndicator?.removeFromSuperview()
         refreshActivityIndicator = nil
@@ -427,9 +427,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         let dispatchGroup = DispatchGroup()
         
         DispatchQueue.main.async {
-            //let sql = "delete from voHKfail where stat = \(hkStatus.noData);"
-            //self.tracker!.toExecSql(sql: sql)
-            
+
             // delete all voData sourced from HealthKit and other trackers
             for vo in self.tracker!.valObjTableH {
                 vo.vos?.clearHKdata()  // re-load all hk data
@@ -459,9 +457,9 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             // Notify when all operations are completed
             dispatchGroup.notify(queue: .main) {
                 DBGLog("Full refresh completed - All HealthKit data loaded and SQL inserts completed.")
-                self.tracker?.cleanDb()
-                self.endRAI()
-                _ = self.tracker!.loadData(Int(self.tracker!.trackerDate!.timeIntervalSince1970))
+                self.tracker?.cleanDb()  // no orphaned data
+                self.endRAI()  // end refresh activity indicator
+                _ = self.tracker!.loadData(Int(self.tracker!.trackerDate!.timeIntervalSince1970))  // load current date record
                 self.updateTrackerTableView()
                 self.isRefreshInProgress = false
             }
@@ -704,7 +702,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     // MARK: view rotation methods
 
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
-        if isViewLoaded && view.window != nil {
+        if isViewLoaded && view.window != nil && !isRefreshInProgress {
 
             coordinator.animate(alongsideTransition: { context in
                 let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
