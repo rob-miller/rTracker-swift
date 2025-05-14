@@ -396,7 +396,7 @@ class valueObj: NSObject, UITextFieldDelegate {
         }
 
         if display == nil {
-            DBGLog(String("vo new display name:  \(valueName) currVal: .\(value)."))
+            //DBGLog(String("vo new display name:  \(valueName) currVal: .\(value)."))
             display = vos?.voDisplay(bounds)
             display?.tag = kViewTag
         }

@@ -158,7 +158,7 @@ class voState: NSObject, voProtocol {
           );
         """
         to.toExecSql(sql: sql)
-        DBGLog("Done loadOTdata with \(myDates.count) records.")
+        DBGLog("Done loadOTdata \(xtName) \(xvName) with \(myDates.count) records.")
         dispatchGroup?.leave()  // done with enter before getHealthkitDates processing overall
         
     }

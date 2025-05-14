@@ -84,7 +84,7 @@ class voBoolean: voState {
             rTracker_resource.setSwitch(bSwitch!, colr: rTracker_resource.colorSet()[Int(vo.optDict["btnColr"]!)!])
         }
 
-        DBGLog(String("bool data= \(vo.value)"))
+        //DBGLog(String("bool data= \(vo.value)"))
         return bSwitch!
     }
 
@@ -260,8 +260,7 @@ class voBoolean: voState {
     }
     
     override func voTVCellHeight() -> CGFloat {
-        //return CELL_HEIGHT_TALL;
-        DBGLog(String("\(bSwitch!.frame.size.height) \(3 * MARGIN) \(vo.getLabelSize().height) "))
+        //DBGLog(String("\(bSwitch!.frame.size.height) \(3 * MARGIN) \(vo.getLabelSize().height) "))
         return bSwitch!.frame.size.height + MARGIN   // (3 * MARGIN) // + vo.getLabelSize().height
     }
 

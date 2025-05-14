@@ -1349,7 +1349,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         }
     }
 
-    override func setFnVal(_ tDate: Int, dispatchGroup: DispatchGroup?) {
+    override func setFnVal(_ tDate: Int, dispatchGroup: DispatchGroup? = nil) {
         dispatchGroup?.enter()
         // track vo's in fnstatus so can delete independently
         var sql: String

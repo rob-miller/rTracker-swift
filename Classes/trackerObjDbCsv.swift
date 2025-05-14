@@ -309,7 +309,7 @@ extension trackerObj {
         deleteTDb()
     }
     
-    func cleanDb() {
+    func cleanDb() {  // ensure no orphaned data without voData <-> trkrData match
         // wipe empty voData entries
         var sql = "delete from voData where val=''"
         toExecSql(sql:sql)
