@@ -45,7 +45,7 @@ class voNumber: voState, UITextFieldDelegate {
     }
     
     private func createTextField() -> UITextField {
-        DBGLog(String("init \(vo.valueName) : x=\(vosFrame.origin.x) y=\(vosFrame.origin.y) w=\(vosFrame.size.width) h=\(vosFrame.size.height)"))
+        //DBGLog(String("init \(vo.valueName) : x=\(vosFrame.origin.x) y=\(vosFrame.origin.y) w=\(vosFrame.size.width) h=\(vosFrame.size.height)"))
 
         let textField = UITextField(frame: vosFrame)
         
@@ -189,7 +189,7 @@ class voNumber: voState, UITextFieldDelegate {
                     targD = calendar.date(byAdding: .day, value: -1, to: targD) ?? targD
                 }
                 
-                let haveUnit = vo.optDict["ahUnit"] == nil
+                let haveUnit = vo.optDict["ahUnit"] != nil
                 let cacheKey = "\(vo.optDict["ahSource"]!)-\(Int(targD.timeIntervalSince1970))-\(haveUnit ? vo.optDict["ahUnit"]! : "default")"
 
                 if let cachedValue = Self.healthKitCache[cacheKey] {
@@ -248,7 +248,7 @@ class voNumber: voState, UITextFieldDelegate {
                             self.dtf.text = "\(formattedValue)"
                             Self.healthKitCache[cacheKey] = formattedValue
                             self.vo.vos?.addExternalSourceOverlay(to: self.dtf)  // no taps
-                            DBGLog("\(self.vo.valueName!) dtf= \(formattedValue)")
+                            //DBGLog("\(self.vo.valueName!) dtf= \(formattedValue)")
                         }
                     }
                 }
@@ -405,6 +405,186 @@ class voNumber: voState, UITextFieldDelegate {
         return timestamp
     }
 
+    // MARK: -
+    // MARK: HealthKit
+    
+    func debugHealthKitDateQuery(tracker: trackerObj, valueObjID: Int) {
+        let to = tracker
+        let vid = valueObjID
+        
+        DBGLog("Begin debugging HealthKit date query for valueObj ID \(vid)")
+        
+        // Test 1: Get all dates in trkrData as the base set
+        let allDatesSQL = "SELECT date FROM trkrData ORDER BY date DESC"
+        let allDates = to.toQry2AryI(sql: allDatesSQL)
+        DBGLog("Total trkrData dates: \(allDates.count)")
+        
+        // Test 2: Dates that already have voData entries for this valueObj
+        let withVoDataSQL = """
+        SELECT date FROM trkrData 
+        WHERE EXISTS (
+            SELECT 1 FROM voData 
+            WHERE voData.date = trkrData.date 
+            AND voData.id = \(vid)
+        )
+        ORDER BY date DESC
+        """
+        let withVoData = to.toQry2AryI(sql: withVoDataSQL)
+        DBGLog("Dates with existing voData entries: \(withVoData.count)")
+        
+        // Test 3: Dates that have hkStatus entries with hkData status
+        let withHkDataStatusSQL = """
+        SELECT date FROM trkrData 
+        WHERE EXISTS (
+            SELECT 1 FROM voHKstatus 
+            WHERE voHKstatus.date = trkrData.date 
+            AND voHKstatus.stat = \(hkStatus.hkData.rawValue)
+            AND voHKstatus.id = \(vid)
+        )
+        ORDER BY date DESC
+        """
+        let withHkDataStatus = to.toQry2AryI(sql: withHkDataStatusSQL)
+        DBGLog("Dates with hkData status: \(withHkDataStatus.count)")
+        
+        // Test 4: Dates with any hkStatus entries (any status)
+        let withAnyHkStatusSQL = """
+        SELECT date FROM trkrData 
+        WHERE EXISTS (
+            SELECT 1 FROM voHKstatus 
+            WHERE voHKstatus.date = trkrData.date 
+            AND voHKstatus.id = \(vid)
+        )
+        ORDER BY date DESC
+        """
+        let withAnyHkStatus = to.toQry2AryI(sql: withAnyHkStatusSQL)
+        DBGLog("Dates with any hkStatus: \(withAnyHkStatus.count)")
+        
+        // Test 5: Get the latest date with hkData status
+        let latestHkDataSQL = """
+        SELECT COALESCE(MAX(date), 0) FROM voHKstatus 
+        WHERE id = \(vid) AND stat = \(hkStatus.hkData.rawValue)
+        """
+        let latestHkData = to.toQry2Int(sql: latestHkDataSQL)
+        let latestHkDataDate = Date(timeIntervalSince1970: TimeInterval(latestHkData))
+        DBGLog("Latest date with hkData status: \(latestHkData) (\(latestHkDataDate))")
+        
+        // Test 6: Dates newer than the latest hkData status
+        let newerDatesSQL = """
+        SELECT date FROM trkrData 
+        WHERE date >= \(latestHkData)
+        ORDER BY date DESC
+        """
+        let newerDates = to.toQry2AryI(sql: newerDatesSQL)
+        DBGLog("Dates newer than latest hkData date: \(newerDates.count)")
+        
+        // Break down the original query into its components
+        
+        // Part 1: Dates that don't have voData
+        let noVoDataSQL = """
+        SELECT date FROM trkrData 
+        WHERE NOT EXISTS (
+            SELECT 1 FROM voData 
+            WHERE voData.date = trkrData.date 
+            AND voData.id = \(vid)
+        )
+        ORDER BY date DESC
+        """
+        let noVoData = to.toQry2AryI(sql: noVoDataSQL)
+        DBGLog("Dates with no voData: \(noVoData.count)")
+        
+        // Part 2: Dates that don't have hkStatus.hkData
+        let noHkDataStatusSQL = """
+        SELECT date FROM trkrData 
+        WHERE NOT EXISTS (
+            SELECT 1 FROM voHKstatus 
+            WHERE voHKstatus.date = trkrData.date 
+            AND voHKstatus.stat = \(hkStatus.hkData.rawValue)
+            AND voHKstatus.id = \(vid)
+        )
+        ORDER BY date DESC
+        """
+        let noHkDataStatus = to.toQry2AryI(sql: noHkDataStatusSQL)
+        DBGLog("Dates with no hkData status: \(noHkDataStatus.count)")
+        
+        // Part 3: Dates with no voData, no hkData status, and newer than latest hkData
+        let firstPartSQL = """
+        SELECT date FROM trkrData 
+        WHERE NOT EXISTS (
+            SELECT 1 FROM voData 
+            WHERE voData.date = trkrData.date 
+            AND voData.id = \(vid)
+        )
+        AND NOT EXISTS (
+            SELECT 1 FROM voHKstatus 
+            WHERE voHKstatus.date = trkrData.date 
+            AND voHKstatus.stat = \(hkStatus.hkData.rawValue)
+            AND voHKstatus.id = \(vid)
+        )
+        AND date >= \(latestHkData)
+        ORDER BY date DESC
+        """
+        let firstPart = to.toQry2AryI(sql: firstPartSQL)
+        DBGLog("Dates matching first part of query (no voData, no hkData status, newer than latest): \(firstPart.count)")
+        
+        // Part 4: Dates with no hkStatus at all
+        let secondPartSQL = """
+        SELECT date FROM trkrData 
+        WHERE NOT EXISTS (
+            SELECT 1 FROM voHKstatus 
+            WHERE voHKstatus.date = trkrData.date 
+            AND voHKstatus.id = \(vid)
+        )
+        ORDER BY date DESC
+        """
+        let secondPart = to.toQry2AryI(sql: secondPartSQL)
+        DBGLog("Dates matching second part of query (no hkStatus at all): \(secondPart.count)")
+        
+        // Show sample dates from each group
+        func formatSampleDates(_ dates: [Int], max: Int = 5) -> String {
+            guard !dates.isEmpty else { return "[]" }
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateStyle = .short
+            dateFormatter.timeStyle = .short
+            
+            let samples = dates.prefix(max).map { date -> String in
+                let dateObj = Date(timeIntervalSince1970: TimeInterval(date))
+                return "\(date) (\(dateFormatter.string(from: dateObj)))"
+            }
+            
+            return "[\(samples.joined(separator: ", "))\(dates.count > max ? ", ..." : "")]"
+        }
+        
+        DBGLog("Sample dates from first part: \(formatSampleDates(firstPart))")
+        DBGLog("Sample dates from second part: \(formatSampleDates(secondPart))")
+        
+        // Calculate the union of both parts to match the full query
+        var combinedSet = Set<Int>()
+        for date in firstPart { combinedSet.insert(date) }
+        for date in secondPart { combinedSet.insert(date) }
+        
+        DBGLog("Total unique dates from combined parts: \(combinedSet.count)")
+        
+        // Determine which part contributes more to the result
+        let firstPartOnly = firstPart.filter { !secondPart.contains($0) }
+        let secondPartOnly = secondPart.filter { !firstPart.contains($0) }
+        let intersection = firstPart.filter { secondPart.contains($0) }
+        
+        DBGLog("Dates only in first part: \(firstPartOnly.count) \(formatSampleDates(firstPartOnly))")
+        DBGLog("Dates only in second part: \(secondPartOnly.count) \(formatSampleDates(secondPartOnly))")
+        DBGLog("Dates in both parts: \(intersection.count)")
+        
+        // Look for dates far in the past or future that might be suspicious
+        let now = Int(Date().timeIntervalSince1970)
+        let oneYearAgo = now - 365*24*60*60
+        let veryOldDates = combinedSet.filter { $0 < oneYearAgo }
+        let futureDates = combinedSet.filter { $0 > now }
+        
+        DBGLog("Very old dates (>1 year): \(veryOldDates.count) \(formatSampleDates(Array(veryOldDates)))")
+        DBGLog("Future dates: \(futureDates.count) \(formatSampleDates(Array(futureDates)))")
+        
+        DBGLog("End debugging HealthKit date query")
+    }
+    
     override func loadHKdata(forDate date: Int?, dispatchGroup: DispatchGroup?) {
         // loads into database, not for current tracker record
         let to = vo.parentTracker
@@ -539,12 +719,15 @@ class voNumber: voState, UITextFieldDelegate {
             );
             """
             // get dates where
-            //   do not have voData and hkStatus confirms no data and only looking at new data since last update
-            //   or have trkrData entry but no hkStatus entry at all (refreshing current record)
+            //   do not have voData and hkStatus not hkData and only looking at new data since last update
+            //   or have trkrData entry but no hkStatus entry at all (refreshing current record or missing data)
             
             let dateSet = to.toQry2AryI(sql: sql)
             
             DBGLog("Query complete, count is \(dateSet.count)")
+            //debugHealthKitDateQuery(tracker: to, valueObjID: vo.vid)
+            
+            
             let calendar = Calendar.current
             let secondHKDispatchGroup = DispatchGroup()
             for dat in dateSet.sorted() {  // .sorted() is just to help debugging
@@ -566,7 +749,7 @@ class voNumber: voState, UITextFieldDelegate {
                 }
 
                 
-                DBGLog("calling phq \(srcName) date \(date)  prevD \(self.vo.optDict["ahPrevD"] ?? "nil") prevDate= \(prevDate)")
+                //DBGLog("calling phq \(srcName) date \(date)  prevD \(self.vo.optDict["ahPrevD"] ?? "nil") prevDate= \(prevDate)")
                 
                 rthk.performHealthQuery(
                     displayName: srcName,
