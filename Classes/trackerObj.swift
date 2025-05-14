@@ -208,14 +208,60 @@ class trackerObj: tObjBase {
         dispatchGroup?.enter()
         let localGroup = DispatchGroup()
         var rslt = false
+        var hkValueObjIDs: [Int] = []
         for vo in valObjTable {
             if vo.optDict["ahksrc"] ?? "0" != "0" {
+                hkValueObjIDs.append(vo.vid)
                 vo.vos?.loadHKdata(forDate: date, dispatchGroup: localGroup)
                 rslt = true
             }
         }
         // Wait for our local operations to complete before calling completion
         localGroup.notify(queue: .main) {
+            
+            // processing multiple
+            if hkValueObjIDs.count > 1 {
+                // Convert Int array to comma-separated string for SQL
+                let hkVidsList = hkValueObjIDs.map { String($0) }.joined(separator: ",")
+#if DEBUGLOG
+                let countMissingSQL = """
+                SELECT COUNT(*) FROM (
+                    SELECT d.date, v.id as vid
+                    FROM 
+                        (SELECT DISTINCT date FROM voHKstatus WHERE id IN (\(hkVidsList))) d,
+                        (SELECT DISTINCT id FROM voHKstatus WHERE id IN (\(hkVidsList))) v
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM voHKstatus 
+                        WHERE voHKstatus.id = v.id
+                        AND voHKstatus.date = d.date
+                    )
+                )
+                """
+                let missingCount = self.toQry2Int(sql: countMissingSQL)
+                DBGLog("need to add \(missingCount) noData records")
+                #endif
+                // This query finds all combinations of (HK valueObj ID, date with HK data)
+                // where a voHKstatus entry doesn't exist, and creates entries for them
+                let ensureStatusSQL = """
+                            INSERT INTO voHKstatus (id, date, stat)
+                            SELECT vid, date, \(hkStatus.noData.rawValue)
+                            FROM (
+                                SELECT d.date, v.id as vid
+                                FROM 
+                                    (SELECT DISTINCT date FROM voHKstatus WHERE id IN (\(hkVidsList))) d,
+                                    (SELECT DISTINCT id FROM voHKstatus WHERE id IN (\(hkVidsList))) v
+                                WHERE NOT EXISTS (
+                                    SELECT 1 FROM voHKstatus 
+                                    WHERE voHKstatus.id = v.id
+                                    AND voHKstatus.date = d.date
+                                )
+                            )
+                            """
+                //DBGLog(ensureStatusSQL)
+                self.toExecSql(sql: ensureStatusSQL)
+                //DBGLog("Added voHKstatus entries for all dates in trkrData for all HK valueObjs")
+            }
+            
             completion?()
             dispatchGroup?.leave()
         }
