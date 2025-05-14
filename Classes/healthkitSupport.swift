@@ -341,7 +341,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         queryConfig: HealthDataQuery,
         completion: @escaping ([HealthQueryResult]) -> Void
     ) {
-        DBGLog("sleepAnalysisQuery startDate \(startDate) endDate \(endDate) name \(queryConfig.displayName)")
+        //DBGLog("sleepAnalysisQuery startDate \(startDate) endDate \(endDate) name \(queryConfig.displayName)")
         guard let categoryType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
             DBGLog("Unsupported sample type for sleep analysis.")
             completion([])
@@ -463,9 +463,11 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                     if hasSleepData && self.isSleepCategoryQuery(queryConfig) {
                         // Sleep data exists, but no data for this specific category - this means 0 minutes
                         let result = HealthQueryResult(date: startDate, value: 0.0, unit: specifiedUnit)
+                        DBGLog("No samples found for the \(queryConfig.displayName), but sleep data exists.")
                         completion([result])
                     } else {
                         // No sleep data at all exists for this period
+                        DBGLog("No sleep data found for the specified time period.")
                         completion([])
                     }
                 }
@@ -484,12 +486,13 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                     maxGapMinutes: MAXSLEEPSEGMENTGAP,
                     minDurationMinutes: MINSLEEPSEGMENTDURATION
                 )
-                // Always add a result with the count (which might be 0)
-                results.append(HealthQueryResult(
-                    date: startDate,
-                    value: Double(segmentCount),
-                    unit: specifiedUnit
-                ))
+                if segmentCount > 0 {
+                    results.append(HealthQueryResult(
+                        date: startDate,
+                        value: Double(segmentCount),
+                        unit: specifiedUnit
+                    ))
+                }
                 
             case "Sleep - REM Segments":
                 let segmentCount = self.countSleepSegments(
@@ -502,33 +505,36 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                     maxGapMinutes: MAXSLEEPSEGMENTGAP,
                     minDurationMinutes: MINSLEEPSEGMENTDURATION
                 )
-                // Always add a result with the count (which might be 0)
-                results.append(HealthQueryResult(
-                    date: startDate,
-                    value: Double(segmentCount),
-                    unit: specifiedUnit
-                ))
+                if segmentCount > 0 {
+                    results.append(HealthQueryResult(
+                        date: startDate,
+                        value: Double(segmentCount),
+                        unit: specifiedUnit
+                    ))
+                }
                 
             case "Sleep - Cycles":
                 let cycleCount = self.countSleepCycles(
                     samples: categorySamples,
                     minSegmentMinutes: MINSLEEPSEGMENTDURATION
                 )
-                // Always add a result with the count (which might be 0)
-                results.append(HealthQueryResult(
-                    date: startDate,
-                    value: Double(cycleCount),
-                    unit: specifiedUnit
-                ))
+                if cycleCount > 0 {
+                    results.append(HealthQueryResult(
+                        date: startDate,
+                        value: Double(cycleCount),
+                        unit: specifiedUnit
+                    ))
+                }
                 
             case "Sleep - Transitions":
                 let transitionCount = self.countSleepTransitions(samples: categorySamples)
-                // Always add a result with the count (which might be 0)
-                results.append(HealthQueryResult(
-                    date: startDate,
-                    value: Double(transitionCount),
-                    unit: specifiedUnit
-                ))
+                if transitionCount > 0 {
+                    results.append(HealthQueryResult(
+                        date: startDate,
+                        value: Double(transitionCount),
+                        unit: specifiedUnit
+                    ))
+                }
                 
             default:
                 // Handle regular sleep analysis metrics
@@ -538,11 +544,12 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                         total + (queryConfig.customProcessor?(sample) ?? 0)
                     }
                     
-                    // Always create a result, even if totalValue is 0
-                    if specifiedUnit == HKUnit.hour() {
-                        totalValue /= 60.0
+                    if totalValue != 0.0 {  // don't add 0 value records, e.g. from no deep sleep data when have in bed data
+                        if specifiedUnit == HKUnit.hour() {
+                            totalValue /= 60.0
+                        }
+                        results.append(HealthQueryResult(date: startDate, value: totalValue, unit: specifiedUnit))
                     }
-                    results.append(HealthQueryResult(date: startDate, value: totalValue, unit: specifiedUnit))
                     
                 case .discreteArithmetic:
                     if !categorySamples.isEmpty {
@@ -571,7 +578,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                     DBGErr("aggregation Style \(queryConfig.aggregationStyle) not handled")
                 }
             }
-            
+            DBGLog("have Sleep Analysis Query Results for \(queryConfig.displayName) : \(results)")
             completion(results)
         }
         
@@ -899,7 +906,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
             return
         }
 
-        DBGLog("query name \(displayName)")
+        //DBGLog("query name \(displayName)")
         let calendar = Calendar.current
 
         let startDate: Date
@@ -918,7 +925,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
             startDate = calendar.date(byAdding: .day, value: -1, to: endDate) ??
                         Date(timeIntervalSince1970: TimeInterval(targetDate) - 86400) // Default to one day earlier
             
-            DBGLog("startDate \(startDate)  endDate  \(endDate)")
+            //DBGLog("startDate \(startDate)  endDate  \(endDate)")
             //DBGLog("hello")
         } else {
             // Default time range: ±10 hours around the targetDate
