@@ -314,7 +314,29 @@ class rTracker_resource: NSObject {
     }
     
     class func addTimedLabel(text: String, tag: Int, sv: UIView, ti: TimeInterval? = nil) {
-        let label = UILabel(frame: CGRect(x: 0, y: 0, width: 200, height: 30))
+        // Sizing ------------------------------------------------------
+        let font                = UIFont.preferredFont(forTextStyle: .body)
+        let hPad: CGFloat       = 16        // horizontal padding
+        let vPad: CGFloat       = 8         // vertical padding
+        let limit               = sv.bounds.width * 0.8
+
+        // Measure the string (multi-line aware)
+        let boundingSize = CGSize(width: limit - 2 * hPad,
+                                  height: .greatestFiniteMagnitude)
+
+        let textRect = (text as NSString)
+            .boundingRect(with: boundingSize,
+                          options: [.usesLineFragmentOrigin, .usesFontLeading],
+                          attributes: [.font: font],
+                          context: nil)
+            .integral   // round up to whole pixels
+
+        let labelSize = CGSize(width: textRect.width  + 2 * hPad,
+                               height: textRect.height + 2 * vPad)
+
+        // Label set-up -----------------------------------------------
+        let label = UILabel(frame: CGRect(origin: .zero, size: labelSize))
+
         label.center = CGPoint(x: sv.center.x, y: 100)
         label.textAlignment = .center
         label.text = text
