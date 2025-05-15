@@ -49,7 +49,7 @@
 import MessageUI
 import UIKit
 
-class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDataSource, UITextFieldDelegate, MFMailComposeViewControllerDelegate, UIAdaptivePresentationControllerDelegate {
+class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDataSource, UITextFieldDelegate, MFMailComposeViewControllerDelegate, UIAdaptivePresentationControllerDelegate, RefreshProgressDelegate {
 
     var tracker: trackerObj?
     var saveFrame = CGRect.zero
@@ -85,6 +85,14 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     private var isRefreshInProgress = false
     private var refreshActivityIndicator: UIActivityIndicatorView?
     
+    // refresh progress bar
+    private var fullRefreshProgressBar: UIProgressView?
+    private var fullRefreshProgressLabel: UILabel?
+    private var totalProgressSteps = 0
+    private var currentProgressStep = 0
+    private var currentRefreshPhase = ""
+    private var fullRefreshProgressContainerView: UIView?
+
     let refreshLabelId = 1002
     let refreshLabelId2 = 1003
     
@@ -107,6 +115,17 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         return _dpr!
     }
 
+    override init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) {
+        super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)
+        // Initialize progress tracking variables
+        currentRefreshPhase = ""
+    }
+    
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        // Initialize progress tracking variables
+        currentRefreshPhase = ""
+    }
 
 
     // MARK: -
@@ -352,6 +371,9 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 // Reset counter
                 pullCounter = 0
                 
+                // Remove spinner as we'll use the progress bar instead
+                endRAI()
+                
                 // Show visual indicator for full refresh
                 DispatchQueue.main.async {
                     rTracker_resource.addTimedLabel(text:"Full refresh in progress...", tag:self.refreshLabelId, sv:self.view, ti:3.0)
@@ -375,7 +397,6 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         if pullCounter == 1 {
             // Reset counter
             pullCounter = 0
-
             DispatchQueue.main.async {
                 // Refresh only the current record
                 self.isRefreshInProgress = true
@@ -422,48 +443,68 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     
     // full data reload
     @objc func handleFullRefresh() {
-        DBGLog("Full Refresh initiated")
+        DBGLog("[\(Date())] Full Refresh initiated")
         
-        let dispatchGroup = DispatchGroup()
+        // Calculate total progress steps
+        totalProgressSteps = calculateTotalProgressSteps()
+        currentProgressStep = 0
         
-        DispatchQueue.main.async {
-
-            // delete all voData sourced from HealthKit and other trackers
-            for vo in self.tracker!.valObjTableH {
-                vo.vos?.clearHKdata()  // re-load all hk data
+        // Setup progress UI before starting operations
+        setupFullRefreshProgressUI()
+        
+        // Put everything in a small delay to ensure UI can update
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            // Update phase explicitly before each step
+            self.updateFullRefreshProgress(phase: "Preparing data refresh")
+            
+            // Delete all voData sourced from HealthKit and other trackers
+            for vo in self.tracker!.valObjTable {
+                vo.vos?.clearHKdata()
                 vo.vos?.clearOTdata()
                 vo.vos?.clearFNdata()
             }
-            // delete trkrData entries which no longer have associated voData
+            
+            // Delete trkrData entries which no longer have associated voData
             let sql = "delete from trkrdata where date not in (select date from voData where voData.date = trkrdata.date)"
             self.tracker?.toExecSql(sql: sql)
             
-            // Load HealthKit data and wait for all async tasks to complete
-            dispatchGroup.enter() // starting
-            // load hk data
-            _ = self.tracker!.loadHKdata(dispatchGroup: dispatchGroup, completion: {
-                // have hk data, load OT data for really other trackers
-                _ = self.tracker!.loadOTdata(otSelf:false, dispatchGroup: dispatchGroup, completion:{
-                    // now can compute fn results
-                    _ = self.tracker!.loadFNdata(dispatchGroup: dispatchGroup, completion:{
-                        // now load ot data that look at self
-                        _ = self.tracker!.loadOTdata(otSelf:true, dispatchGroup: dispatchGroup)
-                    })
-                })
-
-            })
-            dispatchGroup.leave() // Only if loadHKdata returns synchronously (no async left to track)
+            // Set the tracker as the delegate for progress updates
+            self.tracker!.refreshDelegate = self
             
-            // Notify when all operations are completed
-            dispatchGroup.notify(queue: .main) {
-                DBGLog("Full refresh completed - All HealthKit data loaded and SQL inserts completed.")
-                self.tracker?.cleanDb()  // no orphaned data
-                self.endRAI()  // end refresh activity indicator
-                _ = self.tracker!.loadData(Int(self.tracker!.trackerDate!.timeIntervalSince1970))  // load current date record
-                self.updateTrackerTableView()
-                self.isRefreshInProgress = false
+            // CRITICAL: Use sequential direct method calls instead of nesting callbacks
+            // Each method will now handle its own phase reporting
+            
+            // Process HealthKit data
+            _ = self.tracker!.loadHKdata(dispatchGroup: nil) {
+                // Process other tracker data (non-self references)
+                _ = self.tracker!.loadOTdata(otSelf: false, dispatchGroup: nil) {
+                    _ = self.tracker!.loadFNdata(dispatchGroup: nil) {
+                        // Process other tracker data (self references)
+                        _ = self.tracker!.loadOTdata(otSelf: true, dispatchGroup: nil) {
+                            // All operations complete
+                            DispatchQueue.main.async {
+                                DBGLog("Full refresh completed - All data loaded and SQL inserts completed.")
+                                self.tracker?.cleanDb()  // no orphaned data
+                                
+                                // Add a small success indicator message
+                                rTracker_resource.addTimedLabel(text: "Refresh completed successfully", tag: self.refreshLabelId, sv: self.view, ti: 3.0)
+                                
+                                // Clean up progress UI
+                                self.cleanupFullRefreshProgressUI()
+                                
+                                // Clear tracker delegate
+                                self.tracker!.refreshDelegate = nil
+                                
+                                // Just to make sure we clean up properly
+                                self.endRAI()
+                                _ = self.tracker!.loadData(Int(self.tracker!.trackerDate!.timeIntervalSince1970))
+                                self.updateTrackerTableView()
+                                self.isRefreshInProgress = false
+                            }
+                        }
+                    }
+                }
             }
-
         }
     }
     
@@ -745,6 +786,17 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                     DBGWarn("utc did rotate but can't tell to where")
                 }
             }
+        } else if isRefreshInProgress {
+            // Handle rotation during refresh by ensuring progress UI stays properly positioned
+            coordinator.animate(alongsideTransition: { _ in
+                // Ensure the progress container stays centered during rotation
+                if let container = self.fullRefreshProgressContainerView {
+                    // Only update if using constraints - our implementation should already handle this
+                    if !container.translatesAutoresizingMaskIntoConstraints {
+                        container.layoutIfNeeded()
+                    }
+                }
+            })
         }
 
         super.viewWillTransition(to: size, with: coordinator)
@@ -786,6 +838,202 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         dismiss(animated: true)
         alreadyReturning = false
         DBGLog("graph down")
+    }
+
+    // MARK: -
+    // MARK: full refresh progress bar
+    
+    private func setupFullRefreshProgressUI() {
+        // Calculate size and position for both portrait and landscape orientations
+        let containerWidth = min(view.bounds.width - 40, 400) // Cap width at 400 for large screens
+        let containerHeight = 90
+        
+        // Center in the view
+        let xPosition = (view.bounds.width - containerWidth) / 2
+        let yPosition = (view.bounds.height - CGFloat(containerHeight)) / 2
+        
+        // Create container view with Auto Layout support
+        fullRefreshProgressContainerView = UIView(frame: CGRect(x: xPosition, y: yPosition, width: containerWidth, height: CGFloat(containerHeight)))
+        fullRefreshProgressContainerView?.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Style the container
+        fullRefreshProgressContainerView?.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.95)
+        fullRefreshProgressContainerView?.layer.cornerRadius = 12
+        fullRefreshProgressContainerView?.layer.borderWidth = 0.5
+        fullRefreshProgressContainerView?.layer.borderColor = UIColor.separator.cgColor
+        fullRefreshProgressContainerView?.layer.shadowColor = UIColor.black.cgColor
+        fullRefreshProgressContainerView?.layer.shadowOffset = CGSize(width: 0, height: 2)
+        fullRefreshProgressContainerView?.layer.shadowOpacity = 0.2
+        fullRefreshProgressContainerView?.layer.shadowRadius = 6
+        
+        // Create and configure the progress label with Auto Layout support
+        fullRefreshProgressLabel = UILabel()
+        fullRefreshProgressLabel?.translatesAutoresizingMaskIntoConstraints = false
+        fullRefreshProgressLabel?.font = UIFont.systemFont(ofSize: 15, weight: .medium)
+        fullRefreshProgressLabel?.textColor = .label
+        fullRefreshProgressLabel?.textAlignment = .center
+        fullRefreshProgressLabel?.text = "Preparing refresh..."
+        
+        // Create and configure the progress bar with Auto Layout support
+        fullRefreshProgressBar = UIProgressView()
+        fullRefreshProgressBar?.translatesAutoresizingMaskIntoConstraints = false
+        fullRefreshProgressBar?.progressViewStyle = .bar
+        fullRefreshProgressBar?.progressTintColor = .systemBlue
+        fullRefreshProgressBar?.trackTintColor = .systemGray5
+        fullRefreshProgressBar?.progress = 0.0
+        fullRefreshProgressBar?.layer.cornerRadius = 4
+        fullRefreshProgressBar?.clipsToBounds = true
+        
+        // Add the UI elements to the container
+        if let container = fullRefreshProgressContainerView, let label = fullRefreshProgressLabel, let progressBar = fullRefreshProgressBar {
+            view.addSubview(container)
+            container.addSubview(label)
+            container.addSubview(progressBar)
+            
+            // Center the container in the view with constraints
+            NSLayoutConstraint.activate([
+                container.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+                container.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+                container.widthAnchor.constraint(equalToConstant: containerWidth),
+                container.heightAnchor.constraint(equalToConstant: CGFloat(containerHeight)),
+                
+                // Position the label at the top with margins
+                label.topAnchor.constraint(equalTo: container.topAnchor, constant: 15),
+                label.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 15),
+                label.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -15),
+                
+                // Position the progress bar below the label
+                progressBar.topAnchor.constraint(equalTo: label.bottomAnchor, constant: 15),
+                progressBar.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 15),
+                progressBar.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -15),
+                progressBar.heightAnchor.constraint(equalToConstant: 8)
+            ])
+            
+            // Bring to front to ensure visibility
+            view.bringSubviewToFront(container)
+            
+            // Slight animation to draw attention
+            container.alpha = 0
+            UIView.animate(withDuration: 0.3) {
+                container.alpha = 1
+            }
+        }
+    }
+
+    // Clean up progress tracking UI elements
+    private func cleanupFullRefreshProgressUI() {
+        // Fade out the progress view container with animation
+        UIView.animate(withDuration: 0.5, animations: {
+            self.fullRefreshProgressContainerView?.alpha = 0
+            self.fullRefreshProgressContainerView?.transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
+        }, completion: { _ in
+            // Clean up resources after animation completes
+            self.fullRefreshProgressContainerView?.removeFromSuperview()
+            self.fullRefreshProgressContainerView = nil
+            self.fullRefreshProgressBar = nil
+            self.fullRefreshProgressLabel = nil
+            
+            // Reset tracking variables
+            self.currentProgressStep = 0
+            self.totalProgressSteps = 0
+            self.currentRefreshPhase = ""
+        })
+    }
+
+    // Update progress bar and label - implements RefreshProgressDelegate protocol
+    func updateFullRefreshProgress(step: Int = 1, phase: String? = nil) {
+        // Diagnostic step 2: Add timestamp to track when method is called
+        //DBGLog("[\(Date())] updateFullRefreshProgress called with step=\(step), phase=\(phase ?? "nil")")
+        
+        if totalProgressSteps == 0 {
+            return
+        }
+        
+        currentProgressStep += step
+        
+        if let phase = phase {
+            currentRefreshPhase = phase
+            DBGLog("Progress phase changed to: \(phase)")
+        }
+        
+        // Ensure we don't exceed 100%
+        let progressValue = min(Float(currentProgressStep) / Float(totalProgressSteps), 1.0)
+        
+        // IMPORTANT: Always use async to avoid potential deadlocks, especially during function processing
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            // Update UI elements
+            self.fullRefreshProgressBar?.progress = progressValue
+            
+            // Format the text with phase and percentage
+            if !self.currentRefreshPhase.isEmpty {
+                self.fullRefreshProgressLabel?.text = "\(self.currentRefreshPhase) - \(Int(progressValue * 100))%"
+            } else {
+                self.fullRefreshProgressLabel?.text = "Processing data - \(Int(progressValue * 100))%"
+            }
+            
+            // Log for debugging
+            //DBGLog("Progress updated: \(self.currentProgressStep)/\(self.totalProgressSteps) = \(Int(progressValue * 100))% during '\(self.currentRefreshPhase)'")
+            
+            // Force immediate layout update with animation transaction for better rendering
+            CATransaction.begin()
+            CATransaction.setDisableActions(false)
+            CATransaction.setCompletionBlock {
+                // Log when the UI update completes
+                //DBGLog("[\(Date())] CATransaction completed for phase: \(self.currentRefreshPhase)")
+            }
+            
+            self.fullRefreshProgressLabel?.setNeedsDisplay()
+            self.fullRefreshProgressBar?.setNeedsDisplay()
+            self.fullRefreshProgressContainerView?.setNeedsLayout()
+            self.fullRefreshProgressContainerView?.layoutIfNeeded()
+            
+            // Force window update if possible
+            self.view.window?.layoutIfNeeded()
+            
+            CATransaction.commit()
+        }
+    }
+
+    // Calculate the total number of steps for progress tracking
+    private func calculateTotalProgressSteps() -> Int {
+        let to = self.tracker!
+        var totalSteps = 0
+        
+        // Count HK, OT, and FN valueObjs
+        var hkCount = 0
+        var otCount = 0
+        var fnCount = 0
+        
+        for vo in to.valObjTable {
+            if vo.optDict["ahksrc"] ?? "0" != "0" {
+                hkCount += 1
+            }
+            if vo.optDict["otsrc"] ?? "0" != "0" {
+                otCount += 1
+            }
+            if vo.vtype == VOT_FUNC {
+                fnCount += 1
+            }
+        }
+
+        // Count total dates to process
+        let dateCountSql = "SELECT COUNT(date) FROM trkrData"
+        let dateCount = to.toQry2Int(sql: dateCountSql)
+        
+        // HK operations: each HK valueObj processes all dates
+        totalSteps += hkCount * dateCount
+        
+        // OT operations: each OT valueObj processes all dates
+        totalSteps += otCount * dateCount
+        
+        // FN operations: process each date once
+        totalSteps += dateCount
+        
+        DBGLog("Progress calculation: \(hkCount) HK valueObjs, \(otCount) OT valueObjs, \(fnCount) FN valueObjs over \(dateCount) dates. Total steps: \(totalSteps)")
+        
+        return max(totalSteps, 1) // Avoid division by zero
     }
 
 
@@ -1226,6 +1474,9 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     }
 
     @objc func btnCreateChart() {
+        if isRefreshInProgress {
+            return  // just wait please....
+        }
         // Create an instance of the TrackerChart view controller
         let chartVC = TrackerChart(nibName: nil, bundle: nil)
         

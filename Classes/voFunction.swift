@@ -1157,6 +1157,14 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
 
     //- (NSString*) currFunctionValue {
     override func update(_ instr: String?) -> String {
+        // Synchronize access to shared resources to make thread-safe
+        return synchronized(vo.parentTracker.recalcFnLock) {
+            return doFunctionUpdate(instr)
+        }
+    }
+    
+    // Helper method to separate thread synchronization from actual update
+    private func doFunctionUpdate(_ instr: String?) -> String {
         let pto = vo.parentTracker
 
         if nil == pto.tDb {
@@ -1214,6 +1222,13 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         DBGLog(String("fndbg fn update returning: \(instr)"))
         #endif
         return instr ?? ""
+    }
+    
+    // Helper method for thread synchronization
+    private func synchronized<T>(_ lock: Any, block: () -> T) -> T {
+        objc_sync_enter(lock)
+        defer { objc_sync_exit(lock) }
+        return block()
     }
 
     override func voDisplay(_ bounds: CGRect) -> UIView {
@@ -1350,25 +1365,38 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
     }
 
     override func setFnVal(_ tDate: Int, dispatchGroup: DispatchGroup? = nil) {
-        dispatchGroup?.enter()
+        // If in a dispatch group, update asynchronously
+        if let dispatchGroup = dispatchGroup {
+            dispatchGroup.enter()
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                self?.performFnValUpdate(tDate)
+                dispatchGroup.leave()
+            }
+        } else {
+            // Direct synchronous update - fine for background queue
+            performFnValUpdate(tDate)
+        }
+    }
+    
+    // New helper method to encapsulate the actual work
+    private func performFnValUpdate(_ date: Int) {
         // track vo's in fnstatus so can delete independently
         var sql: String
         // vo.value is computed for this tracker date from loaded tracker data when we read it here because reading calls update()
         // but db must be cleared for vot_function s or will just get db value
         if vo.value == "" {
             // if value is empty we should not have data in db
-            sql = "delete from voData where id = \(vo.vid) and date = \(tDate);"
+            sql = "delete from voData where id = \(vo.vid) and date = \(date);"
             MyTracker.toExecSql(sql:sql)
-            sql = "delete from voFNstatus where id = \(vo.vid) and date = \(tDate);"
+            sql = "delete from voFNstatus where id = \(vo.vid) and date = \(date);"
             MyTracker.toExecSql(sql:sql)
         } else {
             let val = rTracker_resource.toSqlStr(vo.value)
-            sql = "insert or replace into voData (id, date, val) values (\(vo.vid), \(tDate),'\(val)');"
+            sql = "insert or replace into voData (id, date, val) values (\(vo.vid), \(date),'\(val)');"
             MyTracker.toExecSql(sql:sql)
-            sql = "insert into voFNstatus (id, date, stat) values (\(vo.vid), \(tDate), \(fnStatus.fnData.rawValue))"
+            sql = "insert into voFNstatus (id, date, stat) values (\(vo.vid), \(date), \(fnStatus.fnData.rawValue))"
             MyTracker.toExecSql(sql:sql)
         }
-        dispatchGroup?.leave()
     }
 
     override func clearFNdata(forDate date: Int? = nil) {

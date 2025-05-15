@@ -119,8 +119,6 @@ class voState: NSObject, voProtocol {
             myDates = to.toQry2AryI(sql: "select date from trkrData where date > \(lastDate) order by date asc")
         }
         
-
-        
         for md in myDates {
             if xto.toid == to.toid {  // other tracker is self so exact date match
                 sql = "select val from voData where id = \(xvid) and date = \(md)"
@@ -139,6 +137,14 @@ class voState: NSObject, voProtocol {
                 DBGLog("no data for \(sql)")
                 //DBGLog("hello")
             }
+            
+            // Update progress tracking
+             if let delegate = to.refreshDelegate, (date == nil || date == 0) {
+                 // Only update progress during a full refresh (indicated by delegate and no specific date)
+                 DispatchQueue.main.async {
+                     delegate.updateFullRefreshProgress(step: 1, phase: nil)
+                 }
+             }
             
             prevDate = md
         }

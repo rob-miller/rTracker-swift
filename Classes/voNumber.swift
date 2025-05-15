@@ -657,8 +657,8 @@ class voNumber: voState, UITextFieldDelegate {
                 // restrict any times in future to now
                 let now = Date()
                 newDates = adjustedDates.map { timeInterval -> TimeInterval in
-                    let date = Date(timeIntervalSince1970: timeInterval)
-                    if date > now {
+                    let ndate = Date(timeIntervalSince1970: timeInterval)
+                    if ndate > now {
                         return now.timeIntervalSince1970 // Change to the current time
                     }
                     // If not in the future, keep the original time
@@ -679,6 +679,7 @@ class voNumber: voState, UITextFieldDelegate {
             }
             
             DBGLog("Inserted \(newDates.count) new dates into trkrData.")
+            
             hkDispatchGroup.leave() // Leave the group after insertion is complete
         }
 
@@ -687,7 +688,7 @@ class voNumber: voState, UITextFieldDelegate {
         // Wait for getHealthKitDates processing to complete before proceeding
         hkDispatchGroup.notify(queue: .main) { [self] in
             DBGLog("HealthKit dates processed, continuing with loadHKdata.")
-
+            
             // Fetch dates from trkrData for processing
             // will update where we don't have data sourced from healthkit already
             // since the last time valid data was loaded for this vid
@@ -727,18 +728,17 @@ class voNumber: voState, UITextFieldDelegate {
             DBGLog("Query complete, count is \(dateSet.count)")
             //debugHealthKitDateQuery(tracker: to, valueObjID: vo.vid)
             
-            
             let calendar = Calendar.current
             let secondHKDispatchGroup = DispatchGroup()
             for dat in dateSet.sorted() {  // .sorted() is just to help debugging
-                let date = Date(timeIntervalSince1970: TimeInterval(dat))
-                let components = calendar.dateComponents([.hour, .minute, .second], from: date)
+                let ddat = Date(timeIntervalSince1970: TimeInterval(dat))
+                let components = calendar.dateComponents([.hour, .minute, .second], from: ddat)
                 
                 if vo.optDict["ahAvg"] ?? "0" == "1" && (components.hour != 12 || components.minute != 0 || components.second != 0) {
                     continue // Skip to the next entry if ahAvg and the time is not 12:00:00 noon
                 }
                 
-                let prevDate = Int((calendar.date(byAdding: .day, value: -1, to: date))!.timeIntervalSince1970)
+                let prevDate = Int((calendar.date(byAdding: .day, value: -1, to: ddat))!.timeIntervalSince1970)
                 
                 secondHKDispatchGroup.enter() // Enter the group for each query
 
@@ -749,7 +749,7 @@ class voNumber: voState, UITextFieldDelegate {
                 }
 
                 
-                //DBGLog("calling phq \(srcName) date \(date)  prevD \(self.vo.optDict["ahPrevD"] ?? "nil") prevDate= \(prevDate)")
+                //DBGLog("calling phq \(srcName) date \(ddat)  prevD \(self.vo.optDict["ahPrevD"] ?? "nil") prevDate= \(prevDate)")
                 
                 rthk.performHealthQuery(
                     displayName: srcName,
@@ -773,9 +773,9 @@ class voNumber: voState, UITextFieldDelegate {
                         var result = results.last!
                         
                         /*
-                        let date = result.date
+                        let rdate = result.date
                         // This line will help you set a conditional breakpoint
-                        if Calendar.current.isDate(date, inSameDayAs: DateComponents(calendar: .current, year: 2025, month: 3, day: 23).date!) {
+                        if Calendar.current.isDate(rdate, inSameDayAs: DateComponents(calendar: .current, year: 2025, month: 3, day: 23).date!) {
                             // Set your breakpoint on this line
                             DBGLog("Breakpoint will trigger here")
                         }
@@ -812,10 +812,10 @@ class voNumber: voState, UITextFieldDelegate {
                         }
 
                         if false && self.vo.optDict["ahPrevD"] ?? "0" == "1" {  // if data is for previous day, set to next day, unless that is in future from today
-                            var date = Date(timeIntervalSince1970: TimeInterval(dat))
-                            if !calendar.isDateInToday(date) {
-                                date = calendar.date(byAdding: .day, value: 1, to: date)!
-                                let nextdat = Int(date.timeIntervalSince1970)
+                            var ddat = Date(timeIntervalSince1970: TimeInterval(dat))
+                            if !calendar.isDateInToday(ddat) {
+                                ddat = calendar.date(byAdding: .day, value: 1, to: ddat)!
+                                let nextdat = Int(ddat.timeIntervalSince1970)
                                 
                                 var sql = "insert into voData (id, date, val) values (\(self.vo.vid), \(nextdat), \(formattedValue))"
                                 to.toExecSql(sql: sql)
@@ -836,6 +836,14 @@ class voNumber: voState, UITextFieldDelegate {
                         }
                     }
 
+                    // Update progress
+                    if let delegate = to.refreshDelegate, (date == nil || date == 0)  {
+                        // Only update progress during a full refresh (indicated by delegate and not a specific date)
+                        DispatchQueue.main.async {
+                            delegate.updateFullRefreshProgress(step: 1, phase: nil)
+                        }
+                    }
+                    
                     secondHKDispatchGroup.leave() // Leave the group after this query is processed
                 }
             }

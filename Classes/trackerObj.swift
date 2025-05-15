@@ -24,6 +24,10 @@
 import Foundation
 import UIKit
 
+protocol RefreshProgressDelegate: AnyObject {
+    func updateFullRefreshProgress(step: Int, phase: String?)
+}
+
 // to config checkbutton default states
 let SAVERTNDFLT = true
 
@@ -56,6 +60,9 @@ class trackerObj: tObjBase {
             }
         }
     }
+    
+    weak var refreshDelegate: RefreshProgressDelegate?
+    
     var trackerDate: Date?
     var lastDbDate: Int = 0
     
@@ -204,7 +211,46 @@ class trackerObj: tObjBase {
         return true
     }
     
+    // Add this method to trackerObj for explicit progress reporting
+    func reportProgressPhase(_ phase: String) {
+        DBGLog("[\(Date())] Explicitly reporting progress phase: \(phase)")
+        
+        // Check if we're already on the main thread
+        if Thread.isMainThread {
+            // Execute directly
+            refreshDelegate?.updateFullRefreshProgress(step: 0, phase: phase)
+            
+            // Force UI updates
+            if let controller = refreshDelegate as? UIViewController {
+                controller.view.setNeedsLayout()
+                controller.view.layoutIfNeeded()
+            }
+        } else {
+            // Force execution on main thread and wait for it to complete
+            DispatchQueue.main.async {
+                self.refreshDelegate?.updateFullRefreshProgress(step: 0, phase: phase)
+                
+                // Force UI updates
+                if let controller = self.refreshDelegate as? UIViewController {
+                    controller.view.setNeedsLayout()
+                    controller.view.layoutIfNeeded()
+                }
+            }
+        }
+        
+        // Small delay to allow UI to refresh - only use a small sleep on background threads
+        if !Thread.isMainThread {
+            Thread.sleep(forTimeInterval: 0.05)
+        }
+        
+        DBGLog("Phase report complete for: \(phase)")
+    }
+    
     func loadHKdata(forDate date: Int? = nil, dispatchGroup: DispatchGroup?, completion: (() -> Void)? = nil) -> Bool {
+        // Report explicit phase update at the start
+        if dispatchGroup == nil && refreshDelegate != nil {
+            reportProgressPhase("Loading HealthKit data")
+        }
         dispatchGroup?.enter()
         let localGroup = DispatchGroup()
         var rslt = false
@@ -223,7 +269,9 @@ class trackerObj: tObjBase {
             if hkValueObjIDs.count > 1 {
                 // Convert Int array to comma-separated string for SQL
                 let hkVidsList = hkValueObjIDs.map { String($0) }.joined(separator: ",")
-#if DEBUGLOG
+                
+                #if DEBUGLOG
+                //---------------------------------------------------------
                 let countMissingSQL = """
                 SELECT COUNT(*) FROM (
                     SELECT d.date, v.id as vid
@@ -239,7 +287,9 @@ class trackerObj: tObjBase {
                 """
                 let missingCount = self.toQry2Int(sql: countMissingSQL)
                 DBGLog("need to add \(missingCount) noData records")
+                //---------------------------------------------------------
                 #endif
+                
                 // This query finds all combinations of (HK valueObj ID, date with HK data)
                 // where a voHKstatus entry doesn't exist, and creates entries for them
                 let ensureStatusSQL = """
@@ -262,6 +312,9 @@ class trackerObj: tObjBase {
                 //DBGLog("Added voHKstatus entries for all dates in trkrData for all HK valueObjs")
             }
             
+            // Update progress after all HealthKit processing is done
+            self.refreshDelegate?.updateFullRefreshProgress(step: hkValueObjIDs.count, phase: nil)
+            
             completion?()
             dispatchGroup?.leave()
         }
@@ -269,28 +322,107 @@ class trackerObj: tObjBase {
     }
 
     func loadOTdata(forDate date: Int? = nil, otSelf: Bool = false, dispatchGroup: DispatchGroup?, completion: (() -> Void)? = nil) -> Bool {
+        // Report phase update at the start
+        if dispatchGroup == nil && refreshDelegate != nil {
+            if otSelf {
+                reportProgressPhase("Finishing up...")
+            } else {
+                reportProgressPhase("Loading data from other trackers")
+            }
+        }
+        
         dispatchGroup?.enter()
-        let localGroup = DispatchGroup()
+        
+        // Key change: Create a dedicated queue for OT processing
+        let otProcessingQueue = DispatchQueue(label: "com.rtracker.otProcessing", qos: .userInitiated)
+        
         var rslt = false
+        var otValueObjCount = 0
+        let localGroup = DispatchGroup()
+        
+        // Count OT value objects first for progress tracking
         for vo in valObjTable {
             guard vo.optDict["otsrc"] ?? "0" != "0",
                   let otTracker = vo.optDict["otTracker"] else { continue }
             if (otSelf && otTracker == trackerName) ||
                (!otSelf && otTracker != trackerName) {
-                vo.vos?.loadOTdata(forDate: date, dispatchGroup: localGroup)
-                rslt = true
+                otValueObjCount += 1
             }
         }
-        // Wait for our local operations to complete before calling completion
-        localGroup.notify(queue: .main) {
-            completion?()
-            dispatchGroup?.leave()
+        
+        // Start background processing
+        otProcessingQueue.async { [weak self] in
+            guard let self = self else {
+                dispatchGroup?.leave()
+                completion?()
+                return
+            }
+            
+            // Track processed values for progress updates
+            var processedCount = 0
+            
+            // Process each value object in the background
+            for vo in self.valObjTable {
+                guard vo.optDict["otsrc"] ?? "0" != "0",
+                      let otTracker = vo.optDict["otTracker"] else { continue }
+                
+                if (otSelf && otTracker == self.trackerName) ||
+                   (!otSelf && otTracker != self.trackerName) {
+                    
+                    vo.vos?.loadOTdata(forDate: date, dispatchGroup: localGroup)
+                    rslt = true
+                    
+                    // Update progress periodically
+                    processedCount += 1
+                    
+                    // Batch updates to avoid overwhelming the main thread
+                    if processedCount % 5 == 0 || processedCount == otValueObjCount {
+                        DispatchQueue.main.async {
+                            self.refreshDelegate?.updateFullRefreshProgress(step: processedCount % 5 == 0 ? 5 : processedCount % 5, phase: nil)
+                        }
+                        
+                        // Small yield to give main thread breathing room
+                        if processedCount % 5 == 0 {
+                            Thread.sleep(forTimeInterval: 0.01)
+                        }
+                    }
+                }
+            }
+            
+            // Final updates on main thread
+            DispatchQueue.main.async {
+                // Update progress after all OtherTracker processing is done
+                self.refreshDelegate?.updateFullRefreshProgress(step: 1, phase: nil)
+                
+                // Call completion and leave dispatch group
+                completion?()
+                dispatchGroup?.leave()
+            }
         }
+        
         return rslt
+    }
+    // Helper class to track processing state
+    private class ProcessingState {
+        var currentDate: Int
+        var datesProcessed = 0
+        let totalDates: Int
+        
+        init(startDate: Int, totalDates: Int) {
+            self.currentDate = startDate
+            self.totalDates = totalDates
+        }
     }
 
     private func processFnData(forDate date: Int? = nil, dispatchGroup: DispatchGroup? = nil, forceAll: Bool = false, completion: (() -> Void)? = nil) -> Bool {
-        let localGroup = DispatchGroup()
+        // Diagnostic step 1: Verify delegate is set
+        DBGLog("[\(Date())] processFnData called - refreshDelegate is \(refreshDelegate != nil ? "SET" : "NOT SET!")")
+        // Report phase update before background processing begins
+        if dispatchGroup == nil && refreshDelegate != nil {
+            reportProgressPhase("Computing functions")
+        }
+        
+        //let localGroup = DispatchGroup()
         var rslt = false
         
         // Check if we have any functions
@@ -330,49 +462,70 @@ class trackerObj: tObjBase {
         
         dispatchGroup?.enter()
         
-        var ndx: Float = 1.0
-        let all = Float(getDateCount())
+        // Key change: Create a dedicated queue for function processing
+        let functionProcessingQueue = DispatchQueue(label: "com.rtracker.functionProcessing", qos: .userInitiated)
         
-        repeat {
-            _ = loadData(nextDate)
+        // Create a state object to track progress
+        let progressState = ProcessingState(startDate: nextDate, totalDates: getDateCount())
+        
+        // Start background processing
+        functionProcessingQueue.async { [weak self] in
+            guard let self = self else {
+                dispatchGroup?.leave()
+                completion?()
+                return
+            }
             
-            for vo in valObjTable {
-                vo.vos?.setFNrecalc()  // do not use cached values
-                if dispatchGroup != nil {
-                    vo.vos?.setFnVal(nextDate, dispatchGroup: localGroup)  // async with dispatch group
-                } else {
-                    vo.vos?.setFnVal(nextDate)  // sync without dispatch group
+            // Process each date in the background
+            repeat {
+                autoreleasepool {
+                    // Load data for this date and process functions
+                    _ = self.loadData(progressState.currentDate)
+                    
+                    for vo in self.valObjTable {
+                        vo.vos?.setFNrecalc()  // do not use cached values
+                        vo.vos?.setFnVal(progressState.currentDate)  // Use synchronous version since we're already on a background thread
+                    }
+                    
+                    // Update progress (every 5 dates or so to avoid too many UI updates)
+                    progressState.datesProcessed += 1
+                    if progressState.datesProcessed % 5 == 0 {
+                        DispatchQueue.main.async {
+                            self.refreshDelegate?.updateFullRefreshProgress(step: 5, phase: nil)
+                        }
+                        
+                        // Small yield to give main thread breathing room
+                        Thread.sleep(forTimeInterval: 0.01)
+                    }
+                    
+                    // Move to next date
+                    progressState.currentDate = self.postDate()
                 }
-            }
+            } while (progressState.currentDate != 0) // iterate through dates
             
-            // Only show progress if no dispatch group (sync operation)
-            if dispatchGroup == nil {
-                rTracker_resource.setProgressVal(ndx / all)
-                ndx += 1.0
+            // Final cleanup on main thread
+            DispatchQueue.main.async {
+                // Clean up and trim function values
+                for vo in self.valObjTable {
+                    vo.vos?.doTrimFnVals()
+                }
+                
+                // Restore current date
+                _ = self.loadData(currDate)
+                
+                // Clear dirty flag
+                self.optDict.removeValue(forKey: "dirtyFns")
+                let sql = "delete from trkrInfo where field='dirtyFns';"
+                self.toExecSql(sql: sql)
+                
+                // Update progress after function calculations
+                self.refreshDelegate?.updateFullRefreshProgress(step: progressState.datesProcessed, phase: nil)
+                
+                // Set result and call completion
+                rslt = true
+                completion?()
+                dispatchGroup?.leave()
             }
-            
-            nextDate = postDate()
-        } while (nextDate != 0) // iterate through dates
-        
-        for vo in valObjTable {
-            vo.vos?.doTrimFnVals()
-        }
-        
-        // restore current date
-        _ = loadData(currDate)
-        
-        // Clear dirty flag regardless
-        optDict.removeValue(forKey: "dirtyFns")
-        let sql = "delete from trkrInfo where field='dirtyFns';"
-        toExecSql(sql:sql)
-        
-        
-        rslt = true
-        
-        // Wait for local operations to complete before calling completion
-        localGroup.notify(queue: .main) {
-            completion?()
-            dispatchGroup?.leave()
         }
         
         return rslt
@@ -1178,3 +1331,4 @@ class trackerObj: tObjBase {
     }
 
 }
+
