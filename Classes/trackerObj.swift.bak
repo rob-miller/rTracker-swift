@@ -1,0 +1,436 @@
+//  Converted to Swift 5.7.2 by Swiftify v5.7.25331 - https://swiftify.com/
+///************
+/// trackerObj.swift
+/// Copyright 2010-2021 Robert T. Miller
+/// Licensed under the Apache License, Version 2.0 (the "License");
+/// you may not use this file except in compliance with the License.
+/// You may obtain a copy of the License at
+/// http://www.apache.org/licenses/LICENSE-2.0
+/// Unless required by applicable law or agreed to in writing, software
+/// distributed under the License is distributed on an "AS IS" BASIS,
+/// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+/// See the License for the specific language governing permissions and
+/// limitations under the License.
+///***************
+
+//
+//  trackerObj.swift
+//  rTracker
+//
+//  Created by Robert Miller on 16/03/2010.
+//  Copyright 2010 Robert T. Miller. All rights reserved.
+//
+
+import Foundation
+import UIKit
+
+protocol RefreshProgressDelegate: AnyObject {
+    func updateFullRefreshProgress(step: Int, phase: String?)
+}
+
+// to config checkbutton default states
+let SAVERTNDFLT = true
+
+// to config textfield default values
+// #define PRIVDFLT        0  //note: already in valObj.h
+
+// max days for graph, 0= no limit
+let GRAPHMAXDAYSDFLT = 0
+
+class trackerObj: tObjBase {
+
+    private var _trackerName: String?
+    var trackerName: String? {
+        get {
+            if nil == _trackerName {
+                _trackerName = optDict["name"] as! String?
+            }
+            return _trackerName
+        }
+        set(trackerNameValue) {
+            if _trackerName != trackerNameValue {
+                _trackerName = trackerNameValue
+
+                if let trackerNameValue {
+                    // if not nil
+                    optDict["name"] = trackerNameValue
+                } else {
+                    optDict.removeValue(forKey: "name")
+                }
+            }
+        }
+    }
+    
+    weak var refreshDelegate: RefreshProgressDelegate?
+    
+    var trackerDate: Date?
+    var lastDbDate: Int = 0
+    
+    var optDict: [String : Any] = [:]  // trackerObj level optDict in dtabase as text : any
+
+    var valObjTable: [valueObj] = []
+    var valObjTableH: [valueObj] = []
+
+    var reminders: [notifyReminder] = []
+    var reminderNdx = 0
+    let recalcFnLock = AtomicTestAndSet()  //(initialValue: false)
+    
+    private var _maxLabel = CGSize.zero
+    var maxLabel: CGSize {
+        get {
+            if (_maxLabel.height == 0) || (_maxLabel.width == 0) {
+                let w = CGFloat(optDict["width"] as? Double ?? 0)
+                let h = CGFloat(optDict["height"] as? Double ?? 0)
+                _maxLabel = CGSize(width: w, height: h)
+            }
+            return _maxLabel
+        }
+        set(maxLabelValue) {
+            if (_maxLabel.height != maxLabelValue.height) || (_maxLabel.width != maxLabelValue.width) {
+                _maxLabel = maxLabelValue
+                if _maxLabel.height != 0.0 && _maxLabel.width != 0.0 {
+                    optDict["width"] = String(Float(_maxLabel.width))
+                    optDict["height"] = String(Float(_maxLabel.height))
+                } else {
+                    optDict.removeValue(forKey: "width")
+                    optDict.removeValue(forKey: "height")
+                }
+            }
+        }
+    }
+
+    private var _nextColor = 0
+    var nextColor: Int {
+        let rv = _nextColor
+        _nextColor += 1
+        if _nextColor >= rTracker_resource.colorSet().count {
+            _nextColor = 0
+        }
+        return rv
+    }
+    //@property (nonatomic,strong) NSArray *votArray;
+    var activeControl: UIControl?
+    var vc: UIViewController?
+
+    private var _dateFormatter: DateFormatter?
+    var dateFormatter: DateFormatter? {
+        if nil == _dateFormatter {
+            _dateFormatter = DateFormatter()
+            _dateFormatter?.timeStyle = .long
+            _dateFormatter?.dateStyle = .long
+
+            //[_dateFormatter setTimeStyle:NSDateFormatterLongStyle];
+            //[_dateFormatter setDateStyle:NSDateFormatterShortStyle];
+
+            /*
+                    NSString *dateComponents = @"yyyy MM dd HH mm ss";
+                    _dateFormatter.locale = [NSLocale currentLocale];
+                    _dateFormatter.dateFormat = [NSDateFormatter dateFormatFromTemplate:dateComponents options:0 locale:[NSLocale currentLocale]];
+                     */
+        }
+        return _dateFormatter
+    }
+
+    private var _dateOnlyFormatter: DateFormatter?
+    var dateOnlyFormatter: DateFormatter? {
+        if nil == _dateOnlyFormatter {
+            _dateOnlyFormatter = DateFormatter()
+            _dateOnlyFormatter?.timeStyle = .none
+            _dateOnlyFormatter?.dateStyle = .long
+            //[_dateOnlyFormatter setDateStyle:NSDateFormatterShortStyle];
+        }
+        return _dateOnlyFormatter
+    }
+    var csvReadFlags = 0
+    var csvProblem: String?
+    var togd: Togd?
+
+    var prevTID: Int {
+        get {
+            return Int(optDict["prevTID"] as? String ?? "0")!
+        }
+        set(prevTIDvalue) {
+            if prevTIDvalue != 0 {
+                optDict["prevTID"] = String(prevTIDvalue)
+            } else {
+                optDict.removeValue(forKey: "prevTID")
+            }
+        }
+    }
+    var goRecalculate = false
+    var swipeEnable = false
+    var changedDateFrom = 0
+   
+    var csvHeaderDict: [String : [String]] = [:]
+    var csvChoiceDict: [String : Int] = [:]
+
+    var loadingDbData = false
+    
+    override init() {
+        togd = nil
+        super.init()
+        trackerDate = nil
+        dbName = nil
+
+        //self.valObjTable = [[NSMutableArray alloc] init];
+        valObjTable = []
+        _nextColor = 0
+
+        //DBGLog(@"init trackerObj New");
+        goRecalculate = false
+        swipeEnable = true
+        changedDateFrom = 0
+    }
+
+    convenience init(_ tid: Int) {
+        self.init()
+        //DBGLog(@"init trackerObj id: %d",tid);
+        super.toid = tid
+        confirmDb()
+        loadConfig()
+    }
+
+    convenience init(dict: [String : Any]) {
+        self.init()
+        //DBGLog(@"init trackerObj from dict id: %d",[dict objectForKey:@"tid"]);
+        super.toid = dict["tid"] as! Int
+        confirmDb()
+        loadConfig(fromDict: dict)
+    }
+
+    func mvIfFn(_ vo: valueObj?, testVT tstVT: Int) -> Bool {
+        if (VOT_FUNC != tstVT) || (VOT_FUNC == vo?.vtype) {
+            return false
+        }
+
+        // fix it
+        voUpdateVID(vo, newVID: getUnique())
+
+        vo?.valueName = (vo?.valueName ?? "") + "_data"
+
+        return true
+    }
+    
+    // Add this method to trackerObj for explicit progress reporting
+    func reportProgressPhase(_ phase: String) {
+        DBGLog("Explicitly reporting progress phase: \(phase)")
+        
+        // Check if we're already on the main thread
+        if Thread.isMainThread {
+            // Execute directly
+            refreshDelegate?.updateFullRefreshProgress(step: 0, phase: phase)
+            
+            // Force UI updates
+            if let controller = refreshDelegate as? UIViewController {
+                controller.view.setNeedsLayout()
+                controller.view.layoutIfNeeded()
+            }
+        } else {
+            // Force execution on main thread and wait for it to complete
+            DispatchQueue.main.async {
+                self.refreshDelegate?.updateFullRefreshProgress(step: 0, phase: phase)
+                
+                // Force UI updates
+                if let controller = self.refreshDelegate as? UIViewController {
+                    controller.view.setNeedsLayout()
+                    controller.view.layoutIfNeeded()
+                }
+            }
+        }
+        
+        // Small delay to allow UI to refresh - only use a small sleep on background threads
+        if !Thread.isMainThread {
+            Thread.sleep(forTimeInterval: 0.05)
+        }
+        
+        DBGLog("Phase report complete for: \(phase)")
+    }
+    
+    func loadHKdata(forDate date: Int? = nil, dispatchGroup: DispatchGroup?, completion: (() -> Void)? = nil) -> Bool {
+        // Report explicit phase update at the start
+        if dispatchGroup == nil && refreshDelegate != nil {
+            reportProgressPhase("Loading HealthKit data")
+        }
+        dispatchGroup?.enter()
+        let localGroup = DispatchGroup()
+        var rslt = false
+        var hkValueObjIDs: [Int] = []
+        for vo in valObjTable {
+            if vo.optDict["ahksrc"] ?? "0" != "0" {
+                hkValueObjIDs.append(vo.vid)
+                vo.vos?.loadHKdata(forDate: date, dispatchGroup: localGroup)
+                rslt = true
+            }
+        }
+        // Wait for our local operations to complete before calling completion
+        localGroup.notify(queue: .main) {
+            
+            // processing multiple
+            if hkValueObjIDs.count > 1 {
+                // Convert Int array to comma-separated string for SQL
+                let hkVidsList = hkValueObjIDs.map { String($0) }.joined(separator: ",")
+#if DEBUGLOG
+                let countMissingSQL = """
+                SELECT COUNT(*) FROM (
+                    SELECT d.date, v.id as vid
+                    FROM 
+                        (SELECT DISTINCT date FROM voHKstatus WHERE id IN (\(hkVidsList))) d,
+                        (SELECT DISTINCT id FROM voHKstatus WHERE id IN (\(hkVidsList))) v
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM voHKstatus 
+                        WHERE voHKstatus.id = v.id
+                        AND voHKstatus.date = d.date
+                    )
+                )
+                """
+                let missingCount = self.toQry2Int(sql: countMissingSQL)
+                DBGLog("need to add \(missingCount) noData records")
+                #endif
+                // This query finds all combinations of (HK valueObj ID, date with HK data)
+                // where a voHKstatus entry doesn't exist, and creates entries for them
+                let ensureStatusSQL = """
+                            INSERT INTO voHKstatus (id, date, stat)
+                            SELECT vid, date, \(hkStatus.noData.rawValue)
+                            FROM (
+                                SELECT d.date, v.id as vid
+                                FROM 
+                                    (SELECT DISTINCT date FROM voHKstatus WHERE id IN (\(hkVidsList))) d,
+                                    (SELECT DISTINCT id FROM voHKstatus WHERE id IN (\(hkVidsList))) v
+                                WHERE NOT EXISTS (
+                                    SELECT 1 FROM voHKstatus 
+                                    WHERE voHKstatus.id = v.id
+                                    AND voHKstatus.date = d.date
+                                )
+                            )
+                            """
+                //DBGLog(ensureStatusSQL)
+                self.toExecSql(sql: ensureStatusSQL)
+                //DBGLog("Added voHKstatus entries for all dates in trkrData for all HK valueObjs")
+            }
+            
+            // Update progress after all HealthKit processing is done
+            self.refreshDelegate?.updateFullRefreshProgress(step: hkValueObjIDs.count, phase: nil)
+            
+            completion?()
+            dispatchGroup?.leave()
+        }
+        return rslt
+    }
+
+    func loadOTdata(forDate date: Int? = nil, otSelf: Bool = false, dispatchGroup: DispatchGroup?, completion: (() -> Void)? = nil) -> Bool {
+        if dispatchGroup == nil && refreshDelegate != nil {
+            if otSelf {
+                reportProgressPhase("Finishing up...")
+            } else {
+                reportProgressPhase("Loading data from other trackers")
+            }
+        }
+        dispatchGroup?.enter()
+        let localGroup = DispatchGroup()
+        var rslt = false
+        var otValueObjCount = 0
+        for vo in valObjTable {
+            guard vo.optDict["otsrc"] ?? "0" != "0",
+                  let otTracker = vo.optDict["otTracker"] else { continue }
+            if (otSelf && otTracker == trackerName) ||
+               (!otSelf && otTracker != trackerName) {
+                otValueObjCount += 1
+                vo.vos?.loadOTdata(forDate: date, dispatchGroup: localGroup)
+                rslt = true
+            }
+        }
+        // Wait for our local operations to complete before calling completion
+        localGroup.notify(queue: .main) {
+            // Update progress after all OtherTracker processing is done
+            self.refreshDelegate?.updateFullRefreshProgress(step: otValueObjCount, phase: nil)
+                    
+            completion?()
+            dispatchGroup?.leave()
+        }
+        return rslt
+    }
+
+    private func processFnData(forDate date: Int? = nil, dispatchGroup: DispatchGroup? = nil, forceAll: Bool = false, completion: (() -> Void)? = nil) -> Bool {
+        if dispatchGroup == nil && refreshDelegate != nil {
+            reportProgressPhase("Computing functions")
+        }
+        
+        let localGroup = DispatchGroup()
+        var rslt = false
+        
+        // Check if we have any functions
+        var haveFn = false
+        for vo in valObjTable {
+            if VOT_FUNC == vo.vtype {
+                haveFn = true
+                break
+            }
+        }
+        if !haveFn {
+            completion?()
+            return rslt
+        }
+        
+        let currDate = Int(trackerDate?.timeIntervalSince1970 ?? 0)
+        
+        // Determine start date based on mode
+        var nextDate: Int
+        if forceAll {
+            nextDate = firstDate() // Always start from beginning for setFnVals
+        } else if let specifiedDate = date {
+            nextDate = specifiedDate
+        } else {
+            let sql = "select max(date) from voFNstatus where stat = \(fnStatus.fnData.rawValue)"
+            nextDate = toQry2Int(sql: sql)
+            if nextDate == 0 || (optDict["dirtyFns"] as? String) == "1" {
+                nextDate = firstDate()
+            }
+        }
+        
+        if 0 == nextDate {
+            // no data yet for this tracker so do not generate a 0 value in database
+            completion?()
+            return rslt
+        }
+        
+        dispatchGroup?.enter()
+        
+        var ndx: Float = 1.0
+        let all = Float(getDateCount())
+        var datesProcessed = 0
+        
+        // Determine total dates at the start for progress reporting
+        let totalDates = getDateCount()
+        
+        repeat {
+            _ = loadData(nextDate)
+            
+            for vo in valObjTable {
+                vo.vos?.setFNrecalc()  // do not use cached values
+                if dispatchGroup != nil {
+                    vo.vos?.setFnVal(nextDate, dispatchGroup: localGroup)  // async with dispatch group
+                } else {
+                    vo.vos?.setFnVal(nextDate)  // sync without dispatch group
+                }
+            }
+            
+            // Update progress for function calculations (only once per date)
+            datesProcessed += 1
+            // This is where we update progress for each date processed
+            if dispatchGroup == nil && refreshDelegate != nil {
+                DBGLog("Updating function progress: \(datesProcessed)/\(totalDates)")
+                refreshDelegate?.updateFullRefreshProgress(step: 1, phase: nil)
+                
+                // Force minor delay to allow UI to update
+                if datesProcessed % 5 == 0 {  // Every 5 dates, allow UI thread to breathe
+                    Thread.sleep(forTimeInterval: 0.01)
+                }
+            }
+            // Only show progress if no dispatch group (sync operation)
+            if dispatchGroup == nil {
+                rTracker_resource.setProgressVal(ndx / all)
+                ndx += 1.0
+            }
+            
+            nextDate = postDate()
+        
