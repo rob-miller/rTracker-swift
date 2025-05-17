@@ -183,6 +183,7 @@ class voNumber: voState, UITextFieldDelegate {
                 }
                 //sql = nil;
             } else if vo.optDict["ahksrc"] == "1" && Int(vo.parentTracker.trackerDate!.timeIntervalSince1970) > self.MyTracker.lastDbDate{
+                self.vo.vos?.addExternalSourceOverlay(to: self.dtf)  // no taps
                 // apple healthkit source and trackerDate is newer than last in database (not historical = new record)
                 if vo.optDict["ahPrevD"] ?? "0" == "1" {
                     let calendar = Calendar.current
@@ -253,6 +254,7 @@ class voNumber: voState, UITextFieldDelegate {
                     }
                 }
             } else if vo.optDict["otsrc"] == "1" {
+                self.vo.vos?.addExternalSourceOverlay(to: self.dtf)  // no taps
                 if let xrslt = vo.vos?.getOTrslt() {
                     self.dtf.text = xrslt
                     /*
@@ -263,7 +265,6 @@ class voNumber: voState, UITextFieldDelegate {
                 } else {
                     self.dtf.text = ""
                 }
-                self.vo.vos?.addExternalSourceOverlay(to: self.dtf)  // no taps
             } else {
                 dtf.text = ""
             }
