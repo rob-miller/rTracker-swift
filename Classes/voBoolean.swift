@@ -160,9 +160,19 @@ class voBoolean: voState {
     override func voDrawOptions(_ ctvovc: configTVObjVC) {
         var frame = CGRect(x: MARGIN, y: ctvovc.lasty, width: 0.0, height: 0.0)
 
-        var labframe = ctvovc.configLabel("stored value:", frame: frame, key: "bvLab", addsv: true)
+        var labframe = ctvovc.configLabel(
+            "Boolean (yes/no) options:",
+            frame: CGRect(x: MARGIN, y: ctvovc.lasty, width: 0.0, height: 0.0),
+            key: "gooLab",
+            addsv: true)
 
         localCtvovc = ctvovc
+        
+        
+        frame.origin.x = MARGIN
+        frame.origin.y += MARGIN + labframe.size.height
+        
+        labframe = ctvovc.configLabel("stored value:", frame: frame, key: "bvLab", addsv: true)
         
         frame.origin.x = labframe.size.width + MARGIN + SPACE
         let tfWidth = "9999999999".size(withAttributes: [

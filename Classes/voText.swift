@@ -174,16 +174,7 @@ class voText: voState, UITextFieldDelegate {
     }
 
     override func cleanOptDictDflts(_ key: String) -> Bool {
-        /*
-            NSString *val = [self.vo.optDict objectForKey:key];
-            if (nil == val) 
-                return YES;
-            if (([key isEqualToString:@"shrinkb"] && [val isEqualToString:(SHRINKBDFLT ? @"1" : @"0")])
-                ) {
-                [self.vo.optDict removeObjectForKey:key];
-                return YES;
-            }
-            */
+
         return super.cleanOptDictDflts(key)
     }
 
@@ -196,7 +187,7 @@ class voText: voState, UITextFieldDelegate {
         var frame = CGRect(x: MARGIN, y: ctvovc.lasty, width: 0.0, height: 0.0)
         
         var labframe = ctvovc.configLabel(
-            "Options:",
+            "Text options:",
             frame: CGRect(x: MARGIN, y: ctvovc.lasty, width: 0.0, height: 0.0),
             key: "gooLab",
             addsv: true)
@@ -204,7 +195,7 @@ class voText: voState, UITextFieldDelegate {
         localCtvovc = ctvovc
         
         frame.origin.x = MARGIN
-        frame.origin.y += MARGIN + frame.size.height
+        frame.origin.y += MARGIN + labframe.size.height
         
         labframe = ctvovc.configLabel("Other Tracker source: ", frame: frame, key: "otsLab", addsv: true)
         frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
@@ -230,7 +221,9 @@ class voText: voState, UITextFieldDelegate {
         
         
         labframe = ctvovc.configLabel("Other options:", frame: frame, key: "noLab", addsv: true)
-        ctvovc.lasty += labframe.size.height + MARGIN
+        
+        ctvovc.lasty = frame.origin.y + labframe.size.height + MARGIN
+        
         super.voDrawOptions(ctvovc)
     }
 

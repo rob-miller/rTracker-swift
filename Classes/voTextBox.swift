@@ -408,23 +408,8 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
     }
 
     @objc func backButtonTapped() {
-        // Perform the 'done' action, like saving data or updating UI
-        // ...
-        /*
-         // disable because don't think needed
-        if 0 == cav.searchSeg.selectedSegmentIndex {
-            let tt = textView?.text.trimmingCharacters(in: .whitespacesAndNewlines)
-            if vo.value != tt {
-                presentSaveAlert()
-                return
-            }
-        }
-         */
-        
-        // Then pop the view controller if needed
         vo.value = vo.value.trimmingCharacters(in: .whitespacesAndNewlines)  // redundant if saveAction was called
         devc?.navigationController?.popViewController(animated: true)
-        
     }
     
     override func dataEditVDidLoad(_ vc: UIViewController) {
@@ -970,7 +955,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
     
     override func voDrawOptions(_ ctvovc: configTVObjVC) {
         var frame = CGRect(x: MARGIN, y: ctvovc.lasty , width: 0.0, height: 0.0)
-        var labframe = ctvovc.configLabel("Text box options:", frame: frame, key: "tboLab", addsv: true)
+        var labframe = ctvovc.configLabel("Textbox options:", frame: frame, key: "tboLab", addsv: true)
         
         localCtvovc = ctvovc
         

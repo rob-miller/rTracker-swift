@@ -103,7 +103,6 @@ class voChoice: voState {
 
     override func voTVCell(_ tableView: UITableView) -> UITableViewCell {
         return super.voTVEnabledCell(tableView)
-        //return [super voTVCell:tableView];
     }
 
     override func voTVCellHeight() -> CGFloat {

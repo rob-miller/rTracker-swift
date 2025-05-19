@@ -273,6 +273,7 @@ class valueObj: NSObject, UITextFieldDelegate {
             _switchUseVO?.contentHorizontalAlignment = .center
             _switchUseVO?.tag = kViewTag
             _switchUseVO?.addTarget(self, action: #selector(switchAction(_:)), for: .valueChanged)
+            _switchUseVO?.isUserInteractionEnabled = optDict["otsrc"] ?? "0" != "1"
         }
         return _switchUseVO
     }
