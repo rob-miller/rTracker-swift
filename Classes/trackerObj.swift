@@ -1169,11 +1169,12 @@ class trackerObj: tObjBase {
         let qDate = Date(timeIntervalSince1970: TimeInterval(iDate))
         // DBGLog(@"trackerObj loadData for date %@",qDate);
         // don't leave thread, need values reset here: dispatch_async(dispatch_get_main_queue(), ^(void){
-        resetData()
+
         var sql = String(format: "select count(*) from trkrData where date = %ld and minpriv <= %d;", iDate, privacyValue)
         let c = toQry2Int(sql:sql)
         if c != 0 {
-            trackerDate = qDate 
+            resetData()
+            trackerDate = qDate
             sql = String(format: "select id, val from voData where date = %ld;", iDate)
             let isa = toQry2AryIS(sql: sql)
 
