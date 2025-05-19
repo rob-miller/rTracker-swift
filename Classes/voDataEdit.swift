@@ -89,7 +89,7 @@ class voDataEdit: UIViewController, UITextViewDelegate {
             textView?.returnKeyType = .default
             textView?.keyboardType = .default // use the default type input method (entire keyboard)
             textView?.isScrollEnabled = true
-            textView?.isUserInteractionEnabled = true
+            textView?.isUserInteractionEnabled = self.vo?.optDict["otsrc"] ?? "0" != "1"
 
             // this will cause automatic vertical resize when the table is resized
             textView?.autoresizingMask = .flexibleHeight
@@ -130,9 +130,6 @@ class voDataEdit: UIViewController, UITextViewDelegate {
             name: UIResponder.keyboardWillHideNotification,
             object: view.window)
 
-
-        //[self.navigationController setToolbarHidden:NO animated:NO];
-
         super.viewWillAppear(animated)
 
     }
@@ -145,15 +142,11 @@ class voDataEdit: UIViewController, UITextViewDelegate {
             self,
             name: UIResponder.keyboardWillChangeFrameNotification /* UIKeyboardWillShowNotification */,
             object: nil)
-        //--object:self.textView];    // nil]; //self.devc.view.window];
-        //object:self.devc.view.window];
+
         NotificationCenter.default.removeObserver(
             self,
             name: UIResponder.keyboardWillHideNotification,
             object: nil)
-        //object:self.textView];    // nil];   // self.devc.view.window];
-        //object:self.devc.view.window];
-
 
         super.viewWillDisappear(animated)
     }
@@ -208,25 +201,16 @@ class voDataEdit: UIViewController, UITextViewDelegate {
     @objc func keyboardWillHide(_ aNotification: Notification?) {
         DBGLog("votb keyboardwillhide")
 
-        // the keyboard is hiding reset the table's height
-        //CGRect keyboardRect = [[[aNotification userInfo] objectForKey:UIKeyboardFrameEndUserInfoKey] CGRectValue];
-        //NSTimeInterval animationDuration = [[aNotification userInfo][UIKeyboardAnimationDurationUserInfoKey] doubleValue];
-        //CGRect frame = self.devc.view.frame;
-        //frame.size.height += keyboardRect.size.height;
-        //[UIView beginAnimations:@"ResizeForKeyboard" context:nil];
-        //[UIView setAnimationDuration:animationDuration];
         UIView.animate(withDuration: 0.2, animations: { [self] in
             textView?.frame = voDataEdit.getInitTVF(self)
         })
-        //[UIView commitAnimations];
-
 
         keyboardIsShown = false
     }
 
     @objc func saveAction(_ sender: Any?) {
         DBGLog("save me")
-        //[self.saveClass performSelector:self.saveSelector withObject:@"FOOOO" afterDelay:(NSTimeInterval)0];
+
         if self.vo?.optDict["otsrc"] ?? "0" != "1" {
             saveClass!.perform(saveSelector!, with: textView?.text, afterDelay: TimeInterval(0))
         }
@@ -242,24 +226,11 @@ class voDataEdit: UIViewController, UITextViewDelegate {
         navigationItem.rightBarButtonItem = saveItem
     }
 
+    /*
     func textViewShouldBeginEditing(_ aTextView: UITextView) -> Bool {
-
-        /*
-             You can create the accessory view programmatically (in code), in the same nib file as the view controller's main view, or from a separate nib file. This example illustrates the latter; it means the accessory view is loaded lazily -- only if it is required.
-             */
-        /*
-            if (self.textView.inputAccessoryView == nil) {
-                [[NSBundle mainBundle] loadNibNamed:@"voTBacc" owner:self options:nil];
-                // Loading the AccessoryView nib file sets the accessoryView outlet.
-                self.textView.inputAccessoryView = self.accessoryView;
-                // After setting the accessory view for the text view, we no longer need a reference to the accessory view.
-                self.accessoryView = nil;
-                self.addButton.hidden = YES;
-                CGFloat fsize = 20.0;
-                [self.segControl setTitleTextAttributes:@{NSFontAttributeName: [UIFont systemFontOfSize:fsize]} forState:UIControlStateNormal];
-                [self.setSearchSeg setTitleTextAttributes:@{NSFontAttributeName: [UIFont systemFontOfSize:fsize]} forState:UIControlStateNormal];
-            }
-            */
+        if vo?.optDict["otsrc"] ?? "0" != "0" {
+            return false
+        }
         return true
     }
 
@@ -267,35 +238,11 @@ class voDataEdit: UIViewController, UITextViewDelegate {
         aTextView.resignFirstResponder()
         return true
     }
-
-    /*
-     // needs more work to adjust text box size / display point as rotated view is very short
-
-    // Override to allow orientations other than the default portrait orientation.
-    - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
-        // Return YES for supported orientations
-        return (interfaceOrientation != UIInterfaceOrientationPortraitUpsideDown);
-    }
-    */
-
+*/
     override func didReceiveMemoryWarning() {
         // Releases the view if it doesn't have a superview.
         super.didReceiveMemoryWarning()
-
-        // Release any cached data, images, etc that aren't in use.
     }
-
-    /*
-    - (void)viewDidUnload {
-    	DBGLog(@"vde view did unload");
-
-        [super viewDidUnload];
-        // Release any retained subviews of the main view.
-        // e.g. self.myOutlet = nil;
-    	[self.vo.vos dataEditVDidUnload];
-    	self.vo = nil;
-    }
-    */
 
     deinit {
 
@@ -303,8 +250,6 @@ class voDataEdit: UIViewController, UITextViewDelegate {
         if vo != nil {
             vo = nil
         }
-        //[vo release];
-
 
         NotificationCenter.default.removeObserver(self)
         

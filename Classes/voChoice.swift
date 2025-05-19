@@ -165,7 +165,8 @@ class voChoice: voState {
             } else {
                 vo.value = ""
             }
-            addExternalSourceOverlay(to: segmentedControl!)  // no taps
+            segmentedControl?.isUserInteractionEnabled = false   // no taps
+            //addExternalSourceOverlay(to: segmentedControl!)  // no taps
         }
         // set displayed segment from self.vo.value
 

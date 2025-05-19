@@ -441,11 +441,8 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         textView?.returnKeyType = .default
         textView?.keyboardType = .default // use the default type input method (entire keyboard)
         textView?.isScrollEnabled = true
-        textView?.isUserInteractionEnabled = true
-        //self.textView.layoutManager.allowsNonContiguousLayout = NO;
+        textView?.isUserInteractionEnabled = self.vo.optDict["otsrc"] ?? "0" != "1"
 
-        //self.textView.contentOffset = CGPointZero;
-        //[self.textView setTextContainerInset:UIEdgeInsetsMake(7, 7, 0, 0)];
         // this will cause automatic vertical resize when the table is resized
         textView?.autoresizingMask = .flexibleHeight
 
