@@ -32,7 +32,7 @@ let healthDataQueries: [HealthDataQuery] = [
         identifier: "HKQuantityTypeIdentifierBodyFatPercentage",
         displayName: "Body Fat %",
         categories: nil,
-        unit: nil, // still a fractional value so special case handling
+        unit: [HKUnit.percent()],
         needUnit: false,
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
@@ -377,7 +377,7 @@ let healthDataQueries: [HealthDataQuery] = [
     ),
     HealthDataQuery(
         identifier: "HKQuantityTypeIdentifierOxygenSaturation",
-        displayName: "Oxygen Saturation",
+        displayName: "Oxygen Saturation %",
         categories: nil,
         unit: [HKUnit.percent()],
         needUnit: false,
