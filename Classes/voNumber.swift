@@ -209,6 +209,7 @@ class voNumber: voState, UITextFieldDelegate {
                             self.dtf.text = self.noHKdataMsg
                         }
                     } else {
+                        // If value is exactly 0.0 for sleep-related metrics, display it as 0.0, not 'No HealthKit data'
                         var result = results.last!
                         
                         if results.count > 1 {
@@ -244,6 +245,9 @@ class voNumber: voState, UITextFieldDelegate {
                             // Otherwise, format to two decimal places
                             formattedValue = String(format: "%.2f", result.value)
                         }
+                        
+                        // For sleep-awake categories or others where a zero value is meaningful,
+                        // make sure we display it (even if it's 0.0) rather than showing 'No HealthKit data'
 
                         DispatchQueue.main.async {
                             self.dtf.text = "\(formattedValue)"
