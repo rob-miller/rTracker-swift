@@ -463,7 +463,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                     if hasSleepData && self.isSleepCategoryQuery(queryConfig) {
                         // Sleep data exists, but no data for this specific category - this means 0 minutes
                         let result = HealthQueryResult(date: startDate, value: 0.0, unit: specifiedUnit)
-                        DBGLog("No samples found for the \(queryConfig.displayName), but sleep data exists.")
+                        DBGLog("No samples found for the \(queryConfig.displayName), but sleep data exists. Setting value to 0.")
                         completion([result])
                     } else {
                         // No sleep data at all exists for this period
@@ -544,12 +544,13 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                         total + (queryConfig.customProcessor?(sample) ?? 0)
                     }
                     
-                    if totalValue != 0.0 {  // don't add 0 value records, e.g. from no deep sleep data when have in bed data
+                    //if totalValue != 0.0 {  // don't add 0 value records, e.g. from no deep sleep data when have in bed data
+                    // actually this is correct - need to handle 0.0 time awake
                         if specifiedUnit == HKUnit.hour() {
                             totalValue /= 60.0
                         }
                         results.append(HealthQueryResult(date: startDate, value: totalValue, unit: specifiedUnit))
-                    }
+                    //}
                     
                 case .discreteArithmetic:
                     if !categorySamples.isEmpty {
