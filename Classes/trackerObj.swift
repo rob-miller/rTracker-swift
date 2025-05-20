@@ -480,7 +480,7 @@ class trackerObj: tObjBase {
             repeat {
                 autoreleasepool {
                     // Load data for this date and process functions
-                    _ = self.loadData(progressState.currentDate)
+                    _ = self.loadData(progressState.currentDate)  // does nothing if date not in db, so leaves curent gui settings
                     
                     for vo in self.valObjTable {
                         vo.vos?.setFNrecalc()  // do not use cached values
