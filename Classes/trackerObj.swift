@@ -511,7 +511,7 @@ class trackerObj: tObjBase {
                 }
                 
                 // Restore current date
-                _ = self.loadData(currDate)
+                _ = self.loadData(currDate)  // does nothing if no db data for currDate
                 
                 // Clear dirty flag
                 self.optDict.removeValue(forKey: "dirtyFns")
