@@ -92,7 +92,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     private var currentProgressStep = 0
     private var currentRefreshPhase = ""
     private var fullRefreshProgressContainerView: UIView?
-
+    private var frDate: Date?  // trackerDate shown when full refresh started
+    
     let refreshLabelId = 1002
     let refreshLabelId2 = 1003
     
@@ -309,6 +310,16 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             
             // Notify when all operations are completed
             dispatchGroup.notify(queue: .main) {
+                // loadFNdata above left data loaded for last db date, so clear here and get to current date
+                self.tracker!.trackerDate = Date()
+                for vo in self.tracker!.valObjTableH {
+                    if vo.optDict["otsrc"] ?? "0" == "0" && vo.optDict["ahksrc"] ?? "0" == "0" && vo.vtype != VOT_FUNC {
+                        vo.resetData()  // clear data for non ot/hk/fn valueObjs
+                    }
+                }
+
+
+                
                 // Stop and remove the spinner
                 self.endRAI()
 
@@ -434,7 +445,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             dispatchGroup.notify(queue: .main) {
                 DBGLog("Current record data refreshed")
                 self.endRAI()
-                _ = self.tracker!.loadData(currentDate)
+                _ = self.tracker!.loadData(currentDate) // does nothing if currentDate not in db so leaves current ui settings
                 self.updateTrackerTableView()
                 self.isRefreshInProgress = false
             }
@@ -444,7 +455,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     // full data reload
     @objc func handleFullRefresh() {
         DBGLog("[\(Date())] Full Refresh initiated")
-        
+        frDate = tracker!.trackerDate!
         // Calculate total progress steps
         totalProgressSteps = calculateTotalProgressSteps()
         currentProgressStep = 0
@@ -497,7 +508,15 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                                 
                                 // Just to make sure we clean up properly
                                 self.endRAI()
-                                _ = self.tracker!.loadData(Int(self.tracker!.trackerDate!.timeIntervalSince1970))
+                                self.tracker!.trackerDate = self.frDate
+                                if !self.tracker!.loadData(Int(self.tracker!.trackerDate!.timeIntervalSince1970)) { // does nothing if currentDate not in db
+                                    // so only choice is to reset UI to nothing, assume frDate is now plus some seconds
+                                    for vo in self.tracker!.valObjTableH {
+                                        if vo.optDict["otsrc"] ?? "0" == "0" && vo.optDict["ahksrc"] ?? "0" == "0" && vo.vtype != VOT_FUNC {
+                                            vo.resetData()  // clear data for non ot/hk/fn valueObjs
+                                        }
+                                    }
+                                }
                                 self.updateTrackerTableView()
                                 self.isRefreshInProgress = false
                             }
