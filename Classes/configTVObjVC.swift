@@ -542,7 +542,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
             rootView: otViewController(
                 selectedTracker: vo?.optDict["otTracker"],
                 selectedValue: vo?.optDict["otValue"],
-                otCurrent: vo?.optDict["otCurrent"] ?? "0" == "1",
+                otCurrent: vo?.optDict["otCurrent"] ?? (OTCURRDFLT ? "1" : "0") == "1",
                 callerTrackerName: to?.trackerName, // Pass the caller's tracker name
                 onDismiss: { [self] updatedTracker, updatedValue, updatedOtCurrent in
                     vo?.optDict["otTracker"] = updatedTracker
