@@ -707,7 +707,7 @@ class trackerObj: tObjBase {
 
         dbgNSAssert(super.toid != 0, "tObj load toid=0")
 
-        DBGLog(String("tObj loadConfig toid:\(super.toid) name:\(trackerName)"))
+        DBGLog(String("tObj loadConfig toid:\(super.toid)"))
 
         //var s1: [AnyHashable] = []
         //var s2: [AnyHashable] = []
@@ -787,10 +787,6 @@ class trackerObj: tObjBase {
         trackerDate = nil
         trackerDate = Date()
         rescanMaxLabel()
-
-
-
-
     }
 
     //
