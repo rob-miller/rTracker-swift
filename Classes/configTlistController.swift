@@ -93,9 +93,23 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
             throw NSError(domain: "ZIPFoundationError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Unable to create archive: \(error.localizedDescription)"])
         }
 
-        // Get matching files
+        // Get matching files - filter based on extension pattern to match the actual files created
         let files = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
-            .filter { $0.lastPathComponent.hasSuffix("_out.csv") || $0.lastPathComponent.hasSuffix("_out.plist") || $0.lastPathComponent.hasSuffix("_out.rtcsv") }
+            .filter { file in
+                // Match the extension based on pattern
+                if pattern == "*.csv" {
+                    return file.pathExtension == "csv" || file.pathExtension == "rtcsv"
+                } else if pattern == "*.rtrk" {
+                    return file.pathExtension == "rtrk"
+                }
+                return false
+            }
+        
+        // Log found files for debugging
+        DBGLog("Found \(files.count) files matching pattern \(pattern)")
+        for file in files {
+            DBGLog("Adding to ZIP: \(file.lastPathComponent)")
+        }
 
         // Add files to the ZIP archive
         for file in files {
@@ -166,12 +180,27 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
                 zipFileName = "rTracker_exportAllRtrk.zip"
                 fpattern = "*.rtrk"
             }
+            
+            // Log the temporary directory for debugging
+            DBGLog("Temporary directory path: \(fpatho)")
+            
+            // List files in the directory to verify what's there
+            do {
+                let contents = try FileManager.default.contentsOfDirectory(atPath: fpatho)
+                DBGLog("Files in temporary directory before ZIP creation: \(contents)")
+            } catch {
+                DBGLog("Error listing directory contents: \(error.localizedDescription)")
+            }
 
             let zipFileURL = URL(fileURLWithPath: fpatho).appendingPathComponent(zipFileName)
             
             do {
                 try createZipFile(at: zipFileURL, withFilesMatching: fpattern, in: fpathu)
-                DBGLog("Zip file created at: \(zipFileURL)")
+                
+                // Verify ZIP file size after creation
+                let attributes = try FileManager.default.attributesOfItem(atPath: zipFileURL.path)
+                let fileSize = attributes[FileAttributeKey.size] as? UInt64 ?? 0
+                DBGLog("Zip file created at: \(zipFileURL) with size: \(fileSize) bytes")
             } catch {
                 DBGLog("Failed to create zip file: \(error.localizedDescription)")
             }
