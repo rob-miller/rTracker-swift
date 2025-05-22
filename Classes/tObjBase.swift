@@ -895,7 +895,7 @@ class tObjBase: NSObject {
             
             var stmt: OpaquePointer?
             var drslt = 0.0
-            objc_sync_enter(self)
+            //objc_sync_enter(self)
             
             if sqlite3_prepare_v2(tDb, sql, -1, &stmt, nil) == SQLITE_OK {
                 while sqlite3_step(stmt) == SQLITE_ROW {
