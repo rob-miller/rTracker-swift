@@ -296,7 +296,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             dispatchGroup.enter()
             self.hkDataSource = self.tracker!.loadHKdata(dispatchGroup: dispatchGroup, completion: {
                 // have hk data, load OT data for really other trackers
-                _ = self.tracker!.loadOTdata(otSelf:false, dispatchGroup: dispatchGroup, completion:{
+                self.otDataSource = self.tracker!.loadOTdata(otSelf:false, dispatchGroup: dispatchGroup, completion:{
                     // now can compute fn results
                     _ = self.tracker!.loadFNdata(dispatchGroup: dispatchGroup, completion:{
                         // now load ot data that look at self
@@ -312,7 +312,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             dispatchGroup.notify(queue: .main) {
                 // loadFNdata above left data loaded for last db date, so clear here and get to current date
                 self.tracker!.trackerDate = Date()
-                for vo in self.tracker!.valObjTableH {
+                for vo in self.tracker!.valObjTable {
                     if vo.optDict["otsrc"] ?? "0" == "0" && vo.optDict["ahksrc"] ?? "0" == "0" && vo.vtype != VOT_FUNC {
                         vo.resetData()  // clear data for non ot/hk/fn valueObjs
                     }
@@ -328,17 +328,18 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 self.tableView?.reloadData()
                 self.loadingData = false
                 self.tracker!.loadingDbData = false
+                
+                if self.hkDataSource || self.otDataSource {
+                    let refreshControl = UIRefreshControl()
+                    
+                    // Add target for when pull begins
+                    refreshControl.addTarget(self, action: #selector(self.pullToRefreshStarted), for: .valueChanged)
+                    
+                    self.tableView!.refreshControl = refreshControl
+                }
             }
         }
 
-        if hkDataSource || otDataSource {
-            let refreshControl = UIRefreshControl()
-            
-            // Add target for when pull begins
-            refreshControl.addTarget(self, action: #selector(pullToRefreshStarted), for: .valueChanged)
-            
-            tableView!.refreshControl = refreshControl
-        }
     }
     
     // Called when pull-to-refresh starts or continues
@@ -511,7 +512,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                                 self.tracker!.trackerDate = self.frDate
                                 if !self.tracker!.loadData(Int(self.tracker!.trackerDate!.timeIntervalSince1970)) { // does nothing if currentDate not in db
                                     // so only choice is to reset UI to nothing, assume frDate is now plus some seconds
-                                    for vo in self.tracker!.valObjTableH {
+                                    for vo in self.tracker!.valObjTable {
                                         if vo.optDict["otsrc"] ?? "0" == "0" && vo.optDict["ahksrc"] ?? "0" == "0" && vo.vtype != VOT_FUNC {
                                             vo.resetData()  // clear data for non ot/hk/fn valueObjs
                                         }
@@ -1037,6 +1038,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             }
         }
 
+        // add otsrc dates, probably hk dates takes too long
+        to.loadOTdates()
         // Count total dates to process
         let dateCountSql = "SELECT COUNT(date) FROM trkrData"
         let dateCount = to.toQry2Int(sql: dateCountSql)
