@@ -155,14 +155,15 @@ struct otViewController: View {
                 let allValues = to.toQry2AryS(sql: "select name from voConfig where priv <= \(privacyValue)")
                 
                 // Filter out values that have a recursive reference to the current tracker
-                return allValues.filter { valueName in
+                // Filter values and conditionally add "-<Any Value>-"
+                let filteredValues = allValues.filter { valueName in
                     let vo = to.getValObjByName(valueName)
                     let otTrackerName = vo?.optDict["otTracker"]
-                    
-                    // Keep the value if it doesn't have an otTracker reference or if the reference
-                    // isn't to the current tracker (preventing circular references)
                     return otTrackerName == nil || otTrackerName != callerTrackerName
                 }
+
+                // Only add "-<Any Value>-" if the tracker isn't referencing itself
+                return (trackerName != callerTrackerName ? [OTANYNAME] : []) + filteredValues
             } else {
                 return []
             }

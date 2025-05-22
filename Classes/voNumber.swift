@@ -618,57 +618,10 @@ class voNumber: voState, UITextFieldDelegate {
         DBGLog("lastDate is \(Date(timeIntervalSince1970:TimeInterval(lastDate)))")
         rthk.getHealthKitDates(for: srcName, lastDate: lastDate) { hkDates in
             DBGLog("hk dates for \(srcName), ahAvg is \(self.vo.optDict["ahAvg"] ?? "1")")
-            let existingDatesQuery = """
-            SELECT date
-            FROM trkrData order by date DESC
-            """
-            
-            let existingDatesArr = to.toQry2AryI(sql: existingDatesQuery)  // for debug to look at
-            let existingDates = Set(existingDatesArr)
-            
-            /*
-             // Filter dates that don't match within ±4 hours of existing dates
-            let fourHours: TimeInterval = 4 * 60 * 60
-            let newDates = hkDates.filter { hkDate in
-                !existingDates.contains { abs(hkDate - Double($0)) <= fourHours }
-            }
-            */
-            
-            let calendar = Calendar.current
+
             var newDates: [TimeInterval]
             if self.vo.optDict["ahAvg"] ?? "1" == "1" {
-                // find dates that are not on the same calendar day as any existing dates
-                // because prefer to use existing times if possible, not 12:00
-                // also remove today if present because today's data shown on current tracker not saved yet
-                newDates = hkDates.filter { hkDate in
-                    // First check if it's not today
-                    !calendar.isDateInToday(Date(timeIntervalSince1970: hkDate)) &&
-                    // Then check if it's not already in existing dates
-                    !existingDates.contains { existingDate in
-                        calendar.isDate(Date(timeIntervalSince1970: hkDate), inSameDayAs: Date(timeIntervalSince1970: Double(existingDate)))
-                    }
-                }
-                
-                // set all times to 12:00 noon
-                let adjustedDates = newDates.map { hkDate in
-                    var components = calendar.dateComponents([.year, .month, .day], from: Date(timeIntervalSince1970: hkDate))
-                    components.hour = 12
-                    components.minute = 0
-                    components.second = 0
-                    return calendar.date(from: components)?.timeIntervalSince1970 ?? hkDate
-                }
-                
-                
-                // restrict any times in future to now
-                let now = Date()
-                newDates = adjustedDates.map { timeInterval -> TimeInterval in
-                    let ndate = Date(timeIntervalSince1970: timeInterval)
-                    if ndate > now {
-                        return now.timeIntervalSince1970 // Change to the current time
-                    }
-                    // If not in the future, keep the original time
-                    return timeInterval
-                }
+                newDates = to.mergeDates(inDates: hkDates)
             } else {
                 newDates = hkDates
             }

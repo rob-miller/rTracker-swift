@@ -321,6 +321,119 @@ class trackerObj: tObjBase {
         return rslt
     }
 
+    func mergeDates(inDates:[TimeInterval], set12: Bool = true) -> [TimeInterval] {
+        let existingDatesQuery = "SELECT date FROM trkrData order by date DESC"
+        
+        let existingDatesArr = toQry2AryI(sql: existingDatesQuery)  // for debug to look at
+        let existingDates = Set(existingDatesArr)
+        
+        let calendar = Calendar.current
+        var newDates: [TimeInterval]
+        
+        /*
+         // Filter dates that don't match within ±4 hours of existing dates
+         let fourHours: TimeInterval = 4 * 60 * 60
+         let newDates = hkDates.filter { hkDate in
+         !existingDates.contains { abs(hkDate - Double($0)) <= fourHours }
+         }
+         */
+        
+        
+        // find dates that are not on the same calendar day as any existing dates
+        // because prefer to use existing times if possible, not 12:00
+        // also remove today if present because today's data shown on current tracker not saved yet
+        newDates = inDates.filter { inDate in
+            // First check if it's not today
+            !calendar.isDateInToday(Date(timeIntervalSince1970: inDate)) &&
+            // Then check if it's not already in existing dates
+            !existingDates.contains { existingDate in
+                calendar.isDate(Date(timeIntervalSince1970: inDate), inSameDayAs: Date(timeIntervalSince1970: Double(existingDate)))
+            }
+        }
+        
+        if (set12) {
+            // set all times to 12:00 noon
+            let adjustedDates = newDates.map { inDate in
+                var components = calendar.dateComponents([.year, .month, .day], from: Date(timeIntervalSince1970: inDate))
+                components.hour = 12
+                components.minute = 0
+                components.second = 0
+                return calendar.date(from: components)?.timeIntervalSince1970 ?? inDate
+            }
+            
+            
+            // restrict any times in future to now
+            let now = Date()
+            newDates = adjustedDates.map { timeInterval -> TimeInterval in
+                let ndate = Date(timeIntervalSince1970: timeInterval)
+                if ndate > now {
+                    return now.timeIntervalSince1970 // Change to the current time
+                }
+                // If not in the future, keep the original time
+                return timeInterval
+            }
+        }
+        return newDates
+    }
+    
+    func loadOTdates(forDate date: Int? = nil) {
+        // instantiate trkrData dates for external trackers
+        for vo in self.valObjTable {
+            guard vo.optDict["otsrc"] ?? "0" != "0",
+                  let otTracker = vo.optDict["otTracker"],
+                  let otValue = vo.optDict["otValue"] else { continue }
+            
+            let xto = trackerObj(trackerList.shared.getTIDfromNameDb(otTracker)[0])
+            
+            let xvid: Int
+            if otValue != OTANYNAME {
+                let tempxvid = xto.toQry2Int(sql: "select id from voConfig where name = '\(otValue)'")
+                if tempxvid == 0 {
+                    DBGErr("no xvid for other tracker \(otTracker) valueObj \(otValue)")
+                    continue
+                }
+                xvid = tempxvid
+            } else {
+                xvid = -1
+            }
+            let sql = "select max(date) from voOTstatus where id = \(Int(vo.vid)) and stat = \(otStatus.otData.rawValue)"
+            let lastDate = toQry2Int(sql: sql)
+            
+            if (otTracker != self.trackerName) {
+                let selStr: String
+                if otValue == OTANYNAME {
+                    selStr = "trkrData where"
+                } else {
+                    selStr = "voData where id = \(xvid) and"
+                }
+                
+                var myDates: [Int]
+                
+                // get all local tracker dates to populate
+                if let specificDate = date {
+                    // If a specific date is provided, only query that date and if it exists
+                    myDates = xto.toQry2AryI(sql: "select date from \(selStr) date = \(specificDate)")
+                } else {
+                    // Original implementation - get all dates after lastDate
+                    myDates = xto.toQry2AryI(sql: "select date from \(selStr) date > \(lastDate) order by date asc")
+                }
+                
+                let newDates = self.mergeDates(inDates: myDates.map { TimeInterval($0) }, set12:false)
+                
+                // Insert the new dates into trkrData
+                // trkrData is 'on conflict replace'
+                // but should only be adding new dates
+                let priv = max(MINPRIV, vo.vpriv)  // priv needs to be at least minpriv if vpriv = 0
+                for newDate in newDates {
+                    let sql = "insert into trkrData (date, minpriv) values (\(Int(newDate)), \(priv))"
+                    toExecSql(sql: sql)
+                }
+                
+                DBGLog("Inserted \(newDates.count) new dates into trkrData.")
+            }
+        }
+    }
+    
     func loadOTdata(forDate date: Int? = nil, otSelf: Bool = false, dispatchGroup: DispatchGroup?, completion: (() -> Void)? = nil) -> Bool {
         // Report phase update at the start
         if dispatchGroup == nil && refreshDelegate != nil {
@@ -347,8 +460,10 @@ class trackerObj: tObjBase {
             if (otSelf && otTracker == trackerName) ||
                (!otSelf && otTracker != trackerName) {
                 otValueObjCount += 1
+                rslt = true
             }
         }
+        DBGLog("OT value objects to process: \(otValueObjCount)")
         
         // Start background processing
         otProcessingQueue.async { [weak self] in
@@ -358,6 +473,8 @@ class trackerObj: tObjBase {
                 return
             }
             
+            loadOTdates(forDate: date)
+                    
             // Track processed values for progress updates
             var processedCount = 0
             
@@ -370,7 +487,6 @@ class trackerObj: tObjBase {
                    (!otSelf && otTracker != self.trackerName) {
                     
                     vo.vos?.loadOTdata(forDate: date, dispatchGroup: localGroup)
-                    rslt = true
                     
                     // Update progress periodically
                     processedCount += 1
@@ -707,7 +823,7 @@ class trackerObj: tObjBase {
 
         dbgNSAssert(super.toid != 0, "tObj load toid=0")
 
-        DBGLog(String("tObj loadConfig toid:\(super.toid)"))
+        //DBGLog(String("tObj loadConfig toid:\(super.toid)"))
 
         //var s1: [AnyHashable] = []
         //var s2: [AnyHashable] = []
@@ -725,7 +841,7 @@ class trackerObj: tObjBase {
         setToOptDictDflts()
         _ = loadReminders() // required here as can't distinguish did not load vs. deleted all
 
-        DBGLog(String("to optdict: \(optDict)"))
+        //DBGLog(String("to optdict: \(optDict)"))
 
         sql = "select max(date) from trkrData"
         lastDbDate = toQry2Int(sql:sql)
@@ -787,6 +903,8 @@ class trackerObj: tObjBase {
         trackerDate = nil
         trackerDate = Date()
         rescanMaxLabel()
+        
+        DBGLog("loaded \(trackerName ?? "nil") \(dbName ?? "nil") \(valObjTable.count) valObjs \(reminders.count) reminders")
     }
 
     //
@@ -804,11 +922,7 @@ class trackerObj: tObjBase {
 
         //self.trackerName = [self.optDict objectForKey:@"name"];
 
-        DBGLog(String("tObj loadConfigFromDict toid:\(super.toid) name:\(trackerName)"))
-
-        //CGFloat w = [[self.optDict objectForKey:@"width"] floatValue];
-        //CGFloat h = [[self.optDict objectForKey:@"height"] floatValue];
-        //self.maxLabel = (CGSize) {w,h};
+        DBGLog(String("tObj loadConfigFromDict toid:\(super.toid) name:\(trackerName ?? "nil")"))
 
         let voda = dict["valObjTable"] as? [AnyHashable]
         for vod in voda ?? [] {
@@ -816,7 +930,7 @@ class trackerObj: tObjBase {
                 continue
             }
             let vo = valueObj(dict: self, dict: vod)
-            DBGLog(String("add vo \(vo.valueName)"))
+            DBGLog(String("add vo \(vo.valueName ?? "nil")"))
             valObjTable.append(vo)
         }
 
@@ -855,7 +969,7 @@ class trackerObj: tObjBase {
 
         trackerDate = nil
         trackerDate = Date()
-        DBGLog(String("loadConfigFromDict finished loading \(trackerName)"))
+        //DBGLog(String("loadConfigFromDict finished loading \(trackerName)"))
     }
     
     func streakCount() -> Int {

@@ -93,12 +93,16 @@ class voState: NSObject, voProtocol {
             xvid = xvo.vid
         } else {
             xto = trackerObj(trackerList.shared.getTIDfromNameDb(xtName)[0])
-            let tempxvid = xto.toQry2Int(sql: "select id from voConfig where name = '\(xvName)'")
-            if tempxvid == 0 {
-                DBGErr("no xvid for other tracker \(xtName) valueObj \(xvName)")
-                return
+            if xvName == OTANYNAME {
+                xvid = OTANYVID
+            } else {
+                let tempxvid = xto.toQry2Int(sql: "select id from voConfig where name = '\(xvName)'")
+                if tempxvid == 0 {
+                    DBGErr("no xvid for other tracker \(xtName) valueObj \(xvName)")
+                    return
+                }
+                xvid = tempxvid
             }
-            xvid = tempxvid
         }
         dispatchGroup?.enter()  // wait for processing all OT data
         
@@ -110,6 +114,7 @@ class voState: NSObject, voProtocol {
         
         var myDates: [Int]
             
+        // get all local tracker dates to populate
         if let specificDate = date {
             // If a specific date is provided, only query that date and if it exists
             myDates = to.toQry2AryI(sql: "select date from trkrData where date = \(specificDate)")
@@ -120,12 +125,19 @@ class voState: NSObject, voProtocol {
         }
         
         for md in myDates {
-            if xto.toid == to.toid {  // other tracker is self so exact date match
-                sql = "select val from voData where id = \(xvid) and date = \(md)"
-            } else if xcd {
-                sql = "select val from voData where id = \(xvid) and date <= \(md) and date >= \(prevDate)"
+            
+            let selStr: String
+            if xvid == OTANYVID {
+                selStr = "1 from voData where date"
             } else {
-                sql = "select val from voData where id = \(xvid) and date <= \(md)"
+                selStr = "val from voData where id = \(xvid) and date"
+            }
+            if xto.toid == to.toid {  // other tracker is self so exact date match
+                sql = "select \(selStr) = \(md)"
+            } else if xcd {
+                sql = "select \(selStr) <= \(md) and date > \(prevDate)"
+            } else {
+                sql = "select \(selStr) <= \(md)"
             }
             let xval = xto.toQry2Str(sql: sql)
             if xval != "" {
@@ -205,6 +217,10 @@ class voState: NSObject, voProtocol {
             vo.optDict["privacy"] = "\(PRIVDFLT)"
         }
 
+        if nil == vo.optDict["otCurrent"] {
+            vo.optDict["otCurrent"] = OTCURRDFLT ? "1" : "0"
+        }
+        
         if nil == vo.optDict["otsrc"] {
             vo.optDict["otsrc"] = OTSRCDFLT ? "1" : "0"
         }
@@ -328,19 +344,30 @@ class voState: NSObject, voProtocol {
                 return xvo?.value ?? ""
             } else {
                 let xto = trackerObj(trackerList.shared.getTIDfromNameDb(xtName)[0])
-                let xvid = xto.toQry2Int(sql: "select id from voConfig where name = '\(xvName)'")
-                if xvid != 0 {
+                let xvid: Int
+                if xvName == OTANYNAME {
+                    xvid = OTANYVID
+                } else {
+                    xvid = xto.toQry2Int(sql: "select id from voConfig where name = '\(xvName)'")
+                }
+                if xvid != 0 {  // 0 is not found, OTANYVID is -1
                     let to = vo.parentTracker
                     let td = to.trackerDate!.timeIntervalSince1970
                     var rslt = ""
+                    let selStr: String
+                    if xvid == OTANYVID {
+                        selStr = "1 from trkrData where"
+                    } else {
+                        selStr = "val from voData where id = \(xvid) and"
+                    }
                     if xcd {
                         let pd = to.prevDate()
                         if pd != 0 {
-                            let sql = "select val from voData where id = \(xvid) and date <= \(td) and date >= \(pd)"
+                            let sql = "select \(selStr) date <= \(td) and date > \(pd)"
                             rslt = xto.toQry2Str(sql: sql)
                         }
                     } else {
-                        let sql = "select val from voData where id = \(xvid) and date <= \(td)"
+                        let sql = "select \(selStr) date <= \(td)"
                         rslt = xto.toQry2Str(sql: sql)
                     }
                     return rslt

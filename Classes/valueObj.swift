@@ -116,6 +116,10 @@ let INFOSAVEDFLT = false
 
 let NUMDDPDFLT = -1
 
+let OTANYNAME = "-<Any Value>-"
+let OTANYVID = -1
+
+
 // healthKit status in table voHKstatus
 enum hkStatus: Int {
     case noData = 0
