@@ -1157,14 +1157,6 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
 
     //- (NSString*) currFunctionValue {
     override func update(_ instr: String?) -> String {
-        // Synchronize access to shared resources to make thread-safe
-        return synchronized(vo.parentTracker.recalcFnLock) {
-            return doFunctionUpdate(instr)
-        }
-    }
-    
-    // Helper method to separate thread synchronization from actual update
-    private func doFunctionUpdate(_ instr: String?) -> String {
         let pto = vo.parentTracker
 
         if nil == pto.tDb {
@@ -1224,13 +1216,6 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         return instr ?? ""
     }
     
-    // Helper method for thread synchronization
-    private func synchronized<T>(_ lock: Any, block: () -> T) -> T {
-        objc_sync_enter(lock)
-        defer { objc_sync_exit(lock) }
-        return block()
-    }
-
     override func voDisplay(_ bounds: CGRect) -> UIView {
 
         //trackerObj *to = (trackerObj*) parentTracker;
@@ -1244,7 +1229,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         CrashlyticsKit.setObjectValue(voFnDefnStr(true), forKey: "fnDefn")
         CrashlyticsKit.setObjectValue(voRangeStr(true), forKey: "fnRange")
         #endif
-
+        DBGLog("display fn voDisplay: \(vo.valueName ?? "nil")")
         var valstr = vo.value // evaluated on read so make copy
         if FnErr {
             valstr = "❌ " + (valstr)
