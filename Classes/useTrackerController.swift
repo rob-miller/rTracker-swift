@@ -746,7 +746,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     }
 
     func rejectTracker() {
-        DBGLog(String("rejecting input tracker \(tracker!.toid) \(tracker!.trackerName)  prevTID= \(tracker!.prevTID)"))
+        DBGLog(String("rejecting input tracker \(tracker!.toid) \(tracker!.trackerName ?? "nil")  prevTID= \(tracker!.prevTID)"))
         // RootViewController:loadTrackerDict() sets prevTID to -1 if this is new = no name or existing tid match (rejectable tracker)
         // also loadTrackerDict sets tid to -1 in error condition but never checked
         tlist!.updateTLtid(Int(tracker!.toid), new: tracker!.prevTID) // revert topLevel to before

@@ -29,11 +29,9 @@ class AtomicTestAndSet {
         } else {
             previousValue = OSAtomicTestAndClearBarrier(0, value)
         }
-        // let newValue = newValue ? 1 : 0
-        DBGLog(String("atomic test and set: \(newValue) was \(previousValue)"))
-        //let previousValue = OSAtomicTestAndSetBarrier(UInt32(newValue), value)
-        //OSAtomicTestAndClearBarrier(<#T##__n: UInt32##UInt32#>, <#T##__theAddress: UnsafeMutableRawPointer!##UnsafeMutableRawPointer!#>)
-        //DBGLog(String("atomic returning \(previousValue)"))
+
+        //DBGLog(String("atomic test and set: \(newValue) was \(previousValue)"))
+
         return previousValue // != false
     }
     

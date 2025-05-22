@@ -149,7 +149,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         // set up the window title, try to get owner's name
 
         let devname = UIDevice.current.name  // this no longer works from iOS 16, need an 'entitlement'
-        DBGLog("name = \(devname)");
+        //DBGLog("name = \(devname)");
         let words = devname.components(separatedBy: " ")
         let bname = Bundle.main.infoDictionary?["CFBundleName"] as? String // @"rTracker";  default title
         var rtitle = bname
@@ -196,7 +196,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         }
         
         title = rtitle
-        DBGLog("title= \(rtitle!)")
+        DBGLog("\(rtitle!) running on \(devname)")
     }
 
 
@@ -274,7 +274,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         //DBGLog(@"rvc: viewDidLoad privacy= %d",[privacyObj getPrivacyValue]);
 
         //refreshLock = false
-        DBGLog("release atomic loadFilesLock")
+        //DBGLog("release atomic loadFilesLock")
         _ = loadFilesLock.testAndSet(newValue: false)
         readingFile = false
 
@@ -363,13 +363,18 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
     func samplesNeeded() -> Bool {
         let rslt = tlist.toQry2Int(sql:"select val from info where name = 'samples_version'")
-        DBGLog(String("samplesNeeded if \(SAMPLES_VERSION) != \(rslt)"))
+        if SAMPLES_VERSION != rslt {
+            DBGLog(String("samples Needed"))
+        }
         return SAMPLES_VERSION != rslt
     }
 
     func demosNeeded() -> Bool {
         let rslt = tlist.toQry2Int(sql:"select val from info where name = 'demos_version'")
-        DBGLog(String("demosNeeded if \(DEMOS_VERSION) != \(rslt)"))
+        if DEMOS_VERSION != rslt {
+            DBGLog(String("demos Needed"))
+        }
+ 
         #if !RELEASE
         //rslt=0;
         if 0 == rslt {
@@ -419,9 +424,10 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                 InstallDemos = true
             }
         }
-
-        DBGLog(String("InstallSamples \(InstallSamples)  InstallDemos \(InstallDemos)"))
-
+        if InstallSamples || InstallDemos {
+            DBGLog(String("InstallSamples \(InstallSamples)  InstallDemos \(InstallDemos)"))
+        }
+        
         if resetPassPref {
             sud.set(false, forKey: "reset_password_pref")
         }
@@ -432,26 +438,16 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         initialPrefsLoad = false
 
         sud.synchronize()
-        /*
-        #if DEBUGLOG
-            resetPassPref = [sud boolForKey:@"reset_password_pref"];
-            reloadSamplesPref = [sud boolForKey:@"reload_sample_trackers_pref"];
-
-            DBGLog(@"exit prefs-- resetPass: %d  reloadsamples: %d",resetPassPref,reloadSamplesPref);
-        #endif
-        */
     }
 
     func refreshView() {
-
-        // deprecated ios 10 - if (0 != OSAtomicTestAndSet(0, &(_refreshLock))) {
-        DBGLog("try atomic set loadFilesLock")
+        //DBGLog("try atomic set loadFilesLock")
         if loadFilesLock.testAndSet(newValue: true) {
             // wasn't false before, so we didn't get lock, so leave because refresh already in process
             return
         }
-        DBGLog("got atomic set")
-        //DBGLog(@"refreshView");
+        //DBGLog("got atomic set")
+
         scrollState()
 
         handlePrefs()
@@ -806,7 +802,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
             for i in 0..<notifications.count {
                 let oneEvent = notifications[i]
                 let userInfoCurrent = oneEvent.content.userInfo
-                DBGLog(String("\(i) uic: \(userInfoCurrent)"))
+                //DBGLog(String("\(i) uic: \(userInfoCurrent)"))
                 if let tidNumber = userInfoCurrent["tid"] as? NSNumber {
                     let tid = tidNumber.intValue
 
@@ -980,7 +976,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         let erc = tlist.topLayoutReminderCountH[row]
         let src = scheduledReminderCounts[tid] ?? 0
 
-        DBGLog(String("src: \(src)  erc:  \(erc) \(tlist.topLayoutNamesH[row]) (\(tid))"))
+        //DBGLog(String("src: \(src)  erc:  \(erc) \(tlist.topLayoutNamesH[row]) (\(tid))"))
 
         if erc != src {
             cellLabel.append(
@@ -1001,7 +997,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
             // Get current streak count
             let to = trackerObj(tid)
             let streakCount = to.streakCount()
-            
+            //DBGLog("streak count for \(to.trackerName ?? "nil") is \(streakCount)")
             // Only show streak badge if there's an active streak
             if streakCount > 0 {
                 addStreakBadge(to: cell!, count: streakCount, shouldAnimate: false)

@@ -611,7 +611,7 @@ class rTracker_resource: NSObject {
         pbFrame?.size.width = vFrame?.size.width ?? 0.0
 
         pbFrame?.origin.y = yloc
-        DBGLog(String("progressbar yloc= \(yloc)"))
+        //DBGLog(String("progressbar yloc= \(yloc)"))
 
         progressBar?.frame = pbFrame ?? CGRect.zero
 
@@ -707,12 +707,12 @@ class rTracker_resource: NSObject {
     
     class func setToldAboutSwipe(_ toldSwipe: Bool) {
         toldAboutSwipe = toldSwipe
-        DBGLog(String("updateToldAboutSwipe:\(toldAboutSwipe)"))
+        //DBGLog(String("updateToldAboutSwipe:\(toldAboutSwipe)"))
     }
 
     class func setToldAboutSwipe2(_ toldSwipe2: Bool) {
         toldAboutSwipe2 = toldSwipe2
-        DBGLog(String("updateToldAboutSwipe2:\(toldAboutSwipe2)"))
+        //DBGLog(String("updateToldAboutSwipe2:\(toldAboutSwipe2)"))
     }
 
     class func getToldAboutNotifications() -> Bool {
@@ -721,7 +721,7 @@ class rTracker_resource: NSObject {
 
     class func setToldAboutNotifications(_ toldNotifications: Bool) {
         toldAboutNotifications = toldNotifications
-        DBGLog(String("updateToldAboutNotifications:\(toldAboutNotifications)"))
+        //DBGLog(String("updateToldAboutNotifications:\(toldAboutNotifications)"))
     }
 
     class func setNotificationsEnabled() {

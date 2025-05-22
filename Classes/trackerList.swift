@@ -34,7 +34,7 @@ class trackerList: tObjBase {
     private override init() {
         super.init()
         initTDb()
-        DBGLog("trackerList singleton initialized")
+        //DBGLog("trackerList singleton initialized")
     }
     
     var topLayoutNames: [String] = []
@@ -161,14 +161,14 @@ class trackerList: tObjBase {
                 hiddenDict[id] = hidden
                 streakDict[id] = isTrackerStreaked(id) ? 1 : 0
             }
-            //self.sql = nil;
+
             DBGLog(String("loadTopLayoutTable finished, priv=\(privacyValue) tlt=\(self.topLayoutNames)"))
             //DBGTLIST(self);
         }
     }
 
     func add(toTopLayoutTable tObj: trackerObj, nrank: Int? = nil) {
-        DBGLog(String("\(tObj.trackerName) toid \(tObj.toid)"))
+        DBGLog(String("\(tObj.trackerName ?? "nil") toid \(tObj.toid)"))
 
         topLayoutIDs.append(tObj.toid)
         topLayoutNames.append(tObj.trackerName!)

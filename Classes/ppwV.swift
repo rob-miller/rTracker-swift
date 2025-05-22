@@ -159,13 +159,13 @@ class ppwV: UIView, UITextFieldDelegate {
         safeDispatchSync({
             frame = pv.frame
         })
-        DBGLog(String("ppwV parent: x=\(frame.origin.x) y=\(frame.origin.y) w=\(frame.size.width) h=\(frame.size.height)"))
+        //DBGLog(String("ppwV parent: x=\(frame.origin.x) y=\(frame.origin.y) w=\(frame.size.width) h=\(frame.size.height)"))
 
         //frame.origin.x = 0.0
         //frame.origin.y = 372.0
         frame.size.width = 320.0
         frame.size.height = 130.0
-        DBGLog(String("ppwV: x=\(frame.origin.x) y=\(frame.origin.y) w=\(frame.size.width) h=\(frame.size.height)"))
+        //DBGLog(String("ppwV: x=\(frame.origin.x) y=\(frame.origin.y) w=\(frame.size.width) h=\(frame.size.height)"))
 
         //tbh = par.navigationController!.toolbar.frame.height
         //topy = pv.frame.size.height - (frame.size.height + tbh)
@@ -390,7 +390,7 @@ class ppwV: UIView, UITextFieldDelegate {
         tob?.toExecSql(sql:sql)
         sql = "select count(*) from priv0 where key=0;"
         if tob?.toQry2Int(sql:sql) != 0 {
-            DBGLog("password exists")
+            //DBGLog("password exists")
             return true
         } else {
             DBGLog("password does not exist")

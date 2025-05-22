@@ -58,7 +58,7 @@ class tictacV: UIView {
             return theKey
         }
         set(k) {
-            DBGLog("setKey: \(theKey) \(String(theKey, radix: 2)) -> \(k) \(String(k, radix: 2))")
+            //DBGLog("setKey: \(theKey) \(String(theKey, radix: 2)) -> \(k) \(String(k, radix: 2))")
             theKey = k
         }
     }
@@ -108,7 +108,7 @@ class tictacV: UIView {
         ttf.origin.y = TICTACVRTFRAC * ttf.size.height
         ttf.size.width *= TICTACWIDFRAC
         ttf.size.height *= TICTACHGTFRAC
-        DBGLog(String("ttv: x=\(ttf.origin.x) y=\(ttf.origin.y) w=\(ttf.size.width) h=\(ttf.size.height)"));
+        //DBGLog(String("ttv: x=\(ttf.origin.x) y=\(ttf.origin.y) w=\(ttf.size.width) h=\(ttf.size.height)"));
         super.init(frame: ttf)
         backgroundColor = .secondarySystemBackground //.white
         layer.cornerRadius = 8 // doesn't work, probably overwriting rectangle elsewhere
@@ -157,7 +157,7 @@ class tictacV: UIView {
 
     func drawTicTac() {
         //var i: Int
-        DBGLog(String("\(frame)"))
+        //DBGLog(String("\(frame)"))
         safeDispatchSync({ [self] in
             vborder = TTBF * frame.size.height
             hborder = TTBF * frame.size.width

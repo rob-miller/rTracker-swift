@@ -156,7 +156,7 @@ class tObjBase: NSObject {
                     name: UIApplication.willTerminateNotification,
                     object: app)
                 
-                DBGLog(String("opened tDb \(dbName) tDb= \(tDb)"))
+                //DBGLog(String("opened tDb \(dbName)"))
             }
         }
         

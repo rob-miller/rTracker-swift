@@ -399,7 +399,9 @@ extension trackerObj {
         //var rids: [AnyHashable] = []
         let sql = "select rid from reminders order by rid"
         let rids = toQry2AryI(sql: sql)
-        DBGLog(String("toid \(super.toid) has \(rids.count) reminders in db"))
+        //if rids.count > 0 {
+        //    DBGLog(String("toid \(super.toid) has \(rids.count) reminders in db"))
+        //}
         if 0 < rids.count {
             for rid in rids {
                 let tnr = notifyReminder(NSNumber(value:rid), to: self)
@@ -745,7 +747,7 @@ extension trackerObj {
         notifyReminder.useRidArray(center, tid: super.toid, callback: { toRemove in
             let rmIdStrs = toRemove.map { "\(super.toid)-\($0)" }
             center.removePendingNotificationRequests(withIdentifiers: rmIdStrs)
-            DBGLog("removed identifiers \(rmIdStrs)")
+            //DBGLog("removed identifiers \(rmIdStrs)")
         })
     }
 

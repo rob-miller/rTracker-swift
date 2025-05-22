@@ -70,7 +70,7 @@ var privacyValue: Int {
     }
     set {
         _privacyValue = newValue
-        DBGLog(String("updatePrivacy:\(_privacyValue)"))
+        //DBGLog(String("updatePrivacy:\(_privacyValue)"))
     }
 }
 
@@ -80,24 +80,22 @@ var lastShow: TimeInterval = 0
 func jumpMaxPriv() {
     if nil == stashedPriv {
         stashedPriv = NSNumber(value: privacyValue)
-        DBGLog(String("stashed priv \(stashedPriv!)"))
+        //DBGLog(String("stashed priv \(stashedPriv!)"))
     }
 
     //[self.privacyObj setPrivacyValue:MAXPRIV];  // temporary max privacy level so see all
     privacyValue = MAXPRIV
     _jmpriv = true
-    DBGLog("priv jump!")
+    DBGLog("priv jump from \(stashedPriv!) to \(privacyValue)")
 }
 
 func restorePriv() {
     if nil == stashedPriv {
         return
     }
-    //if (YES == self.openUrlLock) {
-    //    return;
-    //}
+
     DBGLog(String("restore priv to \(stashedPriv!)"))
-    //[self.privacyObj setPrivacyValue:[self.stashedPriv intValue]];  // return to privacy level
+
     privacyValue = stashedPriv?.intValue ?? 0
     stashedPriv = nil
     _jmpriv = false
@@ -107,7 +105,7 @@ func restorePriv() {
 class privacyV: UIView {
     
     func lockDown() -> Int {
-        DBGLog("privObj: lockdown")
+        //DBGLog("privObj: lockdown")
         let currP = privacyValue
 
         ttv?.showKey(0)
@@ -119,9 +117,6 @@ class privacyV: UIView {
         }
 
         showing = PVNOSHOW
-        //if ([self.configBtn.currentTitle isEqualToString:CFGBTNLOCK]) {
-        //    self.showing = PVQUERY;
-        //}
         return currP
     }
 
@@ -164,7 +159,7 @@ class privacyV: UIView {
             _ppwv!.parentAction = #selector(ppwvResponse)
             tbh = parent!.navigationController!.toolbar.frame.height
             _ppwv?.topy = frame.origin.y - (frame.size.height + tbh) // parentView!.frame.size.height - (frame.size.height /*+ tbh + CGFloat(49)*/)
-            DBGLog(String("pv.y = \(parentView!.frame.size.height)  s.h = \(frame.size.height)  ty= \(_ppwv!.topy)"))
+            //DBGLog(String("pv.y = \(parentView!.frame.size.height)  s.h = \(frame.size.height)  ty= \(_ppwv!.topy)"))
         }
         return _ppwv
     }
@@ -176,7 +171,7 @@ class privacyV: UIView {
             _showing
         }
         set(newState) {
-            DBGLog(String("priv: setShowing \(_showing) -> \(newState)  curr priv= \(privacyValue)"))
+            //DBGLog(String("priv: setShowing \(_showing) -> \(newState)  curr priv= \(privacyValue)"))
             if (PVNOSHOW == _showing) && (PVNOSHOW == newState) {
                 return // this happens when closing down.
             }
@@ -497,29 +492,21 @@ class privacyV: UIView {
     let PVH = 0.46
 
     init(parentView pv: RootViewController!) {
-        DBGLog(String("privV enter parent= x=\(pv?.view.frame.origin.x ?? 0) y=\(pv?.view.frame.origin.y ?? 0) w=\(pv?.view.frame.size.width ?? 0) h=\(pv?.view.frame.size.height ?? 0)"))
-        //CGRect frame = CGRectMake(0.0f, pv.frame.size.height,pv.frame.size.width,(pv.frame.size.height * PVH));
-        // like this but need to re-calc button positions too :-( CGRect frame = CGRectMake(pv.frame.size.width-320.0, pv.frame.size.height,320.0,171.0);
+        //DBGLog(String("privV enter parent= x=\(pv?.view.frame.origin.x ?? 0) y=\(pv?.view.frame.origin.y ?? 0) w=\(pv?.view.frame.size.width ?? 0) h=\(pv?.view.frame.size.height ?? 0)"))
         
         tbh = pv.navigationController!.toolbar.frame.height
         let frame = CGRect(x: 0.0, y: pv.view.frame.size.height, width: 320.0, height: 171.0)  // rtmx location issues placing priv view and ppw view here
-        DBGLog(String("privacyV: x=\(frame.origin.x) y=\(frame.origin.y) w=\(frame.size.width) h=\(frame.size.height)"))
+        //DBGLog(String("privacyV: x=\(frame.origin.x) y=\(frame.origin.y) w=\(frame.size.width) h=\(frame.size.height)"))
         super.init(frame: frame)
         
         parent = pv
         parentView = pv.view
         _pwState = PWNEEDPRIVOK //PWNEEDPASS;
-        /*
-        let bg = UIImageView(image: UIImage(named: rTracker_resource.getLaunchImageName() ?? ""))
 
-        addSubview(bg)
-        sendSubviewToBack(bg)
-         */
         backgroundColor = .secondarySystemBackground  // .clear  //.white
 
         layer.cornerRadius = 8
         showing = PVNOSHOW
-        //self.hidden = YES;
         alpha = 1.0
 
         if let ttv {
