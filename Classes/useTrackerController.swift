@@ -270,7 +270,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         swipe.direction = .left
         view.addGestureRecognizer(swipe)
 
-        swipe = UISwipeGestureRecognizer(target: self, action: #selector(addTrackerController.handleViewSwipeRight(_:)))
+        //swipe = UISwipeGestureRecognizer(target: self, action: #selector(addTrackerController.handleViewSwipeRight(_:)))
+        swipe = UISwipeGestureRecognizer(target: self, action: #selector(handleViewSwipeRight(_:)))
         swipe.direction = .right
         view.addGestureRecognizer(swipe)
 
