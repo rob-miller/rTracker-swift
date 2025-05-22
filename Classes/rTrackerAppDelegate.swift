@@ -193,6 +193,8 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
     }
     
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
+        DBGLog("Received file via AirDrop: \(url.lastPathComponent)")
+        /*
         // Start accessing the security-scoped resource
         let didStartAccessing = url.startAccessingSecurityScopedResource()
         
@@ -201,6 +203,16 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
             if didStartAccessing {
                 url.stopAccessingSecurityScopedResource()
             }
+        }
+        */
+        
+        guard url.startAccessingSecurityScopedResource() else {
+            DBGLog("Cannot access security scoped resource")
+            return false
+        }
+        
+        defer {
+            url.stopAccessingSecurityScopedResource()
         }
         
         do {
@@ -220,23 +232,21 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
             
             DBGLog("File successfully saved to: \(destinationURL.path)")
             
-            // Get the root view controller
+            // Get the root view controller through navigation controller
             var rootVC: RootViewController?
             
-            if #available(iOS 15.0, *) {
-                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                   let window = windowScene.windows.first,
-                   let viewController = window.rootViewController as? RootViewController {
-                    rootVC = viewController
-                }
-            } else {
-                if let viewController = UIApplication.shared.windows.first?.rootViewController as? RootViewController {
-                    rootVC = viewController
-                }
+
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let window = windowScene.windows.first,
+               let navController = window.rootViewController as? UINavigationController,
+               let viewController = navController.viewControllers.first as? RootViewController {
+                rootVC = viewController
             }
             
-            // Trigger file loading
-            rootVC?.loadInputFiles()
+            // Ensure UI updates happen on main thread after current operation completes
+            DispatchQueue.main.async {
+                rootVC?.loadInputFiles()
+            }
             
             return true
         } catch {
