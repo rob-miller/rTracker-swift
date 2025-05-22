@@ -1399,6 +1399,8 @@ class trackerObj: tObjBase {
         for vo in valObjTable {
             vo.describe(false)
         }
+        let count = toQry2Int(sql: "select count(*) from trkrData")
+        DBGLog(String("tracker \(trackerName ?? "") has \(count) data entries"))
 #endif
     }
 
