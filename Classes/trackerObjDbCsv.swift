@@ -381,6 +381,7 @@ extension trackerObj {
     func insertTrackerVodata(vid: Int, date: Int, val: String, vo: valueObj? = nil) {
         var sql = "insert or replace into voData (id, date, val) values (\(vid),\(date),'\(val)');"
         toExecSql(sql:sql)
+        sql = ""
         if let vo = vo {
             if vo.vtype == VOT_FUNC {
                 sql = "insert or replace into voFNstatus (id, date, stat) values (\(vid),\(date),\(fnStatus.fnData.rawValue));"
@@ -389,7 +390,9 @@ extension trackerObj {
             } else if vo.optDict["ahksrc"] ?? "0" != "0" {
                 sql = "insert or replace into voHKstatus (id, date, stat) values (\(vid),\(date),\(hkStatus.hkData.rawValue));"
             }
-            toExecSql(sql:sql)
+            if sql != "" {
+                toExecSql(sql:sql)
+            }
         }
     }
     
@@ -1161,13 +1164,10 @@ extension trackerObj {
                     mp = vo?.vpriv ?? MINPRIV
                 }
             }
+
+            let sql = String(format: "insert or replace into trkrData (date, minpriv) values (%d,%ld);", tdi, mp)
+            toExecSql(sql:sql)
             
-            var sql = "select minpriv from trkrData where date = \(tdi);"
-            let dbmp = toQry2Int(sql: sql)
-            if dbmp > mp {
-                sql = String(format: "insert or replace into trkrData (date, minpriv) values (%d,%ld);", tdi, mp)
-                toExecSql(sql:sql)
-            }
             rTracker_resource.bumpProgressBar()
         }
     }
