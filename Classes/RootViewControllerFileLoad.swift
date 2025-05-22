@@ -102,7 +102,7 @@ extension RootViewController {
     
     func loadTrackerCsvFiles(completion: @escaping () -> Void) {
         if loadingCsvFiles {
-            completion()
+            //completion()
             return
         }
         
@@ -364,7 +364,7 @@ extension RootViewController {
         inputTO.prevTID = -1
         inputTO.saveConfig() // write to db
         tlist.add(toTopLayoutTable: inputTO) // insert in top list
-        DBGLog(String("loaded new \(tname)-new"))
+        DBGLog(String("loaded new \(tname)\((!loadingDemos && nameClash) ? "-new" : "")"))
         tldStashedTID = -1
     }
     
@@ -440,8 +440,8 @@ extension RootViewController {
             if url.lastPathComponent.hasSuffix(targ_ext ?? "") {
                 DBGLog("countInputFiles: match on \(url.lastPathComponent) url is \(url)")
                 retval += 1
-            //} else {
-               // DBGLog("cif: url \(url.lastPathComponent) no match for \(targ_ext ?? "")")
+            } else {
+                DBGLog("cif: url \(url.lastPathComponent) no match for \(targ_ext ?? "")")
             }
         }
         
@@ -451,7 +451,6 @@ extension RootViewController {
     // Main entry point for loading all input files
     func loadInputFiles() {
         DBGLog("loadInputFiles")
-        
         // Check if already processing files
         if loadingInputFiles || loadingCsvFiles || !loadFilesLock.testAndSet(newValue: true) {
             return
@@ -467,14 +466,18 @@ extension RootViewController {
         // Handle rtrks as plist + csv
         csvLoadCount += rtrkLoadCount
         plistLoadCount += rtrkLoadCount
+        if plistLoadCount + csvLoadCount > 0 {
+            DBGLog("loadInputFiles plistLoadCount \(plistLoadCount) csvLoadCount \(csvLoadCount)")
+        }
         
         // Count demos and samples asynchronously, then proceed with loading
         countDemosAndSamples { [weak self] in
             guard let self = self else { return }
             
             // Reset counters for progress bars
-            self.csvReadCount = 1
-            self.plistReadCount = 1
+            // rtm - why???
+            //self.csvReadCount = 1
+            //self.plistReadCount = 1
             
             // Check if there are any files to load
             if self.plistLoadCount + self.csvLoadCount > 0 {
@@ -719,6 +722,8 @@ extension RootViewController {
 
     // Refresh the view - called after loading files
     func refreshViewPart2() {
+        DBGLog("enter refreshViewPart2")
+        
         tlist.confirmToplevelTIDs()
         tlist.loadTopLayoutTable()
         
