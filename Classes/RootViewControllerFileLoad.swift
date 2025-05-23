@@ -440,8 +440,8 @@ extension RootViewController {
             if url.lastPathComponent.hasSuffix(targ_ext ?? "") {
                 DBGLog("countInputFiles: match on \(url.lastPathComponent) url is \(url)")
                 retval += 1
-            } else {
-                DBGLog("cif: url \(url.lastPathComponent) no match for \(targ_ext ?? "")")
+            //} else {
+            //    DBGLog("cif: url \(url.lastPathComponent) no match for \(targ_ext ?? "")")
             }
         }
         
