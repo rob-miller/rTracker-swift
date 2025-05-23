@@ -312,7 +312,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             // Notify when all operations are completed
             dispatchGroup.notify(queue: .main) {
                 // loadFNdata above left data loaded for last db date, so clear here and get to current date
-                self.tracker!.trackerDate = Date()
+                self.setTrackerDate(0)
                 for vo in self.tracker!.valObjTable {
                     if vo.optDict["otsrc"] ?? "0" == "0" && vo.optDict["ahksrc"] ?? "0" == "0" && vo.vtype != VOT_FUNC {
                         vo.resetData()  // clear data for non ot/hk/fn valueObjs
@@ -510,7 +510,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                                 
                                 // Just to make sure we clean up properly
                                 self.endRAI()
-                                self.tracker!.trackerDate = self.frDate
+                                
+                                self.setTrackerDate(Int(self.frDate?.timeIntervalSince1970 ?? 0))
                                 if !self.tracker!.loadData(Int(self.tracker!.trackerDate!.timeIntervalSince1970)) { // does nothing if currentDate not in db
                                     // so only choice is to reset UI to nothing, assume frDate is now plus some seconds
                                     for vo in self.tracker!.valObjTable {
