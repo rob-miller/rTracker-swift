@@ -973,6 +973,172 @@ class trackerObj: tObjBase {
     }
     
     func streakCount() -> Int {
+        
+        // Check if most recent entry is too old (streak should be broken)
+
+        let now = Date()
+        let mostRecentQuery = "SELECT MAX(date) FROM trkrData"
+        let mostRecentTimestamp = toQry2Int(sql: mostRecentQuery)
+        
+        if mostRecentTimestamp > 0 {
+            let mostRecentDate = Date(timeIntervalSince1970: TimeInterval(mostRecentTimestamp))
+            let timeSinceLastEntry = now.timeIntervalSince(mostRecentDate)
+            let daysSinceLastEntry = timeSinceLastEntry / (24.0 * 60.0 * 60.0)
+            
+            if daysSinceLastEntry > 1.5 {
+                return 0
+            }
+        } else {
+            return 0
+        }
+
+        /*
+        
+        // Step 1: Debug raw data from trkrData
+        DBGLog("=== STREAK DEBUG: Raw trkrData entries ===")
+        let rawDataQuery = "SELECT date, datetime(date, 'unixepoch') as readable_date FROM trkrData ORDER BY date DESC LIMIT 10"
+        let rawData = toQry2AryIS(sql: rawDataQuery)
+        for (date, readableDate) in rawData {
+            DBGLog("Raw entry - Unix timestamp: \(date), Human readable: \(readableDate)")
+        }
+        
+        // Step 1.5: Check if most recent entry is too old (streak should be broken)
+        DBGLog("=== STREAK DEBUG: Current time vs most recent entry ===")
+        let now = Date()
+        let nowTimestamp = Int(now.timeIntervalSince1970)
+        DBGLog("Current time: \(now) (timestamp: \(nowTimestamp))")
+        
+        let mostRecentQuery = "SELECT MAX(date) FROM trkrData"
+        let mostRecentTimestamp = toQry2Int(sql: mostRecentQuery)
+        
+        if mostRecentTimestamp > 0 {
+            let mostRecentDate = Date(timeIntervalSince1970: TimeInterval(mostRecentTimestamp))
+            let timeSinceLastEntry = now.timeIntervalSince(mostRecentDate)
+            let daysSinceLastEntry = timeSinceLastEntry / (24.0 * 60.0 * 60.0)
+            
+            DBGLog("Most recent entry: \(mostRecentDate) (timestamp: \(mostRecentTimestamp))")
+            DBGLog("Time since last entry: \(timeSinceLastEntry) seconds = \(daysSinceLastEntry) days")
+            
+            if daysSinceLastEntry > 1.5 {
+                DBGLog("*** STREAK BROKEN: Last entry is \(daysSinceLastEntry) days old (> 1.5 days) ***")
+                DBGLog("=== STREAK DEBUG: Final result = 0 (streak expired) ===")
+                return 0
+            } else {
+                DBGLog("Streak still active: Last entry is only \(daysSinceLastEntry) days old (<= 1.5 days)")
+            }
+        } else {
+            DBGLog("No entries found in trkrData")
+            return 0
+        }
+        
+        // Step 2: Debug daily_entries CTE
+        DBGLog("=== STREAK DEBUG: Daily entries (after grouping) ===")
+        let dailyEntriesQuery = """
+            SELECT 
+                date(datetime(date, 'unixepoch')) as entry_date,
+                count(*) as entries_count
+            FROM trkrData
+            GROUP BY entry_date
+            ORDER BY entry_date DESC
+            LIMIT 15
+        """
+        let dailyEntries = toQry2ArySI(sql: dailyEntriesQuery)
+        for (entryDate, count) in dailyEntries {
+            DBGLog("Daily entry: \(entryDate), Count: \(count)")
+        }
+        
+        // Step 3: Debug date_gaps CTE  
+        DBGLog("=== STREAK DEBUG: Date gaps calculation ===")
+        let dateGapsQuery = """
+            WITH daily_entries AS (
+                SELECT 
+                    date(datetime(date, 'unixepoch')) as entry_date
+                FROM trkrData
+                GROUP BY entry_date
+            )
+            SELECT 
+                entry_date,
+                COALESCE(CAST(julianday(entry_date) - 
+                julianday(lag(entry_date, 1) OVER (ORDER BY entry_date)) AS TEXT), 'NULL') as gap_text
+            FROM daily_entries
+            ORDER BY entry_date DESC
+            LIMIT 15
+        """
+        let dateGaps = toQry2ArySS(sql: dateGapsQuery) // Using SS since gap might be null for first entry
+        for (entryDate, gapStr) in dateGaps {
+            let gap = gapStr == "NULL" ? "NULL (first entry)" : gapStr
+            DBGLog("Date: \(entryDate), Gap from previous: \(gap)")
+        }
+        
+        // Step 4: Debug streak_groups CTE
+        DBGLog("=== STREAK DEBUG: Streak groups ===")
+        let streakGroupsQuery = """
+            WITH daily_entries AS (
+                SELECT 
+                    date(datetime(date, 'unixepoch')) as entry_date
+                FROM trkrData
+                GROUP BY entry_date
+            ),
+            date_gaps AS (
+                SELECT 
+                    entry_date,
+                    julianday(entry_date) - 
+                    julianday(lag(entry_date, 1) OVER (ORDER BY entry_date)) as gap
+                FROM daily_entries
+                ORDER BY entry_date DESC
+            )
+            SELECT 
+                entry_date,
+                COALESCE(CAST(gap AS TEXT), 'NULL') as gap_text,
+                CASE WHEN gap > 1.5 THEN 1 ELSE 0 END as is_break,
+                sum(CASE WHEN gap > 1.5 THEN 1 ELSE 0 END) 
+                    OVER (ORDER BY entry_date DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as streak_group
+            FROM date_gaps
+            ORDER BY entry_date DESC
+            LIMIT 20
+        """
+        let streakGroups = toQry2ArySSSI(sql: streakGroupsQuery)
+        for (entryDate, gapStr, isBreakStr, streakGroup) in streakGroups {
+            DBGLog("Date: \(entryDate), Gap: \(gapStr), IsBreak: \(isBreakStr), StreakGroup: \(streakGroup)")
+        }
+        
+        // Step 5: Debug final count for group 0
+        DBGLog("=== STREAK DEBUG: Group 0 count (current streak) ===")
+        let group0CountQuery = """
+            WITH daily_entries AS (
+                SELECT 
+                    date(datetime(date, 'unixepoch')) as entry_date
+                FROM trkrData
+                GROUP BY entry_date
+            ),
+            date_gaps AS (
+                SELECT 
+                    entry_date,
+                    julianday(entry_date) - 
+                    julianday(lag(entry_date, 1) OVER (ORDER BY entry_date)) as gap
+                FROM daily_entries
+                ORDER BY entry_date DESC
+            ),
+            streak_groups AS (
+                SELECT 
+                    entry_date,
+                    sum(CASE WHEN gap > 1.5 THEN 1 ELSE 0 END) 
+                        OVER (ORDER BY entry_date DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as streak_group
+                FROM date_gaps
+            )
+            SELECT entry_date, streak_group
+            FROM streak_groups
+            WHERE streak_group = 0
+            ORDER BY entry_date DESC
+        """
+        let group0Entries = toQry2ArySI(sql: group0CountQuery)
+        DBGLog("Entries in current streak (group 0):")
+        for (entryDate, streakGroup) in group0Entries {
+            DBGLog("  \(entryDate) (group \(streakGroup))")
+        }
+        
+        // Original query unchanged
+         */
         let queryStreak = """
             WITH daily_entries AS (
                 SELECT 
@@ -1000,7 +1166,11 @@ class trackerObj: tObjBase {
             FROM streak_groups
             WHERE streak_group = 0
         """
-        return toQry2Int(sql: queryStreak)
+        
+        let result = toQry2Int(sql: queryStreak)
+        DBGLog("=== STREAK DEBUG: Final result = \(result) ===")
+        
+        return result
     }
 
     // delete default settings from vo.optDict to save space
