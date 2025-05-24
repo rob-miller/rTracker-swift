@@ -997,7 +997,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
             // Get current streak count
             let to = trackerObj(tid)
             let streakCount = to.streakCount()
-            //DBGLog("streak count for \(to.trackerName ?? "nil") is \(streakCount)")
+            DBGLog("streak count for \(to.trackerName ?? "nil") is \(streakCount)")
             // Only show streak badge if there's an active streak
             if streakCount > 0 {
                 addStreakBadge(to: cell!, count: streakCount, shouldAnimate: false)
