@@ -73,6 +73,11 @@
 		D47B5648194118D5002B0CCA /* trackerCalCalendarRowCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = D47B5647194118D5002B0CCA /* trackerCalCalendarRowCell.swift */; };
 		D47D168E19028F2C006563B9 /* notifyReminderVC2.xib in Resources */ = {isa = PBXBuildFile; fileRef = D47D168D19028F2C006563B9 /* notifyReminderVC2.xib */; };
 		D47D169119028FBE006563B9 /* notifyReminderVC2.swift in Sources */ = {isa = PBXBuildFile; fileRef = D47D169019028FBE006563B9 /* notifyReminderVC2.swift */; };
+		D47E6DD52DDFC2FA00D68B2F /* rTrackerSceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D47E6DD42DDFC2FA00D68B2F /* rTrackerSceneDelegate.swift */; };
+		D47E6DD62DDFC2FA00D68B2F /* rTrackerSceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D47E6DD42DDFC2FA00D68B2F /* rTrackerSceneDelegate.swift */; };
+		D47E6DD82DDFC3D000D68B2F /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D47E6DD72DDFC3D000D68B2F /* HealthKit.framework */; };
+		D47E6DDF2DE0CF7F00D68B2F /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = D47E6DDE2DE0CF7F00D68B2F /* main.swift */; };
+		D47E6DE02DE0CF7F00D68B2F /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = D47E6DDE2DE0CF7F00D68B2F /* main.swift */; };
 		D47FBB7F14A9E2D700CE0547 /* closedview-button.png in Resources */ = {isa = PBXBuildFile; fileRef = D47FBB7E14A9E2D700CE0547 /* closedview-button.png */; };
 		D47FBB8114A9E2E300CE0547 /* fullview-button.png in Resources */ = {isa = PBXBuildFile; fileRef = D47FBB8014A9E2E300CE0547 /* fullview-button.png */; };
 		D47FBB8314A9E2F100CE0547 /* shadeview-button.png in Resources */ = {isa = PBXBuildFile; fileRef = D47FBB8214A9E2F100CE0547 /* shadeview-button.png */; };
@@ -244,6 +249,10 @@
 		D47B5647194118D5002B0CCA /* trackerCalCalendarRowCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = trackerCalCalendarRowCell.swift; sourceTree = "<group>"; };
 		D47D168D19028F2C006563B9 /* notifyReminderVC2.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = notifyReminderVC2.xib; sourceTree = "<group>"; };
 		D47D169019028FBE006563B9 /* notifyReminderVC2.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = notifyReminderVC2.swift; sourceTree = "<group>"; };
+		D47E6DD42DDFC2FA00D68B2F /* rTrackerSceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = rTrackerSceneDelegate.swift; sourceTree = "<group>"; };
+		D47E6DD72DDFC3D000D68B2F /* HealthKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HealthKit.framework; path = System/Library/Frameworks/HealthKit.framework; sourceTree = SDKROOT; };
+		D47E6DD92DDFC3F600D68B2F /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
+		D47E6DDE2DE0CF7F00D68B2F /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		D47FBB7E14A9E2D700CE0547 /* closedview-button.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "closedview-button.png"; path = "Resources/png/closedview-button.png"; sourceTree = "<group>"; };
 		D47FBB8014A9E2E300CE0547 /* fullview-button.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "fullview-button.png"; path = "Resources/png/fullview-button.png"; sourceTree = "<group>"; };
 		D47FBB8214A9E2F100CE0547 /* shadeview-button.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "shadeview-button.png"; path = "Resources/png/shadeview-button.png"; sourceTree = "<group>"; };
@@ -345,6 +354,7 @@
 				D43216B225F2444100B2E582 /* ContactsUI.framework in Frameworks */,
 				D46E56AD1B73A10F0023CE55 /* SystemConfiguration.framework in Frameworks */,
 				D46E56AB1B73A10F0023CE55 /* Security.framework in Frameworks */,
+				D47E6DD82DDFC3D000D68B2F /* HealthKit.framework in Frameworks */,
 				D43216B325F2444100B2E582 /* Contacts.framework in Frameworks */,
 				D4CA92C12D3014BD00554F55 /* ZIPFoundation in Frameworks */,
 			);
@@ -363,7 +373,9 @@
 		080E96DDFE201D6D7F000001 /* Classes */ = {
 			isa = PBXGroup;
 			children = (
+				D47E6DDE2DE0CF7F00D68B2F /* main.swift */,
 				1D3623250D0F684500981E51 /* rTrackerAppDelegate.swift */,
+				D47E6DD42DDFC2FA00D68B2F /* rTrackerSceneDelegate.swift */,
 				D4956B2212E076B900B0BB9B /* views */,
 				D4956B2012E0710100B0BB9B /* trackerObj classes */,
 				D4956B1F12E06EAA00B0BB9B /* valueObj classes */,
@@ -444,6 +456,8 @@
 		29B97323FDCFA39411CA2CEA /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D47E6DD92DDFC3F600D68B2F /* CoreAudio.framework */,
+				D47E6DD72DDFC3D000D68B2F /* HealthKit.framework */,
 				D4C6B87F26247FB100345F2A /* UserNotifications.framework */,
 				D43216B125F2444100B2E582 /* Contacts.framework */,
 				D43216B025F2444100B2E582 /* ContactsUI.framework */,
@@ -871,6 +885,7 @@
 			files = (
 				D417E3142A2121570093564A /* TSQCalendarRowCell.m in Sources */,
 				1D3623260D0F684500981E51 /* rTrackerAppDelegate.swift in Sources */,
+				D47E6DE02DE0CF7F00D68B2F /* main.swift in Sources */,
 				D467CF9D2DB93DC700EF479F /* trackerChartScatterPlot.swift in Sources */,
 				D4CA92BE2D2EF2E400554F55 /* filePickerVC.swift in Sources */,
 				28C286E10D94DF7D0034E888 /* RootViewController.swift in Sources */,
@@ -917,6 +932,7 @@
 				D40DC290133BEC3F00023D5D /* rTracker-resource.swift in Sources */,
 				D43EE368133CBF8D00737E76 /* CSVParser.swift in Sources */,
 				D494D5B52DA567C500298132 /* healthKitData.swift in Sources */,
+				D47E6DD62DDFC2FA00D68B2F /* rTrackerSceneDelegate.swift in Sources */,
 				D4A700CD13798874005E0E23 /* togd.swift in Sources */,
 				D4A700D01379928E005E0E23 /* vogd.swift in Sources */,
 				D494D5BF2DA7126200298132 /* trackerChartTimePlot.swift in Sources */,
@@ -944,8 +960,10 @@
 			files = (
 				D4CA92BC2D2B115400554F55 /* ahViewController.swift in Sources */,
 				D49F29482ACC8CC800B11560 /* rTrackerUITestsLaunchTests.swift in Sources */,
+				D47E6DDF2DE0CF7F00D68B2F /* main.swift in Sources */,
 				D49F29462ACC8CC800B11560 /* rTrackerUITests.swift in Sources */,
 				D4EE7D852D8DE57000206D26 /* trackerChart.swift in Sources */,
+				D47E6DD52DDFC2FA00D68B2F /* rTrackerSceneDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
