@@ -24,7 +24,6 @@
 import UIKit
 import UserNotifications
 
-@UIApplicationMain
 class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
     @IBOutlet var window: UIWindow?
     @IBOutlet var navigationController: UINavigationController!
@@ -92,48 +91,9 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
         let sud = UserDefaults.standard
         sud.synchronize()
 
-        let rootController = (navigationController.viewControllers)[0] as! RootViewController
-
-        if nil == sud.object(forKey: "reload_sample_trackers_pref") {
-
-            //((RootViewController *) [self.navigationController.viewControllers objectAtIndex:0]).initialPrefsLoad = YES;
-            rootController.initialPrefsLoad = true
-
-            let mainBundlePath = Bundle.main.bundlePath
-            let settingsPropertyListPath = URL(fileURLWithPath: mainBundlePath).appendingPathComponent("Settings.bundle/Root.plist").path
-
-            if let settingsPropertyList = NSDictionary(contentsOfFile: settingsPropertyListPath) as? [String: Any] {
-                let preferenceArray = settingsPropertyList["PreferenceSpecifiers"] as? [[String : Any]]
-                var registerableDictionary: [String : Any] = [:]
-
-                for i in 0..<(preferenceArray?.count ?? 0) {
-                    let key = preferenceArray?[i]["Title"] as? String
-
-                    if let key {
-                        let value = preferenceArray?[i]["DefaultValue"]
-                        if let value {
-                            registerableDictionary[key] = value
-                        }
-                    }
-                }
-
-                sud.register(defaults: registerableDictionary)
-                sud.synchronize()
-
-            } else {
-                DBGLog("unable to open settings dictionary from rRoot.plist file")
-            }
-        }
+        // Settings initialization will be handled by SceneDelegate after UI setup
         rTracker_resource.setNotificationsEnabled()
         rTracker_resource.setToldAboutNotifications(sud.bool(forKey: "toldAboutNotifications"))
-
-        let rootViewController = RootViewController()
-        let navigationController = UINavigationController(rootViewController: rootViewController)
-
-        window?.backgroundColor = .systemBackground
-
-        window?.rootViewController = navigationController
-        window?.makeKeyAndVisible()
 
         let prod = Bundle.main.infoDictionary?["CFBundleName"]
         let ver = Bundle.main.infoDictionary?["CFBundleShortVersionString"]
@@ -142,47 +102,12 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
 
         rTracker_resource.initHasAmPm()
 
-        DispatchQueue.main.async{
-            if !sud.bool(forKey: "acceptLicense") {
-                // race relying on rvc having set
-                let freeMsg = "Copyright 2010-2025 Robert T. Miller\n\nrTracker is free and open source software, distributed under the Apache License, Version 2.0.\n\nrTracker is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n\nrTracker source code is available at https://github.com/rob-miller/rTracker-swift\n\nThe full Apache License is available at http://www.apache.org/licenses/LICENSE-2.0"
-                
-                let alert = UIAlertController(
-                    title: "rTracker is free software.",
-                    message: freeMsg,
-                    preferredStyle: .alert)
-                
-                let defaultAction = UIAlertAction(
-                    title: "Accept",
-                    style: .default,
-                    handler: { [self] action in
-                        rTracker_resource.setAcceptLicense(true)
-                        UserDefaults.standard.set(true, forKey: "acceptLicense")
-                        UserDefaults.standard.synchronize()
-                        
-                        pleaseRegister(forNotifications: rootViewController)
-                    })
-                
-                let recoverAction = UIAlertAction(
-                    title: "Reject",
-                    style: .default,
-                    handler: { action in
-                        exit(0)
-                    })
-                
-                alert.addAction(defaultAction)
-                alert.addAction(recoverAction)
+        // License acceptance will be handled in scene delegate after UI is set up
 
-                rootViewController.present(alert, animated: true)
-            }
-        }
-
+        // Shortcut items will be handled in scene delegate
+        // Store shortcut info for scene delegate to access
         if let shortcutItem = launchOptions?[.shortcutItem] as? UIApplicationShortcutItem {
-            if let tidString = shortcutItem.userInfo?["tid"] as? String, let tid = Int(tidString) {
-                rootController.doOpenTracker(tid)
-                return false // http://stackoverflow.com/questions/32634024/3d-touch-home-shortcuts-in-obj-c
-                // When you return a value of NO, the system does not call the application:performActionForShortcutItem:completionHandler: method.
-            }
+            pendingTid = shortcutItem.userInfo?["tid"] as? NSNumber
         }
 
         return true
@@ -255,46 +180,7 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
         }
     }
     
-    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
-        guard let urlContext = URLContexts.first else { return }
-        let url = urlContext.url
-        
-        // Start accessing the security-scoped resource
-        let didStartAccessing = url.startAccessingSecurityScopedResource()
-        
-        defer {
-            // Make sure to release the security-scoped resource when done
-            if didStartAccessing {
-                url.stopAccessingSecurityScopedResource()
-            }
-        }
-        
-        do {
-            let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            let destinationURL = documentsURL.appendingPathComponent(url.lastPathComponent)
-            
-            // Remove any existing file
-            if FileManager.default.fileExists(atPath: destinationURL.path) {
-                try FileManager.default.removeItem(at: destinationURL)
-            }
-            
-            // Read the data directly instead of trying to copy the file
-            let data = try Data(contentsOf: url)
-            
-            // Write to your app's documents directory
-            try data.write(to: destinationURL)
-            
-            DBGLog("File successfully saved to: \(destinationURL.path)")
-            
-            // Get the root view controller
-            if let windowScene = scene as? UIWindowScene,
-               let rootVC = windowScene.windows.first?.rootViewController as? RootViewController {
-                rootVC.loadInputFiles()
-            }
-        } catch {
-            DBGErr("Error handling incoming file in scene: \(error.localizedDescription)")
-        }
-    }
+    // Scene URL handling moved to SceneDelegate
     
     func quickAlert(_ title: String?, msg: String?) -> UIAlertController? {
         let alert = UIAlertController(
@@ -317,33 +203,32 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
             return  // spurious event when registering for notifications
         }
         resigningActive = true
-        // Save data if appropriate
-        //DBGLog(@"rt app delegate: app will resign active");
-        let rootController = (navigationController.viewControllers)[0]
-        let topController = navigationController.viewControllers.last
-
-        _ = (rootController as? RootViewController)?.privacyObj.lockDown()
-
+        
+        // Get root controller through scene if available
+        if let rootController = getRootController() {
+            _ = rootController.privacyObj.lockDown()
+            
+            // Update badge count using new API
+            let badgeCount = rootController.pendingNotificationCount()
+            UNUserNotificationCenter.current().setBadgeCount(badgeCount) { error in
+                if let error = error {
+                    DBGLog("Failed to set badge count: \(error.localizedDescription)")
+                }
+            }
+            
+            // Handle rejectable tracker if needed
+            if let navController = window?.rootViewController as? UINavigationController,
+               let topController = navController.viewControllers.last {
+                let rtSelector = NSSelectorFromString("rejectTracker")
+                if topController.responds(to: rtSelector),
+                   let trackerController = topController as? useTrackerController,
+                   trackerController.rejectable != false {
+                    navController.popViewController(animated: true)
+                }
+            }
+        }
+        
         UIApplication.shared.isIdleTimerDisabled = false
-
-        let rtSelector = NSSelectorFromString("rejectTracker")
-
-        if topController?.responds(to: rtSelector) ?? false {
-            // leaving so reject tracker if it is rejectable
-            if (((topController as? useTrackerController)?.rejectable) != nil) {
-                //[((useTrackerController *) topController) rejectTracker];
-                navigationController.popViewController(animated: true)
-            }
-        }
-
-        // Update badge count using new API
-        let badgeCount = (rootController as? RootViewController)?.pendingNotificationCount() ?? 0
-        UNUserNotificationCenter.current().setBadgeCount(badgeCount) { error in
-            if let error = error {
-                DBGLog("Failed to set badge count: \(error.localizedDescription)")
-            }
-        }
-
         resigningActive = false
     }
 
@@ -379,38 +264,25 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
     ///*
      // needs notification set above, still called after applicationWillResignActive()
     @objc func appWillEnterBackground() {
-        // hide screen in case private
+        // App-level background handling - scene-specific UI hiding moved to SceneDelegate
         DBGLog("will enter background - appDelegate")
-
-        let blankViewController = UIViewController()
-        blankViewController.view.backgroundColor = UIColor.black
-        blankViewController.modalPresentationStyle = .fullScreen
-
-        // Assuming your launch image is named "LaunchImage" in the asset catalog
-        if let launchImage = UIImage(named: "LaunchScreenImg") {
-            let imageView = UIImageView(frame: blankViewController.view.bounds)
-            imageView.image = launchImage
-            imageView.contentMode = .scaleAspectFill // Adjust as needed
-            imageView.clipsToBounds = true
-
-            // Add the image view as a subview
-            blankViewController.view.addSubview(imageView)
-            blankViewController.view.sendSubviewToBack(imageView) // Ensure it's behind any other views
-        }
-        
-         let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
-         let window = windowScene!.windows.first
-         let rootViewController = window!.rootViewController!
-         rootViewController.present(blankViewController, animated: false, completion: nil)
     }
 
-
     @objc func appWillEnterForeground() {
-        // Unhide screen, rvc enterForeground refreshes the view
+        // App-level foreground handling - scene-specific UI showing moved to SceneDelegate
         DBGLog("will enter foreground - appdelegate")
-        let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
-        let window = windowScene!.windows.first
-        let rootViewController = window!.rootViewController!
-        rootViewController.dismiss(animated: false, completion: nil)
+    }
+    
+    // MARK: - Scene Session Lifecycle
+    
+    func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+        let config = UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
+        config.delegateClass = rTrackerSceneDelegate.self
+        return config
+    }
+    
+    func application(_ application: UIApplication, didDiscardSceneSessions sceneSessions: Set<UISceneSession>) {
+        // Called when the user discards a scene session.
+        // Use this method to release any resources that were specific to the discarded scenes, as they will not return.
     }
 }
