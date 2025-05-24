@@ -317,6 +317,33 @@ class tObjBase: NSObject {
         }
     }
 
+    func toQry2ArySI(sql: String) -> [(String, Int)] {
+        tObjBase.performDatabaseOperation(toid: toid) { [self] in
+            
+            SQLDbg(String("toQry2ArySI: \(dbName!) => _\(sql)_"))
+            dbgNSAssert(tDb != nil, "toQry2ArySI called with no tDb")
+            
+            var stmt: OpaquePointer?  // sqlite3_stmt?
+            //objc_sync_enter(self)
+            if sqlite3_prepare_v2(tDb, sql, -1, &stmt, nil) == SQLITE_OK {
+                var results: [(String, Int)] = []
+                while sqlite3_step(stmt) == SQLITE_ROW {
+                    let s1 = String(cString: sqlite3_column_text(stmt, 1)!)
+                    let i1 = Int(sqlite3_column_int(stmt, 0))
+                    results.append((s1, i1))
+                    SQLDbg(String("  rslt: \(s1) \(i1)"))
+                }
+                //tobDoneCheck(rslt, sql: sql)
+                sqlite3_finalize(stmt)
+                //objc_sync_exit(self)
+                return results
+            } else {
+                tobPrepError(sql)
+                return []
+            }
+        }
+    }
+
     func toQry2AryISI(sql: String) -> [(Int, String, Int)] {
         tObjBase.performDatabaseOperation(toid: toid) { [self] in
             
