@@ -155,7 +155,7 @@ class voNumber: voState, UITextFieldDelegate {
     }
 
     override func resetData() {
-        if nil != _dtf && !vo.parentTracker.loadingDbData {
+        if nil != _dtf {   // && !vo.parentTracker.loadingDbData
             // not self as don't want to instantiate prematurely
             safeDispatchSync({dtf.text = ""})
         }
