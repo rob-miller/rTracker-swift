@@ -1407,9 +1407,10 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
     }
     
     override func doTrimFnVals() {
-        let frep0 = Int(vo.optDict["frep0"]!)!
-        if ISCALFREP(frep0) && (vo.optDict["calOnlyLast"] != "0") && MyTracker.goRecalculate {
-            trimFnVals(frep0)
+        if let odfrep0 = vo.optDict["frep0"], let frep0 = Int(odfrep0) {
+            if ISCALFREP(frep0) && (vo.optDict["calOnlyLast"] != "0") && MyTracker.goRecalculate {
+                trimFnVals(frep0)
+            }
         }
     }
 
