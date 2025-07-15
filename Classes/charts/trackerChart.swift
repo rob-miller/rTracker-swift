@@ -143,6 +143,11 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     internal var zoomedEarliestDate: Date? // The zoomed earliest date
     internal var isDateRangeZoomed: Bool = false // Track the zoom state
     internal var dateRangeZoomContainer: UIView! // Container for zoom slider
+    
+    // recent data indicator button and state
+    internal var recentDataIndicatorButton: UIButton!
+    internal var recentDataIndicatorState: Int = 0 // 0=off, 1=last, 2=minus1, 3=minus2
+    
     // height constraint property
     internal var zoomContainerHeightConstraint: NSLayoutConstraint!
     // track whether zoom is applied (separate from UI visibility)
@@ -370,6 +375,14 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         dateRangeLabel.text = "Date Range"
         dateRangeLabel.font = UIFont.boldSystemFont(ofSize: 14)
         
+        // Create recent data indicator button
+        recentDataIndicatorButton = UIButton(type: .system)
+        recentDataIndicatorButton.translatesAutoresizingMaskIntoConstraints = false
+        recentDataIndicatorButton.setTitle("○", for: .normal)
+        recentDataIndicatorButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .medium)
+        recentDataIndicatorButton.tintColor = .systemBlue
+        recentDataIndicatorButton.addTarget(self, action: #selector(recentDataIndicatorTapped), for: .touchUpInside)
+        
         // Create zoom icon
         dateRangeZoomIcon = UIImageView(image: UIImage(systemName: "magnifyingglass"))
         dateRangeZoomIcon.translatesAutoresizingMaskIntoConstraints = false
@@ -412,6 +425,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         
         
         sliderContainer.addSubview(dateRangeLabel)
+        sliderContainer.addSubview(recentDataIndicatorButton)
         sliderContainer.addSubview(dateRangeZoomIcon)
         sliderContainer.addSubview(dateRangeZoomSwitch)
         sliderContainer.addSubview(dateRangeLockIcon)
@@ -466,28 +480,44 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
          sliderContainer.backgroundColor = UIColor.yellow.withAlphaComponent(0.3)
          */
         
+        // Create constraints with proper priority for zoom container
+        let zoomLabelTopConstraint = zoomSliderLabel.topAnchor.constraint(equalTo: dateRangeZoomContainer.topAnchor)
+        zoomLabelTopConstraint.priority = UILayoutPriority(999) // Just below required
+        
+        let zoomSliderTopConstraint = dateRangeZoomSlider.topAnchor.constraint(equalTo: zoomSliderLabel.bottomAnchor, constant: 4)
+        zoomSliderTopConstraint.priority = UILayoutPriority(999)
+        
+        let zoomSliderBottomConstraint = dateRangeZoomSlider.bottomAnchor.constraint(equalTo: dateRangeZoomContainer.bottomAnchor, constant: -4)
+        zoomSliderBottomConstraint.priority = UILayoutPriority(999)
+        
         NSLayoutConstraint.activate([
             dateRangeLabel.topAnchor.constraint(equalTo: sliderContainer.topAnchor, constant: 8),
             dateRangeLabel.leadingAnchor.constraint(equalTo: sliderContainer.leadingAnchor),
             
+            // Position recent data indicator button
+            recentDataIndicatorButton.centerYAnchor.constraint(equalTo: dateRangeLabel.centerYAnchor),
+            recentDataIndicatorButton.leadingAnchor.constraint(equalTo: dateRangeLabel.trailingAnchor, constant: 16),
+            recentDataIndicatorButton.widthAnchor.constraint(equalToConstant: 24),
+            recentDataIndicatorButton.heightAnchor.constraint(equalToConstant: 24),
+            
             // Position lock icon
             dateRangeLockIcon.centerYAnchor.constraint(equalTo: dateRangeLabel.centerYAnchor),
-            dateRangeLockIcon.trailingAnchor.constraint(equalTo: dateRangeLockSwitch.leadingAnchor, constant: -8),
+            dateRangeLockIcon.leadingAnchor.constraint(equalTo: dateRangeZoomSwitch.trailingAnchor, constant: 16),
             dateRangeLockIcon.widthAnchor.constraint(equalToConstant: 16),
             dateRangeLockIcon.heightAnchor.constraint(equalToConstant: 16),
             
             // Position zoom icon and switch
             dateRangeZoomIcon.centerYAnchor.constraint(equalTo: dateRangeLabel.centerYAnchor),
-            dateRangeZoomIcon.trailingAnchor.constraint(equalTo: dateRangeZoomSwitch.leadingAnchor, constant: -8),
+            dateRangeZoomIcon.leadingAnchor.constraint(equalTo: recentDataIndicatorButton.trailingAnchor, constant: 16),
             dateRangeZoomIcon.widthAnchor.constraint(equalToConstant: 16),
             dateRangeZoomIcon.heightAnchor.constraint(equalToConstant: 16),
             
             dateRangeZoomSwitch.centerYAnchor.constraint(equalTo: dateRangeLabel.centerYAnchor),
-            dateRangeZoomSwitch.trailingAnchor.constraint(equalTo: dateRangeLockIcon.leadingAnchor, constant: -16),
+            dateRangeZoomSwitch.leadingAnchor.constraint(equalTo: dateRangeZoomIcon.trailingAnchor, constant: 8),
             
             // Position lock switch
             dateRangeLockSwitch.centerYAnchor.constraint(equalTo: dateRangeLabel.centerYAnchor),
-            dateRangeLockSwitch.trailingAnchor.constraint(equalTo: sliderContainer.trailingAnchor),
+            dateRangeLockSwitch.leadingAnchor.constraint(equalTo: dateRangeLockIcon.trailingAnchor, constant: 8),
             
             // Regular date sliders - position after the header
             startDateSlider.topAnchor.constraint(equalTo: dateRangeLockSwitch.bottomAnchor, constant: 10),
@@ -499,15 +529,12 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             endDateSlider.trailingAnchor.constraint(equalTo: sliderContainer.trailingAnchor),
             
             // Position start date tappable label
-            //startDateTextTappable.topAnchor.constraint(equalTo: dateRangeLabel.bottomAnchor, constant: 12),
             startDateTextTappable.topAnchor.constraint(equalTo: endDateSlider.bottomAnchor, constant: 12),
-            
             startDateTextTappable.leadingAnchor.constraint(equalTo: sliderContainer.leadingAnchor),
             startDateTextTappable.widthAnchor.constraint(equalTo: sliderContainer.widthAnchor, multiplier: 0.45),
             startDateTextTappable.heightAnchor.constraint(equalToConstant: 30),
             
             // Position end date tappable label
-            //endDateTextTappable.topAnchor.constraint(equalTo: dateRangeLabel.bottomAnchor, constant: 12),
             endDateTextTappable.topAnchor.constraint(equalTo: endDateSlider.bottomAnchor, constant: 12),
             endDateTextTappable.trailingAnchor.constraint(equalTo: sliderContainer.trailingAnchor),
             endDateTextTappable.widthAnchor.constraint(equalTo: sliderContainer.widthAnchor, multiplier: 0.45),
@@ -531,14 +558,14 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             dateRangeZoomContainer.trailingAnchor.constraint(equalTo: configControlsContainer.trailingAnchor),
             // Height constraint is managed separately
             
-            // Zoom slider and label constraints
-            zoomSliderLabel.topAnchor.constraint(equalTo: dateRangeZoomContainer.topAnchor),
+            // Zoom slider and label constraints (lower priority to avoid conflicts when collapsed)
+            zoomLabelTopConstraint,
             zoomSliderLabel.leadingAnchor.constraint(equalTo: dateRangeZoomContainer.leadingAnchor),
             
-            dateRangeZoomSlider.topAnchor.constraint(equalTo: zoomSliderLabel.bottomAnchor, constant: 4),
+            zoomSliderTopConstraint,
             dateRangeZoomSlider.leadingAnchor.constraint(equalTo: dateRangeZoomContainer.leadingAnchor),
             dateRangeZoomSlider.trailingAnchor.constraint(equalTo: dateRangeZoomContainer.trailingAnchor),
-            dateRangeZoomSlider.bottomAnchor.constraint(equalTo: dateRangeZoomContainer.bottomAnchor, constant: -4),
+            zoomSliderBottomConstraint,
             
             // Make the container bottom anchor depend on the zoom container visibility
             sliderContainer.bottomAnchor.constraint(equalTo: dateRangeZoomContainer.bottomAnchor, constant: 10)
@@ -600,6 +627,33 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         updateDateSlidersForZoomedRange()
         
         // Update the chart
+        updateChartDataWithDebounce()
+    }
+    
+    // Handle recent data indicator button taps
+    @objc internal func recentDataIndicatorTapped(_ sender: UIButton) {
+        // Cycle through states: 0=off, 1=last, 2=minus1, 3=minus2, back to 0
+        recentDataIndicatorState = (recentDataIndicatorState + 1) % 4
+        
+        // Update button appearance
+        switch recentDataIndicatorState {
+        case 0: // Off
+            sender.setTitle("○", for: .normal)
+            sender.tintColor = .systemBlue
+        case 1: // Last entry
+            sender.setTitle("●", for: .normal)
+            sender.tintColor = .systemRed
+        case 2: // Minus 1 entry
+            sender.setTitle("◑", for: .normal)
+            sender.tintColor = .systemGreen
+        case 3: // Minus 2 entry
+            sender.setTitle("◐", for: .normal)
+            sender.tintColor = .systemOrange
+        default:
+            break
+        }
+        
+        // Update the chart to draw/remove the indicator line
         updateChartDataWithDebounce()
     }
     
@@ -1166,7 +1220,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         let endTimestamp = Int(end.timeIntervalSince1970)
         
         let sql = """
-        SELECT COUNT(date) FROM voData 
+        SELECT COUNT(date) FROM trkrData 
         WHERE date >= \(startTimestamp) AND date <= \(endTimestamp)
         """
         return tracker.toQry2Int(sql: sql)
