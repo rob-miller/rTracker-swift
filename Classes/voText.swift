@@ -32,43 +32,45 @@ class voText: voState, UITextFieldDelegate {
     private var _dtf: UITextField?
     var dtf: UITextField {
         //safeDispatchSync({ [self] in
-        if self._dtf != nil && self._dtf?.frame.size.width != vosFrame.size.width {
-            self._dtf = nil // first time around thinks size is 320, handle larger devices
+        if let existingDtf = _dtf, existingDtf.frame.size.width != vosFrame.size.width {
+            _dtf = nil // first time around thinks size is 320, handle larger devices
         }
         // })
         
-        if nil == _dtf {
+        if _dtf == nil {
             DBGLog(String("init \(vo.valueName) : x=\(vosFrame.origin.x) y=\(vosFrame.origin.y) w=\(vosFrame.size.width) h=\(vosFrame.size.height)"))
-            _dtf = UITextField(frame: vosFrame)
             
-
-            _dtf?.textColor = .label
-            _dtf?.backgroundColor = .secondarySystemBackground
+            let textField = UITextField(frame: vosFrame)
             
-            _dtf?.borderStyle = .roundedRect //Bezel;
-            _dtf?.font = PrefBodyFont //[UIFont systemFontOfSize:17.0];
-            _dtf?.autocorrectionType = .no // no auto correction support
+            textField.textColor = .label
+            textField.backgroundColor = .secondarySystemBackground
             
-            _dtf?.keyboardType = .default // use the full keyboard
+            textField.borderStyle = .roundedRect //Bezel;
+            textField.font = PrefBodyFont //[UIFont systemFontOfSize:17.0];
+            textField.autocorrectionType = .no // no auto correction support
+            
+            textField.keyboardType = .default // use the full keyboard
             if vo.optDict["otsrc"] == "1" {
-                _dtf?.placeholder = "<no data>"
+                textField.placeholder = "<no data>"
             } else {
-                _dtf?.placeholder = "<enter number>"
+                textField.placeholder = "<enter number>"
             }
             
-            _dtf?.returnKeyType = .done
+            textField.returnKeyType = .done
             
-            _dtf?.clearButtonMode = .whileEditing // has a clear 'x' button to the right
+            textField.clearButtonMode = .whileEditing // has a clear 'x' button to the right
             
             //dtf.tag = kViewTag;		// tag this control so we can remove it later for recycled cells
-            _dtf?.delegate = self // let us be the delegate so we know when the keyboard's "Done" button is pressed
+            textField.delegate = self // let us be the delegate so we know when the keyboard's "Done" button is pressed
             
             // Add an accessibility label that describes what the text field is for.
-            _dtf?.accessibilityLabel = NSLocalizedString("NormalTextField", comment: "")
-            _dtf?.text = ""
-            _dtf?.addTarget(self, action: #selector(voNumber.textFieldDidChange(_:)), for: .editingChanged)
+            textField.accessibilityLabel = NSLocalizedString("NormalTextField", comment: "")
+            textField.text = ""
+            textField.addTarget(self, action: #selector(voNumber.textFieldDidChange(_:)), for: .editingChanged)
             
-            _dtf?.accessibilityIdentifier = "\(self.tvn())_textfield"
+            textField.accessibilityIdentifier = "\(self.tvn())_textfield"
+            
+            _dtf = textField
         }
     
         return _dtf!
@@ -118,7 +120,7 @@ class voText: voState, UITextFieldDelegate {
     }
 
     override func resetData() {
-        if nil != _dtf  && !vo.parentTracker.loadingDbData {
+        if _dtf != nil && !vo.parentTracker.loadingDbData {
             // not self, do not instantiate
             if Thread.isMainThread {
                 dtf.text = ""
