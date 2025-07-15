@@ -554,7 +554,10 @@ extension TrackerChart {
             graphHeight: graphHeight,
             binCount: binCount,
             normalizedBackgroundBins: normalizedBackgroundBins,
-            selectionBins: selectionBins
+            selectionBins: selectionBins,
+            paddedMinValue: paddedMinValue,
+            paddedMaxValue: paddedMaxValue,
+            binWidth: binWidth
         )
         
         // Draw legend for categories
@@ -592,6 +595,11 @@ extension TrackerChart {
                 categoryColors: [:],
                 orderedCategories: []
             )
+        }
+        
+        // Draw recent data indicator line if enabled
+        if recentDataIndicatorState > 0 {
+            drawRecentDataIndicatorLine(backgroundValues: backgroundValues)
         }
     }
     
@@ -665,7 +673,10 @@ extension TrackerChart {
             graphHeight: graphHeight,
             binCount: binCount,
             normalizedBackgroundBins: normalizedBackgroundBins,
-            selectionBins: selectionBins
+            selectionBins: selectionBins,
+            paddedMinValue: paddedMinValue,
+            paddedMaxValue: paddedMaxValue,
+            binWidth: binWidth
         )
         
         // Draw legend for categories - use the original selectionData to show all possible categories
@@ -703,6 +714,11 @@ extension TrackerChart {
                 categoryColors: [:],
                 orderedCategories: []
             )
+        }
+        
+        // Draw recent data indicator line if enabled
+        if recentDataIndicatorState > 0 {
+            drawRecentDataIndicatorLine(backgroundValues: backgroundValues)
         }
     }
     
@@ -809,7 +825,10 @@ extension TrackerChart {
         graphHeight: CGFloat,
         binCount: Int,
         normalizedBackgroundBins: [Double],
-        selectionBins: [String: [Double]]
+        selectionBins: [String: [Double]],
+        paddedMinValue: Double,
+        paddedMaxValue: Double,
+        binWidth: Double
     ) {
         // Find the maximum normalized bin value for scaling
         let maxBinValue = max(
@@ -850,7 +869,15 @@ extension TrackerChart {
                 continue
             }
             
-            let x = leftMargin + CGFloat(index) * barWidth
+            // Position bar centered on the bin center value
+            // For binWidth = 2.0, this centers each bar on the middle of its range
+            let binCenterValue = paddedMinValue + (Double(index) + 0.5) * binWidth
+            
+            // Calculate x position for the bin center
+            let xCenter = leftMargin + CGFloat((binCenterValue - paddedMinValue) / (paddedMaxValue - paddedMinValue)) * graphWidth
+            
+            // Position bar centered on the representative value
+            let x = xCenter - barWidth / 2
             let y = topMargin + graphHeight - barHeight
             
             let barView = UIView(frame: CGRect(x: x, y: y, width: barWidth, height: barHeight))
@@ -870,7 +897,7 @@ extension TrackerChart {
         // Draw category lines
         for (category, bins) in selectionBins {
             let linePath = UIBezierPath()
-            let barWidth = graphWidth / CGFloat(binCount)
+            //let barWidth = graphWidth / CGFloat(binCount)
             var validPoints = false
             
             for (index, value) in bins.enumerated() {
@@ -886,7 +913,10 @@ extension TrackerChart {
                 }
                 
                 let yPos = topMargin + graphHeight - normalizedHeight * graphHeight
-                let xPos = leftMargin + CGFloat(index) * barWidth + barWidth / 2
+                
+                // Calculate bin center value for proper alignment
+                let binCenterValue = paddedMinValue + (Double(index) + 0.5) * binWidth
+                let xPos = leftMargin + CGFloat((binCenterValue - paddedMinValue) / (paddedMaxValue - paddedMinValue)) * graphWidth
                 
                 if index == 0 || !validPoints {
                     linePath.move(to: CGPoint(x: xPos, y: yPos))
@@ -1441,6 +1471,7 @@ extension TrackerChart {
         binCount: Int,
         paddedMinValue: Double,
         binWidth: Double
+
     ) -> [String: [Double]] {
         var selectionBins: [String: [Double]] = [:]
         
@@ -1567,5 +1598,90 @@ extension TrackerChart {
         }
         
         return result ?? low
+    }
+    
+    // Draw a skinny line at the position of recent data points
+    internal func drawRecentDataIndicatorLine(backgroundValues: [Double]) {
+        // Clear any existing indicator lines
+        for subview in chartView.subviews {
+            if subview.tag == 5001 {
+                subview.removeFromSuperview()
+            }
+        }
+        
+        // Get the recent data point based on the current state
+        let dataValue: Double
+        switch recentDataIndicatorState {
+        case 1: // Last entry
+            guard !backgroundValues.isEmpty else { return }
+            dataValue = backgroundValues.last!
+        case 2: // Minus 1 entry
+            guard backgroundValues.count >= 2 else { return }
+            dataValue = backgroundValues[backgroundValues.count - 2]
+        case 3: // Minus 2 entry
+            guard backgroundValues.count >= 3 else { return }
+            dataValue = backgroundValues[backgroundValues.count - 3]
+        default:
+            return
+        }
+        
+        // Get chart configuration
+        let graphWidth = chartView.bounds.width - leftMargin - rightMargin
+        let graphHeight = chartView.bounds.height - topMargin - bottomMargin - extraBottomSpace
+        let binCount = chartData["binCount"] as? Int ?? 10
+        let paddedMinValue = chartData["minValue"] as? Double ?? (backgroundValues.min() ?? 0)
+        let paddedMaxValue = chartData["maxValue"] as? Double ?? (backgroundValues.max() ?? 1)
+        let binWidth = chartData["binWidth"] as? Double ?? ((paddedMaxValue - paddedMinValue) / Double(binCount))
+        
+        // Calculate x position of the data value (same as bar centering logic)
+        let xPosition = leftMargin + CGFloat((dataValue - paddedMinValue) / (paddedMaxValue - paddedMinValue)) * graphWidth
+        
+        // Calculate the height of the distribution bar at this position
+        let binIndex = Int((dataValue - paddedMinValue) / binWidth)
+        var barHeight: CGFloat = 0
+        
+        if binIndex >= 0 && binIndex < binCount {
+            // Create bins for background data to get the height
+            var backgroundBins = Array(repeating: 0, count: binCount)
+            for value in backgroundValues {
+                let valueBinIndex = Int((value - paddedMinValue) / binWidth)
+                if valueBinIndex >= 0 && valueBinIndex < binCount {
+                    backgroundBins[valueBinIndex] += 1
+                }
+            }
+            
+            // Normalize and get the height for this bin
+            let totalBackgroundCount = Double(backgroundValues.count)
+            let normalizedValue = Double(backgroundBins[binIndex]) / totalBackgroundCount
+            
+            // Find the maximum normalized bin value for scaling (same as in drawDistributionHistogram)
+            let maxBinValue = backgroundBins.map { Double($0) / totalBackgroundCount }.max() ?? 0.001
+            let normalizedHeight = CGFloat(normalizedValue / maxBinValue)
+            barHeight = normalizedHeight * graphHeight
+        }
+        
+        // Create the skinny line
+        let lineWidth: CGFloat = 2.0
+        let lineView = UIView(frame: CGRect(
+            x: xPosition - lineWidth / 2,
+            y: topMargin + graphHeight - barHeight,
+            width: lineWidth,
+            height: barHeight
+        ))
+        lineView.tag = 5001
+        
+        // Set line color based on state
+        switch recentDataIndicatorState {
+        case 1:
+            lineView.backgroundColor = .systemRed
+        case 2:
+            lineView.backgroundColor = .systemGreen
+        case 3:
+            lineView.backgroundColor = .systemOrange
+        default:
+            break
+        }
+        
+        chartView.addSubview(lineView)
     }
 }
