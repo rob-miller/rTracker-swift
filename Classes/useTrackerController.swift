@@ -1386,8 +1386,11 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         }
 
         if tracker!.optDict["savertn"] as? String ?? "1" == "0" {
-
-            tracker!.resetData()
+            let postD = tracker!.postDate()
+            if postD == 0 {
+                // Only reset if we're on the last record (no next date)
+                tracker!.resetData()
+            }
             
             updateToolBar()
             updateTrackerTableView()
