@@ -42,7 +42,7 @@ extension TrackerChart {
             stackView.bottomAnchor.constraint(equalTo: configContainer.bottomAnchor),
             
             // Set a fixed height constraint for the slider container
-            //sliderContainer.heightAnchor.constraint(equalToConstant: 120)  // Increased height for sliders
+            sliderContainer.heightAnchor.constraint(equalToConstant: 160)  // More space for sliders
         ])
         
         // Update buttons with any previously selected values
