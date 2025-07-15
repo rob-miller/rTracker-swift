@@ -56,7 +56,11 @@ class voNumber: voState, UITextFieldDelegate {
         textField.font = PrefBodyFont // [UIFont systemFontOfSize:17.0];
         textField.autocorrectionType = .no // no auto correction support
         
-        textField.placeholder = "<enter number>"
+        if vo.optDict["ahksrc"] == "1" || vo.optDict["otsrc"] == "1" {
+            textField.placeholder = "<no data>"
+        } else {
+            textField.placeholder = "<enter number>"
+        }
         textField.textAlignment = .right // ios6 UITextAlignmentRight;
         //[dtf addTarget:self action:@selector(numTextFieldClose:) forControlEvents:UIControlEventTouchUpOutside];
         

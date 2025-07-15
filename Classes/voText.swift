@@ -50,7 +50,11 @@ class voText: voState, UITextFieldDelegate {
             _dtf?.autocorrectionType = .no // no auto correction support
             
             _dtf?.keyboardType = .default // use the full keyboard
-            _dtf?.placeholder = "<enter text>"
+            if vo.optDict["otsrc"] == "1" {
+                _dtf?.placeholder = "<no data>"
+            } else {
+                _dtf?.placeholder = "<enter number>"
+            }
             
             _dtf?.returnKeyType = .done
             
@@ -69,6 +73,7 @@ class voText: voState, UITextFieldDelegate {
     
         return _dtf!
     }
+    
     var startStr: String?
     private var localCtvovc: configTVObjVC?
     
