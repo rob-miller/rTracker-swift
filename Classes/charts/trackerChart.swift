@@ -43,7 +43,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     internal let extraBottomSpace: CGFloat = 30 // Extra space for correlation text
     
     // Legend constants
-    internal let legendWidth: CGFloat = 120
+    internal let legendWidth: CGFloat = 150
     internal let legendHeight: CGFloat = 20
     internal let legendRightMargin: CGFloat = 15
     internal let legendTopMargin: CGFloat = 15
@@ -1447,7 +1447,16 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         if sender == startDateSlider {
             // Calculate new start date
             let startInterval = TimeInterval(sender.value) * timeRange
-            selectedStartDate = effectiveEarliestDate.addingTimeInterval(startInterval)
+            let calculatedStartDate = effectiveEarliestDate.addingTimeInterval(startInterval)
+            
+            // Clamp to available date range
+            selectedStartDate = max(effectiveEarliestDate, min(calculatedStartDate, latestDate))
+            
+            // Update slider position to reflect clamped value
+            if selectedStartDate != calculatedStartDate {
+                let clampedInterval = selectedStartDate!.timeIntervalSince(effectiveEarliestDate)
+                startDateSlider.value = Float(clampedInterval / timeRange)
+            }
             
             if dateRangeLockSwitch.isOn {
                 // Lock mode: Keep date range constant
@@ -1467,8 +1476,9 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
                             selectedEndDate = latestDate
                             endDateSlider.value = 1.0
                             
-                            // Adjust start date back by daysBetweenDates
+                            // Adjust start date back by daysBetweenDates, but clamp to available range
                             selectedStartDate = calendar.date(byAdding: .day, value: -daysBetweenDates, to: latestDate)
+                            selectedStartDate = max(effectiveEarliestDate, selectedStartDate!)
                             let adjustedStartInterval = selectedStartDate!.timeIntervalSince(effectiveEarliestDate)
                             startDateSlider.value = Float(max(0.0, min(1.0, adjustedStartInterval / timeRange)))
                         }
@@ -1481,9 +1491,9 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
                     let minEndDate = calendar.date(byAdding: .day, value: 1, to: startDate) ?? startDate
                     
                     if endDate < minEndDate {
-                        // Push end date forward
-                        selectedEndDate = minEndDate
-                        let endInterval = minEndDate.timeIntervalSince(effectiveEarliestDate)
+                        // Push end date forward, but clamp to available range
+                        selectedEndDate = min(latestDate, minEndDate)
+                        let endInterval = selectedEndDate!.timeIntervalSince(effectiveEarliestDate)
                         endDateSlider.value = Float(min(1.0, endInterval / timeRange))
                     }
                 }
@@ -1491,7 +1501,16 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         } else if sender == endDateSlider {
             // Calculate new end date
             let endInterval = TimeInterval(sender.value) * timeRange
-            selectedEndDate = effectiveEarliestDate.addingTimeInterval(endInterval)
+            let calculatedEndDate = effectiveEarliestDate.addingTimeInterval(endInterval)
+            
+            // Clamp to available date range
+            selectedEndDate = max(effectiveEarliestDate, min(calculatedEndDate, latestDate))
+            
+            // Update slider position to reflect clamped value
+            if selectedEndDate != calculatedEndDate {
+                let clampedInterval = selectedEndDate!.timeIntervalSince(effectiveEarliestDate)
+                endDateSlider.value = Float(clampedInterval / timeRange)
+            }
             
             if dateRangeLockSwitch.isOn {
                 // Lock mode: Keep date range constant
@@ -1508,11 +1527,12 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
                         // Ensure start date doesn't go below earliest date
                         if startDate < effectiveEarliestDate {
                             // Adjust both sliders to respect the boundary
-                            selectedStartDate = earliestDate
+                            selectedStartDate = effectiveEarliestDate
                             startDateSlider.value = 0.0
                             
-                            // Adjust end date forward by daysBetweenDates
+                            // Adjust end date forward by daysBetweenDates, but clamp to available range
                             selectedEndDate = calendar.date(byAdding: .day, value: daysBetweenDates, to: effectiveEarliestDate)
+                            selectedEndDate = min(latestDate, selectedEndDate!)
                             let adjustedEndInterval = selectedEndDate!.timeIntervalSince(effectiveEarliestDate)
                             endDateSlider.value = Float(min(1.0, adjustedEndInterval / timeRange))
                         }
@@ -1525,9 +1545,9 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
                     let minStartDate = calendar.date(byAdding: .day, value: -1, to: endDate) ?? endDate
                     
                     if startDate > minStartDate {
-                        // Push start date backward
-                        selectedStartDate = minStartDate
-                        let startInterval = minStartDate.timeIntervalSince(effectiveEarliestDate)
+                        // Push start date backward, but clamp to available range
+                        selectedStartDate = max(effectiveEarliestDate, minStartDate)
+                        let startInterval = selectedStartDate!.timeIntervalSince(effectiveEarliestDate)
                         startDateSlider.value = Float(max(0.0, startInterval / timeRange))
                     }
                 }
