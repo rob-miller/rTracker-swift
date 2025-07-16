@@ -1281,15 +1281,15 @@ extension TrackerChart {
             UIColor.systemOrange
         ]
         
-        // Calculate legend height based on number of sources (increased for average text)
-        let itemHeight: CGFloat = 25  // Increased from 15 to accommodate two lines
+        // Calculate legend height based on number of sources (back to single line)
+        let itemHeight: CGFloat = 15  // Back to original height for single line
         let padding: CGFloat = 5
         
         let legendHeight: CGFloat = CGFloat(sourcesData.count) * (itemHeight + padding)
         
         let legendView = UIView(frame: CGRect(
             x: chartView.bounds.width - legendWidth - legendRightMargin,
-            y: legendTopMargin + 10,
+            y: legendTopMargin - 5,  // Moved up from +10 to -5
             width: legendWidth,
             height: legendHeight
         ))
@@ -1320,38 +1320,6 @@ extension TrackerChart {
             ))
             legendView.addSubview(itemContainer)
             
-            // Type indicator
-            var indicatorView: UIView
-            
-            if isBooleanType {
-                // For boolean, show a dot
-                let dotSize: CGFloat = 8
-                let dotView = UIView(frame: CGRect(x: 10, y: (itemHeight - dotSize) / 2, width: dotSize, height: dotSize))
-                dotView.backgroundColor = color
-                dotView.layer.cornerRadius = dotSize / 2
-                indicatorView = dotView
-            } else {
-                // For other types, show a line
-                let lineView = UIView(frame: CGRect(x: 10, y: itemHeight / 2, width: 15, height: 2))
-                lineView.backgroundColor = color
-                indicatorView = lineView
-            }
-            
-            itemContainer.addSubview(indicatorView)
-            
-            // Name label
-            let nameLabel = UILabel(frame: CGRect(
-                x: 35,
-                y: 0,
-                width: legendWidth - 45,
-                height: 12
-            ))
-            nameLabel.text = name
-            nameLabel.font = UIFont.systemFont(ofSize: 10)
-            nameLabel.adjustsFontSizeToFitWidth = true
-            nameLabel.minimumScaleFactor = 0.7
-            itemContainer.addSubview(nameLabel)
-            
             // Calculate and display average
             let values = dataPoints.map { $0.1 }
             let averageText: String
@@ -1362,24 +1330,38 @@ extension TrackerChart {
                 let percentage = values.isEmpty ? 0.0 : (Double(trueCount) / Double(values.count)) * 100
                 averageText = String(format: "%.1f%%", percentage)
             } else {
-                // For numeric data, calculate average
+                // For numeric data, calculate average (without "Avg:" prefix)
                 let average = values.isEmpty ? 0.0 : values.reduce(0.0, +) / Double(values.count)
-                averageText = String(format: "Avg: %.2f", average)
+                averageText = String(format: "%.2f", average)
             }
             
-            // Average label
+            // Average label in trace color (replaces the line/dot indicator)
             let averageLabel = UILabel(frame: CGRect(
-                x: 35,
-                y: 12,
-                width: legendWidth - 45,
-                height: 12
+                x: 5,
+                y: 0,
+                width: 40,
+                height: itemHeight
             ))
             averageLabel.text = averageText
-            averageLabel.font = UIFont.systemFont(ofSize: 9)
-            averageLabel.textColor = .secondaryLabel
+            averageLabel.font = UIFont.systemFont(ofSize: 10, weight: .medium)
+            averageLabel.textColor = color
+            averageLabel.textAlignment = .center
             averageLabel.adjustsFontSizeToFitWidth = true
             averageLabel.minimumScaleFactor = 0.7
             itemContainer.addSubview(averageLabel)
+            
+            // Name label
+            let nameLabel = UILabel(frame: CGRect(
+                x: 50,
+                y: 0,
+                width: legendWidth - 55,
+                height: itemHeight
+            ))
+            nameLabel.text = name
+            nameLabel.font = UIFont.systemFont(ofSize: 10)
+            nameLabel.adjustsFontSizeToFitWidth = true
+            nameLabel.minimumScaleFactor = 0.7
+            itemContainer.addSubview(nameLabel)
         }
     }
     
