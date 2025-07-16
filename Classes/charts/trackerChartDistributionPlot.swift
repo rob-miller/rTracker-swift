@@ -1654,8 +1654,20 @@ extension TrackerChart {
             let totalBackgroundCount = Double(backgroundValues.count)
             let normalizedValue = Double(backgroundBins[binIndex]) / totalBackgroundCount
             
-            // Find the maximum normalized bin value for scaling (same as in drawDistributionHistogram)
-            let maxBinValue = backgroundBins.map { Double($0) / totalBackgroundCount }.max() ?? 0.001
+            // Calculate maxBinValue the same way as drawDistributionHistogram to match the scale
+            let normalizedBackgroundBins = backgroundBins.map { Double($0) / totalBackgroundCount }
+            let selectionData = chartData["filteredSelectionData"] as? [String: [Double]] ?? [:]
+            let selectionBins = calculateSelectionBins(
+                selectionData: selectionData,
+                binCount: binCount,
+                paddedMinValue: paddedMinValue,
+                binWidth: binWidth
+            )
+            
+            let maxBinValue = max(
+                normalizedBackgroundBins.max() ?? 0.001,
+                selectionBins.values.flatMap { $0 }.max() ?? 0.001
+            )
             let normalizedHeight = CGFloat(normalizedValue / maxBinValue)
             barHeight = normalizedHeight * graphHeight
         }
