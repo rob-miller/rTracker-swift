@@ -30,10 +30,10 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     // MARK: - Constants
     
     // Chart type constants
-    internal let CHART_TYPE_SCATTER = 0
-    internal let CHART_TYPE_DISTRIBUTION = 1
-    internal let CHART_TYPE_PIE = 2
-    internal let CHART_TYPE_TIME = 3
+    internal let CHART_TYPE_DISTRIBUTION = 0
+    internal let CHART_TYPE_TIME = 1
+    internal let CHART_TYPE_SCATTER = 2
+    internal let CHART_TYPE_PIE = 3
     
     // Chart layout constants
     internal let leftMargin: CGFloat = 60     // Space for y-axis labels
@@ -221,8 +221,8 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         scrollView.addSubview(contentView)
         
         // Create a segmented control for different chart types
-        segmentedControl = UISegmentedControl(items: ["Scatter", "Distribution", "Pie", "Time"])
-        segmentedControl.selectedSegmentIndex = CHART_TYPE_SCATTER
+        segmentedControl = UISegmentedControl(items: ["Distribution", "Time", "Scatter", "Pie"])
+        segmentedControl.selectedSegmentIndex = CHART_TYPE_DISTRIBUTION
         segmentedControl.addTarget(self, action: #selector(chartTypeChanged), for: .valueChanged)
         segmentedControl.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(segmentedControl)
