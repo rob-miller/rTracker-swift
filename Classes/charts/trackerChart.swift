@@ -144,6 +144,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     internal var isDateRangeZoomed: Bool = false // Track the zoom state
     internal var dateRangeZoomContainer: UIView! // Container for zoom slider
     
+    
     // recent data indicator button and state
     internal var recentDataIndicatorButton: UIButton!
     internal var recentDataIndicatorState: Int = 0 // 0=off, 1=last, 2=minus1, 3=minus2
@@ -494,30 +495,31 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             dateRangeLabel.topAnchor.constraint(equalTo: sliderContainer.topAnchor, constant: 8),
             dateRangeLabel.leadingAnchor.constraint(equalTo: sliderContainer.leadingAnchor),
             
-            // Position recent data indicator button
-            recentDataIndicatorButton.centerYAnchor.constraint(equalTo: dateRangeLabel.centerYAnchor),
-            recentDataIndicatorButton.leadingAnchor.constraint(equalTo: dateRangeLabel.trailingAnchor, constant: 16),
-            recentDataIndicatorButton.widthAnchor.constraint(equalToConstant: 24),
-            recentDataIndicatorButton.heightAnchor.constraint(equalToConstant: 24),
+            // Position lock switch (right justified)
+            dateRangeLockSwitch.centerYAnchor.constraint(equalTo: dateRangeLabel.centerYAnchor),
+            dateRangeLockSwitch.trailingAnchor.constraint(equalTo: sliderContainer.trailingAnchor),
             
             // Position lock icon
             dateRangeLockIcon.centerYAnchor.constraint(equalTo: dateRangeLabel.centerYAnchor),
-            dateRangeLockIcon.leadingAnchor.constraint(equalTo: dateRangeZoomSwitch.trailingAnchor, constant: 16),
+            dateRangeLockIcon.trailingAnchor.constraint(equalTo: dateRangeLockSwitch.leadingAnchor, constant: -8),
             dateRangeLockIcon.widthAnchor.constraint(equalToConstant: 16),
             dateRangeLockIcon.heightAnchor.constraint(equalToConstant: 16),
             
-            // Position zoom icon and switch
+            // Position zoom switch next to lock icon
+            dateRangeZoomSwitch.centerYAnchor.constraint(equalTo: dateRangeLabel.centerYAnchor),
+            dateRangeZoomSwitch.trailingAnchor.constraint(equalTo: dateRangeLockIcon.leadingAnchor, constant: -16),
+            
+            // Position zoom icon next to zoom switch
             dateRangeZoomIcon.centerYAnchor.constraint(equalTo: dateRangeLabel.centerYAnchor),
-            dateRangeZoomIcon.leadingAnchor.constraint(equalTo: recentDataIndicatorButton.trailingAnchor, constant: 16),
+            dateRangeZoomIcon.trailingAnchor.constraint(equalTo: dateRangeZoomSwitch.leadingAnchor, constant: -8),
             dateRangeZoomIcon.widthAnchor.constraint(equalToConstant: 16),
             dateRangeZoomIcon.heightAnchor.constraint(equalToConstant: 16),
             
-            dateRangeZoomSwitch.centerYAnchor.constraint(equalTo: dateRangeLabel.centerYAnchor),
-            dateRangeZoomSwitch.leadingAnchor.constraint(equalTo: dateRangeZoomIcon.trailingAnchor, constant: 8),
-            
-            // Position lock switch
-            dateRangeLockSwitch.centerYAnchor.constraint(equalTo: dateRangeLabel.centerYAnchor),
-            dateRangeLockSwitch.leadingAnchor.constraint(equalTo: dateRangeLockIcon.trailingAnchor, constant: 8),
+            // Position recent data indicator button to the left of zoom icon
+            recentDataIndicatorButton.centerYAnchor.constraint(equalTo: dateRangeLabel.centerYAnchor),
+            recentDataIndicatorButton.trailingAnchor.constraint(equalTo: dateRangeZoomIcon.leadingAnchor, constant: -16),
+            recentDataIndicatorButton.widthAnchor.constraint(equalToConstant: 24),
+            recentDataIndicatorButton.heightAnchor.constraint(equalToConstant: 24),
             
             // Regular date sliders - position after the header
             startDateSlider.topAnchor.constraint(equalTo: dateRangeLockSwitch.bottomAnchor, constant: 10),
@@ -837,6 +839,9 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         ]
         
         // Setup initial configuration based on selected chart type
+        // Set initial visibility of recent data button
+        recentDataIndicatorButton.isHidden = (segmentedControl.selectedSegmentIndex != CHART_TYPE_DISTRIBUTION)
+        
         if segmentedControl.selectedSegmentIndex == CHART_TYPE_SCATTER {
             setupScatterPlotConfig()
         } else if segmentedControl.selectedSegmentIndex == CHART_TYPE_DISTRIBUTION {
@@ -1322,6 +1327,9 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     // MARK: - UI Actions
     
     @objc internal func chartTypeChanged(_ sender: UISegmentedControl) {
+        // Show/hide recent data button based on chart type
+        recentDataIndicatorButton.isHidden = (sender.selectedSegmentIndex != CHART_TYPE_DISTRIBUTION)
+        
         if sender.selectedSegmentIndex == CHART_TYPE_SCATTER {
             setupScatterPlotConfig()
             
