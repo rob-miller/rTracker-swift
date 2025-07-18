@@ -748,13 +748,15 @@ extension TrackerChart {
         
         switch mode {
         case "fixed":
-            // Fixed range for boolean data (0-1)
+            // Fixed range for boolean data (0-1) - show single "1" at 50% position
             drawYAxisTicks(
                 in: yAxisView,
                 min: yAxisRanges["min"] as? Double ?? 0.0,
                 max: yAxisRanges["max"] as? Double ?? 1.0,
                 graphHeight: graphHeight,
-                color: .label
+                color: .label,
+                isBooleanData: true,
+                booleanSeriesIndex: 2  // Use index 2 for 50% position (0.5)
             )
             
         case "shared":
@@ -766,7 +768,9 @@ extension TrackerChart {
                 min: min,
                 max: max,
                 graphHeight: graphHeight,
-                color: .label
+                color: .label,
+                isBooleanData: false,
+                booleanSeriesIndex: 0
             )
             
         case "individual":
@@ -780,7 +784,9 @@ extension TrackerChart {
                     min: min,
                     max: max,
                     graphHeight: graphHeight,
-                    color: .label
+                    color: .label,
+                    isBooleanData: false,
+                    booleanSeriesIndex: 0
                 )
             } else {
                 // Fallback to default range
@@ -789,7 +795,9 @@ extension TrackerChart {
                     min: 0.0,
                     max: 1.0,
                     graphHeight: graphHeight,
-                    color: .label
+                    color: .label,
+                    isBooleanData: false,
+                    booleanSeriesIndex: 0
                 )
             }
             
@@ -800,7 +808,9 @@ extension TrackerChart {
                 min: 0.0,
                 max: 1.0,
                 graphHeight: graphHeight,
-                color: .label
+                color: .label,
+                isBooleanData: false,
+                booleanSeriesIndex: 0
             )
         }
         
@@ -815,9 +825,34 @@ extension TrackerChart {
         min: Double,
         max: Double,
         graphHeight: CGFloat,
-        color: UIColor
+        color: UIColor,
+        isBooleanData: Bool = false,
+        booleanSeriesIndex: Int = 0
     ) {
-        // Create tick marks and labels
+        // Handle boolean data separately
+        if isBooleanData {
+            // For boolean data, show only a single tick at the Y position where dots are plotted
+            let booleanYPositions: [CGFloat] = [0.4, 0.45, 0.5, 0.55]
+            let yPositionRatio = booleanYPositions[booleanSeriesIndex % booleanYPositions.count]
+            let y = graphHeight * yPositionRatio
+            
+            // Single tick mark
+            let tick = UIView(frame: CGRect(x: view.bounds.width - 5, y: y, width: 5, height: 1))
+            tick.backgroundColor = color
+            view.addSubview(tick)
+            
+            // Single label showing "1" at the tick position
+            let label = UILabel(frame: CGRect(x: 0, y: y - 8, width: view.bounds.width - 10, height: 15))
+            label.text = "1"
+            label.textAlignment = .right
+            label.font = UIFont.systemFont(ofSize: 10)
+            label.textColor = color
+            view.addSubview(label)
+            
+            return
+        }
+        
+        // Create tick marks and labels for non-boolean data
         let tickCount = 5
         let range = max - min
         
@@ -1104,7 +1139,8 @@ extension TrackerChart {
                     totalTimeInterval: totalTimeInterval,
                     startDate: startDate,
                     color: color,
-                    containerView: dataPointsView
+                    containerView: dataPointsView,
+                    seriesIndex: index
                 )
             } else {
                 // For numeric data, draw lines
@@ -1131,7 +1167,8 @@ extension TrackerChart {
         totalTimeInterval: TimeInterval,
         startDate: Date,
         color: UIColor,
-        containerView: UIView
+        containerView: UIView,
+        seriesIndex: Int
     ) {
         let dotSize: CGFloat = 6
         
@@ -1149,7 +1186,11 @@ extension TrackerChart {
             }
             
             let x = leftMargin + CGFloat(progress) * graphWidth
-            let y = topMargin + graphHeight / 2  // Center vertically for boolean data
+            // Position boolean dots at different Y positions based on series index
+            // Use positions near the center: 40%, 45%, 50%, 55% of chart height
+            let booleanYPositions: [CGFloat] = [0.4, 0.45, 0.5, 0.55]
+            let yPositionRatio = booleanYPositions[seriesIndex % booleanYPositions.count]
+            let y = topMargin + graphHeight * yPositionRatio
             
             // Create dot
             let dotView = UIView(frame: CGRect(
@@ -1359,7 +1400,8 @@ extension TrackerChart {
         let sharedIds = yAxisRanges["sharedIds"] as? [Int] ?? []
         let totalSourcesWithRanges = Set(sharedIds + Array(individualRanges.keys)).count
         let hasMultipleRanges = (mode == "individual" && sourcesData.count > 1) || 
-                               (mode == "shared" && totalSourcesWithRanges > 1)
+                               (mode == "shared" && totalSourcesWithRanges > 1) ||
+                               (mode == "fixed" && sourcesData.count > 1)
         
         if hasMultipleRanges {
             // Remove current y-axis view (which includes the indicator label)
@@ -1369,6 +1411,9 @@ extension TrackerChart {
             let sourcesWithRanges: [Int]
             if mode == "individual" {
                 // In individual mode, all sources should have ranges
+                sourcesWithRanges = sourcesData.compactMap { $0["id"] as? Int }
+            } else if mode == "fixed" {
+                // In fixed mode (boolean-only data), all sources can be cycled
                 sourcesWithRanges = sourcesData.compactMap { $0["id"] as? Int }
             } else {
                 // In shared mode, include ALL sources (both shared and individual)
@@ -1427,6 +1472,11 @@ extension TrackerChart {
                 } else {
                     DBGLog("DEBUG: No range found for ID \(currentSourceId) in shared mode")
                 }
+            } else if mode == "fixed" {
+                // In fixed mode (boolean-only data), use fixed range
+                minY = yAxisRanges["min"] as? Double ?? 0.0
+                maxY = yAxisRanges["max"] as? Double ?? 1.0
+                DBGLog("DEBUG: Using fixed range for boolean ID \(currentSourceId): \(minY) to \(maxY)")
             }
             
             // Create a new Y-axis view
@@ -1438,12 +1488,17 @@ extension TrackerChart {
             let sourceIndex = sourcesData.firstIndex(where: { $0["id"] as? Int == currentSourceId }) ?? 0
             let color = seriesColors[sourceIndex % seriesColors.count]
             
+            // Check if this is boolean data
+            let isBooleanData = sourceData["type"] as? Int == VOT_BOOLEAN
+            
             drawYAxisTicks(
                 in: yAxisView,
                 min: minY,
                 max: maxY,
                 graphHeight: chartView.bounds.height - topMargin - bottomMargin - extraBottomSpace,
-                color: color
+                color: color,
+                isBooleanData: isBooleanData,
+                booleanSeriesIndex: sourceIndex
             )
             
             // Add a tap recognizer to the Y-axis to cycle through views
@@ -1535,10 +1590,10 @@ extension TrackerChart {
             let averageText: String
             
             if isBooleanType {
-                // For boolean data, calculate percentage of true values
+                // For boolean data, show count of true values instead of percentage
+                // This is more meaningful since boolean data may only store "true" entries
                 let trueCount = values.filter { $0 >= 0.5 }.count
-                let percentage = values.isEmpty ? 0.0 : (Double(trueCount) / Double(values.count)) * 100
-                averageText = String(format: "%.1f%%", percentage)
+                averageText = "\(trueCount)"
             } else {
                 // For numeric data, calculate average (without "Avg:" prefix)
                 let average = values.isEmpty ? 0.0 : values.reduce(0.0, +) / Double(values.count)
