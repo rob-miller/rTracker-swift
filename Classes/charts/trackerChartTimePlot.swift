@@ -8,6 +8,7 @@
 
 import UIKit
 
+
 // MARK: - time line plot implementation
 extension TrackerChart {
     
@@ -187,6 +188,18 @@ extension TrackerChart {
             return
         }
         
+        // Debug logging for sourcesData
+        DBGLog("DEBUG: generateTimeChartData created \(sourcesData.count) sources")
+        for (i, sourceData) in sourcesData.enumerated() {
+            DBGLog("DEBUG: Source \(i): id=\(sourceData["id"] ?? "nil"), name=\(sourceData["name"] ?? "nil"), dataPoints=\(((sourceData["dataPoints"] as? [(Date, Double)])?.count ?? 0))")
+        }
+        
+        // Debug logging for allTimeSeriesData
+        DBGLog("DEBUG: allTimeSeriesData has \(allTimeSeriesData.count) series")
+        for (i, series) in allTimeSeriesData.enumerated() {
+            DBGLog("DEBUG: TimeSeriesData \(i): id=\(series.id), name=\(series.name), dataPoints=\(series.dataPoints.count)")
+        }
+        
         // Calculate Y-axis ranges
         let yAxisRanges = calculateYAxisRanges(allTimeSeriesData)
         
@@ -333,47 +346,109 @@ extension TrackerChart {
         
         // IMPROVEMENT 1: Check for common units in value names
         let commonUnitSeries = findSeriesWithCommonUnits(nonBooleanSeries)
-        if !commonUnitSeries.isEmpty && commonUnitSeries.count > 1 {
+        DBGLog("DEBUG: findSeriesWithCommonUnits returned \(commonUnitSeries.count) series: \(commonUnitSeries.map { "\($0.id):\($0.name)" })")
+        
+        // IMPROVEMENT 2: Always check scale ratios first for consistency
+        let seriesGroups = groupSeriesByScaleRatio(nonBooleanSeries)
+        
+        // If we have both common units and scale ratio groups, prefer scale ratio for consistency
+        if !commonUnitSeries.isEmpty && commonUnitSeries.count > 1 && seriesGroups.filter({ $0.count > 1 }).isEmpty {
+            DBGLog("DEBUG: Using common units path for shared Y-axis (no scale ratio groups found)")
             // Use a shared range for series with common units, starting at 0 if appropriate
             let minVal = shouldStartAtZero(commonUnitSeries) ? 0 : commonUnitSeries.map { $0.minValue }.min() ?? 0
             let maxVal = commonUnitSeries.map { $0.maxValue }.max() ?? 1
+            let groupIds = commonUnitSeries.map { $0.id }
+            
+            // Create individual ranges for series not in the shared group
+            let ungroupedSeries = nonBooleanSeries.filter { !groupIds.contains($0.id) }
+            let individualRanges = ungroupedSeries.reduce(into: [Int: [String: Double]]()) { result, series in
+                let minVal = shouldStartAtZero([series]) ? 0 : series.minValue
+                let paddingFactor = 0.05 // 5% padding
+                let range = max(0.1, series.maxValue - minVal)
+                
+                result[series.id] = [
+                    "min": minVal - (range * paddingFactor),
+                    "max": series.maxValue + (range * paddingFactor)
+                ]
+            }
             
             return [
                 "mode": "shared",
                 "min": minVal,
                 "max": maxVal,
-                "sharedIds": commonUnitSeries.map { $0.id }
+                "sharedIds": groupIds,
+                "ranges": individualRanges
             ]
         }
         
-        // IMPROVEMENT 2: Check based on value scale ratios
-        let seriesGroups = groupSeriesByScaleRatio(nonBooleanSeries)
-        if let largestGroup = seriesGroups.max(by: { $0.count < $1.count }), largestGroup.count > 1 {
+        // IMPROVEMENT 2: Check based on value scale ratios (already called above)
+        // Find the largest group that has more than one series
+        if let largestGroup = seriesGroups.filter({ $0.count > 1 }).max(by: { $0.count < $1.count }) {
+            DBGLog("DEBUG: Using scale ratio path for shared Y-axis")
             let groupIds = largestGroup.map { $0.id }
             let minVal = shouldStartAtZero(largestGroup) ? 0 : largestGroup.map { $0.minValue }.min() ?? 0
             let maxVal = largestGroup.map { $0.maxValue }.max() ?? 1
             
+            DBGLog("DEBUG: Largest group selected: \(largestGroup.count) series, IDs: \(groupIds), range: \(minVal) to \(maxVal)")
+            
+            // Create individual ranges for series not in the shared group (including single-item groups)
+            let ungroupedSeries = nonBooleanSeries.filter { !groupIds.contains($0.id) }
+            let individualRanges = ungroupedSeries.reduce(into: [Int: [String: Double]]()) { result, series in
+                let minVal = shouldStartAtZero([series]) ? 0 : series.minValue
+                let paddingFactor = 0.05 // 5% padding
+                let range = max(0.1, series.maxValue - minVal)
+                
+                DBGLog("DEBUG: Individual range calc for series \(series.id) (\(series.name)): minValue=\(series.minValue), maxValue=\(series.maxValue), shouldStartAtZero=\(shouldStartAtZero([series])), calculated minVal=\(minVal), range=\(range)")
+                
+                let finalMin = minVal - (range * paddingFactor)
+                let finalMax = series.maxValue + (range * paddingFactor)
+                
+                result[series.id] = [
+                    "min": finalMin,
+                    "max": finalMax
+                ]
+                
+                DBGLog("DEBUG: Final individual range for series \(series.id): min=\(finalMin), max=\(finalMax)")
+            }
+            
             return [
                 "mode": "shared",
                 "min": minVal,
                 "max": maxVal,
-                "sharedIds": groupIds
+                "sharedIds": groupIds,
+                "ranges": individualRanges
             ]
         }
         
         // If all above checks fail, fall back to the original overlap check
         // but with a more nuanced approach
         let potentiallySharedGroups = findOverlappingGroups(nonBooleanSeries)
+        DBGLog("DEBUG: findOverlappingGroups returned \(potentiallySharedGroups.count) groups")
         if let largestGroup = potentiallySharedGroups.max(by: { $0.count < $1.count }), largestGroup.count > 1 {
+            DBGLog("DEBUG: Using overlap groups path for shared Y-axis, group size: \(largestGroup.count)")
             let groupIds = largestGroup.map { $0.id }
             let minVal = shouldStartAtZero(largestGroup) ? 0 : largestGroup.map { $0.minValue }.min() ?? 0
             let maxVal = largestGroup.map { $0.maxValue }.max() ?? 1
+            
+            // Create individual ranges for series not in the shared group
+            let ungroupedSeries = nonBooleanSeries.filter { !groupIds.contains($0.id) }
+            let individualRanges = ungroupedSeries.reduce(into: [Int: [String: Double]]()) { result, series in
+                let minVal = shouldStartAtZero([series]) ? 0 : series.minValue
+                let paddingFactor = 0.05 // 5% padding
+                let range = max(0.1, series.maxValue - minVal)
+                
+                result[series.id] = [
+                    "min": minVal - (range * paddingFactor),
+                    "max": series.maxValue + (range * paddingFactor)
+                ]
+            }
             
             return [
                 "mode": "shared",
                 "min": minVal,
                 "max": maxVal,
-                "sharedIds": groupIds
+                "sharedIds": groupIds,
+                "ranges": individualRanges
             ]
         }
         
@@ -429,7 +504,12 @@ extension TrackerChart {
         guard series.count > 1 else { return [] }
         
         // Maximum ratio between max values to be considered similar scale
-        let maxRatioThreshold = 10.0
+        let maxRatioThreshold = 3.0
+        
+        DBGLog("DEBUG: groupSeriesByScaleRatio called with \(series.count) series")
+        for (i, s) in series.enumerated() {
+            DBGLog("DEBUG: Series \(i): id=\(s.id), name=\(s.name), maxValue=\(s.maxValue)")
+        }
         
         var groups: [[TimeSeriesData]] = []
         var processedIds = Set<Int>()
@@ -440,6 +520,8 @@ extension TrackerChart {
             var currentGroup: [TimeSeriesData] = [series[i]]
             processedIds.insert(series[i].id)
             
+            DBGLog("DEBUG: Starting group with series \(i) (id=\(series[i].id), maxValue=\(series[i].maxValue))")
+            
             for j in 0..<series.count {
                 if i == j || processedIds.contains(series[j].id) { continue }
                 
@@ -448,17 +530,23 @@ extension TrackerChart {
                 
                 let ratio = maxValue1 > maxValue2 ? maxValue1 / maxValue2 : maxValue2 / maxValue1
                 
+                DBGLog("DEBUG: Comparing series \(i) (max=\(maxValue1)) with series \(j) (max=\(maxValue2)), ratio=\(ratio)")
+                
                 if ratio <= maxRatioThreshold {
+                    DBGLog("DEBUG: Adding series \(j) to group (ratio \(ratio) <= \(maxRatioThreshold))")
                     currentGroup.append(series[j])
                     processedIds.insert(series[j].id)
+                } else {
+                    DBGLog("DEBUG: NOT adding series \(j) to group (ratio \(ratio) > \(maxRatioThreshold))")
                 }
             }
             
-            if currentGroup.count > 1 {
-                groups.append(currentGroup)
-            }
+            DBGLog("DEBUG: Final group size: \(currentGroup.count), IDs: \(currentGroup.map { $0.id })")
+            // Always append the group, even if it's a single series
+            groups.append(currentGroup)
         }
         
+        DBGLog("DEBUG: Total groups created: \(groups.count)")
         return groups
     }
 
@@ -500,7 +588,7 @@ extension TrackerChart {
                 let maxValue2 = max(abs(r2Max), 0.001)
                 let ratio = maxValue1 > maxValue2 ? maxValue1 / maxValue2 : maxValue2 / maxValue1
                 
-                if overlapPercent >= 0.2 || (ratio <= 5.0 && (r1Min >= 0 && r2Min >= 0)) {
+                if overlapPercent >= 0.2 || (ratio <= 3.0 && (r1Min >= 0 && r2Min >= 0)) {
                     currentGroup.append(series[j])
                     processedIds.insert(series[j].id)
                 }
@@ -525,15 +613,20 @@ extension TrackerChart {
             return timeKeywords.contains { name.contains($0) }
         }
         
-        // If series has time-related names or all series have non-negative mins
-        // that are small compared to their max values
-        let allNonNegative = series.allSatisfy { $0.minValue >= 0 }
-        let allMinsSmallRelativeToMax = series.allSatisfy {
-            let range = $0.maxValue - $0.minValue
-            return range > 0 && $0.minValue / range < 0.2 // Min is less than 20% of range
+        // If series has time-related names, start at zero
+        if hasTimeRelatedNames {
+            return true
         }
         
-        return hasTimeRelatedNames || (allNonNegative && allMinsSmallRelativeToMax)
+        // For other series, be more conservative about starting at zero
+        // Only start at zero if ALL series have minimum values very close to zero
+        let allNonNegative = series.allSatisfy { $0.minValue >= 0 }
+        let allMinsVeryCloseToZero = series.allSatisfy {
+            let range = $0.maxValue - $0.minValue
+            return range > 0 && $0.minValue / $0.maxValue < 0.1 // Min is less than 10% of max value
+        }
+        
+        return allNonNegative && allMinsVeryCloseToZero
     }
     // Add rendering methods
     // Implement the renderTimeChart method and related methods to draw the time chart
@@ -755,8 +848,8 @@ extension TrackerChart {
                 } else {
                     label.text = ""
                 }
-            } else if abs(value) < 0.01 {
-                // For very small values, use scientific notation
+            } else if abs(value) < 0.01 && value != 0.0 {
+                // For very small values (but not zero), use scientific notation
                 label.text = String(format: "%.2e", value)
             } else if abs(value) > 1000 {
                 // For large values, use K/M notation
@@ -767,13 +860,32 @@ extension TrackerChart {
                 }
             } else if range < 0.1 {
                 // For small ranges, use more decimal places
-                label.text = String(format: "%.3f", value)
+                if value == 0.0 {
+                    label.text = "0.000"
+                } else {
+                    label.text = String(format: "%.3f", value)
+                }
             } else if range < 1 {
-                label.text = String(format: "%.2f", value)
+                // For medium ranges, use 2 decimal places
+                if value == 0.0 {
+                    label.text = "0.00"
+                } else {
+                    label.text = String(format: "%.2f", value)
+                }
             } else if range < 10 {
-                label.text = String(format: "%.1f", value)
+                // For larger ranges, use 1 decimal place
+                if value == 0.0 {
+                    label.text = "0.0"
+                } else {
+                    label.text = String(format: "%.1f", value)
+                }
             } else {
-                label.text = String(format: "%.0f", value)
+                // For very large ranges, use no decimal places
+                if value == 0.0 {
+                    label.text = "0"
+                } else {
+                    label.text = String(format: "%.0f", value)
+                }
             }
             
             label.textAlignment = .right
@@ -912,7 +1024,12 @@ extension TrackerChart {
         var individualRanges: [Int: [String: Double]] = [:]
         if mode == "individual" {
             individualRanges = yAxisRanges["ranges"] as? [Int: [String: Double]] ?? [:]
+        } else if mode == "shared" {
+            // In shared mode, we also need individual ranges for ungrouped series
+            individualRanges = yAxisRanges["ranges"] as? [Int: [String: Double]] ?? [:]
         }
+        
+        DBGLog("DEBUG: individualRanges = \(individualRanges)")
         
         // Total time range for x-axis positioning
         let totalTimeInterval = endDate.timeIntervalSince(startDate)
@@ -925,6 +1042,10 @@ extension TrackerChart {
                   let id = sourceData["id"] as? Int else {
                 continue
             }
+            
+            // Debug logging
+            DBGLog("DEBUG: Processing series \(index), id: \(id), name: \(sourceData["name"] ?? "unknown")")
+            DBGLog("DEBUG: Data points count: \(dataPoints.count)")
             
             // Get min/max Y values for this series
             var minY: Double = 0
@@ -950,6 +1071,8 @@ extension TrackerChart {
                 if let range = individualRanges[id] {
                     minY = range["min"] ?? 0
                     maxY = range["max"] ?? 1
+                } else {
+                    DBGLog("DEBUG: No individual range found for series \(id), using defaults")
                 }
             default:
                 // Default ranges
@@ -957,10 +1080,17 @@ extension TrackerChart {
                 maxY = 1
             }
             
+            // Debug logging for Y-axis ranges
+            DBGLog("DEBUG: Y-axis range for series \(index): minY=\(minY), maxY=\(maxY), range=\(maxY - minY)")
+            DBGLog("DEBUG: Mode: \(mode), sharedIds: \(sharedIds)")
+            
             // Skip if no data points or invalid range
             if dataPoints.isEmpty || maxY - minY <= 0 {
+                DBGLog("DEBUG: SKIPPING series \(index) - dataPoints.isEmpty: \(dataPoints.isEmpty), invalid range: \(maxY - minY <= 0)")
                 continue
             }
+            
+            DBGLog("DEBUG: RENDERING series \(index) with color: \(seriesColors[index])")
             
             let isBooleanType = sourceType == VOT_BOOLEAN
             let color = seriesColors[index]
@@ -1055,6 +1185,13 @@ extension TrackerChart {
         color: UIColor,
         containerView: UIView
     ) {
+        // Debug logging
+        DBGLog("DEBUG: drawTimeSeries called with \(dataPoints.count) points, color: \(color)")
+        DBGLog("DEBUG: Date range: \(startDate) to \(startDate.addingTimeInterval(totalTimeInterval))")
+        if !dataPoints.isEmpty {
+            DBGLog("DEBUG: First point: \(dataPoints.first!)")
+            DBGLog("DEBUG: Last point: \(dataPoints.last!)")
+        }
         // Need at least two points to draw a line
         guard dataPoints.count >= 2 else {
             // If only one point, draw a dot
@@ -1102,6 +1239,8 @@ extension TrackerChart {
         let linePath = UIBezierPath()
         var firstPoint = true
         var dotViews: [UIView] = []
+        var pointsInRange = 0
+        var pointsOutOfRange = 0
         
         for (date, value) in sortedPoints {
             // Calculate position
@@ -1110,8 +1249,10 @@ extension TrackerChart {
             
             // Skip if out of range
             if progress < 0 || progress > 1 {
+                pointsOutOfRange += 1
                 continue
             }
+            pointsInRange += 1
             
             let x = leftMargin + CGFloat(progress) * graphWidth
             let yRange = maxY - minY
@@ -1159,6 +1300,10 @@ extension TrackerChart {
         for dotView in dotViews {
             containerView.addSubview(dotView)
         }
+        
+        // Debug logging
+        DBGLog("DEBUG: Points in range: \(pointsInRange), out of range: \(pointsOutOfRange)")
+        DBGLog("DEBUG: Total visual elements created: \(dotViews.count)")
     }
 
     // Show tooltip for data point
@@ -1207,39 +1352,91 @@ extension TrackerChart {
         // Check the mode
         let mode = yAxisRanges["mode"] as? String ?? "individual"
         
-        // Only cycle in individual mode with multiple sources
-        if mode == "individual" && sourcesData.count > 1 {
-            // Remove current y-axis view
+        // Get available individual ranges (works for both individual and shared modes)
+        let individualRanges = yAxisRanges["ranges"] as? [Int: [String: Double]] ?? [:]
+        
+        // Only cycle if we have multiple sources and ranges available
+        let sharedIds = yAxisRanges["sharedIds"] as? [Int] ?? []
+        let totalSourcesWithRanges = Set(sharedIds + Array(individualRanges.keys)).count
+        let hasMultipleRanges = (mode == "individual" && sourcesData.count > 1) || 
+                               (mode == "shared" && totalSourcesWithRanges > 1)
+        
+        if hasMultipleRanges {
+            // Remove current y-axis view (which includes the indicator label)
             currentYAxisView?.removeFromSuperview()
             
-            // Increment the mode
-            selectedYAxisMode = (selectedYAxisMode + 1) % sourcesData.count
+            // Create list of sources that have any range (shared or individual)
+            let sourcesWithRanges: [Int]
+            if mode == "individual" {
+                // In individual mode, all sources should have ranges
+                sourcesWithRanges = sourcesData.compactMap { $0["id"] as? Int }
+            } else {
+                // In shared mode, include ALL sources (both shared and individual)
+                let sharedIds = yAxisRanges["sharedIds"] as? [Int] ?? []
+                let individualIds = Array(individualRanges.keys)
+                let allIds = Set(sharedIds + individualIds)
+                sourcesWithRanges = Array(allIds).sorted()
+            }
             
-            guard selectedYAxisMode < sourcesData.count else {
+            // If no sources with ranges, fallback to all sources
+            let cyclableSourceIds = sourcesWithRanges.isEmpty ? sourcesData.compactMap { $0["id"] as? Int } : sourcesWithRanges
+            
+            guard !cyclableSourceIds.isEmpty else { return }
+            
+            // Increment the mode (cycle through sources that have individual ranges)
+            selectedYAxisMode = (selectedYAxisMode + 1) % cyclableSourceIds.count
+            
+            DBGLog("DEBUG: Y-axis cycling - selectedYAxisMode: \(selectedYAxisMode), cyclableSourceIds.count: \(cyclableSourceIds.count), cyclableSourceIds: \(cyclableSourceIds)")
+            
+            let currentSourceId = cyclableSourceIds[selectedYAxisMode]
+            
+            // Find the source data for this ID
+            guard let sourceData = sourcesData.first(where: { $0["id"] as? Int == currentSourceId }) else {
+                DBGLog("DEBUG: Could not find sourceData for currentSourceId: \(currentSourceId)")
                 return
             }
             
-            let sourceData = sourcesData[selectedYAxisMode]
-            guard let id = sourceData["id"] as? Int else {
-                return
-            }
+            DBGLog("DEBUG: Found sourceData for ID \(currentSourceId): \(sourceData["name"] ?? "unknown")")
             
-            // Get individual ranges
-            guard let individualRanges = yAxisRanges["ranges"] as? [Int: [String: Double]],
-                  let range = individualRanges[id] else {
-                return
-            }
+            // Get Y-axis range for this source
+            var minY: Double = 0.0
+            var maxY: Double = 1.0
             
-            // Get min and max values
-            let minY = range["min"] ?? 0.0
-            let maxY = range["max"] ?? 1.0
+            if mode == "individual" {
+                // In individual mode, get range from individualRanges
+                if let range = individualRanges[currentSourceId] {
+                    minY = range["min"] ?? 0.0
+                    maxY = range["max"] ?? 1.0
+                    DBGLog("DEBUG: Using individual range for ID \(currentSourceId): \(minY) to \(maxY)")
+                } else {
+                    DBGLog("DEBUG: No individual range found for ID \(currentSourceId) in individual mode")
+                }
+            } else if mode == "shared" {
+                // In shared mode, check if source is in shared group or has individual range
+                let sharedIds = yAxisRanges["sharedIds"] as? [Int] ?? []
+                if sharedIds.contains(currentSourceId) {
+                    // Use shared range
+                    minY = yAxisRanges["min"] as? Double ?? 0.0
+                    maxY = yAxisRanges["max"] as? Double ?? 1.0
+                    DBGLog("DEBUG: Using shared range for ID \(currentSourceId): \(minY) to \(maxY)")
+                } else if let range = individualRanges[currentSourceId] {
+                    // Use individual range
+                    minY = range["min"] ?? 0.0
+                    maxY = range["max"] ?? 1.0
+                    DBGLog("DEBUG: Using individual range for ID \(currentSourceId): \(minY) to \(maxY)")
+                } else {
+                    DBGLog("DEBUG: No range found for ID \(currentSourceId) in shared mode")
+                }
+            }
             
             // Create a new Y-axis view
             let yAxisView = UIView(frame: CGRect(x: 0, y: topMargin, width: leftMargin, height: chartView.bounds.height - topMargin - bottomMargin - extraBottomSpace))
+            yAxisView.clipsToBounds = false  // Allow rotated label to extend beyond bounds
             
             // Draw ticks with the color of the current series
-            let seriesColors: [UIColor] = [UIColor.systemBlue, UIColor.systemGreen, UIColor.systemRed]
-            let color = seriesColors[selectedYAxisMode % seriesColors.count]
+            let seriesColors: [UIColor] = [UIColor.systemBlue, UIColor.systemGreen, UIColor.systemRed, UIColor.systemOrange]
+            let sourceIndex = sourcesData.firstIndex(where: { $0["id"] as? Int == currentSourceId }) ?? 0
+            let color = seriesColors[sourceIndex % seriesColors.count]
             
             drawYAxisTicks(
                 in: yAxisView,
@@ -1260,12 +1457,25 @@ extension TrackerChart {
             
             // Add indicator to show which source is currently selected
             if let name = sourceData["name"] as? String {
-                let indicatorLabel = UILabel(frame: CGRect(x: 5, y: 5, width: leftMargin - 10, height: 20))
+                let yAxisHeight = chartView.bounds.height - topMargin - bottomMargin - extraBottomSpace
+                // Position title in yAxisView like the tick labels
+                let labelX: CGFloat = -85  // Small margin from left edge of yAxisView
+                let labelY: CGFloat = yAxisHeight - 20 //yAxisHeight - 150  // Position near bottom of y-axis area
+                let labelWidth: CGFloat = yAxisView.bounds.height * 0.9  // Use yAxisView height for text width after rotation
+                let labelHeight: CGFloat = 20  // Height becomes width after rotation
+                let indicatorLabel = UILabel(frame: CGRect(x: labelX, y: labelY, width: labelWidth, height: labelHeight))
                 indicatorLabel.text = name
                 indicatorLabel.textColor = color
-                indicatorLabel.font = UIFont.boldSystemFont(ofSize: 10)
-                indicatorLabel.adjustsFontSizeToFitWidth = true
+                indicatorLabel.font = UIFont.boldSystemFont(ofSize: 14)
+                indicatorLabel.adjustsFontSizeToFitWidth = false
                 indicatorLabel.textAlignment = .center
+                indicatorLabel.numberOfLines = 2  // Maximum 2 lines as requested
+                //indicatorLabel.backgroundColor = UIColor.systemRed.withAlphaComponent(0.3)  // Visible background to see label bounds
+                indicatorLabel.layer.anchorPoint = CGPoint(x: 0, y: 0.5)  // Rotate around left edge
+                indicatorLabel.transform = CGAffineTransform(rotationAngle: -CGFloat.pi / 2)
+                indicatorLabel.tag = 3001  // Tag to identify the label for removal
+                
+                // Add to yAxisView like the tick labels
                 yAxisView.addSubview(indicatorLabel)
             }
         }
