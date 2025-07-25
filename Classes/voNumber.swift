@@ -675,15 +675,19 @@ class voNumber: voState, UITextFieldDelegate {
                 FROM voHKstatus
                 WHERE id = \(Int(vo.vid))
                   AND stat = \(hkStatus.hkData.rawValue)
-            )) OR NOT EXISTS (
+            )) OR (NOT EXISTS (
                 SELECT 1 FROM voHKstatus
                 WHERE voHKstatus.date = trkrData.date
                   AND voHKstatus.id = \(Int(vo.vid))
-            );
+            ) AND NOT EXISTS (
+                SELECT 1 FROM voData
+                WHERE voData.date = trkrData.date
+                  AND voData.id = \(Int(vo.vid))
+            ));
             """
             // get dates where
             //   do not have voData and hkStatus not hkData and only looking at new data since last update
-            //   or have trkrData entry but no hkStatus entry at all (refreshing current record or missing data)
+            //   or have trkrData entry but no hkStatus entry at all AND no manually entered voData (refreshing current record or missing data)
             
             let dateSet = to.toQry2AryI(sql: sql)
             
