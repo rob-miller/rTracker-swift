@@ -1171,6 +1171,76 @@ extension trackerObj {
             rTracker_resource.bumpProgressBar()
         }
     }
+    
+    // Asynchronous version that prevents UI blocking for large datasets
+    func loadDataDictAsync(_ dataDict: [String : [String : String]], completion: @escaping () -> Void) {
+        let batchSize = 10 // Smaller batches for better UI responsiveness
+        let dateKeys = Array(dataDict.keys)
+        let totalCount = dateKeys.count
+        
+        DispatchQueue.main.async {
+            rTracker_resource.stashProgressBarMax(totalCount)
+        }
+        
+        // Process data in background queue in batches
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else {
+                DispatchQueue.main.async { completion() }
+                return
+            }
+            
+            self.processDataBatch(dateKeys: dateKeys, dataDict: dataDict, startIndex: 0, batchSize: batchSize, completion: completion)
+        }
+    }
+    
+    private func processDataBatch(dateKeys: [String], dataDict: [String : [String : String]], startIndex: Int, batchSize: Int, completion: @escaping () -> Void) {
+        let endIndex = min(startIndex + batchSize, dateKeys.count)
+        
+        // Process this batch on background thread
+        autoreleasepool {
+            for i in startIndex..<endIndex {
+                let dateIntStr = dateKeys[i]
+                let tdate = Date(timeIntervalSinceReferenceDate: TimeInterval(Double(dateIntStr)!))
+                let tdi = Int(tdate.timeIntervalSince1970)
+                let vdata = dataDict[dateIntStr]
+                var mp = BIGPRIV
+                
+                for vids in vdata!.keys {
+                    let vid = Int(vids)
+                    let vo = getValObj(vid!)
+                    let val = vdata![vids]
+                    insertTrackerVodata(vid: vid!, date: tdi, val: rTracker_resource.toSqlStr(val!), vo:vo)
+
+                    if (vo?.vpriv ?? MINPRIV) < mp {
+                        mp = vo?.vpriv ?? MINPRIV
+                    }
+                }
+
+                let sql = String(format: "insert or replace into trkrData (date, minpriv) values (%d,%ld);", tdi, mp)
+                toExecSql(sql:sql)
+            }
+        }
+        
+        // Update progress on main queue and continue
+        DispatchQueue.main.async { [weak self] in
+            // Update progress bar
+            for _ in startIndex..<endIndex {
+                rTracker_resource.bumpProgressBar()
+            }
+            
+            // Check if we're done
+            if endIndex >= dateKeys.count {
+                completion()
+            } else {
+                // Continue with next batch after allowing UI to update
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
+                    DispatchQueue.global(qos: .userInitiated).async {
+                        self?.processDataBatch(dateKeys: dateKeys, dataDict: dataDict, startIndex: endIndex, batchSize: batchSize, completion: completion)
+                    }
+                }
+            }
+        }
+    }
 
 
     // MARK: -

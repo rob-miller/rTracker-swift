@@ -398,28 +398,86 @@ extension RootViewController {
             }
         }
         
+        // Show initial loading indicator
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            rTracker_resource.startActivityIndicator(self.view, navItem: nil, disable: false, str: "loading \(tname!) tracker...")
+        }
+        
         // Call the asynchronous loadTrackerDict with a completion handler
-        loadTrackerDict(tdict, tname: tname!) { tid in
-            if let dataDict = dataDict {
-                let to = trackerObj(tid)
-                to.loadDataDict(dataDict) // vids ok because confirmTOdict updated as needed
-                to.goRecalculate = true
-                to.recalculateFns() // updates fn vals in database
-                to.goRecalculate = false
-                to.saveChoiceConfigs() // in case input data had unrecognised choices
-                DBGLog("datadict loaded for open file url:")
-                #if DEBUGLOG
-                to.describe()
-                #endif
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            
+            self.loadTrackerDict(tdict, tname: tname!) { tid in
+                if let dataDict = dataDict {
+                    let to = trackerObj(tid)
+                    
+                    // Update loading indicator on main thread
+                    DispatchQueue.main.async { [weak self] in
+                        guard let self = self else { return }
+                        rTracker_resource.finishActivityIndicator(self.view, navItem: nil, disable: false)
+                        rTracker_resource.startActivityIndicator(self.view, navItem: nil, disable: false, str: "importing \(tname!) data...")
+                        rTracker_resource.startProgressBar(self.view, navItem: self.navigationItem, disable: true, yloc: 100.0)
+                    }
+                    
+                    // Use async version to prevent UI blocking
+                    to.loadDataDictAsync(dataDict) { [weak self] in
+                        DispatchQueue.main.async {
+                            guard let self = self else { return }
+                            
+                            // Hide loading indicators
+                            rTracker_resource.finishActivityIndicator(self.view, navItem: nil, disable: false)
+                            rTracker_resource.finishProgressBar(self.view, navItem: self.navigationItem, disable: true)
+                            
+                            // Show final processing indicator
+                            rTracker_resource.startActivityIndicator(self.view, navItem: nil, disable: false, str: "finalizing import...")
+                        }
+                        
+                        // Continue with post-processing on background thread
+                        DispatchQueue.global(qos: .userInitiated).async {
+                            to.goRecalculate = true
+                            to.recalculateFns() // updates fn vals in database
+                            to.goRecalculate = false
+                            to.saveChoiceConfigs() // in case input data had unrecognised choices
+                            DBGLog("datadict loaded for open file url:")
+                            #if DEBUGLOG
+                            to.describe()
+                            #endif
+                            
+                            DBGLog("ltd/ldd finish")
+                            
+                            DispatchQueue.main.async { [weak self] in
+                                guard let self = self else { 
+                                    completion(tid)
+                                    return 
+                                }
+                                restorePriv()
+                                rTracker_resource.finishActivityIndicator(self.view, navItem: nil, disable: false)
+                                DBGLog(String("removing file \(url.path)"))
+                                _ = rTracker_resource.deleteFile(atPath: url.path)
+                                
+                                // Pass the tid to the completion handler
+                                completion(tid)
+                            }
+                        }
+                    }
+                } else {
+                    DispatchQueue.main.async { [weak self] in
+                        guard let self = self else { 
+                            completion(tid)
+                            return 
+                        }
+                        rTracker_resource.finishActivityIndicator(self.view, navItem: nil, disable: false)
+                        DBGLog("ltd/ldd finish")
+                        restorePriv()
+                        DBGLog(String("removing file \(url.path)"))
+                        _ = rTracker_resource.deleteFile(atPath: url.path)
+                        
+                        // Pass the tid to the completion handler
+                        completion(tid)
+                    }
+                }
             }
-            
-            DBGLog("ltd/ldd finish")
-            restorePriv()
-            DBGLog(String("removing file \(url.path)"))
-            _ = rTracker_resource.deleteFile(atPath: url.path)
-            
-            // Pass the tid to the completion handler
-            completion(tid)
         }
     }
 
@@ -485,7 +543,7 @@ extension RootViewController {
                 DispatchQueue.main.async {
                     self.tableView?.scrollRectToVisible(CGRect(x: 0, y: 0, width: 1, height: 1), animated: true)
                     rTracker_resource.startActivityIndicator(self.view, navItem: nil, disable: false, str: "loading trackers...")
-                    rTracker_resource.startProgressBar(self.view, navItem: self.navigationItem, disable: true, yloc: 0.0)
+                    rTracker_resource.startProgressBar(self.view, navItem: self.navigationItem, disable: true, yloc: 100.0)
                 }
                 
                 // Start the loading process asynchronously
