@@ -145,8 +145,8 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     internal var dateRangeZoomContainer: UIView! // Container for zoom slider
     
     
-    // recent data indicator button and state
-    internal var recentDataIndicatorButton: UIButton!
+    // action button and state (behavior depends on chart type)
+    internal var actionButton: UIButton!
     internal var recentDataIndicatorState: Int = 0 // 0=off, 1=last, 2=minus1, 3=minus2
     
     // height constraint property
@@ -376,13 +376,13 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         dateRangeLabel.text = "Date Range"
         dateRangeLabel.font = UIFont.boldSystemFont(ofSize: 14)
         
-        // Create recent data indicator button
-        recentDataIndicatorButton = UIButton(type: .system)
-        recentDataIndicatorButton.translatesAutoresizingMaskIntoConstraints = false
-        recentDataIndicatorButton.setTitle("○", for: .normal)
-        recentDataIndicatorButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .medium)
-        recentDataIndicatorButton.tintColor = .systemBlue
-        recentDataIndicatorButton.addTarget(self, action: #selector(recentDataIndicatorTapped), for: .touchUpInside)
+        // Create action button (behavior varies by chart type)
+        actionButton = UIButton(type: .system)
+        actionButton.translatesAutoresizingMaskIntoConstraints = false
+        actionButton.setTitle("○", for: .normal)
+        actionButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .medium)
+        actionButton.tintColor = .systemBlue
+        actionButton.addTarget(self, action: #selector(actionButtonTapped), for: .touchUpInside)
         
         // Create zoom icon
         dateRangeZoomIcon = UIImageView(image: UIImage(systemName: "magnifyingglass"))
@@ -426,7 +426,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         
         
         sliderContainer.addSubview(dateRangeLabel)
-        sliderContainer.addSubview(recentDataIndicatorButton)
+        sliderContainer.addSubview(actionButton)
         sliderContainer.addSubview(dateRangeZoomIcon)
         sliderContainer.addSubview(dateRangeZoomSwitch)
         sliderContainer.addSubview(dateRangeLockIcon)
@@ -515,11 +515,11 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             dateRangeZoomIcon.widthAnchor.constraint(equalToConstant: 16),
             dateRangeZoomIcon.heightAnchor.constraint(equalToConstant: 16),
             
-            // Position recent data indicator button to the left of zoom icon
-            recentDataIndicatorButton.centerYAnchor.constraint(equalTo: dateRangeLabel.centerYAnchor),
-            recentDataIndicatorButton.trailingAnchor.constraint(equalTo: dateRangeZoomIcon.leadingAnchor, constant: -16),
-            recentDataIndicatorButton.widthAnchor.constraint(equalToConstant: 24),
-            recentDataIndicatorButton.heightAnchor.constraint(equalToConstant: 24),
+            // Position action button to the left of zoom icon
+            actionButton.centerYAnchor.constraint(equalTo: dateRangeLabel.centerYAnchor),
+            actionButton.trailingAnchor.constraint(equalTo: dateRangeZoomIcon.leadingAnchor, constant: -16),
+            actionButton.widthAnchor.constraint(equalToConstant: 24),
+            actionButton.heightAnchor.constraint(equalToConstant: 24),
             
             // Regular date sliders - position after the header
             startDateSlider.topAnchor.constraint(equalTo: dateRangeLockSwitch.bottomAnchor, constant: 10),
@@ -632,31 +632,39 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         updateChartDataWithDebounce()
     }
     
-    // Handle recent data indicator button taps
-    @objc internal func recentDataIndicatorTapped(_ sender: UIButton) {
-        // Cycle through states: 0=off, 1=last, 2=minus1, 3=minus2, back to 0
-        recentDataIndicatorState = (recentDataIndicatorState + 1) % 4
+    // Handle action button taps - behavior varies by chart type
+    @objc internal func actionButtonTapped(_ sender: UIButton) {
+        let chartType = segmentedControl.selectedSegmentIndex
         
-        // Update button appearance
-        switch recentDataIndicatorState {
-        case 0: // Off
-            sender.setTitle("○", for: .normal)
-            sender.tintColor = .systemBlue
-        case 1: // Last entry
-            sender.setTitle("●", for: .normal)
-            sender.tintColor = .systemRed
-        case 2: // Minus 1 entry
-            sender.setTitle("◑", for: .normal)
-            sender.tintColor = .systemGreen
-        case 3: // Minus 2 entry
-            sender.setTitle("◐", for: .normal)
-            sender.tintColor = .systemOrange
-        default:
-            break
+        if chartType == CHART_TYPE_DISTRIBUTION {
+            // Distribution plot: recent data indicator functionality
+            // Cycle through states: 0=off, 1=last, 2=minus1, 3=minus2, back to 0
+            recentDataIndicatorState = (recentDataIndicatorState + 1) % 4
+            
+            // Update button appearance
+            switch recentDataIndicatorState {
+            case 0: // Off
+                sender.setTitle("○", for: .normal)
+                sender.tintColor = .systemBlue
+            case 1: // Last entry
+                sender.setTitle("●", for: .normal)
+                sender.tintColor = .systemRed
+            case 2: // Minus 1 entry
+                sender.setTitle("◑", for: .normal)
+                sender.tintColor = .systemGreen
+            case 3: // Minus 2 entry
+                sender.setTitle("◐", for: .normal)
+                sender.tintColor = .systemOrange
+            default:
+                break
+            }
+            
+            // Update the chart to draw/remove the indicator line
+            updateChartDataWithDebounce()
+        } else if chartType == CHART_TYPE_TIME {
+            // Time plot: navigate to first record in date range and close charts
+            navigateToFirstRecordAndCloseCharts()
         }
-        
-        // Update the chart to draw/remove the indicator line
-        updateChartDataWithDebounce()
     }
     
     // Helper method to update date sliders for zoomed range
@@ -839,8 +847,8 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         ]
         
         // Setup initial configuration based on selected chart type
-        // Set initial visibility of recent data button
-        recentDataIndicatorButton.isHidden = (segmentedControl.selectedSegmentIndex != CHART_TYPE_DISTRIBUTION)
+        // Set initial visibility and appearance of action button
+        updateActionButtonForChartType()
         
         if segmentedControl.selectedSegmentIndex == CHART_TYPE_SCATTER {
             setupScatterPlotConfig()
@@ -1327,8 +1335,8 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     // MARK: - UI Actions
     
     @objc internal func chartTypeChanged(_ sender: UISegmentedControl) {
-        // Show/hide recent data button based on chart type
-        recentDataIndicatorButton.isHidden = (sender.selectedSegmentIndex != CHART_TYPE_DISTRIBUTION)
+        // Update action button appearance and visibility for the new chart type
+        updateActionButtonForChartType()
         
         if sender.selectedSegmentIndex == CHART_TYPE_SCATTER {
             setupScatterPlotConfig()
@@ -1849,6 +1857,96 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         updateDateLabels()
         
         // Update axis configurations if they exist
-        updateChartData()
+        updateChartDataForCurrentType()
+    }
+    
+    // MARK: - Action Button Management
+    
+    // Update action button appearance and visibility based on current chart type
+    internal func updateActionButtonForChartType() {
+        let chartType = segmentedControl.selectedSegmentIndex
+        
+        switch chartType {
+        case CHART_TYPE_DISTRIBUTION:
+            // Distribution plot: show as recent data indicator
+            actionButton.isHidden = false
+            actionButton.setImage(nil, for: .normal) // Clear any image
+            actionButton.setTitle("○", for: .normal)
+            actionButton.tintColor = .systemBlue
+            recentDataIndicatorState = 0 // Reset state when switching chart types
+            
+        case CHART_TYPE_TIME:
+            // Time plot: show as navigation button
+            actionButton.isHidden = false
+            if let arrowImage = UIImage(systemName: "arrow.up.right.square") {
+                actionButton.setImage(arrowImage, for: .normal)
+                actionButton.setTitle("", for: .normal)
+            } else {
+                actionButton.setTitle("→", for: .normal)
+            }
+            actionButton.tintColor = .systemBlue
+            
+        default:
+            // Scatter and Pie charts: hide the button
+            actionButton.isHidden = true
+        }
+    }
+    
+    // Navigate to first record in current date range and close charts view
+    internal func navigateToFirstRecordAndCloseCharts() {
+        guard let selectedStartDate = selectedStartDate,
+              let tracker = tracker else {
+            return
+        }
+        
+        // Find the first record in the current date range
+        let startTimestamp = Int(selectedStartDate.timeIntervalSince1970)
+        let endTimestamp = Int(selectedEndDate?.timeIntervalSince1970 ?? Date().timeIntervalSince1970)
+        
+        // Query for the earliest date in the range
+        let sql = """
+        SELECT MIN(date) FROM trkrData 
+        WHERE date >= \(startTimestamp) AND date <= \(endTimestamp)
+        """
+        
+        let firstRecordTimestamp = tracker.toQry2Int(sql: sql)
+        
+        // Close the charts view first
+        navigationController?.popViewController(animated: true)
+        
+        // Navigate to the first record if we found one
+        if firstRecordTimestamp > 0 {
+            // Get the useTrackerController from the navigation stack
+            if let useTrackerVC = navigationController?.viewControllers.last as? useTrackerController {
+                // Use setTrackerDate to navigate to the first record
+                useTrackerVC.setTrackerDate(firstRecordTimestamp)
+            }
+        }
+    }
+    
+    // Update chart data based on current chart type
+    internal func updateChartDataForCurrentType() {
+        let chartType = segmentedControl.selectedSegmentIndex
+        
+        switch chartType {
+        case CHART_TYPE_SCATTER:
+            if selectedValueObjIDs["xAxis"] != -1 && selectedValueObjIDs["yAxis"] != -1 {
+                generateScatterPlotData()
+            }
+        case CHART_TYPE_DISTRIBUTION:
+            if selectedValueObjIDs["background"] != -1 {
+                generateDistributionPlotData()
+            }
+        case CHART_TYPE_TIME:
+            if timeChartSources.contains(where: { $0 != -1 }) {
+                generateTimeChartData()
+            }
+        case CHART_TYPE_PIE:
+            if selectedValueObjIDs["pieData"] != -1 {
+                generatePieChartData()
+            }
+        default:
+            break
+        }
     }
 }
