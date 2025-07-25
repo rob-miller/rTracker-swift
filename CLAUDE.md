@@ -81,12 +81,13 @@ rTracker is an iOS app for creating local databases ("trackers") to log timestam
    [Key recent commits and changes from git log]
    ```
 
-4. **ALWAYS update notes during analysis**: While working with the file, you MUST update the notes file if you discover:
-   - Information that contradicts existing notes
-   - New understanding of the file's purpose or implementation
-   - Important details that would speed up future analysis
-   - Breaking changes or significant modifications made
+4. **ALWAYS update notes during analysis**: While working with the file, you MUST update the notes file to reflect the CURRENT state:
+   - **Remove resolved issues**: If you fix a bug or performance problem, remove the issue description from the notes
+   - **Add new issues**: If you discover new problems, add them to the appropriate section
+   - **Update descriptions**: If your changes significantly alter the file's purpose or key methods, update those sections
+   - **Keep current**: The notes should always describe the file as it exists NOW, not its historical problems
+   - **Use git history section**: Track significant changes and detect regressions by referencing recent commits
 
-5. **Keep notes concise**: Focus on information that saves time in future analysis, not exhaustive documentation
+5. **Keep notes current and concise**: The notes file should be a snapshot of the file's current state to enable rapid analysis. Use the "Recent Development History" section to track when major changes occurred, but don't accumulate a list of every issue ever fixed.
 
 **CRITICAL**: Do not proceed with any file analysis without completing steps 1-3. This workflow is required for ALL source code files to maintain consistency and facilitate future work.
