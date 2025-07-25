@@ -40,4 +40,5 @@ Extension of trackerObj class that handles database operations and CSV import/ex
 - Improved UI responsiveness during .rtrk file loading with smaller batch sizes (10 items)
 - Added autoreleasepool and proper thread management for better memory handling
 - Enhanced progress updates with main thread scheduling between batches
+- Fixed UI blocking issues by implementing proper background queue processing
 - Maintained backward compatibility with existing synchronous interface
