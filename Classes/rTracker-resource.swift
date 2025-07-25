@@ -543,25 +543,47 @@ class rTracker_resource: NSObject {
             navItem?.rightBarButtonItem?.isEnabled = false
         }
 
-        outerView = UIView(frame: CGRect(x: 75, y: 155, width: 170, height: 170))
-        outerView?.backgroundColor = .secondarySystemBackground  // .clear  // .systemBackground // UIColor(red: 0, green: 0, blue: 0, alpha: 0.5)
+        // Create modern centered container
+        let screenBounds = UIScreen.main.bounds
+        let containerWidth: CGFloat = 200
+        let containerHeight: CGFloat = 120
+        let centerX = (screenBounds.width - containerWidth) / 2
+        let centerY = (screenBounds.height - containerHeight) / 2
+        
+        outerView = UIView(frame: CGRect(x: centerX, y: centerY, width: containerWidth, height: containerHeight))
+        outerView?.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.95)
         outerView?.clipsToBounds = true
-        outerView?.layer.cornerRadius = 10.0
-
+        outerView?.layer.cornerRadius = 16.0
+        
+        // Add subtle shadow for depth
+        outerView?.layer.shadowColor = UIColor.black.cgColor
+        outerView?.layer.shadowOffset = CGSize(width: 0, height: 2)
+        outerView?.layer.shadowOpacity = 0.1
+        outerView?.layer.shadowRadius = 8.0
+        outerView?.layer.masksToBounds = false
+        
+        // Add subtle border
+        outerView?.layer.borderWidth = 0.5
+        outerView?.layer.borderColor = UIColor.separator.cgColor
 
         activityIndicator = UIActivityIndicatorView(style: .large)
-        activityIndicator?.frame = CGRect(x: 65, y: 40, width: activityIndicator?.bounds.size.width ?? 0.0, height: activityIndicator?.bounds.size.height ?? 0.0)
+        activityIndicator?.color = .systemBlue
+        activityIndicator?.center = CGPoint(x: containerWidth / 2, y: 35)
 
         if let activityIndicator {
             outerView?.addSubview(activityIndicator)
         }
         activityIndicator?.startAnimating()
 
-        captionLabel = UILabel(frame: CGRect(x: 20, y: 115, width: 130, height: 22))
+        // Improved label styling
+        captionLabel = UILabel(frame: CGRect(x: 16, y: 65, width: containerWidth - 32, height: 40))
         captionLabel?.backgroundColor = .clear
         captionLabel?.textColor = .label
+        captionLabel?.font = UIFont.systemFont(ofSize: 16, weight: .medium)
         captionLabel?.adjustsFontSizeToFitWidth = true
-        captionLabel?.textAlignment = .center // ios6 UITextAlignmentCenter;
+        captionLabel?.minimumScaleFactor = 0.8
+        captionLabel?.numberOfLines = 2
+        captionLabel?.textAlignment = .center
         captionLabel?.text = str
         if let captionLabel {
             outerView?.addSubview(captionLabel)
@@ -587,6 +609,7 @@ class rTracker_resource: NSObject {
             activityIndicator?.stopAnimating()
 
             outerView?.removeFromSuperview()
+            outerView?.layer.removeFromSuperlayer()
 
             activityIndicator = nil
             captionLabel = nil
