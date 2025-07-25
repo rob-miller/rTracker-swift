@@ -417,7 +417,7 @@ extension RootViewController {
                         guard let self = self else { return }
                         rTracker_resource.finishActivityIndicator(self.view, navItem: nil, disable: false)
                         rTracker_resource.startActivityIndicator(self.view, navItem: nil, disable: false, str: "importing \(tname!) data...")
-                        rTracker_resource.startProgressBar(self.view, navItem: self.navigationItem, disable: true, yloc: 100.0)
+                        rTracker_resource.startProgressBar(self.view, navItem: self.navigationItem, disable: false, yloc: 100.0)
                     }
                     
                     // Use async version to prevent UI blocking
@@ -543,7 +543,7 @@ extension RootViewController {
                 DispatchQueue.main.async {
                     self.tableView?.scrollRectToVisible(CGRect(x: 0, y: 0, width: 1, height: 1), animated: true)
                     rTracker_resource.startActivityIndicator(self.view, navItem: nil, disable: false, str: "loading trackers...")
-                    rTracker_resource.startProgressBar(self.view, navItem: self.navigationItem, disable: true, yloc: 100.0)
+                    rTracker_resource.startProgressBar(self.view, navItem: self.navigationItem, disable: false, yloc: 100.0)
                 }
                 
                 // Start the loading process asynchronously
