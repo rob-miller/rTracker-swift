@@ -49,13 +49,61 @@ rTracker is an iOS app for creating local databases ("trackers") to log timestam
 - **URL Schemes**: Support for rTracker:// and rTracker://tid=N URLs
 
 ## Source Code Analysis Workflow
-**MANDATORY**: These steps MUST be performed whenever reading or analyzing ANY source code file:
 
-1. **ALWAYS check for existing notes**: Look in `.claude/` directory for a file named after the source file (e.g., for `Classes/trackerObj.swift`, check `.claude/trackerObj.swift.md`)
+### ⚠️ CRITICAL WORKFLOW VIOLATION CHECK ⚠️
+**FAILURE TO FOLLOW THIS WORKFLOW IS A CRITICAL ERROR**
 
-2. **ALWAYS review development history**: Use `git log --oneline --follow [filepath]` to understand recent changes and development patterns for the file
+Before reading ANY source code file, you MUST:
+1. **STOP** and check: Does `.claude/[filename].md` exist?
+2. If NO: Create the notes file FIRST using the mandatory template below
+3. If YES: Read the notes file FIRST to understand current state
+4. **NEVER PROCEED** without completing steps 1-3
 
-3. **ALWAYS create notes file if missing**: If no notes file exists, you MUST create one with the following structure:
+**VIOLATION CONSEQUENCES**: 
+Skipping this workflow leads to:
+- Lost context from previous analysis
+- Repeated work and inefficiency  
+- Missing critical implementation details
+- Inability to track code evolution
+- Poor debugging and maintenance
+
+---
+
+### Pre-Analysis Checklist (MANDATORY)
+Before analyzing any source file, complete this checklist:
+- [ ] File path identified: _______________
+- [ ] Checked for existing notes file in `.claude/[filename].md`
+- [ ] Notes file exists? If NO, create using template below
+- [ ] Git history reviewed with: `git log --oneline --follow [filepath]`
+- [ ] Notes file read/updated to reflect CURRENT state
+- [ ] Ready to proceed with analysis
+
+**CHECKPOINT**: Before using Read tool on any .swift file:
+- Have you checked for and created/updated the notes file?
+- Have you reviewed recent git history?
+- Are you ready to update the notes file with new findings?
+
+**If any answer is NO, STOP and complete the missing steps.**
+
+---
+
+### MANDATORY Steps for Source Code Analysis:
+
+**Step 1: Notes File Audit (ALWAYS FIRST)**
+Before beginning any code analysis:
+1. List all files you plan to examine
+2. Check for existing notes files for each in `.claude/` directory
+3. Create missing notes files using the template below
+4. Only then proceed with analysis
+
+**Step 2: Check for existing notes file**
+Look in `.claude/` directory for a file named after the source file (e.g., for `Classes/trackerObj.swift`, check `.claude/trackerObj.swift.md`)
+
+**Step 3: Review development history** 
+Use `git log --oneline --follow [filepath]` to understand recent changes and development patterns for the file
+
+**Step 4: Create notes file if missing**
+If no notes file exists, you MUST create one with the following structure:
    ```markdown
    # [FileName] Analysis Notes
    
@@ -81,13 +129,20 @@ rTracker is an iOS app for creating local databases ("trackers") to log timestam
    [Key recent commits and changes from git log]
    ```
 
-4. **ALWAYS update notes during analysis**: While working with the file, you MUST update the notes file to reflect the CURRENT state:
+**Step 5: Update notes during analysis**
+While working with the file, you MUST update the notes file to reflect the CURRENT state:
    - **Remove resolved issues**: If you fix a bug or performance problem, remove the issue description from the notes
    - **Add new issues**: If you discover new problems, add them to the appropriate section
    - **Update descriptions**: If your changes significantly alter the file's purpose or key methods, update those sections
    - **Keep current**: The notes should always describe the file as it exists NOW, not its historical problems
    - **Use git history section**: Track significant changes and detect regressions by referencing recent commits
 
-5. **Keep notes current and concise**: The notes file should be a snapshot of the file's current state to enable rapid analysis. Use the "Recent Development History" section to track when major changes occurred, but don't accumulate a list of every issue ever fixed.
+**Step 6: Keep notes current and concise**
+The notes file should be a snapshot of the file's current state to enable rapid analysis. Use the "Recent Development History" section to track when major changes occurred, but don't accumulate a list of every issue ever fixed.
 
-**CRITICAL**: Do not proceed with any file analysis without completing steps 1-3. This workflow is required for ALL source code files to maintain consistency and facilitate future work.
+---
+
+### FINAL WARNING
+**Do not proceed with any file analysis without completing Steps 1-4. This workflow is required for ALL source code files to maintain consistency and facilitate future work.**
+
+**WORKFLOW VALIDATION**: If you realize you've read a source file without following this workflow, immediately stop what you're doing and create the missing notes file before continuing.
