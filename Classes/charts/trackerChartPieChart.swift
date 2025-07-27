@@ -256,6 +256,18 @@ extension TrackerChart {
             if sortedData.count >= 3 {
                 recentEntries = [sortedData[2]] // Third entry (minus 2)
             }
+        case 4: // Minus 3 entry (fourth to last)
+            let data = fetchDataForValueObj(id: pieDataID, startTimestamp: startTimestamp, endTimestamp: endTimestamp, excludeEmptyValues: excludeEmpty)
+            let sortedData = data.sorted { $0.0 > $1.0 } // Sort by date descending
+            if sortedData.count >= 4 {
+                recentEntries = [sortedData[3]] // Fourth entry (minus 3)
+            }
+        case 5: // Minus 4 entry (fifth to last)
+            let data = fetchDataForValueObj(id: pieDataID, startTimestamp: startTimestamp, endTimestamp: endTimestamp, excludeEmptyValues: excludeEmpty)
+            let sortedData = data.sorted { $0.0 > $1.0 } // Sort by date descending
+            if sortedData.count >= 5 {
+                recentEntries = [sortedData[4]] // Fifth entry (minus 4)
+            }
         default: // Off
             chartData["recentDataSegment"] = nil
             return
@@ -603,6 +615,10 @@ extension TrackerChart {
                     lineView.backgroundColor = .systemGreen
                 case 3:
                     lineView.backgroundColor = .systemOrange
+                case 4:
+                    lineView.backgroundColor = .systemPurple
+                case 5:
+                    lineView.backgroundColor = .systemBrown
                 default:
                     lineView.backgroundColor = .systemBlue
                 }

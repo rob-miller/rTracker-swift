@@ -147,7 +147,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     
     // action button and state (behavior depends on chart type)
     internal var actionButton: UIButton!
-    internal var recentDataIndicatorState: Int = 0 // 0=off, 1=last, 2=minus1, 3=minus2
+    internal var recentDataIndicatorState: Int = 0 // 0=off, 1=last, 2=minus1, 3=minus2, 4=minus3, 5=minus4
     
     // height constraint property
     internal var zoomContainerHeightConstraint: NSLayoutConstraint!
@@ -638,8 +638,8 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         
         if chartType == CHART_TYPE_DISTRIBUTION {
             // Distribution plot: recent data indicator functionality
-            // Cycle through states: 0=off, 1=last, 2=minus1, 3=minus2, back to 0
-            recentDataIndicatorState = (recentDataIndicatorState + 1) % 4
+            // Cycle through states: 0=off, 1=last, 2=minus1, 3=minus2, 4=minus3, 5=minus4, back to 0
+            recentDataIndicatorState = (recentDataIndicatorState + 1) % 6
             
             // Update button appearance
             switch recentDataIndicatorState {
@@ -655,6 +655,12 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             case 3: // Minus 2 entry
                 sender.setTitle("◐", for: .normal)
                 sender.tintColor = .systemOrange
+            case 4: // Minus 3 entry
+                sender.setTitle("◒", for: .normal)
+                sender.tintColor = .systemPurple
+            case 5: // Minus 4 entry
+                sender.setTitle("◓", for: .normal)
+                sender.tintColor = .systemBrown
             default:
                 break
             }
@@ -666,8 +672,8 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             navigateToFirstRecordAndCloseCharts()
         } else if chartType == CHART_TYPE_PIE {
             // Pie chart: recent data indicator functionality
-            // Cycle through states: 0=off, 1=last, 2=minus1, 3=minus2, back to 0
-            recentDataIndicatorState = (recentDataIndicatorState + 1) % 4
+            // Cycle through states: 0=off, 1=last, 2=minus1, 3=minus2, 4=minus3, 5=minus4, back to 0
+            recentDataIndicatorState = (recentDataIndicatorState + 1) % 6
             
             // Update button appearance
             switch recentDataIndicatorState {
@@ -683,6 +689,12 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             case 3: // Minus 2 entry
                 sender.setTitle("◐", for: .normal)
                 sender.tintColor = .systemOrange
+            case 4: // Minus 3 entry
+                sender.setTitle("◒", for: .normal)
+                sender.tintColor = .systemPurple
+            case 5: // Minus 4 entry
+                sender.setTitle("◓", for: .normal)
+                sender.tintColor = .systemBrown
             default:
                 break
             }

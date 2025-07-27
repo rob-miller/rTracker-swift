@@ -1625,6 +1625,12 @@ extension TrackerChart {
         case 3: // Minus 2 entry
             guard backgroundValues.count >= 3 else { return }
             dataValue = backgroundValues[backgroundValues.count - 3]
+        case 4: // Minus 3 entry
+            guard backgroundValues.count >= 4 else { return }
+            dataValue = backgroundValues[backgroundValues.count - 4]
+        case 5: // Minus 4 entry
+            guard backgroundValues.count >= 5 else { return }
+            dataValue = backgroundValues[backgroundValues.count - 5]
         default:
             return
         }
@@ -1694,6 +1700,10 @@ extension TrackerChart {
             lineView.backgroundColor = .systemGreen
         case 3:
             lineView.backgroundColor = .systemOrange
+        case 4:
+            lineView.backgroundColor = .systemPurple
+        case 5:
+            lineView.backgroundColor = .systemBrown
         default:
             break
         }
