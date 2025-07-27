@@ -211,10 +211,104 @@ extension TrackerChart {
         }
         chartData["piePercentages"] = percentages
         
+        // Determine which segment contains the most recent data entry
+        determineRecentDataSegment()
+        
         // Trigger chart update
         renderPieChart()
     }
 
+    // MARK: - Recent Data Detection
+    
+    // Determine which segment contains the most recent data entries
+    internal func determineRecentDataSegment() {
+        guard let pieDataID = selectedValueObjIDs["pieData"],
+              let startDate = selectedStartDate,
+              let endDate = selectedEndDate,
+              let tracker = tracker else {
+            chartData["recentDataSegment"] = nil
+            return
+        }
+        
+        let startTimestamp = Int(startDate.timeIntervalSince1970)
+        let endTimestamp = Int(endDate.timeIntervalSince1970)
+        
+        // Get recent entries based on the indicator state
+        var recentEntries: [(Date, Double)] = []
+        let valueObj = tracker.valObjTable.first(where: { $0.vid == pieDataID })
+        let excludeEmpty = valueObj?.vtype == VOT_CHOICE || valueObj?.vtype == VOT_NUMBER || valueObj?.vtype == VOT_FUNC
+        
+        switch recentDataIndicatorState {
+        case 1: // Last entry
+            let data = fetchDataForValueObj(id: pieDataID, startTimestamp: startTimestamp, endTimestamp: endTimestamp, excludeEmptyValues: excludeEmpty)
+            if let lastEntry = data.max(by: { $0.0 < $1.0 }) {
+                recentEntries = [lastEntry]
+            }
+        case 2: // Minus 1 entry (second to last)
+            let data = fetchDataForValueObj(id: pieDataID, startTimestamp: startTimestamp, endTimestamp: endTimestamp, excludeEmptyValues: excludeEmpty)
+            let sortedData = data.sorted { $0.0 > $1.0 } // Sort by date descending
+            if sortedData.count >= 2 {
+                recentEntries = [sortedData[1]] // Second entry (minus 1)
+            }
+        case 3: // Minus 2 entry (third to last)
+            let data = fetchDataForValueObj(id: pieDataID, startTimestamp: startTimestamp, endTimestamp: endTimestamp, excludeEmptyValues: excludeEmpty)
+            let sortedData = data.sorted { $0.0 > $1.0 } // Sort by date descending
+            if sortedData.count >= 3 {
+                recentEntries = [sortedData[2]] // Third entry (minus 2)
+            }
+        default: // Off
+            chartData["recentDataSegment"] = nil
+            return
+        }
+        
+        // Determine which segment the recent entry belongs to
+        if let recentEntry = recentEntries.first,
+           let valueObj = valueObj {
+            let recentValue = recentEntry.1
+            var segmentKey: String?
+            
+            switch valueObj.vtype {
+            case VOT_BOOLEAN:
+                let boolValue = recentValue >= 0.5
+                segmentKey = boolValue ? "True" : "False"
+                
+            case VOT_CHOICE:
+                let categoryNdx = valueObj.getChoiceIndex(forDouble: recentValue)
+                segmentKey = valueObj.optDict["c\(categoryNdx)"]
+                
+            case VOT_NUMBER, VOT_FUNC:
+                // Find which bin this value falls into
+                if let valueCounts = chartData["pieData"] as? [String: Int] {
+                    for key in valueCounts.keys {
+                        if key.contains("-") {
+                            // Parse range "min - max"
+                            let components = key.components(separatedBy: " - ")
+                            if components.count == 2,
+                               let minVal = Double(components[0]),
+                               let maxVal = Double(components[1]) {
+                                if recentValue >= minVal && recentValue <= maxVal {
+                                    segmentKey = key
+                                    break
+                                }
+                            }
+                        } else if let singleVal = Double(key), singleVal == recentValue {
+                            // Single value segment
+                            segmentKey = key
+                            break
+                        }
+                    }
+                }
+                
+            default:
+                break
+            }
+            
+            chartData["recentDataSegment"] = segmentKey
+        } else {
+            chartData["recentDataSegment"] = nil
+        }
+    }
+    
     // MARK: - Rendering Methods
     
    
@@ -462,6 +556,65 @@ extension TrackerChart {
             pieChartView.addSubview(label)
             
             // Move to next segment position
+            currentAngle += segmentSize
+        }
+        
+        // Draw recent data indicator line if needed
+        if recentDataIndicatorState > 0,
+           let recentSegmentKey = chartData["recentDataSegment"] as? String {
+            drawRecentDataIndicatorLine(in: pieChartView, center: center, radius: size / 2, for: recentSegmentKey, entries: entries, filteredValueCounts: valueCounts)
+        }
+    }
+    
+    // Draw recent data indicator line in the center of the specified segment
+    private func drawRecentDataIndicatorLine(in pieChartView: UIView, center: CGPoint, radius: CGFloat, for segmentKey: String, entries: [(key: String, value: Int, color: UIColor)], filteredValueCounts: [String: Int]) {
+        // Calculate the angle for the target segment using the same filtered data that's actually rendered
+        let total = Double(filteredValueCounts.values.reduce(0, +))
+        var currentAngle: CGFloat = -.pi / 2 // Start from top
+        
+        for (key, value, _) in entries {
+            let percentage = Double(value) / total
+            let segmentSize = CGFloat(percentage * 2 * .pi)
+            
+            if key == segmentKey {
+                // Found the target segment - draw line in its center
+                let centerAngle = currentAngle + segmentSize / 2
+                
+                // Calculate line endpoints - from center to edge of segment
+                let startPoint = center // Start from center of pie
+                let endPoint = CGPoint(
+                    x: center.x + cos(centerAngle) * (radius * 0.95), // End at 95% of radius
+                    y: center.y + sin(centerAngle) * (radius * 0.95)
+                )
+                
+                // Create the line view
+                let lineView = UIView()
+                lineView.frame = CGRect(x: 0, y: 0, width: 2, height: sqrt(pow(endPoint.x - startPoint.x, 2) + pow(endPoint.y - startPoint.y, 2)))
+                lineView.center = CGPoint(
+                    x: (startPoint.x + endPoint.x) / 2,
+                    y: (startPoint.y + endPoint.y) / 2
+                )
+                
+                // Set line color based on indicator state
+                switch recentDataIndicatorState {
+                case 1:
+                    lineView.backgroundColor = .systemRed
+                case 2:
+                    lineView.backgroundColor = .systemGreen
+                case 3:
+                    lineView.backgroundColor = .systemOrange
+                default:
+                    lineView.backgroundColor = .systemBlue
+                }
+                
+                // Rotate the line to match the angle
+                lineView.transform = CGAffineTransform(rotationAngle: centerAngle + .pi / 2)
+                
+                // Add the line to the pie chart view
+                pieChartView.addSubview(lineView)
+                break
+            }
+            
             currentAngle += segmentSize
         }
     }

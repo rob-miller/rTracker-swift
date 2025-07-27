@@ -1106,8 +1106,10 @@ extension TrackerChart {
         let startTimestamp = Int(selectedStartDate.timeIntervalSince1970)
         let endTimestamp = Int(selectedEndDate.timeIntervalSince1970)
         
-        // Fetch background data
-        let backgroundData = fetchDataForValueObj(id: backgroundID, startTimestamp: startTimestamp, endTimestamp: endTimestamp)
+        // Fetch background data - exclude empty values for numeric types only
+        let backgroundVO = tracker?.valObjTable.first { $0.vid == backgroundID }
+        let excludeEmptyForBackground = backgroundVO?.vtype == VOT_NUMBER || backgroundVO?.vtype == VOT_FUNC || backgroundVO?.vtype == VOT_CHOICE
+        let backgroundData = fetchDataForValueObj(id: backgroundID, startTimestamp: startTimestamp, endTimestamp: endTimestamp, excludeEmptyValues: excludeEmptyForBackground)
         
         // Check if we actually have data
         if backgroundData.isEmpty {
@@ -1240,8 +1242,8 @@ extension TrackerChart {
         backgroundData: [(Date, Double)],
         selectionData: inout [String: [Double]]
     ) {
-        // For boolean, we have true and false categories
-        let booleanData = fetchDataForValueObj(id: selectionID, startTimestamp: startTimestamp, endTimestamp: endTimestamp)
+        // For boolean, we have true and false categories - keep empty values as they count as 'false'
+        let booleanData = fetchDataForValueObj(id: selectionID, startTimestamp: startTimestamp, endTimestamp: endTimestamp, excludeEmptyValues: false)
         
         // Create date lookup for boolean values
         var booleanByDate: [Date: Double] = [:]
@@ -1276,8 +1278,8 @@ extension TrackerChart {
         backgroundData: [(Date, Double)],
         selectionData: inout [String: [Double]]
     ) {
-        // For choice, we need to handle multiple categories
-        let choiceData = fetchDataForValueObj(id: selectionID, startTimestamp: startTimestamp, endTimestamp: endTimestamp)
+        // For choice, we need to handle multiple categories - exclude empty values
+        let choiceData = fetchDataForValueObj(id: selectionID, startTimestamp: startTimestamp, endTimestamp: endTimestamp, excludeEmptyValues: true)
         
         // Create date lookup for choice values
         var choiceByDate: [Date: Double] = [:]
@@ -1328,8 +1330,8 @@ extension TrackerChart {
         backgroundData: [(Date, Double)],
         selectionData: inout [String: [Double]]
     ) {
-        // For numeric types, we create ranges or bins
-        let numericData = fetchDataForValueObj(id: selectionID, startTimestamp: startTimestamp, endTimestamp: endTimestamp)
+        // For numeric types, we create ranges or bins - exclude empty values
+        let numericData = fetchDataForValueObj(id: selectionID, startTimestamp: startTimestamp, endTimestamp: endTimestamp, excludeEmptyValues: true)
         let selectionVO = tracker?.valObjTable.first { $0.vid == selectionID }
         
         // Create date lookup for numeric values
@@ -1532,8 +1534,10 @@ extension TrackerChart {
         let startTimestamp = Int(earliestDate.timeIntervalSince1970)
         let endTimestamp = Int(latestDate.timeIntervalSince1970)
         
-        // Fetch full data range for background data
-        let backgroundData = fetchDataForValueObj(id: backgroundID, startTimestamp: startTimestamp, endTimestamp: endTimestamp)
+        // Fetch full data range for background data - exclude empty values for numeric types only
+        let backgroundVO = tracker?.valObjTable.first { $0.vid == backgroundID }
+        let excludeEmptyForBackground = backgroundVO?.vtype == VOT_NUMBER || backgroundVO?.vtype == VOT_FUNC || backgroundVO?.vtype == VOT_CHOICE
+        let backgroundData = fetchDataForValueObj(id: backgroundID, startTimestamp: startTimestamp, endTimestamp: endTimestamp, excludeEmptyValues: excludeEmptyForBackground)
         
         // Calculate background data range
         let backgroundValues = backgroundData.map { $0.1 }

@@ -664,6 +664,31 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         } else if chartType == CHART_TYPE_TIME {
             // Time plot: navigate to first record in date range and close charts
             navigateToFirstRecordAndCloseCharts()
+        } else if chartType == CHART_TYPE_PIE {
+            // Pie chart: recent data indicator functionality
+            // Cycle through states: 0=off, 1=last, 2=minus1, 3=minus2, back to 0
+            recentDataIndicatorState = (recentDataIndicatorState + 1) % 4
+            
+            // Update button appearance
+            switch recentDataIndicatorState {
+            case 0: // Off
+                sender.setTitle("○", for: .normal)
+                sender.tintColor = .systemBlue
+            case 1: // Last entry
+                sender.setTitle("●", for: .normal)
+                sender.tintColor = .systemRed
+            case 2: // Minus 1 entry
+                sender.setTitle("◑", for: .normal)
+                sender.tintColor = .systemGreen
+            case 3: // Minus 2 entry
+                sender.setTitle("◐", for: .normal)
+                sender.tintColor = .systemOrange
+            default:
+                break
+            }
+            
+            // Update the chart to redraw with/without the indicator
+            generatePieChartData()
         }
     }
     
@@ -1884,8 +1909,16 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             }
             actionButton.tintColor = .systemBlue
             
+        case CHART_TYPE_PIE:
+            // Pie chart: show as recent data indicator
+            actionButton.isHidden = false
+            actionButton.setImage(nil, for: .normal) // Clear any image
+            actionButton.setTitle("○", for: .normal)
+            actionButton.tintColor = .systemBlue
+            recentDataIndicatorState = 0 // Reset state when switching chart types
+            
         default:
-            // Scatter and Pie charts: hide the button
+            // Scatter charts: hide the button
             actionButton.isHidden = true
         }
     }
