@@ -152,8 +152,8 @@ extension TrackerChart {
             // Get value object details
             guard let valueObj = tracker?.valObjTable.first(where: { $0.vid == sourceID }) else { continue }
             
-            // Fetch data points for this source
-            let dataPoints = fetchDataForValueObj(id: sourceID, startTimestamp: startTimestamp, endTimestamp: endTimestamp)
+            // Fetch data points for this source, excluding empty values to avoid plotting 0 for missing data
+            let dataPoints = fetchDataForValueObj(id: sourceID, startTimestamp: startTimestamp, endTimestamp: endTimestamp, excludeEmptyValues: true)
             
             // Skip if no data
             if dataPoints.isEmpty { continue }

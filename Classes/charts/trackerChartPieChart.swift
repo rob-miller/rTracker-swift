@@ -64,7 +64,10 @@ extension TrackerChart {
         let totalPossibleEntries = tracker.toQry2Int(sql: totalCountSQL)
         
         // Fetch data for the selected value object
-        let data = fetchDataForValueObj(id: pieDataID, startTimestamp: startTimestamp, endTimestamp: endTimestamp)
+        // For choice data, exclude empty values to avoid counting empty strings as choice index 0
+        let valueObj = tracker.valObjTable.first(where: { $0.vid == pieDataID })
+        let excludeEmpty = valueObj?.vtype == VOT_CHOICE
+        let data = fetchDataForValueObj(id: pieDataID, startTimestamp: startTimestamp, endTimestamp: endTimestamp, excludeEmptyValues: excludeEmpty)
         
         var valueCounts: [String: Int] = [:]
         
