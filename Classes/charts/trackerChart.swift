@@ -825,7 +825,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             "color": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_BOOLEAN, VOT_CHOICE],
             "background": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_CHOICE],
             "selection": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_BOOLEAN, VOT_CHOICE],
-            "pieData": [VOT_BOOLEAN, VOT_CHOICE],
+            "pieData": [VOT_BOOLEAN, VOT_CHOICE, VOT_NUMBER, VOT_FUNC],
             "timeSource1": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_BOOLEAN],
             "timeSource2": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_BOOLEAN],
             "timeSource3": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_BOOLEAN],

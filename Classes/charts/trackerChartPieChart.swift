@@ -64,9 +64,9 @@ extension TrackerChart {
         let totalPossibleEntries = tracker.toQry2Int(sql: totalCountSQL)
         
         // Fetch data for the selected value object
-        // For choice data, exclude empty values to avoid counting empty strings as choice index 0
+        // For choice and numeric data, exclude empty values to get accurate counts
         let valueObj = tracker.valObjTable.first(where: { $0.vid == pieDataID })
-        let excludeEmpty = valueObj?.vtype == VOT_CHOICE
+        let excludeEmpty = valueObj?.vtype == VOT_CHOICE || valueObj?.vtype == VOT_NUMBER || valueObj?.vtype == VOT_FUNC
         let data = fetchDataForValueObj(id: pieDataID, startTimestamp: startTimestamp, endTimestamp: endTimestamp, excludeEmptyValues: excludeEmpty)
         
         var valueCounts: [String: Int] = [:]
@@ -135,6 +135,65 @@ extension TrackerChart {
                 DBGLog("Total possible entries: \(totalPossibleEntries)")
                 DBGLog("Total counted entries: \(totalEntries)")
                 DBGLog("No Entry count: \(totalPossibleEntries - totalEntries)")
+                
+            case VOT_NUMBER, VOT_FUNC:
+                // For numeric data, create bins based on data range
+                if !data.isEmpty {
+                    let values = data.map { $0.1 }
+                    let minValue = values.min() ?? 0
+                    let maxValue = values.max() ?? 0
+                    
+                    // If all values are the same, create a single category
+                    if minValue == maxValue {
+                        let valueStr = String(format: "%.2g", minValue)
+                        valueCounts[valueStr] = values.count
+                    } else {
+                        // Determine optimal number of bins (between 2 and CHOICES)
+                        let binCount = min(CHOICES, max(2, min(values.count / 2, 6)))
+                        let range = maxValue - minValue
+                        let binWidth = range / Double(binCount)
+                        
+                        // Initialize bins
+                        var binCounts: [Int] = Array(repeating: 0, count: binCount)
+                        var binLabels: [String] = []
+                        
+                        // Create bin labels
+                        for i in 0..<binCount {
+                            let binMin = minValue + Double(i) * binWidth
+                            let binMax = minValue + Double(i + 1) * binWidth
+                            
+                            if i == binCount - 1 {
+                                // Last bin includes the maximum value
+                                binLabels.append(String(format: "%.2g - %.2g", binMin, binMax))
+                            } else {
+                                binLabels.append(String(format: "%.2g - %.2g", binMin, binMax))
+                            }
+                        }
+                        
+                        // Assign values to bins
+                        for value in values {
+                            var binIndex = Int((value - minValue) / binWidth)
+                            // Handle the edge case where value equals maxValue
+                            if binIndex >= binCount {
+                                binIndex = binCount - 1
+                            }
+                            binCounts[binIndex] += 1
+                        }
+                        
+                        // Store results
+                        for i in 0..<binCount {
+                            if binCounts[i] > 0 {  // Only include non-empty bins
+                                valueCounts[binLabels[i]] = binCounts[i]
+                            }
+                        }
+                    }
+                }
+                
+                // Calculate "No Entry" for numeric data
+                let recordedEntries = valueCounts.values.reduce(0, +)
+                if totalPossibleEntries > recordedEntries {
+                    valueCounts["No Entry"] = totalPossibleEntries - recordedEntries
+                }
                 
             default:
                 break
