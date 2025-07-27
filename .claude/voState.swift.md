@@ -1,0 +1,37 @@
+# voState.swift Analysis Notes
+
+## Purpose & Role
+Base UI state class for value objects in rTracker. Manages the UI presentation and interaction for value objects, implementing the voProtocol. Each voState instance is contained within a valueObj and handles the visual representation and user interaction.
+
+## Key Classes/Structs/Protocols
+- `voState`: Base UI state class implementing voProtocol
+- `voProtocol`: Protocol defining interface for value object UI states
+- `valueObj`: Parent value object (via `vo` property)
+- `trackerObj`: Parent tracker (via `MyTracker` property)
+
+## Important Methods/Functions
+- `getValCap()`: Returns value capacity (10 characters)
+- `getNumVal()`: Converts value to Double, returns 0 for invalid values
+[To be populated during analysis]
+
+## Dependencies & Relationships
+- Imports: Foundation, UIKit
+- Implements: voProtocol
+- Contains: valueObj reference, trackerObj reference
+- UI: vosFrame for layout, weak ViewController reference
+
+## Notable Patterns & Conventions
+- Weak reference to view controller to avoid retain cycles
+- Default value capacity of 10 characters
+- Swiftify converted from Objective-C
+- Sets useVO = true on initialization
+
+## Implementation Details
+[To be populated during analysis]
+
+## Recent Development History
+- `65d8bfd`: Implement AnyValue for otsrc; implement mergeDates and otsrc loads all other tracker dates
+- `834d4d3`: Implement progress bar for useTracker full refresh
+- `da3c929`: Comments, remove dbg messages
+- `66b26ec`: Implement hidden valueObjs
+- `6869287`: fn updates with current tracker; vos.update accepts String?
