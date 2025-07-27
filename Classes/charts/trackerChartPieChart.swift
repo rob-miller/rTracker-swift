@@ -584,7 +584,7 @@ extension TrackerChart {
         let total = Double(filteredValueCounts.values.reduce(0, +))
         var currentAngle: CGFloat = -.pi / 2 // Start from top
         
-        for (key, value, _) in entries {
+        for (key, value, segmentColor) in entries {
             let percentage = Double(value) / total
             let segmentSize = CGFloat(percentage * 2 * .pi)
             
@@ -607,21 +607,29 @@ extension TrackerChart {
                     y: (startPoint.y + endPoint.y) / 2
                 )
                 
-                // Set line color based on indicator state
+                // Determine line color based on indicator state, but check for conflicts with segment color
+                var lineColor: UIColor
                 switch recentDataIndicatorState {
                 case 1:
-                    lineView.backgroundColor = .systemRed
+                    lineColor = rTracker_resource.colorSet()[0] // red
                 case 2:
-                    lineView.backgroundColor = .systemGreen
+                    lineColor = rTracker_resource.colorSet()[1] // green
                 case 3:
-                    lineView.backgroundColor = .systemOrange
+                    lineColor = rTracker_resource.colorSet()[2] // blue
                 case 4:
-                    lineView.backgroundColor = .systemPurple
+                    lineColor = rTracker_resource.colorSet()[3] // cyan
                 case 5:
-                    lineView.backgroundColor = .systemBrown
+                    lineColor = rTracker_resource.colorSet()[4] // yellow
                 default:
-                    lineView.backgroundColor = .systemBlue
+                    lineColor = .black
                 }
+                
+                // Check if line color conflicts with segment color - if so, use black for contrast
+                if lineColor.isEqual(segmentColor) {
+                    lineColor = .black
+                }
+                
+                lineView.backgroundColor = lineColor
                 
                 // Rotate the line to match the angle
                 lineView.transform = CGAffineTransform(rotationAngle: centerAngle + .pi / 2)
@@ -642,17 +650,11 @@ extension TrackerChart {
          // Handle "No Entry" separately
          let regularKeys = keys.filter { $0 != "No Entry" }
          
-         // Assign consistent colors based on hash of key
+         // Use colorSet sequence for consistent colors
+         let colorSet = rTracker_resource.colorSet()
          for (index, key) in regularKeys.enumerated() {
-             // Use both key and its position for consistency
-             var hasher = Hasher()
-             hasher.combine(key)
-             hasher.combine(index)
-             let hash = hasher.finalize()
-             
-             // Use hash to generate a consistent hue
-             let hueValue = abs(CGFloat(hash % 100) / 100.0)
-             colorMap[key] = UIColor(hue: hueValue, saturation: 0.7, brightness: 0.9, alpha: 1.0)
+             let colorIndex = index % colorSet.count
+             colorMap[key] = colorSet[colorIndex]
          }
          
          // Always use gray for "No Entry"
@@ -692,12 +694,12 @@ extension TrackerChart {
             return []
             
         default:
-            // Original color generation for other types
+            // Use colorSet sequence for other types
             var colors: [UIColor] = []
+            let colorSet = rTracker_resource.colorSet()
             for i in 0..<count {
-                let hue = CGFloat(i) / CGFloat(count)
-                let color = UIColor(hue: hue, saturation: 0.7, brightness: 0.9, alpha: 1.0)
-                colors.append(color)
+                let colorIndex = i % colorSet.count
+                colors.append(colorSet[colorIndex])
             }
             return colors
         }

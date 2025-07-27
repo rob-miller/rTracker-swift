@@ -645,22 +645,22 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             switch recentDataIndicatorState {
             case 0: // Off
                 sender.setTitle("○", for: .normal)
-                sender.tintColor = .systemBlue
+                sender.tintColor = .black
             case 1: // Last entry
                 sender.setTitle("●", for: .normal)
-                sender.tintColor = .systemRed
+                sender.tintColor = rTracker_resource.colorSet()[0] // red
             case 2: // Minus 1 entry
                 sender.setTitle("◑", for: .normal)
-                sender.tintColor = .systemGreen
+                sender.tintColor = rTracker_resource.colorSet()[1] // green
             case 3: // Minus 2 entry
                 sender.setTitle("◐", for: .normal)
-                sender.tintColor = .systemOrange
+                sender.tintColor = rTracker_resource.colorSet()[2] // blue
             case 4: // Minus 3 entry
                 sender.setTitle("◒", for: .normal)
-                sender.tintColor = .systemPurple
+                sender.tintColor = rTracker_resource.colorSet()[3] // cyan
             case 5: // Minus 4 entry
                 sender.setTitle("◓", for: .normal)
-                sender.tintColor = .systemBrown
+                sender.tintColor = rTracker_resource.colorSet()[4] // yellow
             default:
                 break
             }
@@ -679,22 +679,22 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             switch recentDataIndicatorState {
             case 0: // Off
                 sender.setTitle("○", for: .normal)
-                sender.tintColor = .systemBlue
+                sender.tintColor = .black
             case 1: // Last entry
                 sender.setTitle("●", for: .normal)
-                sender.tintColor = .systemRed
+                sender.tintColor = rTracker_resource.colorSet()[0] // red
             case 2: // Minus 1 entry
                 sender.setTitle("◑", for: .normal)
-                sender.tintColor = .systemGreen
+                sender.tintColor = rTracker_resource.colorSet()[1] // green
             case 3: // Minus 2 entry
                 sender.setTitle("◐", for: .normal)
-                sender.tintColor = .systemOrange
+                sender.tintColor = rTracker_resource.colorSet()[2] // blue
             case 4: // Minus 3 entry
                 sender.setTitle("◒", for: .normal)
-                sender.tintColor = .systemPurple
+                sender.tintColor = rTracker_resource.colorSet()[3] // cyan
             case 5: // Minus 4 entry
                 sender.setTitle("◓", for: .normal)
-                sender.tintColor = .systemBrown
+                sender.tintColor = rTracker_resource.colorSet()[4] // yellow
             default:
                 break
             }
@@ -1907,7 +1907,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             actionButton.isHidden = false
             actionButton.setImage(nil, for: .normal) // Clear any image
             actionButton.setTitle("○", for: .normal)
-            actionButton.tintColor = .systemBlue
+            actionButton.tintColor = .black
             recentDataIndicatorState = 0 // Reset state when switching chart types
             
         case CHART_TYPE_TIME:
@@ -1926,7 +1926,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             actionButton.isHidden = false
             actionButton.setImage(nil, for: .normal) // Clear any image
             actionButton.setTitle("○", for: .normal)
-            actionButton.tintColor = .systemBlue
+            actionButton.tintColor = .black
             recentDataIndicatorState = 0 // Reset state when switching chart types
             
         default:
