@@ -515,6 +515,12 @@ extension TrackerChart {
         // Draw segments - always start from top (-π/2) and go clockwise
         var currentAngle: CGFloat = -.pi / 2 // Start from top
         
+        // Collect leader line data to draw after all segments
+        var leaderLineData: [(path: UIBezierPath, color: UIColor)] = []
+        
+        // Collect outside label data to draw after leader lines
+        var outsideLabelData: [(label: UILabel, point: CGPoint)] = []
+        
         // Use a consistent starting point for each segment
         for (key, value, color) in entries {
             //let isFirstSegment = index == 0
@@ -588,16 +594,16 @@ extension TrackerChart {
                 let preferredCorners: [String]
                 if normalizedAngle >= .pi * 1.5 && normalizedAngle < .pi * 2.0 {
                     // 12 to 3
-                    preferredCorners = ["top-right", "top-left", "bottom-right", "bottom-left"]
+                    preferredCorners = ["top-right", "bottom-right", "top-left", "bottom-left"]
                 } else if normalizedAngle >= .pi * 0.0 && normalizedAngle < .pi * 0.5 {
                     // 3 to 6
                     preferredCorners = ["bottom-right", "top-right", "bottom-left", "top-left"]
                 } else if normalizedAngle >= .pi * 0.5 && normalizedAngle < .pi * 1.0 {
                     // 6 to 9
-                    preferredCorners = ["bottom-left", "bottom-right", "top-left", "top-right"]
+                    preferredCorners = ["bottom-left", "top-left", "bottom-right", "top-right"]
                 } else if normalizedAngle >= .pi * 1.0 && normalizedAngle < .pi * 1.5 {
                     // 9 to 12
-                    preferredCorners = ["top-left", "bottom-left", "top-right", "bottom-right"]
+                    preferredCorners = ["top-left", "top-right", "bottom-left", "bottom-right"]
                 } else {
                     // Default to top-left if angle is unexpected
                     preferredCorners = ["top-left", "top-right", "bottom-left", "bottom-right"]
@@ -607,7 +613,19 @@ extension TrackerChart {
                 var selectedPosition = "top-left-upper" // fallback
                 
                 for corner in preferredCorners {
-                    if normalizedAngle > .pi * 0.5 {
+                    var preferUpper = true
+                    if normalizedAngle >= .pi && normalizedAngle  <= .pi * 1.5 { // 9 to 12
+                        if corner == "top-left" {
+                            preferUpper = false
+                        }
+                    } else if normalizedAngle >= .pi * 0.5 && normalizedAngle < .pi { // 6 to 9
+                        if corner == "bottom-left" {
+                            preferUpper = false
+                        }
+                    }
+
+
+                    if !preferUpper {
                         // For angles past 6 o'clock, prefer bottom corners first
                         let lowerPosition = "\(corner)-lower"
                         if !usedCornerPositions.contains(lowerPosition) {
@@ -666,7 +684,7 @@ extension TrackerChart {
                 let corner: CGPoint
                 if cornerName == "top-left" {
                     // For top-left: upper is closer to corner later segments, lower is earlier segments
-                    corner = CGPoint(x: baseCorner.x, y: baseCorner.y + (isUpper ? verticalSpacing : 0))
+                    corner = CGPoint(x: baseCorner.x, y: baseCorner.y + (isUpper ? 0 : verticalSpacing))
                 } else if cornerName == "bottom-left" {
                     // For bottom-left with segments past 6 o'clock: lower is closer to corner (earlier segments), upper is later segments
                     corner = CGPoint(x: baseCorner.x, y: baseCorner.y - (isUpper ? verticalSpacing : 0))
@@ -736,15 +754,8 @@ extension TrackerChart {
                     leaderPath.addLine(to: corner)
                 }
                 
-                let leaderLayer = CAShapeLayer()
-                leaderLayer.path = leaderPath.cgPath
-                leaderLayer.strokeColor = UIColor.darkGray.cgColor
-                leaderLayer.fillColor = UIColor.clear.cgColor
-                leaderLayer.lineWidth = 1
-                leaderLayer.lineCap = .round
-                leaderLayer.lineDashPattern = [3, 2] // Dashed line
-                
-                pieChartView.layer.addSublayer(leaderLayer)
+                // Store leader line data for later drawing
+                leaderLineData.append((path: leaderPath, color: UIColor.darkGray))
                 
             } else {
                 // For other cases, use the original radial positioning but closer to pie
@@ -766,10 +777,33 @@ extension TrackerChart {
                 height: label.bounds.height
             )
             
-            pieChartView.addSubview(label)
+            // Add inside labels immediately, collect outside labels for later
+            if labelFitsInside {
+                pieChartView.addSubview(label)
+            } else {
+                outsideLabelData.append((label: label, point: labelPoint))
+            }
             
             // Move to next segment position
             currentAngle += segmentSize
+        }
+        
+        // Draw all leader lines after segments to ensure they appear on top
+        for leaderData in leaderLineData {
+            let leaderLayer = CAShapeLayer()
+            leaderLayer.path = leaderData.path.cgPath
+            leaderLayer.strokeColor = leaderData.color.cgColor
+            leaderLayer.fillColor = UIColor.clear.cgColor
+            leaderLayer.lineWidth = 1
+            leaderLayer.lineCap = .round
+            leaderLayer.lineDashPattern = [3, 2] // Dashed line
+            
+            pieChartView.layer.addSublayer(leaderLayer)
+        }
+        
+        // Draw all outside labels after leader lines to ensure correct z-order
+        for labelData in outsideLabelData {
+            pieChartView.addSubview(labelData.label)
         }
         
         // Draw recent data indicator line if needed
