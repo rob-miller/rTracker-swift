@@ -143,14 +143,18 @@ extension TrackerChart {
                     let minValue = values.min() ?? 0
                     let maxValue = values.max() ?? 0
                     
+                    // Calculate range to determine decimal precision
+                    let range = maxValue - minValue
+                    let formatString = range > 99 ? "%.0f" : "%.2f"
+                    let rangeFormatString = range > 99 ? "%.0f - %.0f" : "%.2f - %.2f"
+                    
                     // If all values are the same, create a single category
                     if minValue == maxValue {
-                        let valueStr = String(format: "%.2g", minValue)
+                        let valueStr = String(format: formatString, minValue)
                         valueCounts[valueStr] = values.count
                     } else {
                         // Determine optimal number of bins (between 2 and CHOICES)
                         let binCount = min(CHOICES, max(2, min(values.count / 2, 6)))
-                        let range = maxValue - minValue
                         let binWidth = range / Double(binCount)
                         
                         // Initialize bins
@@ -164,9 +168,9 @@ extension TrackerChart {
                             
                             if i == binCount - 1 {
                                 // Last bin includes the maximum value
-                                binLabels.append(String(format: "%.2g - %.2g", binMin, binMax))
+                                binLabels.append(String(format: rangeFormatString, binMin, binMax))
                             } else {
-                                binLabels.append(String(format: "%.2g - %.2g", binMin, binMax))
+                                binLabels.append(String(format: rangeFormatString, binMin, binMax))
                             }
                         }
                         
