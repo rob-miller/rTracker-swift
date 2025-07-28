@@ -425,6 +425,11 @@ extension TrackerChart {
         pieChartView.tag = 2001 // Use a specific tag to identify the pie chart view
         chartView.addSubview(pieChartView)
         
+        // Track which specific corner positions are already used
+        // Each corner has 2 positions: upper and lower (e.g., "top-left-upper", "top-left-lower")
+        var usedCornerPositions: Set<String> = []
+        let maxCornerLabels = 8 // 4 corners × 2 positions each
+        
         // Add tap gesture to toggle "No Entry" visibility
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(toggleNoEntryInPieChart(_:)))
         pieChartView.addGestureRecognizer(tapGesture)
@@ -512,6 +517,8 @@ extension TrackerChart {
         
         // Use a consistent starting point for each segment
         for (key, value, color) in entries {
+            //let isFirstSegment = index == 0
+            //let isLastSegment = index == entries.count - 1
             let percentage = Double(value) / total
             let segmentSize = CGFloat(percentage * 2 * .pi)
             let startAngle = currentAngle
@@ -540,11 +547,6 @@ extension TrackerChart {
             
             // Add label
             let labelAngle = startAngle + segmentSize/2 // Center of segment
-            let labelRadius = size / 2 * 0.7 // Position label at 70% of radius
-            let labelPoint = CGPoint(
-                x: center.x + cos(labelAngle) * labelRadius,
-                y: center.y + sin(labelAngle) * labelRadius
-            )
             
             let label = UILabel()
             label.text = "\(key)\n\(Int(percentage * 100))%"
@@ -553,9 +555,208 @@ extension TrackerChart {
             label.font = UIFont.systemFont(ofSize: 12, weight: .medium)
             label.sizeToFit()
             
-            // Determine if we should use dark or light text based on segment color
-            let brightness = color.getBrightness()
-            label.textColor = brightness > 0.6 ? .black : .white
+            // Calculate arc width at the label radius to see if label fits
+            let labelRadius = size / 2 * 0.7 // 70% of radius for inside positioning
+            let arcWidthAtLabelRadius = labelRadius * segmentSize // Arc length = radius * angle
+            let labelFitsInside = label.bounds.width <= arcWidthAtLabelRadius && segmentSize > 0.3 // Also check minimum angle
+            
+            // Check if this is a narrow vertical segment (avoiding top area where tabs are)
+            let normalizedAngle = (labelAngle + 2 * .pi).truncatingRemainder(dividingBy: 2 * .pi)
+            let isNarrowVerticalSegment = !labelFitsInside && segmentSize < 0.5 && (normalizedAngle > .pi * 0.2 && normalizedAngle < .pi * 1.8)
+            let canUseCornerPosition = usedCornerPositions.count < maxCornerLabels
+            
+            let labelPoint: CGPoint
+            
+            if labelFitsInside {
+                // Label fits inside - position at 70% of radius
+                labelPoint = CGPoint(
+                    x: center.x + cos(labelAngle) * labelRadius,
+                    y: center.y + sin(labelAngle) * labelRadius
+                )
+                
+                // Determine text color based on segment color for inside labels
+                let brightness = color.getBrightness()
+                label.textColor = brightness > 0.6 ? .black : .white
+                
+            } else if isNarrowVerticalSegment && canUseCornerPosition {
+                // Place in corner of the square containing the pie circle
+                let squareSize = size + 40 // Add padding around pie
+                let halfSquare = squareSize / 2
+                let edgeInset: CGFloat = 20 // Inset from square edges to keep labels fully inside
+                
+                // Determine preferred corners based on segment position
+                let preferredCorners: [String]
+                if normalizedAngle >= .pi * 1.5 && normalizedAngle < .pi * 2.0 {
+                    // 12 to 3
+                    preferredCorners = ["top-right", "top-left", "bottom-right", "bottom-left"]
+                } else if normalizedAngle >= .pi * 0.0 && normalizedAngle < .pi * 0.5 {
+                    // 3 to 6
+                    preferredCorners = ["bottom-right", "top-right", "bottom-left", "top-left"]
+                } else if normalizedAngle >= .pi * 0.5 && normalizedAngle < .pi * 1.0 {
+                    // 6 to 9
+                    preferredCorners = ["bottom-left", "bottom-right", "top-left", "top-right"]
+                } else if normalizedAngle >= .pi * 1.0 && normalizedAngle < .pi * 1.5 {
+                    // 9 to 12
+                    preferredCorners = ["top-left", "bottom-left", "top-right", "bottom-right"]
+                } else {
+                    // Default to top-left if angle is unexpected
+                    preferredCorners = ["top-left", "top-right", "bottom-left", "bottom-right"]
+                }
+
+                // Find first available position (try upper then lower for each corner)
+                var selectedPosition = "top-left-upper" // fallback
+                
+                for corner in preferredCorners {
+                    if normalizedAngle > .pi * 0.5 {
+                        // For angles past 6 o'clock, prefer bottom corners first
+                        let lowerPosition = "\(corner)-lower"
+                        if !usedCornerPositions.contains(lowerPosition) {
+                            selectedPosition = lowerPosition
+                            usedCornerPositions.insert(lowerPosition)
+                            break
+                        }
+                        
+                        // Try upper position
+                        let upperPosition = "\(corner)-upper"
+                        if !usedCornerPositions.contains(upperPosition) {
+                            selectedPosition = upperPosition
+                            usedCornerPositions.insert(upperPosition)
+                            break
+                        }
+                    } else {
+                        // Try upper position first
+                        let upperPosition = "\(corner)-upper"
+                        if !usedCornerPositions.contains(upperPosition) {
+                            selectedPosition = upperPosition
+                            usedCornerPositions.insert(upperPosition)
+                            break
+                        }
+                        
+                        // Try lower position
+                        let lowerPosition = "\(corner)-lower"
+                        if !usedCornerPositions.contains(lowerPosition) {
+                            selectedPosition = lowerPosition
+                            usedCornerPositions.insert(lowerPosition)
+                            break
+                        }
+                    }
+                }
+                
+                // Convert position name to coordinates with edge insets and vertical spacing
+                let verticalSpacing: CGFloat = 30 // Space between upper and lower positions
+                let components = selectedPosition.components(separatedBy: "-")
+                let cornerName = components.count >= 2 ? "\(components[0])-\(components[1])" : "top-left"
+                let isUpper = components.last == "upper"
+                
+                let baseCorner: CGPoint
+                switch cornerName {
+                case "bottom-left":
+                    baseCorner = CGPoint(x: center.x - halfSquare + edgeInset, y: center.y + halfSquare - edgeInset)
+                case "bottom-right":
+                    baseCorner = CGPoint(x: center.x + halfSquare - edgeInset, y: center.y + halfSquare - edgeInset)
+                case "top-left":
+                    baseCorner = CGPoint(x: center.x - halfSquare + edgeInset, y: center.y - halfSquare + edgeInset)
+                case "top-right":
+                    baseCorner = CGPoint(x: center.x + halfSquare - edgeInset, y: center.y - halfSquare + edgeInset)
+                default:
+                    baseCorner = CGPoint(x: center.x - halfSquare + edgeInset, y: center.y - halfSquare + edgeInset)
+                }
+                
+                // Adjust vertical position for upper/lower
+                let corner: CGPoint
+                if cornerName == "top-left" {
+                    // For top-left: upper is closer to corner later segments, lower is earlier segments
+                    corner = CGPoint(x: baseCorner.x, y: baseCorner.y + (isUpper ? verticalSpacing : 0))
+                } else if cornerName == "bottom-left" {
+                    // For bottom-left with segments past 6 o'clock: lower is closer to corner (earlier segments), upper is later segments
+                    corner = CGPoint(x: baseCorner.x, y: baseCorner.y - (isUpper ? verticalSpacing : 0))
+                } else if cornerName == "top-right" {
+                    // For top right: upper is closer to corner, lower is further down
+                    corner = CGPoint(x: baseCorner.x, y: baseCorner.y + (isUpper ?  0 : verticalSpacing))
+
+                } else {
+                    // For bottom right: upper is further up, lower is closer to corner
+                    corner = CGPoint(x: baseCorner.x, y: baseCorner.y - (isUpper ? verticalSpacing : 0))
+                }
+                
+                labelPoint = corner
+                
+                // Style for corner labels
+                label.textColor = .black
+                label.backgroundColor = UIColor.white.withAlphaComponent(0.9)
+                label.layer.cornerRadius = 4
+                label.layer.masksToBounds = true
+                label.layer.borderWidth = 1
+                label.layer.borderColor = UIColor.lightGray.cgColor
+                
+                // Determine if we need a direct line (when segment and corner are on opposite visual sides)
+                // iOS coordinate system has Y increasing downward, so visual layout flipped from angle math
+                // Visual top half: 9 o'clock to 3 o'clock -> angles: π to 2π 
+
+                //let normalizedLabelAngle = (labelAngle + 2 * .pi).truncatingRemainder(dividingBy: 2 * .pi)
+                //let segmentInVisualTopHalf = normalizedLabelAngle > 3 * .pi/2 || normalizedLabelAngle < .pi/2
+                let segmentInVisualTopHalf = normalizedAngle > .pi && normalizedAngle < 2 * .pi  
+                let cornerInVisualTopHalf = cornerName.hasPrefix("top")
+                let mustCrossPie = segmentInVisualTopHalf != cornerInVisualTopHalf
+                
+                let leaderPath = UIBezierPath()
+                
+                if mustCrossPie {
+                    // Direct line from segment center to corner when crossing pie
+                    let segmentCenterPoint = CGPoint(
+                        x: center.x + cos(labelAngle) * (size / 4), // Start from quarter radius
+                        y: center.y + sin(labelAngle) * (size / 4)
+                    )
+                    leaderPath.move(to: segmentCenterPoint)
+                    leaderPath.addLine(to: corner)
+                } else {
+                    // L-shaped line when segment and corner are on same side
+                    let segmentEdgePoint = CGPoint(
+                        x: center.x + cos(labelAngle) * (size / 2),
+                        y: center.y + sin(labelAngle) * (size / 2)
+                    )
+                    
+                    // Extend radially outward - shorter for inner labels to avoid crossing
+                    let radialExtension: CGFloat
+                    if cornerName.hasPrefix("top") {
+                        // For top corners: lower label uses shorter extension to avoid upper label line
+                        radialExtension = isUpper ? 15 : 8
+                    } else {
+                        // For bottom corners: upper label uses shorter extension to avoid lower label line
+                        radialExtension = isUpper ? 8 : 15
+                    }
+                    let bendPoint = CGPoint(
+                        x: segmentEdgePoint.x + cos(labelAngle) * radialExtension,
+                        y: segmentEdgePoint.y + sin(labelAngle) * radialExtension
+                    )
+                    
+                    // Create L-shaped path: segment edge → bend point → corner
+                    leaderPath.move(to: segmentEdgePoint)
+                    leaderPath.addLine(to: bendPoint)
+                    leaderPath.addLine(to: corner)
+                }
+                
+                let leaderLayer = CAShapeLayer()
+                leaderLayer.path = leaderPath.cgPath
+                leaderLayer.strokeColor = UIColor.darkGray.cgColor
+                leaderLayer.fillColor = UIColor.clear.cgColor
+                leaderLayer.lineWidth = 1
+                leaderLayer.lineCap = .round
+                leaderLayer.lineDashPattern = [3, 2] // Dashed line
+                
+                pieChartView.layer.addSublayer(leaderLayer)
+                
+            } else {
+                // For other cases, use the original radial positioning but closer to pie
+                labelPoint = CGPoint(
+                    x: center.x + cos(labelAngle) * (size / 2 * 1.1),
+                    y: center.y + sin(labelAngle) * (size / 2 * 1.1)
+                )
+                
+                // Determine text color based on segment color
+                let brightness = color.getBrightness()
+                label.textColor = brightness > 0.6 ? .black : .white
+            }
             
             // Center label around calculated point
             label.frame = CGRect(
