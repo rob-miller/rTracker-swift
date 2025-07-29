@@ -230,7 +230,7 @@ class voChoice: voState {
             if vo.optDict[cc] == nil {
                 let col = vo.parentTracker.nextColor
                 vo.optDict[cc] = String("\(col)")
-                b?.backgroundColor = rTracker_resource.colorSet()[col]
+                b?.backgroundColor = rTracker_resource.colorSet[col]
             }
         }
         i += 1
@@ -289,11 +289,11 @@ class voChoice: voState {
         let cc = "cc\(i)"
         if let ncol = vo.optDict[cc] {
             var col = Int(ncol)! + 1
-            if col >= rTracker_resource.colorSet().count {
+            if col >= rTracker_resource.colorSet.count {
                 col = 0
             }
             vo.optDict[cc] = String("\(col)")
-            btn?.backgroundColor = rTracker_resource.colorSet()[col]
+            btn?.backgroundColor = rTracker_resource.colorSet[col]
         }
 
     }
@@ -391,7 +391,7 @@ class voChoice: voState {
             btn.layer.masksToBounds = true
             btn.layer.borderWidth = 1.0
             if let cc = vo.optDict["cc\(i)"] {
-                btn.backgroundColor = rTracker_resource.colorSet()[Int(cc)!]
+                btn.backgroundColor = rTracker_resource.colorSet[Int(cc)!]
             } else {
                 btn.backgroundColor = .clear
             }
@@ -546,7 +546,7 @@ class voChoice: voState {
         vo.optDict["c\(maxc)"] = inCsv
 
         lastColor += 1
-        if lastColor >= rTracker_resource.colorSet().count {
+        if lastColor >= rTracker_resource.colorSet.count {
             lastColor = 0
         }
 

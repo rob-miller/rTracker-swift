@@ -1695,15 +1695,15 @@ extension TrackerChart {
         // Set line color based on state
         switch recentDataIndicatorState {
         case 1:
-            lineView.backgroundColor = rTracker_resource.colorSet()[0] // red
+            lineView.backgroundColor = rTracker_resource.colorSet[0] // red
         case 2:
-            lineView.backgroundColor = rTracker_resource.colorSet()[1] // green
+            lineView.backgroundColor = rTracker_resource.colorSet[1] // green
         case 3:
-            lineView.backgroundColor = rTracker_resource.colorSet()[2] // blue
+            lineView.backgroundColor = rTracker_resource.colorSet[2] // blue
         case 4:
-            lineView.backgroundColor = rTracker_resource.colorSet()[3] // cyan
+            lineView.backgroundColor = rTracker_resource.colorSet[3] // cyan
         case 5:
-            lineView.backgroundColor = rTracker_resource.colorSet()[4] // yellow
+            lineView.backgroundColor = rTracker_resource.colorSet[4] // yellow
         default:
             break
         }

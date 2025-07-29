@@ -89,7 +89,7 @@ class gtYAxV: UIView {
     func vtChoiceSetColor(_ context: CGContext?, ndx: Int) {
         let cc = "cc\(ndx)"
         let col = Int(vogd!.vo.optDict[cc] ?? "") ?? 0 // rtmx
-        rTracker_resource.colorSet()[col].set()
+        rTracker_resource.colorSet[col].set()
     }
 
     func drawYAxis(_ context: CGContext) {

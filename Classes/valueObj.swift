@@ -549,8 +549,8 @@ class valueObj: NSObject, UITextFieldDelegate {
             if vcolor < 0 {
                 DBGErr(String("\(VOINF) invalid vcolor (negative): \(vcolor)"))
                 vcolor = 0
-            } else if vcolor > (rTracker_resource.colorSet().count - 1) {
-                DBGErr(String("\(VOINF) invalid vcolor (too large): \(vcolor) max color= \(UInt(rTracker_resource.colorSet().count - 1))"))
+            } else if vcolor > (rTracker_resource.colorSet.count - 1) {
+                DBGErr(String("\(VOINF) invalid vcolor (too large): \(vcolor) max color= \(UInt(rTracker_resource.colorSet.count - 1))"))
                 vcolor = 0
             }
         }
@@ -576,8 +576,8 @@ class valueObj: NSObject, UITextFieldDelegate {
                     if ncol < 0 {
                         DBGErr(String("\(VOINF) invalid choice \(i) color (negative): \(ncol)"))
                         optDict[key] = "0"
-                    } else if ncol > (rTracker_resource.colorSet().count - 1) {
-                        DBGErr(String("\(VOINF) invalid choice \(i) color (too large): \(ncol) max color= \(UInt(rTracker_resource.colorSet().count) - 1))"))
+                    } else if ncol > (rTracker_resource.colorSet.count - 1) {
+                        DBGErr(String("\(VOINF) invalid choice \(i) color (too large): \(ncol) max color= \(UInt(rTracker_resource.colorSet.count) - 1))"))
                         optDict[key] = "0"
                     }
                 }

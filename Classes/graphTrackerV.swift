@@ -109,10 +109,10 @@ class graphTrackerV: UIScrollView {
         let choice = vogd!.vo.getChoiceIndex(forValue: "\(val)")
         let cc = "cc\(choice)"
         let col = Int(vogd!.vo.optDict[cc] ?? "") ?? 0 // rtmx cc=cc8
-        let colorSet = rTracker_resource.colorSet()[col].cgColor
+        let colorSet = rTracker_resource.colorSet[col].cgColor
         context.setFillColor(colorSet)
         
-        let cSet = rTracker_resource.colorSet()[col].cgColor
+        let cSet = rTracker_resource.colorSet[col].cgColor
         context.setStrokeColor(cSet)
         
     }
@@ -541,10 +541,10 @@ class graphTrackerV: UIScrollView {
         }
 
         if vo.vtype != VOT_CHOICE {
-            let colorSet = rTracker_resource.colorSet()[vo.vcolor].cgColor
+            let colorSet = rTracker_resource.colorSet[vo.vcolor].cgColor
             context.setFillColor(colorSet)
             
-            let cSet = rTracker_resource.colorSet()[vo.vcolor].cgColor
+            let cSet = rTracker_resource.colorSet[vo.vcolor].cgColor
             context.setStrokeColor(cSet)
         }
 

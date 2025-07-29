@@ -474,40 +474,35 @@ class rTracker_resource: NSObject {
         }
     }
 
-    class func colorSet() -> [UIColor] {
-        return [
-            UIColor.red,
-            UIColor.orange,
-            UIColor.yellow,
-            UIColor.systemGreen,  //green,
-            UIColor.cyan,
-            UIColor.blue,
-            UIColor.purple,
-            UIColor.magenta,
-            UIColor.brown,
-            UIColor.white,
-            UIColor.lightGray,
-            UIColor.darkGray
-        ]
+    static let colorSet: [UIColor] = [
+        UIColor.red,
+        UIColor.systemGreen,  //green,
+        UIColor.blue,
+        UIColor.cyan,
+        UIColor.yellow,
+        UIColor.magenta,
+        UIColor.orange,
+        UIColor.purple,
+        UIColor.brown,
+        UIColor.white,
+        UIColor.lightGray,
+        UIColor.darkGray
+    ]
 
-    }
-
-    class func colorNames() -> [String] {
-        return [
-            "red",
-            "orange",
-            "yellow",
-            "green",
-            "cyan",
-            "blue",
-            "purple",
-            "magenta",
-            "brown",
-            "white",
-            "lightGray",
-            "darkGray"
-        ]
-    }
+    static let colorNames: [String] = [
+        "red",
+        "green",
+        "blue",
+        "cyan",
+        "yellow",
+        "magenta",
+        "orange",
+        "purple",
+        "brown",
+        "white",
+        "lightGray",
+        "darkGray"
+    ]
 
     class func vtypeNames() -> [String] {
         // indexes must match defns in valueObj.h 

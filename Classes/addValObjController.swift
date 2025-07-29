@@ -113,7 +113,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
         let allGraphs = valueObj.allGraphs()
         sizeGTLabel = addValObjController.maxLabel(fromArray: allGraphs)
 
-        colorCount = rTracker_resource.colorSet().count
+        colorCount = rTracker_resource.colorSet.count
 
         if tempValObj == nil {
             tempValObj = valueObj(parentOnly: parentTrackerObj!)
@@ -472,7 +472,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
             frame.origin.x = 0.0
             frame.origin.y = 0.0
             label = UILabel(frame: frame)
-            label?.backgroundColor = rTracker_resource.colorSet()[row]
+            label?.backgroundColor = rTracker_resource.colorSet[row]
         case 2:
             frame.size = sizeGTLabel
             frame.size.width += cgfFONTSIZE
@@ -517,7 +517,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
         } else if tempValObj?.vGraphType == VOG_NONE {
             colorCount = 0
         } else if colorCount == 0 {
-            colorCount = rTracker_resource.colorSet().count
+            colorCount = rTracker_resource.colorSet.count
         }
 
         if oldcc != colorCount {

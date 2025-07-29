@@ -370,7 +370,7 @@ class vogd: NSObject {
             return .white // VOT_CHOICE, VOT_INFO
         }
 
-        let cs = rTracker_resource.colorSet()
+        let cs = rTracker_resource.colorSet
         if cs.count <= vo.vcolor {
             // paranoid due to crashlytics report error in gtYAxV:drawYAxis but expect due to vcolor=-1
             DBGErr(String("myGraphColor: vcolor out of range: \(vo.vcolor) cs count= \(cs.count) vtype= \(vo.vtype)"))

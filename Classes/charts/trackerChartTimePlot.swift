@@ -1034,7 +1034,7 @@ extension TrackerChart {
         let mode = yAxisRanges["mode"] as? String ?? "individual"
         
         // Colors for each series using colorSet sequence
-        let seriesColors = rTracker_resource.colorSet()
+        let seriesColors = rTracker_resource.colorSet
         
         // Shared y-axis range (if applicable)
         var sharedMinY: Double = 0
@@ -1479,7 +1479,7 @@ extension TrackerChart {
             yAxisView.clipsToBounds = false  // Allow rotated label to extend beyond bounds
             
             // Draw ticks with the color of the current series
-            let seriesColors = rTracker_resource.colorSet()
+            let seriesColors = rTracker_resource.colorSet
             let sourceIndex = sourcesData.firstIndex(where: { $0["id"] as? Int == currentSourceId }) ?? 0
             let color = seriesColors[sourceIndex % seriesColors.count]
             

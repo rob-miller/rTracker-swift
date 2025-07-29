@@ -45,7 +45,7 @@ class voBoolean: voState {
         if vo.value == "" {
             let bv = vo.optDict["boolval"]
             vo.value = bv!
-            rTracker_resource.setSwitch(self.bSwitch!, colr: rTracker_resource.colorSet()[Int(vo.optDict["btnColr"]!)!])
+            rTracker_resource.setSwitch(self.bSwitch!, colr: rTracker_resource.colorSet[Int(vo.optDict["btnColr"]!)!])
             if "1" == vo.optDict["setstrackerdate"] {
                 vo.setTrackerDateToNow()
             }
@@ -81,7 +81,7 @@ class voBoolean: voState {
         if vo.value == "" {
             rTracker_resource.clrSwitch(bSwitch!, colr: .tertiarySystemBackground)
         } else {
-            rTracker_resource.setSwitch(bSwitch!, colr: rTracker_resource.colorSet()[Int(vo.optDict["btnColr"]!)!])
+            rTracker_resource.setSwitch(bSwitch!, colr: rTracker_resource.colorSet[Int(vo.optDict["btnColr"]!)!])
         }
 
         //DBGLog(String("bool data= \(vo.value)"))
@@ -146,11 +146,11 @@ class voBoolean: voState {
     @objc func boolColorButtonAction(_ btn: UIButton?) {
         var col = Int(vo.optDict["btnColr"]!)!
         col += 1
-        if col >= rTracker_resource.colorSet().count {
+        if col >= rTracker_resource.colorSet.count {
             col = 0
         }
         vo.optDict["btnColr"] = String(format: "%ld", col)
-        btn?.backgroundColor = rTracker_resource.colorSet()[col]
+        btn?.backgroundColor = rTracker_resource.colorSet[col]
     }
     
     @objc func forwardToConfigOtherTrackerSrcView() {
@@ -226,7 +226,7 @@ class voBoolean: voState {
             bc = BOOLBTNCOLRDFLTSTR
             vo.optDict["btnColr"] = BOOLBTNCOLRDFLTSTR
         }
-        btn.backgroundColor = rTracker_resource.colorSet()[Int(bc!)!]
+        btn.backgroundColor = rTracker_resource.colorSet[Int(bc!)!]
 
         btn.titleLabel?.font = PrefBodyFont
 

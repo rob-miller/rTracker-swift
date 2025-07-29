@@ -59,7 +59,7 @@ class trackerCalViewController: UIViewController, TSQCalendarViewDelegate {
         sql = "select id from voInfo where field='graph' and val=0"
         let noGraphIds = tracker?.toQry2SetI(sql: sql)
 
-        let colorSet = rTracker_resource.colorSet()
+        let colorSet = rTracker_resource.colorSet
         let pv = privacyValue
         var dates: [Int]
         if nil == (parentUTC as? useTrackerController)?.searchSet {
@@ -139,7 +139,7 @@ class trackerCalViewController: UIViewController, TSQCalendarViewDelegate {
                     dateSelDict[date!] = "" // set for no color
                 } else {
                     dateSelDict[date!] = colorSet[cndx]
-                    DBGLog(String("date: \(date)  valobj \(targVid) UIColor \(colorSet[cndx]) name \(rTracker_resource.colorNames()[cndx])"))
+                    DBGLog(String("date: \(date)  valobj \(targVid) UIColor \(colorSet[cndx]) name \(rTracker_resource.colorNames[cndx])"))
                 }
             }
 

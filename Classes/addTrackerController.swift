@@ -705,7 +705,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 } else {
                     let vtypeNames = rTracker_resource.vtypeNames()[vo!.vtype]
                     let voGraphSet = (vo?.vos?.voGraphSet())?[vo!.vGraphType]
-                    let colorNames = rTracker_resource.colorNames()[vo!.vcolor]
+                    let colorNames = rTracker_resource.colorNames[vo!.vcolor]
                     cell?.detailTextLabel?.text = "\(vtypeNames) - \(voGraphSet!) - \(colorNames)"
                 }
                 

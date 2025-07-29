@@ -103,7 +103,7 @@ class trackerObj: tObjBase {
     var nextColor: Int {
         let rv = _nextColor
         _nextColor += 1
-        if _nextColor >= rTracker_resource.colorSet().count {
+        if _nextColor >= rTracker_resource.colorSet.count {
             _nextColor = 0
         }
         return rv
@@ -886,7 +886,7 @@ class trackerObj: tObjBase {
         }
 
         //[self nextColor];  // inc safely past last used color
-        if nextColor >= rTracker_resource.colorSet().count {
+        if nextColor >= rTracker_resource.colorSet.count {
             _nextColor = 0
         }
 
@@ -961,7 +961,7 @@ class trackerObj: tObjBase {
         }
 
         //[self nextColor];  // inc safely past last used color
-        if _nextColor >= rTracker_resource.colorSet().count {
+        if _nextColor >= rTracker_resource.colorSet.count {
             _nextColor = 0
         }
 
@@ -1316,7 +1316,7 @@ class trackerObj: tObjBase {
 
         var voc = -1 // default to VOT_CHOICE: choice color is -1 for no color as need to check optdict
         if VOT_CHOICE != vot {
-            voc = rTracker_resource.colorNames().firstIndex(of: vocs ?? "") ?? NSNotFound
+            voc = rTracker_resource.colorNames.firstIndex(of: vocs ?? "") ?? NSNotFound
             if NSNotFound == voc {
                 return rslt
             }
