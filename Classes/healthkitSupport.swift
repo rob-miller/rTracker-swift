@@ -969,6 +969,62 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         }
 #endif
     }
+    
+    func performHealthQueryRange(
+        displayName: String,
+        startDate: Date,
+        endDate: Date,
+        specifiedUnit: HKUnit?,
+        completion: @escaping ([HealthQueryResult]) -> Void
+    ) {
+        guard let queryConfig = healthDataQueries.first(where: { $0.displayName == displayName }) else {
+            DBGLog("No query configuration found for displayName: \(displayName)")
+            completion([])
+            return
+        }
+
+        guard let hkObjectType = queryConfig.identifier.hasPrefix("HKQuantityTypeIdentifier") ?
+            HKObjectType.quantityType(forIdentifier: HKQuantityTypeIdentifier(rawValue: queryConfig.identifier)) :
+            HKObjectType.categoryType(forIdentifier: HKCategoryTypeIdentifier(rawValue: queryConfig.identifier)) else {
+            DBGLog("No HealthKit identifier found for display name: \(displayName)")
+            completion([])
+            return
+        }
+
+        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [])
+        
+        let query = HKSampleQuery(sampleType: hkObjectType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]) { _, samples, error in
+            guard let samples = samples else {
+                DBGErr("Error fetching HealthKit samples for range query: \(error?.localizedDescription ?? "Unknown error")")
+                completion([])
+                return
+            }
+            
+            var results: [HealthQueryResult] = []
+            
+            for sample in samples {
+                let value: Double
+                let unit: HKUnit
+                
+                if let quantitySample = sample as? HKQuantitySample {
+                    let targetUnit = specifiedUnit ?? queryConfig.unit?.first ?? HKUnit.count()
+                    unit = targetUnit
+                    value = quantitySample.quantity.doubleValue(for: targetUnit)
+                } else if let categorySample = sample as? HKCategorySample {
+                    unit = HKUnit.count()
+                    value = Double(categorySample.value)
+                } else {
+                    continue
+                }
+                
+                results.append(HealthQueryResult(date: sample.startDate, value: value, unit: unit))
+            }
+            
+            completion(results)
+        }
+        
+        healthStore.execute(query)
+    }
 
     func getHealthKitDates(
         for displayName: String,

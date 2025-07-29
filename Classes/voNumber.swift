@@ -355,6 +355,18 @@ class voNumber: voState, UITextFieldDelegate {
             vo.optDict["ahksrc"] = AHKSRCDFLT ? "1" : "0"
         }
         
+        if nil == vo.optDict["ahFrequency"] {
+            vo.optDict["ahFrequency"] = AHFREQUENCYDFLT
+        }
+        
+        if nil == vo.optDict["ahTimeFilter"] {
+            vo.optDict["ahTimeFilter"] = AHTIMEFILTERDFLT
+        }
+        
+        if nil == vo.optDict["ahAggregation"] {
+            vo.optDict["ahAggregation"] = AHAGGREGATIONDFLT
+        }
+        
         if nil == vo.optDict["hrsmins"] {
             vo.optDict["hrsmins"] = HRSMINSDFLT ? "1" : "0"
         }
@@ -379,6 +391,9 @@ class voNumber: voState, UITextFieldDelegate {
         if ((key == "nswl") && (val == (NSWLDFLT ? "1" : "0")))
             || ((key == "ahksrc") && ((val == (AHKSRCDFLT ? "1" : "0") || (vo.optDict["ahSource"] == nil))))  // unspecified ahSource disallowed
             || ((key == "ahAvg") && (val == (AHAVGDFLT ? "1" : "0")))
+            || ((key == "ahFrequency") && (val == AHFREQUENCYDFLT))
+            || ((key == "ahTimeFilter") && (val == AHTIMEFILTERDFLT))
+            || ((key == "ahAggregation") && (val == AHAGGREGATIONDFLT))
             || ((key == "hrsmins") && (val == (HRSMINSDFLT ? "1" : "0")))
             || ((key == "ahPrevD") && (val == (AHPREVDDFLT ? "1" : "0")))
             || ((key == "autoscale") && (val == (AUTOSCALEDFLT ? "1" : "0")))
@@ -624,10 +639,14 @@ class voNumber: voState, UITextFieldDelegate {
             DBGLog("hk dates for \(srcName), ahAvg is \(self.vo.optDict["ahAvg"] ?? "1")")
 
             var newDates: [TimeInterval]
-            if self.vo.optDict["ahAvg"] ?? "1" == "1" {
+            let frequency = self.vo.optDict["ahFrequency"] ?? "daily"
+            
+            if frequency == "daily" {
+                // Use original daily logic
                 newDates = to.mergeDates(inDates: hkDates)
             } else {
-                newDates = hkDates
+                // Generate time slots based on frequency
+                newDates = to.generateTimeSlots(from: hkDates, frequency: frequency)
             }
             
             // Insert the new dates into trkrData
@@ -696,122 +715,22 @@ class voNumber: voState, UITextFieldDelegate {
             
             let calendar = Calendar.current
             let secondHKDispatchGroup = DispatchGroup()
+            let frequency = self.vo.optDict["ahFrequency"] ?? "daily"
+            
             for dat in dateSet.sorted() {  // .sorted() is just to help debugging
-                let ddat = Date(timeIntervalSince1970: TimeInterval(dat))
-                let components = calendar.dateComponents([.hour, .minute, .second], from: ddat)
-                
-                if vo.optDict["ahAvg"] ?? "0" == "1" && (components.hour != 12 || components.minute != 0 || components.second != 0) {
-                    continue // Skip to the next entry if ahAvg and the time is not 12:00:00 noon
-                }
-                
-                let prevDate = Int((calendar.date(byAdding: .day, value: -1, to: ddat))!.timeIntervalSince1970)
-                
                 secondHKDispatchGroup.enter() // Enter the group for each query
-
-                let targD = Date(timeIntervalSince1970: TimeInterval(dat))
-                var unit: HKUnit? = nil
-                if let unitString = vo.optDict["ahUnit"] {
-                    unit = HKUnit(from: unitString)
-                }
-
                 
-                //DBGLog("calling phq \(srcName) date \(ddat)  prevD \(self.vo.optDict["ahPrevD"] ?? "nil") prevDate= \(prevDate)")
-                
-                rthk.performHealthQuery(
-                    displayName: srcName,
-                    targetDate: self.vo.optDict["ahPrevD"] ?? "0" == "1" ? prevDate : dat,
-                    specifiedUnit: unit
-                ) { results in
-                    if results.isEmpty {
-                        if self.vo.optDict["ahPrevD"] ?? "0" == "1" {
-                            DBGLog("No results found for postDate \(prevDate).")
-                        } else {
-                            DBGLog("No results found - \(self.vo.valueName!) for \(targD).")
-                        }
-                        let sql = "insert into voHKstatus (id, date, stat) values (\(self.vo.vid), \(dat), \(hkStatus.noData.rawValue))"
-                        to.toExecSql(sql: sql)
-                    } else {
-                        for result in results {
-                            DBGLog("\(results.count) entries - \(self.vo.valueName!) TargetDate: \(targD) results - Date: \(result.date), Value: \(result.value), Unit: \(result.unit)")
-                            break
-                        }
-                        
-                        var result = results.last!
-                        
-                        /*
-                        let rdate = result.date
-                        // This line will help you set a conditional breakpoint
-                        if Calendar.current.isDate(rdate, inSameDayAs: DateComponents(calendar: .current, year: 2025, month: 3, day: 23).date!) {
-                            // Set your breakpoint on this line
-                            DBGLog("Breakpoint will trigger here")
-                        }
-                         */
-                        
-                        if results.count > 1 {
-                            if self.vo.optDict["ahAvg"] ?? "1" == "1" {
-                                // Compute the average value
-                                let totalValue = results.reduce(0.0) { $0 + $1.value }
-                                let averageValue = totalValue / Double(results.count)
-                                
-                                // Get the last date and unit
-                                let lastResult = results.last!
-                                let lastDate = lastResult.date
-                                let lastUnit = lastResult.unit
-                                
-                                // Create the single element
-                                let combinedResult = rtHealthKit.HealthQueryResult(date: lastDate, value: averageValue, unit: lastUnit)
-                                
-                                // Replace all elements with the single element
-                                result = combinedResult
-                            } else {
-                                DBGWarn("\(self.vo.valueName!) multiple (\(results.count)) results for \(targD) no average can only use last")
-                            }
-                        }
-                        
-                        let formattedValue: String
-                        if result.value.truncatingRemainder(dividingBy: 1) == 0 {
-                            // If the value is a whole number, format as an integer
-                            formattedValue = String(format: "%.0f", result.value)
-                        } else {
-                            // Otherwise, format to two decimal places
-                            formattedValue = String(format: "%.2f", result.value)
-                        }
-
-                        if false && self.vo.optDict["ahPrevD"] ?? "0" == "1" {  // if data is for previous day, set to next day, unless that is in future from today
-                            var ddat = Date(timeIntervalSince1970: TimeInterval(dat))
-                            if !calendar.isDateInToday(ddat) {
-                                ddat = calendar.date(byAdding: .day, value: 1, to: ddat)!
-                                let nextdat = Int(ddat.timeIntervalSince1970)
-                                
-                                var sql = "insert into voData (id, date, val) values (\(self.vo.vid), \(nextdat), \(formattedValue))"
-                                to.toExecSql(sql: sql)
-                                sql = "insert into voHKstatus (id, date, stat) values (\(self.vo.vid), \(nextdat), \(hkStatus.hkData.rawValue))"
-                                to.toExecSql(sql: sql)
-                                
-                                // as this is going into day+1, possibly day+1 not in trkrdata but should be, and day-1 should be removed - done below
-                                sql = "insert into trkrData (date, minpriv) values (\(nextdat), \(self.vo.vpriv))"
-
-                                to.toExecSql(sql: sql)
-                            }
-                            // no insert if ahPrevD and dat is in today
-                        } else {
-                            var sql = "insert into voData (id, date, val) values (\(self.vo.vid), \(dat), \(formattedValue))"
-                            to.toExecSql(sql: sql)
-                            sql = "insert into voHKstatus (id, date, stat) values (\(self.vo.vid), \(dat), \(hkStatus.hkData.rawValue))"
-                            to.toExecSql(sql: sql)
-                        }
-                    }
-
-                    // Update progress
-                    if let delegate = to.refreshDelegate, (date == nil || date == 0)  {
-                        // Only update progress during a full refresh (indicated by delegate and not a specific date)
-                        DispatchQueue.main.async {
-                            delegate.updateFullRefreshProgress(step: 1, phase: nil)
-                        }
-                    }
-                    
-                    secondHKDispatchGroup.leave() // Leave the group after this query is processed
-                }
+                // Always use the new time slot processing logic since we now provide
+                // the enhanced interface with frequency/time filter/aggregation controls
+                // The old processDaily is kept only for backward compatibility of existing trackers
+                // that were created before the new system was available
+                self.processTimeSlot(
+                    slotTimestamp: dat,
+                    srcName: srcName,
+                    frequency: frequency,
+                    calendar: calendar,
+                    dispatchGroup: secondHKDispatchGroup
+                )
             }
             
             secondHKDispatchGroup.notify(queue: .main) {[self] in
@@ -895,12 +814,18 @@ class voNumber: voState, UITextFieldDelegate {
                 ahAvg: vo.optDict["ahAvg"] ?? "1" == "1",
                 ahPrevD: vo.optDict["ahPrevD"] ?? "0" == "1",
                 ahHrsMin: vo.optDict["hrsmins"] ?? "0" == "1",
-                onDismiss: { [self] updatedChoice,updatedUnit, updatedAhAvg, updatedAhPrevD, updatedAhHrsMin  in
+                ahFrequency: vo.optDict["ahFrequency"] ?? AHFREQUENCYDFLT,
+                ahTimeFilter: vo.optDict["ahTimeFilter"] ?? AHTIMEFILTERDFLT,
+                ahAggregation: vo.optDict["ahAggregation"] ?? AHAGGREGATIONDFLT,
+                onDismiss: { [self] updatedChoice,updatedUnit, updatedAhAvg, updatedAhPrevD, updatedAhHrsMin, updatedAhFrequency, updatedAhTimeFilter, updatedAhAggregation  in
                     vo.optDict["ahSource"] = updatedChoice
                     vo.optDict["ahUnit"] = updatedUnit
                     vo.optDict["ahAvg"] = updatedAhAvg ? "1" : "0"
                     vo.optDict["ahPrevD"] = updatedAhPrevD ? "1" : "0"
                     vo.optDict["hrsmins"] = updatedAhHrsMin ? "1" : "0"
+                    vo.optDict["ahFrequency"] = updatedAhFrequency
+                    vo.optDict["ahTimeFilter"] = updatedAhTimeFilter
+                    vo.optDict["ahAggregation"] = updatedAhAggregation
                     if let button = ctvovcp?.scroll.subviews.first(where: { $0 is UIButton && $0.accessibilityIdentifier == "configtv_ahSelBtn" }) as? UIButton {
                         DBGLog("ahSelect view returned: \(updatedChoice ?? "nil") \(updatedUnit ?? "nil") optDict is \(vo.optDict["ahSource"] ?? "nil")  \(vo.optDict["ahUnit"] ?? "nil")")
                         DispatchQueue.main.async {
@@ -1025,5 +950,225 @@ class voNumber: voState, UITextFieldDelegate {
 
     override func newVOGD() -> vogd {
         return vogd(vo).initAsNum(vo)
+    }
+    
+    // MARK: - Time Slot Processing
+    
+    private func processDaily(date: Int, srcName: String, calendar: Calendar, dispatchGroup: DispatchGroup) {
+        let ddat = Date(timeIntervalSince1970: TimeInterval(date))
+        let components = calendar.dateComponents([.hour, .minute, .second], from: ddat)
+        
+        if vo.optDict["ahAvg"] ?? "0" == "1" && (components.hour != 12 || components.minute != 0 || components.second != 0) {
+            dispatchGroup.leave()
+            return // Skip to the next entry if ahAvg and the time is not 12:00:00 noon
+        }
+        
+        let prevDate = Int((calendar.date(byAdding: .day, value: -1, to: ddat))!.timeIntervalSince1970)
+        let targD = Date(timeIntervalSince1970: TimeInterval(date))
+        
+        var unit: HKUnit? = nil
+        if let unitString = vo.optDict["ahUnit"] {
+            unit = HKUnit(from: unitString)
+        }
+        
+        rthk.performHealthQuery(
+            displayName: srcName,
+            targetDate: self.vo.optDict["ahPrevD"] ?? "0" == "1" ? prevDate : date,
+            specifiedUnit: unit
+        ) { results in
+            self.handleQueryResults(results, for: date, targD: targD, prevDate: prevDate, dispatchGroup: dispatchGroup)
+        }
+    }
+    
+    private func processTimeSlot(slotTimestamp: Int, srcName: String, frequency: String, calendar: Calendar, dispatchGroup: DispatchGroup) {
+        let to = vo.parentTracker
+        
+        // Calculate time window for this slot
+        let (startTime, endTime) = calculateTimeWindow(for: slotTimestamp, frequency: frequency, calendar: calendar)
+        
+        var unit: HKUnit? = nil
+        if let unitString = vo.optDict["ahUnit"] {
+            unit = HKUnit(from: unitString)
+        }
+        
+        // Query all measurements in the time window
+        rthk.performHealthQueryRange(
+            displayName: srcName,
+            startDate: startTime,
+            endDate: endTime,
+            specifiedUnit: unit
+        ) { allResults in
+            // Apply time filtering
+            let filteredResults = self.applyTimeFilter(results: allResults, timeFilter: self.vo.optDict["ahTimeFilter"] ?? "all_day")
+            
+            // Apply aggregation
+            let aggregatedResult = self.applyAggregation(results: filteredResults, aggregation: self.vo.optDict["ahAggregation"] ?? "avg")
+            
+            // Handle the result
+            if let result = aggregatedResult {
+                self.handleAggregatedResult(result, for: slotTimestamp, dispatchGroup: dispatchGroup)
+            } else {
+                // No data for this slot
+                let sql = "insert into voHKstatus (id, date, stat) values (\(self.vo.vid), \(slotTimestamp), \(hkStatus.noData.rawValue))"
+                to.toExecSql(sql: sql)
+                dispatchGroup.leave()
+            }
+        }
+    }
+    
+    private func calculateTimeWindow(for slotTimestamp: Int, frequency: String, calendar: Calendar) -> (Date, Date) {
+        let slotDate = Date(timeIntervalSince1970: TimeInterval(slotTimestamp))
+        //let components = calendar.dateComponents([.year, .month, .day, .hour], from: slotDate)
+        
+        let intervalHours: Int
+        switch frequency {
+        case "every_1h": intervalHours = 1
+        case "every_2h": intervalHours = 2
+        case "every_4h": intervalHours = 4
+        case "every_6h": intervalHours = 6
+        case "every_8h": intervalHours = 8
+        case "twice_daily": intervalHours = 12
+        default: intervalHours = 24
+        }
+        
+        let startTime = slotDate
+        let endTime = calendar.date(byAdding: .hour, value: intervalHours, to: startTime)!
+        
+        return (startTime, endTime)
+    }
+    
+    private func applyTimeFilter(results: [rtHealthKit.HealthQueryResult], timeFilter: String) -> [rtHealthKit.HealthQueryResult] {
+        let calendar = Calendar.current
+        
+        switch timeFilter {
+        case "morning":
+            return results.filter { result in
+                let hour = calendar.component(.hour, from: result.date)
+                return hour >= 6 && hour < 10
+            }
+        case "daytime":
+            return results.filter { result in
+                let hour = calendar.component(.hour, from: result.date)
+                return hour >= 10 && hour < 20
+            }
+        case "evening":
+            return results.filter { result in
+                let hour = calendar.component(.hour, from: result.date)
+                return hour >= 20 && hour < 23
+            }
+        case "sleep_hours":
+            return results.filter { result in
+                let hour = calendar.component(.hour, from: result.date)
+                return hour >= 23 || hour < 6
+            }
+        case "wake_hours":
+            return results.filter { result in
+                let hour = calendar.component(.hour, from: result.date)
+                return hour >= 6 && hour < 23
+            }
+        default: // "all_day"
+            return results
+        }
+    }
+    
+    private func applyAggregation(results: [rtHealthKit.HealthQueryResult], aggregation: String) -> rtHealthKit.HealthQueryResult? {
+        guard !results.isEmpty else { return nil }
+        
+        let values = results.map { $0.value }
+        let lastResult = results.last!
+        
+        let aggregatedValue: Double
+        switch aggregation {
+        case "first":
+            aggregatedValue = results.first!.value
+        case "last":
+            aggregatedValue = results.last!.value
+        case "min":
+            aggregatedValue = values.min()!
+        case "max":
+            aggregatedValue = values.max()!
+        case "median":
+            let sortedValues = values.sorted()
+            let count = sortedValues.count
+            if count % 2 == 0 {
+                aggregatedValue = (sortedValues[count/2 - 1] + sortedValues[count/2]) / 2.0
+            } else {
+                aggregatedValue = sortedValues[count/2]
+            }
+        default: // "avg"
+            aggregatedValue = values.reduce(0.0, +) / Double(values.count)
+        }
+        
+        return rtHealthKit.HealthQueryResult(date: lastResult.date, value: aggregatedValue, unit: lastResult.unit)
+    }
+    
+    private func handleQueryResults(_ results: [rtHealthKit.HealthQueryResult], for date: Int, targD: Date, prevDate: Int, dispatchGroup: DispatchGroup) {
+        let to = vo.parentTracker
+        
+        if results.isEmpty {
+            if self.vo.optDict["ahPrevD"] ?? "0" == "1" {
+                DBGLog("No results found for postDate \(prevDate).")
+            } else {
+                DBGLog("No results found - \(self.vo.valueName!) for \(targD).")
+            }
+            let sql = "insert into voHKstatus (id, date, stat) values (\(self.vo.vid), \(date), \(hkStatus.noData.rawValue))"
+            to.toExecSql(sql: sql)
+        } else {
+            var result = results.last!
+            
+            if results.count > 1 {
+                if self.vo.optDict["ahAvg"] ?? "1" == "1" {
+                    // Compute the average value
+                    let totalValue = results.reduce(0.0) { $0 + $1.value }
+                    let averageValue = totalValue / Double(results.count)
+                    result = rtHealthKit.HealthQueryResult(date: result.date, value: averageValue, unit: result.unit)
+                } else {
+                    DBGWarn("\(self.vo.valueName!) multiple (\(results.count)) results for \(targD) no average can only use last")
+                }
+            }
+            
+            let formattedValue = formatHealthKitValue(result.value)
+            
+            var sql = "insert into voData (id, date, val) values (\(self.vo.vid), \(date), \(formattedValue))"
+            to.toExecSql(sql: sql)
+            sql = "insert into voHKstatus (id, date, stat) values (\(self.vo.vid), \(date), \(hkStatus.hkData.rawValue))"
+            to.toExecSql(sql: sql)
+        }
+        
+        // Update progress
+        if let delegate = to.refreshDelegate {
+            DispatchQueue.main.async {
+                delegate.updateFullRefreshProgress(step: 1, phase: nil)
+            }
+        }
+        
+        dispatchGroup.leave()
+    }
+    
+    private func handleAggregatedResult(_ result: rtHealthKit.HealthQueryResult, for slotTimestamp: Int, dispatchGroup: DispatchGroup) {
+        let to = vo.parentTracker
+        let formattedValue = formatHealthKitValue(result.value)
+        
+        var sql = "insert into voData (id, date, val) values (\(self.vo.vid), \(slotTimestamp), \(formattedValue))"
+        to.toExecSql(sql: sql)
+        sql = "insert into voHKstatus (id, date, stat) values (\(self.vo.vid), \(slotTimestamp), \(hkStatus.hkData.rawValue))"
+        to.toExecSql(sql: sql)
+        
+        // Update progress
+        if let delegate = to.refreshDelegate {
+            DispatchQueue.main.async {
+                delegate.updateFullRefreshProgress(step: 1, phase: nil)
+            }
+        }
+        
+        dispatchGroup.leave()
+    }
+    
+    private func formatHealthKitValue(_ value: Double) -> String {
+        if value.truncatingRemainder(dividingBy: 1) == 0 {
+            return String(format: "%.0f", value)
+        } else {
+            return String(format: "%.2f", value)
+        }
     }
 }

@@ -117,9 +117,24 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
 
         if tempValObj == nil {
             tempValObj = valueObj(parentOnly: parentTrackerObj!)
+            // Set default graph type to 'no graph' for new valueObjs
+            tempValObj?.vGraphType = VOG_NONE
             graphTypes = voState.voGraphSetNum() //[valueObj graphsForVOT:VOT_NUMBER];
+            
+            // Find the "no graph" row in graphTypes and select it
+            var noGraphRow = 0
+            if let graphTypes = graphTypes {
+                for (index, graphType) in graphTypes.enumerated() {
+                    if let graphTypeStr = graphType as? String, graphTypeStr == "no graph" {
+                        noGraphRow = index
+                        break
+                    }
+                }
+            }
+            
             safeDispatchSync({ [self] in
                 votPicker.selectRow(parentTrackerObj?.nextColor ?? 0, inComponent: 1, animated: false)
+                votPicker.selectRow(noGraphRow, inComponent: 2, animated: false)
             })
         } else {
             labelField.text = tempValObj!.valueName

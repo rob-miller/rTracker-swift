@@ -21,9 +21,10 @@ struct HealthDataQuery {
     let info: String?
     
     enum AggregationType {
-        //case discreteArithmetic     // Independent values
-        //case cumulativeDaily        // Daily aggregation (e.g., calories)
-        case groupedByNight         // Nightly grouping (e.g., sleep analysis)
+        case groupedByNight         // Sleep data - no averaging controls (single value per night)
+        case highFrequency          // HRV, Heart Rate - many readings per day, need full controls
+        case lowFrequencyMultiple   // Weight, Blood Pressure - typically one reading but may have multiple
+        case cumulativeDaily        // Steps, Active Energy - values that should be summed over time periods
     }
 }
 
@@ -36,7 +37,7 @@ let healthDataQueries: [HealthDataQuery] = [
         needUnit: false,
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
-        aggregationType: nil,
+        aggregationType: .lowFrequencyMultiple,
         aggregationTime: nil,
         info: nil
 
@@ -61,7 +62,7 @@ let healthDataQueries: [HealthDataQuery] = [
         needUnit: false,
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
-        aggregationType: nil,
+        aggregationType: .lowFrequencyMultiple,
         aggregationTime: nil,
         info: nil
 
@@ -323,7 +324,7 @@ let healthDataQueries: [HealthDataQuery] = [
         needUnit: false,
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
-        aggregationType: nil,
+        aggregationType: .highFrequency,
         aggregationTime: nil,
         info: nil
     ),
@@ -335,7 +336,7 @@ let healthDataQueries: [HealthDataQuery] = [
         needUnit: false,
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
-        aggregationType: nil,
+        aggregationType: .highFrequency,
         aggregationTime: nil,
         info: nil
     ),
@@ -347,7 +348,7 @@ let healthDataQueries: [HealthDataQuery] = [
         needUnit: false,
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
-        aggregationType: nil,
+        aggregationType: .lowFrequencyMultiple,
         aggregationTime: nil,
         info: nil
     ),
@@ -431,7 +432,7 @@ let healthDataQueries: [HealthDataQuery] = [
         needUnit: false,
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
-        aggregationType: nil,
+        aggregationType: .lowFrequencyMultiple,
         aggregationTime: nil,
         info: nil
     ),
@@ -443,7 +444,7 @@ let healthDataQueries: [HealthDataQuery] = [
         needUnit: false,
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
-        aggregationType: nil,
+        aggregationType: .lowFrequencyMultiple,
         aggregationTime: nil,
         info: nil
     ),
@@ -455,7 +456,7 @@ let healthDataQueries: [HealthDataQuery] = [
         needUnit: false,
         aggregationStyle: .cumulative,
         customProcessor: nil,
-        aggregationType: nil,
+        aggregationType: .cumulativeDaily,
         aggregationTime: DateComponents(hour: 23, minute: 59), // midnight end of day
         info: nil
     ),
@@ -467,7 +468,7 @@ let healthDataQueries: [HealthDataQuery] = [
         needUnit: false,
         aggregationStyle: .cumulative,
         customProcessor: nil,
-        aggregationType: nil,
+        aggregationType: .cumulativeDaily,
         aggregationTime: DateComponents(hour: 23, minute: 59), // midnight end of day
         info: nil
     ),
@@ -479,7 +480,7 @@ let healthDataQueries: [HealthDataQuery] = [
         needUnit: false,
         aggregationStyle: .cumulative,
         customProcessor: nil,
-        aggregationType: nil,
+        aggregationType: .cumulativeDaily,
         aggregationTime: DateComponents(hour: 23, minute: 59), // midnight end of day
         info: nil
     ),

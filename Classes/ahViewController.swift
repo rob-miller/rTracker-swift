@@ -10,13 +10,16 @@ import SwiftUI
 import HealthKit
 
 struct ahViewController: View {
-    var onDismiss: (String?, String?, Bool, Bool, Bool) -> Void
+    var onDismiss: (String?, String?, Bool, Bool, Bool, String, String, String) -> Void
     @Environment(\.dismiss) var dismiss // For the Back/Exit button
     @State private var currentSelection: String? // Stores the datasource selection
     @State private var currentUnit: HKUnit? // Tracks the selected unit
     @State private var avgDataSwitch: Bool  // Tracks avg value switch
     @State private var prevDateSwitch: Bool  // Tracks previous date switch
     @State private var hrsMinSwitch: Bool = false  // Tracks hrs:mins display format switch
+    @State private var ahFrequency: String = "daily"  // Tracks frequency selection
+    @State private var ahTimeFilter: String = "all_day"  // Tracks time filter selection  
+    @State private var ahAggregation: String = "avg"  // Tracks aggregation selection
     @State private var showingAvgInfo = false // For average info popup
     @State private var showingPrevDayInfo = false // For previous day info popup
     @State private var showingConfigInfo = false // For selected config info popup
@@ -24,7 +27,7 @@ struct ahViewController: View {
     @State private var seenMinuteSelections: Set<String> = []  // Add this to track which selections we've seen
     @ObservedObject var rthk = rtHealthKit.shared
     
-    init(selectedChoice: String?, selectedUnitString: String?, ahAvg: Bool, ahPrevD: Bool, ahHrsMin: Bool = false, onDismiss: @escaping (String?, String?, Bool, Bool, Bool) -> Void) {
+    init(selectedChoice: String?, selectedUnitString: String?, ahAvg: Bool, ahPrevD: Bool, ahHrsMin: Bool = false, ahFrequency: String = "daily", ahTimeFilter: String = "all_day", ahAggregation: String = "avg", onDismiss: @escaping (String?, String?, Bool, Bool, Bool, String, String, String) -> Void) {
         self.onDismiss = onDismiss
         self._currentSelection = State(initialValue: selectedChoice)
         if let unitString = selectedUnitString {
@@ -36,6 +39,9 @@ struct ahViewController: View {
         prevDateSwitch = ahPrevD
         _hrsMinSwitch = State(initialValue: ahHrsMin)
         _previousHrsMinState = State(initialValue: ahHrsMin)
+        _ahFrequency = State(initialValue: ahFrequency)
+        _ahTimeFilter = State(initialValue: ahTimeFilter)
+        _ahAggregation = State(initialValue: ahAggregation)
     }
     
     var body: some View {
@@ -78,6 +84,15 @@ struct ahViewController: View {
                 
                 // Previous day switch
                 previousDaySection
+                
+                // Frequency selection
+                frequencySection
+                
+                // Time filter selection  
+                timeFilterSection
+                
+                // Aggregation selection
+                aggregationSection
             }
             .padding()
             .navigationTitle("Choose source")
@@ -192,8 +207,9 @@ struct ahViewController: View {
     
     private var averageDataSection: some View {
         ZStack {
-            if let selectedConfig = selectedConfiguration(),
-               selectedConfig.aggregationStyle == .discreteArithmetic {
+            // Show old toggle only for data sources that don't have aggregationType specified
+            // or for .lowFrequencyMultiple sources that may benefit from simple averaging
+            if shouldShowOldAverageToggle() {
                 HStack {
                     Text("Average daily results at 12:00")
                         .font(.system(size: 16))
@@ -257,13 +273,104 @@ struct ahViewController: View {
         }
     }
     
+    private var frequencySection: some View {
+        ZStack {
+            if shouldShowNewControls() {
+                VStack {
+                    HStack {
+                        Text("Frequency")
+                            .font(.system(size: 16))
+                            .foregroundColor(.primary)
+                        Spacer()
+                    }
+                    
+                    Picker("Frequency", selection: $ahFrequency) {
+                        Text("Daily").tag("daily")
+                        Text("Every 1h").tag("every_1h")
+                        Text("Every 2h").tag("every_2h")
+                        Text("Every 4h").tag("every_4h")
+                        Text("Every 6h").tag("every_6h")
+                        Text("Every 8h").tag("every_8h")
+                        Text("Twice daily").tag("twice_daily")
+                    }
+                    .pickerStyle(MenuPickerStyle())
+                }
+                .padding()
+            } else {
+                Color.clear
+            }
+        }
+        .frame(height: 60)
+    }
+    
+    private var timeFilterSection: some View {
+        ZStack {
+            if shouldShowNewControls() {
+                VStack {
+                    HStack {
+                        Text("Time Filter")
+                            .font(.system(size: 16))
+                            .foregroundColor(.primary)
+                        Spacer()
+                    }
+                    
+                    Picker("Time Filter", selection: $ahTimeFilter) {
+                        Text("All day").tag("all_day")
+                        Text("Morning").tag("morning")
+                        Text("Daytime").tag("daytime")
+                        Text("Evening").tag("evening")
+                        Text("Sleep hours").tag("sleep_hours")
+                        Text("Wake hours").tag("wake_hours")
+                    }
+                    .pickerStyle(MenuPickerStyle())
+                }
+                .padding()
+            } else {
+                Color.clear
+            }
+        }
+        .frame(height: 60)
+    }
+    
+    private var aggregationSection: some View {
+        ZStack {
+            if shouldShowNewControls() {
+                VStack {
+                    HStack {
+                        Text("Aggregation")
+                            .font(.system(size: 16))
+                            .foregroundColor(.primary)
+                        Spacer()
+                    }
+                    
+                    Picker("Aggregation", selection: $ahAggregation) {
+                        if shouldShowSumOption() {
+                            Text("Sum").tag("sum")
+                        }
+                        Text("Average").tag("avg")
+                        Text("First").tag("first")
+                        Text("Last").tag("last")
+                        Text("Minimum").tag("min")
+                        Text("Maximum").tag("max")
+                        Text("Median").tag("median")
+                    }
+                    .pickerStyle(MenuPickerStyle())
+                }
+                .padding()
+            } else {
+                Color.clear
+            }
+        }
+        .frame(height: 60)
+    }
+    
     private var bottomToolbar: some View {
         HStack {
             Button(action: {
                 if currentSelection == nil {
                     currentSelection = rthk.configurations.first?.displayName
                 }
-                onDismiss(currentSelection, currentUnit?.unitString, avgDataSwitch, prevDateSwitch, hrsMinSwitch)
+                onDismiss(currentSelection, currentUnit?.unitString, avgDataSwitch, prevDateSwitch, hrsMinSwitch, ahFrequency, ahTimeFilter, ahAggregation)
                 dismiss()
             }) {
                 Text("\u{2611}")
@@ -285,6 +392,31 @@ struct ahViewController: View {
     // Helper function to find the selected configuration
     private func selectedConfiguration() -> HealthDataQuery? {
         return rthk.configurations.first { $0.displayName == currentSelection }
+    }
+    
+    // Determine if old average toggle should be shown
+    private func shouldShowOldAverageToggle() -> Bool {
+        guard let config = selectedConfiguration() else { return false }
+        
+        // Show old toggle only for data sources without aggregationType specified
+        // or for .lowFrequencyMultiple sources that may benefit from simple averaging
+        return config.aggregationType == nil || config.aggregationType == .lowFrequencyMultiple
+    }
+    
+    // Determine if new controls (frequency/time filter/aggregation) should be shown
+    private func shouldShowNewControls() -> Bool {
+        guard let config = selectedConfiguration() else { return false }
+        
+        // Show new controls for .highFrequency sources that need full control
+        return config.aggregationType == .highFrequency
+    }
+    
+    // Determine if Sum option should appear in aggregation picker
+    private func shouldShowSumOption() -> Bool {
+        guard let config = selectedConfiguration() else { return false }
+        
+        // Show Sum option only for .cumulativeDaily sources
+        return config.aggregationType == .cumulativeDaily
     }
     
     // Reusable info sheet view

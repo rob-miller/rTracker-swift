@@ -376,6 +376,71 @@ class trackerObj: tObjBase {
         return newDates
     }
     
+    func generateTimeSlots(from hkDates: [TimeInterval], frequency: String) -> [TimeInterval] {
+        let existingDatesQuery = "SELECT date FROM trkrData order by date DESC"
+        let existingDatesArr = toQry2AryI(sql: existingDatesQuery)
+        let existingDates = Set(existingDatesArr.map { TimeInterval($0) })
+        
+        let calendar = Calendar.current
+        var timeSlots: [TimeInterval] = []
+        
+        // Determine interval based on frequency
+        let intervalHours: Int
+        let slotsPerDay: Int
+        
+        switch frequency {
+        case "every_1h":
+            intervalHours = 1
+            slotsPerDay = 24
+        case "every_2h":
+            intervalHours = 2
+            slotsPerDay = 12
+        case "every_4h":
+            intervalHours = 4
+            slotsPerDay = 6
+        case "every_6h":
+            intervalHours = 6
+            slotsPerDay = 4
+        case "every_8h":
+            intervalHours = 8
+            slotsPerDay = 3
+        case "twice_daily":
+            intervalHours = 12
+            slotsPerDay = 2
+        default:
+            return mergeDates(inDates: hkDates) // fallback to daily
+        }
+        
+        // Get unique days from HealthKit data
+        let uniqueDays = Set(hkDates.map { hkDate in
+            let date = Date(timeIntervalSince1970: hkDate)
+            return calendar.startOfDay(for: date)
+        })
+        
+        // Generate time slots for each day
+        for dayStart in uniqueDays {
+            // Skip today - current tracker handles it
+            if calendar.isDateInToday(dayStart) {
+                continue
+            }
+            
+            // Generate slots for this day
+            for slot in 0..<slotsPerDay {
+                let slotTime = calendar.date(byAdding: .hour, value: slot * intervalHours, to: dayStart)!
+                let slotTimeInterval = slotTime.timeIntervalSince1970
+                
+                // Only add if not already exists
+                if !existingDates.contains(slotTimeInterval) {
+                    timeSlots.append(slotTimeInterval)
+                }
+            }
+        }
+        
+        // Filter out future dates
+        let now = Date()
+        return timeSlots.filter { Date(timeIntervalSince1970: $0) <= now }
+    }
+    
     func loadOTdates(forDate date: Int? = nil) {
         // instantiate trkrData dates for external trackers
         for vo in self.valObjTable {

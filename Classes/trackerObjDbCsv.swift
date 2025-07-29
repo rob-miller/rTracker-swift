@@ -57,13 +57,23 @@ extension trackerObj {
 
     func confirmDb() {
         dbgNSAssert(super.toid != 0, "tObj confirmDb toid=0")
+        
         if dbName == nil {
             dbName = String(format: "trkr%ld.sqlite3", super.toid)
             //self.dbName = [[NSString alloc] initWithFormat:@"trkr%d.sqlite3",super.toid];
-            getTDb()
-            initTDb()
         }
-        initReminderTable() // outside because added later
+        
+        // Always ensure database connection is available
+        if tDb == nil {
+            getTDb()
+        }
+        
+        // Always ensure core database structure is initialized
+        // initTDb() is safe to call multiple times (uses "if not exists")
+        initTDb()
+        
+        // Always ensure reminder table exists (was added later)
+        initReminderTable()
     }
 
     
@@ -371,10 +381,15 @@ extension trackerObj {
         }
         
         if vid == nil {
-            let sql = whereClause.isEmpty ?
-            "delete from trkrData;" :
-            "delete from trkrData where \(whereClause);"
-            toExecSql(sql: sql)
+            // When deleting all records (vid == nil), also clear trkrData and ignoreRecords
+            let additionalTables = ["trkrData", "ignoreRecords"]
+            
+            for table in additionalTables {
+                let sql = whereClause.isEmpty ?
+                    "delete from \(table);" :
+                    "delete from \(table) where \(whereClause);"
+                toExecSql(sql: sql)
+            }
         }
     }
 
