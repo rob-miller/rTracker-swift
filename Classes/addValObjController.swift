@@ -109,7 +109,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
 
         infoBtn.titleLabel?.font = .systemFont(ofSize: 28.0)
 
-        sizeVOTLabel = addValObjController.maxLabel(fromArray: rTracker_resource.vtypeNames()) //self.parentTrackerObj.votArray];
+        sizeVOTLabel = addValObjController.maxLabel(fromArray: rTracker_resource.vtypeNames) //self.parentTrackerObj.votArray];
         let allGraphs = valueObj.allGraphs()
         sizeGTLabel = addValObjController.maxLabel(fromArray: allGraphs)
 
@@ -324,7 +324,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
         }
 
         #if DEBUGLOG
-        let selected = rTracker_resource.vtypeNames()[row]
+        let selected = rTracker_resource.vtypeNames[row]
         DBGLog(String("save label: \(tempValObj!.valueName) id: \(Int(tempValObj!.vid)) row: \(UInt(row)) = \(selected)"))
         #endif
 
@@ -410,7 +410,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
     func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
         switch component {
         case 0:
-            return rTracker_resource.vtypeNames().count//[self.parentTrackerObj.votArray count];
+            return rTracker_resource.vtypeNames.count//[self.parentTrackerObj.votArray count];
         case 1:
             //return [self.parentTrackerObj.colorSet count];
             return colorCount
@@ -434,7 +434,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
     ) -> String? {
         switch component {
         case 0:
-            return rTracker_resource.vtypeNames()?[row] as? String // [self.parentTrackerObj.votArray objectAtIndex:row];
+            return rTracker_resource.vtypeNames?[row] as? String // [self.parentTrackerObj.votArray objectAtIndex:row];
         case 1:
             //return [self.paretntTrackerObj.colorSet objectAtIndex:row];
             return "color"
@@ -464,7 +464,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
             frame.origin.y = 0.0
             label = UILabel(frame: frame)
             label?.backgroundColor = .clear //]greenColor];
-            label?.text = rTracker_resource.vtypeNames()[row] // (self.parentTrackerObj.votArray)[row];
+            label?.text = rTracker_resource.vtypeNames[row] // (self.parentTrackerObj.votArray)[row];
             label?.font = .boldSystemFont(ofSize: cgfFONTSIZE)
         case 1:
             frame.size.height = 1.2 * cgfCOLORSIDE

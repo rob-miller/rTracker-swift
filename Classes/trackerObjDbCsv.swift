@@ -138,7 +138,7 @@ extension trackerObj {
                 if VOT_INFO != vo.vtype || ("1" == vo.optDict["infosave"]) {
                     haveChoice = haveChoice || (vo.vtype == VOT_CHOICE)
                     var voStr: String? = nil
-                    let vtypeNames = rTracker_resource.vtypeNames()[vo.vtype]
+                    let vtypeNames = rTracker_resource.vtypeNames[vo.vtype]
                     voStr = String(format: "%@:%@:%ld", vtypeNames, (vo.vcolor > -1 ? rTracker_resource.colorNames[vo.vcolor] : ""), vo.vid)
                     
                     outString = outString + ",\(csvSafe(voStr) ?? "")"

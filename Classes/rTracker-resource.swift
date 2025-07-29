@@ -504,19 +504,17 @@ class rTracker_resource: NSObject {
         "darkGray"
     ]
 
-    class func vtypeNames() -> [String] {
-        // indexes must match defns in valueObj.h 
-        return [
-            "number",
-            "text",
-            "textbox",
-            "slider",
-            "choice",
-            "yes/no",
-            "function",
-            "info"
-        ]
-    }
+    // indexes must match defns in valueObj.h 
+    static let vtypeNames: [String] = [
+        "number",
+        "text",
+        "textbox",
+        "slider",
+        "choice",
+        "yes/no",
+        "function",
+        "info"
+    ]
 
     class func startActivityIndicator(_ view: UIView?, navItem: UINavigationItem?, disable: Bool, str: String?) {
         DBGLog("start spinner")

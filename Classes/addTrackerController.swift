@@ -692,18 +692,18 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 cell?.accessoryType = .detailDisclosureButton
                 
                 if "0" == vo!.optDict["graph"] || vo!.vGraphType == VOG_NONE {
-                    let vtypeNames = rTracker_resource.vtypeNames()[vo!.vtype]
+                    let vtypeNames = rTracker_resource.vtypeNames[vo!.vtype]
                     cell?.detailTextLabel?.text = "\(vtypeNames) - no graph"
                     
                 } else if VOT_CHOICE == vo!.vtype {
-                    let vtypeNames = rTracker_resource.vtypeNames()[vo!.vtype]
+                    let vtypeNames = rTracker_resource.vtypeNames[vo!.vtype]
                     let voGraphSet = (vo?.vos?.voGraphSet())?[vo!.vGraphType]
                     cell?.detailTextLabel?.text = "\(vtypeNames) - \(voGraphSet!)"
                 } else if VOT_INFO == vo!.vtype {
-                    let vtypeNames = rTracker_resource.vtypeNames()[vo!.vtype]
+                    let vtypeNames = rTracker_resource.vtypeNames[vo!.vtype]
                     cell?.detailTextLabel?.text = "\(vtypeNames)"
                 } else {
-                    let vtypeNames = rTracker_resource.vtypeNames()[vo!.vtype]
+                    let vtypeNames = rTracker_resource.vtypeNames[vo!.vtype]
                     let voGraphSet = (vo?.vos?.voGraphSet())?[vo!.vGraphType]
                     let colorNames = rTracker_resource.colorNames[vo!.vcolor]
                     cell?.detailTextLabel?.text = "\(vtypeNames) - \(voGraphSet!) - \(colorNames)"

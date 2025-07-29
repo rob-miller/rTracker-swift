@@ -1297,7 +1297,7 @@ class trackerObj: tObjBase {
             return rslt
         }
 
-        let vot = rTracker_resource.vtypeNames().firstIndex(of: vots ?? "") ?? NSNotFound // [self.votArray indexOfObject:vots];
+        let vot = rTracker_resource.vtypeNames.firstIndex(of: vots ?? "") ?? NSNotFound // [self.votArray indexOfObject:vots];
         if NSNotFound == vot {
             return rslt
         }

@@ -290,7 +290,7 @@ extension voFunction {
                     if 0 > vt {
                         fstr += "noType"
                     } else {
-                        fstr += rTracker_resource.vtypeNames()[vt]
+                        fstr += rTracker_resource.vtypeNames[vt]
                     }
                 } else {
                     fstr += MyTracker.voGetName(forVID: i)!  // could get from self.fnStrs
@@ -538,7 +538,7 @@ extension voFunction {
         if ep! >= 0 || ep! <= -TMPUNIQSTART {
             // endpoint is vid and valobj saved, or tmp vid as valobj not saved
             if dbg {
-                let vtypeNames = rTracker_resource.vtypeNames()[MyTracker.getValObj(ep!)!.vtype]
+                let vtypeNames = rTracker_resource.vtypeNames[MyTracker.getValObj(ep!)!.vtype]
                 return "\(pre) \(vtypeNames)"
             } else {
                 return "\(pre) \(MyTracker.getValObj(ep!)!.valueName!)"

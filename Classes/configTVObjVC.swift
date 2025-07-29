@@ -180,7 +180,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
 
 
         if (name == nil) || (name == "") {
-            let vtypeNames = rTracker_resource.vtypeNames()[vo?.vtype ?? 0]
+            let vtypeNames = rTracker_resource.vtypeNames[vo?.vtype ?? 0]
             name = "<\(vtypeNames)>"
              // (self.to.votArray)[self.vo.vtype]];
         }
