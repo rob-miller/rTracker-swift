@@ -845,11 +845,43 @@ class voNumber: voState, UITextFieldDelegate {
                 to.toExecSql(sql: "delete from voData where id = \(vo.vid) and date = \(specificDate)")
                 to.toExecSql(sql: "delete from voHKstatus where id = \(vo.vid) and date = \(specificDate)")
             }
+            
+            // Clear cache entries for this specific date
+            if let ahSource = vo.optDict["ahSource"] {
+                let calendar = Calendar.current
+                let targetDate = Date(timeIntervalSince1970: TimeInterval(specificDate))
+                
+                // Clear cache for the actual date
+                let haveUnit = vo.optDict["ahUnit"] != nil
+                let unitStr = haveUnit ? vo.optDict["ahUnit"]! : "default"
+                let cacheKey = "\(ahSource)-\(specificDate)-\(unitStr)"
+                Self.healthKitCache.removeValue(forKey: cacheKey)
+                DBGLog("Cleared cache key: \(cacheKey)")
+                
+                // If ahPrevD is enabled, also clear cache for previous day since that's what gets queried
+                if vo.optDict["ahPrevD"] ?? "0" == "1" {
+                    if let prevDate = calendar.date(byAdding: .day, value: -1, to: targetDate) {
+                        let prevDateTimestamp = Int(prevDate.timeIntervalSince1970)
+                        let prevCacheKey = "\(ahSource)-\(prevDateTimestamp)-\(unitStr)"
+                        Self.healthKitCache.removeValue(forKey: prevCacheKey)
+                        DBGLog("Cleared prevD cache key: \(prevCacheKey)")
+                    }
+                }
+            }
         } else {
             sql = "delete from voData where (id, date) in (select id, date from voHKstatus where id = \(vo.vid))"
             to.toExecSql(sql: sql)
             sql = "delete from voHKstatus where id = \(vo.vid)"
             to.toExecSql(sql: sql)
+            
+            // Clear all cache entries for this value object's ahSource
+            if let ahSource = vo.optDict["ahSource"] {
+                let keysToRemove = Self.healthKitCache.keys.filter { $0.hasPrefix("\(ahSource)-") }
+                for key in keysToRemove {
+                    Self.healthKitCache.removeValue(forKey: key)
+                }
+                DBGLog("Cleared \(keysToRemove.count) cache entries for ahSource: \(ahSource)")
+            }
         }
     }
     
