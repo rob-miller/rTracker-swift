@@ -504,6 +504,19 @@ class rTracker_resource: NSObject {
         "darkGray"
     ]
 
+    // Spectrum-ordered colors for charts - no white, black, or grays
+    static let colorSpectrum: [UIColor] = [
+        UIColor.red,              // Red (700nm)
+        UIColor.orange,           // Orange (620nm)
+        UIColor.yellow,           // Yellow (580nm)  
+        UIColor.systemGreen,      // Green (530nm)
+        UIColor.cyan,             // Cyan (490nm)
+        UIColor.blue,             // Blue (470nm)
+        UIColor.systemIndigo,     // Indigo (450nm)
+        UIColor.purple,           // Purple (420nm)
+        UIColor.magenta           // Magenta (back to red spectrum)
+    ]
+
     // indexes must match defns in valueObj.h 
     static let vtypeNames: [String] = [
         "number",

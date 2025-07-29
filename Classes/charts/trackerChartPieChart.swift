@@ -463,7 +463,7 @@ extension TrackerChart {
                 }
                 
             case VOT_CHOICE:
-                let colorSet = rTracker_resource.colorSet
+                let colorSet = rTracker_resource.colorSet  // Use original colorSet for choice indices
                 var choiceColors: [String: UIColor] = [:]
                 
                 // Get ordered keys from valueObj's optDict - ensuring consistent order
@@ -850,15 +850,15 @@ extension TrackerChart {
                 var lineColor: UIColor
                 switch recentDataIndicatorState {
                 case 1:
-                    lineColor = rTracker_resource.colorSet[0] // red
+                    lineColor = rTracker_resource.colorSpectrum[0] // red
                 case 2:
-                    lineColor = rTracker_resource.colorSet[1] // green
+                    lineColor = rTracker_resource.colorSpectrum[1] // green
                 case 3:
-                    lineColor = rTracker_resource.colorSet[2] // blue
+                    lineColor = rTracker_resource.colorSpectrum[2] // blue
                 case 4:
-                    lineColor = rTracker_resource.colorSet[3] // cyan
+                    lineColor = rTracker_resource.colorSpectrum[3] // cyan
                 case 5:
-                    lineColor = rTracker_resource.colorSet[4] // yellow
+                    lineColor = rTracker_resource.colorSpectrum[4] // yellow
                 default:
                     lineColor = .black
                 }
@@ -890,7 +890,7 @@ extension TrackerChart {
          let regularKeys = keys.filter { $0 != "No Entry" }
          
          // Use colorSet sequence for consistent colors
-         let colorSet = rTracker_resource.colorSet
+         let colorSet = rTracker_resource.colorSpectrum
          for (index, key) in regularKeys.enumerated() {
              let colorIndex = index % colorSet.count
              colorMap[key] = colorSet[colorIndex]
@@ -916,7 +916,7 @@ extension TrackerChart {
             
         case VOT_CHOICE:
             var choiceColors: [String: UIColor] = [:]
-            let colorSet = rTracker_resource.colorSet
+            let colorSet = rTracker_resource.colorSet  // Use original colorSet for choice indices
             
             // Build mapping of choice names to their assigned colors
             for i in 0..<CHOICES {
@@ -935,7 +935,7 @@ extension TrackerChart {
         default:
             // Use colorSet sequence for other types
             var colors: [UIColor] = []
-            let colorSet = rTracker_resource.colorSet
+            let colorSet = rTracker_resource.colorSpectrum
             for i in 0..<count {
                 let colorIndex = i % colorSet.count
                 colors.append(colorSet[colorIndex])
