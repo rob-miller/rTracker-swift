@@ -1170,7 +1170,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         sql = "select count(*) from voConfig"
         let itemCount = to?.toQry2Int(sql:sql) ?? 0
 
-        titleStr = String(format: "tracker number %ld\n%d items\n%d date entries\n%d data points", Int(to?.toid ?? 0), itemCount, dateEntries, dataPoints)
+        titleStr = String(format: "tracker number %ld\n%d values\n%d date entries\n%d data points", Int(to?.toid ?? 0), itemCount, dateEntries, dataPoints)
 
         sql = "select count(*) from (select * from voData where id not in (select id from voConfig))"
         let orphanDatapoints = to?.toQry2Int(sql:sql) ?? 0
