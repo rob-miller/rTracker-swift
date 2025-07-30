@@ -10,7 +10,7 @@ import SwiftUI
 import HealthKit
 
 struct ahViewController: View {
-    var onDismiss: (String?, String?, Bool, Bool, Bool, String, String, String) -> Void
+    var onDismiss: (String?, String?, Bool, Bool, String, String, String) -> Void
     @Environment(\.dismiss) var dismiss // For the Back/Exit button
     @State private var currentSelection: String? // Stores the datasource selection
     @State private var currentUnit: HKUnit? // Tracks the selected unit
@@ -27,7 +27,7 @@ struct ahViewController: View {
     @State private var seenMinuteSelections: Set<String> = []  // Add this to track which selections we've seen
     @ObservedObject var rthk = rtHealthKit.shared
     
-    init(selectedChoice: String?, selectedUnitString: String?, ahAvg: Bool, ahPrevD: Bool, ahHrsMin: Bool = false, ahFrequency: String = "daily", ahTimeFilter: String = "all_day", ahAggregation: String = "avg", onDismiss: @escaping (String?, String?, Bool, Bool, Bool, String, String, String) -> Void) {
+    init(selectedChoice: String?, selectedUnitString: String?, ahPrevD: Bool, ahHrsMin: Bool = false, ahFrequency: String = "daily", ahTimeFilter: String = "all_day", ahAggregation: String = "avg", onDismiss: @escaping (String?, String?, Bool, Bool, String, String, String) -> Void) {
         self.onDismiss = onDismiss
         self._currentSelection = State(initialValue: selectedChoice)
         if let unitString = selectedUnitString {
@@ -35,7 +35,7 @@ struct ahViewController: View {
         } else {
             self._currentUnit = State(initialValue: nil)
         }
-        avgDataSwitch = ahAvg
+        avgDataSwitch = false  // Always false - no averaging needed
         prevDateSwitch = ahPrevD
         _hrsMinSwitch = State(initialValue: ahHrsMin)
         _previousHrsMinState = State(initialValue: ahHrsMin)
@@ -344,9 +344,6 @@ struct ahViewController: View {
                     }
                     
                     Picker("Aggregation", selection: $ahAggregation) {
-                        if shouldShowSumOption() {
-                            Text("Sum").tag("sum")
-                        }
                         Text("Average").tag("avg")
                         Text("First").tag("first")
                         Text("Last").tag("last")
@@ -370,7 +367,7 @@ struct ahViewController: View {
                 if currentSelection == nil {
                     currentSelection = rthk.configurations.first?.displayName
                 }
-                onDismiss(currentSelection, currentUnit?.unitString, avgDataSwitch, prevDateSwitch, hrsMinSwitch, ahFrequency, ahTimeFilter, ahAggregation)
+                onDismiss(currentSelection, currentUnit?.unitString, prevDateSwitch, hrsMinSwitch, ahFrequency, ahTimeFilter, ahAggregation)
                 dismiss()
             }) {
                 Text("\u{2611}")
@@ -413,10 +410,8 @@ struct ahViewController: View {
     
     // Determine if Sum option should appear in aggregation picker
     private func shouldShowSumOption() -> Bool {
-        guard let config = selectedConfiguration() else { return false }
-        
-        // Show Sum option only for .cumulativeDaily sources
-        return config.aggregationType == .cumulativeDaily
+        // Sum option is no longer needed - HealthKit provides daily totals automatically
+        return false
     }
     
     // Reusable info sheet view

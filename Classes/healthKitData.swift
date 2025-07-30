@@ -24,7 +24,6 @@ struct HealthDataQuery {
         case groupedByNight         // Sleep data - no averaging controls (single value per night)
         case highFrequency          // HRV, Heart Rate - many readings per day, need full controls
         case lowFrequencyMultiple   // Weight, Blood Pressure - typically one reading but may have multiple
-        case cumulativeDaily        // Steps, Active Energy - values that should be summed over time periods
     }
 }
 
@@ -456,8 +455,8 @@ let healthDataQueries: [HealthDataQuery] = [
         needUnit: false,
         aggregationStyle: .cumulative,
         customProcessor: nil,
-        aggregationType: .cumulativeDaily,
-        aggregationTime: DateComponents(hour: 23, minute: 59), // midnight end of day
+        aggregationType: nil,
+        aggregationTime: nil,
         info: nil
     ),
     HealthDataQuery(
@@ -468,8 +467,8 @@ let healthDataQueries: [HealthDataQuery] = [
         needUnit: false,
         aggregationStyle: .cumulative,
         customProcessor: nil,
-        aggregationType: .cumulativeDaily,
-        aggregationTime: DateComponents(hour: 23, minute: 59), // midnight end of day
+        aggregationType: nil,
+        aggregationTime: nil,
         info: nil
     ),
     HealthDataQuery(
@@ -480,8 +479,8 @@ let healthDataQueries: [HealthDataQuery] = [
         needUnit: false,
         aggregationStyle: .cumulative,
         customProcessor: nil,
-        aggregationType: .cumulativeDaily,
-        aggregationTime: DateComponents(hour: 23, minute: 59), // midnight end of day
+        aggregationType: nil,
+        aggregationTime: nil,
         info: nil
     ),
     HealthDataQuery(

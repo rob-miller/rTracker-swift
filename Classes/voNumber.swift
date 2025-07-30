@@ -217,24 +217,8 @@ class voNumber: voState, UITextFieldDelegate {
                         var result = results.last!
                         
                         if results.count > 1 {
-                            if self.vo.optDict["ahAvg"] ?? "1" == "1" {
-                                // Compute the average value
-                                let totalValue = results.reduce(0.0) { $0 + $1.value }
-                                let averageValue = totalValue / Double(results.count)
-                                
-                                // Get the last date and unit
-                                let lastResult = results.last!
-                                let lastDate = lastResult.date
-                                let lastUnit = lastResult.unit
-                                
-                                // Create the single element
-                                let combinedResult = rtHealthKit.HealthQueryResult(date: lastDate, value: averageValue, unit: lastUnit)
-                                
-                                // Replace all elements with the single element
-                                result = combinedResult
-                            } else {
-                                DBGWarn("\(self.vo.valueName!) multiple (\(results.count)) results for \(targD) no average can only use last")
-                            }
+                            // For multiple readings, use the most recent value (no averaging)
+                            DBGLog("\(self.vo.valueName!) multiple (\(results.count)) results for \(targD), using most recent")
                         }
                         
                         let formattedValue: String
@@ -636,7 +620,7 @@ class voNumber: voState, UITextFieldDelegate {
         }
         DBGLog("lastDate is \(Date(timeIntervalSince1970:TimeInterval(lastDate)))")
         rthk.getHealthKitDates(for: srcName, lastDate: lastDate) { hkDates in
-            DBGLog("hk dates for \(srcName), ahAvg is \(self.vo.optDict["ahAvg"] ?? "1")")
+            DBGLog("hk dates for \(srcName)")
 
             var newDates: [TimeInterval]
             let frequency = self.vo.optDict["ahFrequency"] ?? "daily"
@@ -811,16 +795,14 @@ class voNumber: voState, UITextFieldDelegate {
             rootView: ahViewController(
                 selectedChoice: vo.optDict["ahSource"],
                 selectedUnitString: vo.optDict["ahUnit"],
-                ahAvg: vo.optDict["ahAvg"] ?? "1" == "1",
                 ahPrevD: vo.optDict["ahPrevD"] ?? "0" == "1",
                 ahHrsMin: vo.optDict["hrsmins"] ?? "0" == "1",
                 ahFrequency: vo.optDict["ahFrequency"] ?? AHFREQUENCYDFLT,
                 ahTimeFilter: vo.optDict["ahTimeFilter"] ?? AHTIMEFILTERDFLT,
                 ahAggregation: vo.optDict["ahAggregation"] ?? AHAGGREGATIONDFLT,
-                onDismiss: { [self] updatedChoice,updatedUnit, updatedAhAvg, updatedAhPrevD, updatedAhHrsMin, updatedAhFrequency, updatedAhTimeFilter, updatedAhAggregation  in
+                onDismiss: { [self] updatedChoice,updatedUnit, updatedAhPrevD, updatedAhHrsMin, updatedAhFrequency, updatedAhTimeFilter, updatedAhAggregation  in
                     vo.optDict["ahSource"] = updatedChoice
                     vo.optDict["ahUnit"] = updatedUnit
-                    vo.optDict["ahAvg"] = updatedAhAvg ? "1" : "0"
                     vo.optDict["ahPrevD"] = updatedAhPrevD ? "1" : "0"
                     vo.optDict["hrsmins"] = updatedAhHrsMin ? "1" : "0"
                     vo.optDict["ahFrequency"] = updatedAhFrequency
@@ -958,10 +940,7 @@ class voNumber: voState, UITextFieldDelegate {
         let ddat = Date(timeIntervalSince1970: TimeInterval(date))
         let components = calendar.dateComponents([.hour, .minute, .second], from: ddat)
         
-        if vo.optDict["ahAvg"] ?? "0" == "1" && (components.hour != 12 || components.minute != 0 || components.second != 0) {
-            dispatchGroup.leave()
-            return // Skip to the next entry if ahAvg and the time is not 12:00:00 noon
-        }
+        // Process all time slots (no time filtering needed)
         
         let prevDate = Int((calendar.date(byAdding: .day, value: -1, to: ddat))!.timeIntervalSince1970)
         let targD = Date(timeIntervalSince1970: TimeInterval(date))
@@ -1117,14 +1096,8 @@ class voNumber: voState, UITextFieldDelegate {
             var result = results.last!
             
             if results.count > 1 {
-                if self.vo.optDict["ahAvg"] ?? "1" == "1" {
-                    // Compute the average value
-                    let totalValue = results.reduce(0.0) { $0 + $1.value }
-                    let averageValue = totalValue / Double(results.count)
-                    result = rtHealthKit.HealthQueryResult(date: result.date, value: averageValue, unit: result.unit)
-                } else {
-                    DBGWarn("\(self.vo.valueName!) multiple (\(results.count)) results for \(targD) no average can only use last")
-                }
+                // For multiple readings, use the most recent value (no averaging)
+                DBGLog("\(self.vo.valueName!) multiple (\(results.count)) results for \(targD), using most recent")
             }
             
             let formattedValue = formatHealthKitValue(result.value)

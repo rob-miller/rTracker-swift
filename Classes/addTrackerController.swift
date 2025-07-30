@@ -335,12 +335,12 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 for ovo in oldTracker.valObjTable {
                     let ood = ovo.optDict
                     if let oaks = ood["ahksrc"] {
-                        let oahs = ood["ahSource"], oahu = ood["ahUnit"], oaha = ood["ahAvg"], oahpd = ood["ahPrevD"], oahhm = ood["hrsmins"]
+                        let oahs = ood["ahSource"], oahu = ood["ahUnit"], oahpd = ood["ahPrevD"], oahhm = ood["hrsmins"]
                         for nvo in tempTrackerObj!.valObjTable {
                             if nvo.vid == ovo.vid {
                                 let nod = nvo.optDict
-                                let nahs = nod["ahSource"], nahu = nod["ahUnit"], naks = nod["ahksrc"], naha = nod["ahAvg"], nahpd = nod["ahPrevD"], nahhm = nod["hrsmins"]
-                                if (nahs != oahs || nahu != oahu || naks != oaks || naha != oaha || nahpd != oahpd || nahhm != oahhm) {
+                                let nahs = nod["ahSource"], nahu = nod["ahUnit"], naks = nod["ahksrc"], nahpd = nod["ahPrevD"], nahhm = nod["hrsmins"]
+                                if (nahs != oahs || nahu != oahu || naks != oaks || nahpd != oahpd || nahhm != oahhm) {
                                     ovo.vos?.clearHKdata()
                                     ahUpdated = true
                                 }
