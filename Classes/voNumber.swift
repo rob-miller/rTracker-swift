@@ -214,7 +214,7 @@ class voNumber: voState, UITextFieldDelegate {
                         }
                     } else {
                         // If value is exactly 0.0 for sleep-related metrics, display it as 0.0, not 'No HealthKit data'
-                        var result = results.last!
+                        let result = results.last!
                         
                         if results.count > 1 {
                             // For multiple readings, use the most recent value (no averaging)
@@ -347,8 +347,29 @@ class voNumber: voState, UITextFieldDelegate {
             vo.optDict["ahTimeFilter"] = AHTIMEFILTERDFLT
         }
         
+        // rtm think both of these are wrong with sleep special handling
         if nil == vo.optDict["ahAggregation"] {
             vo.optDict["ahAggregation"] = AHAGGREGATIONDFLT
+            /*
+            // For sleep data, use sum aggregation by default since sleep segments should be added together
+            if let ahSource = vo.optDict["ahSource"], ahSource.hasPrefix("Sleep") {
+                vo.optDict["ahAggregation"] = "sum"
+            } else {
+                vo.optDict["ahAggregation"] = AHAGGREGATIONDFLT
+            }
+             */
+        }
+        
+        if nil == vo.optDict["ahPrevD"] {
+            vo.optDict["ahPrevD"] = AHPREVDDFLT ? "1" : "0"
+            /*
+            // Sleep data needs ahPrevD=1 to query previous day's sleep data
+            if let ahSource = vo.optDict["ahSource"], ahSource.hasPrefix("Sleep") {
+                vo.optDict["ahPrevD"] = "1"
+            } else {
+                vo.optDict["ahPrevD"] = AHPREVDDFLT ? "1" : "0"
+            }
+             */
         }
         
         if nil == vo.optDict["hrsmins"] {
@@ -702,19 +723,51 @@ class voNumber: voState, UITextFieldDelegate {
             let frequency = self.vo.optDict["ahFrequency"] ?? "daily"
             
             for dat in dateSet.sorted() {  // .sorted() is just to help debugging
-                secondHKDispatchGroup.enter() // Enter the group for each query
+                let ddat = Date(timeIntervalSince1970: TimeInterval(dat))
                 
-                // Always use the new time slot processing logic since we now provide
-                // the enhanced interface with frequency/time filter/aggregation controls
-                // The old processDaily is kept only for backward compatibility of existing trackers
-                // that were created before the new system was available
-                self.processTimeSlot(
-                    slotTimestamp: dat,
-                    srcName: srcName,
-                    frequency: frequency,
-                    calendar: calendar,
-                    dispatchGroup: secondHKDispatchGroup
-                )
+                // Look up the query configuration to determine aggregationType
+                guard let queryConfig = healthDataQueries.first(where: { $0.displayName == srcName }) else {
+                    DBGErr("No query configuration found for displayName: \(srcName)")
+                    continue
+                }
+                
+                // Check if this needs enhanced time-slot processing or legacy single-point processing
+                // Sleep data (.groupedByNight) should always use legacy processing regardless of other settings
+                let isGroupedByNightData = queryConfig.aggregationType == .groupedByNight
+                let needsTimeSlotProcessing = !isGroupedByNightData && 
+                                            (frequency != "daily" || 
+                                             (vo.optDict["ahTimeFilter"] ?? "all_day") != "all_day" ||
+                                             (vo.optDict["ahAggregation"] ?? "avg") != "avg")
+                
+                if needsTimeSlotProcessing {
+                    // Use new time slot processing for high-frequency or filtered data
+                    secondHKDispatchGroup.enter() // Enter the group for each query
+                    self.processTimeSlot(
+                        slotTimestamp: dat,
+                        srcName: srcName,
+                        frequency: frequency,
+                        calendar: calendar,
+                        dispatchGroup: secondHKDispatchGroup
+                    )
+                } else {
+                    let prevDate = Int((calendar.date(byAdding: .day, value: -1, to: ddat))!.timeIntervalSince1970)
+                    
+                    secondHKDispatchGroup.enter() // Enter the group for each query
+
+                    let targD = Date(timeIntervalSince1970: TimeInterval(dat))
+                    var unit: HKUnit? = nil
+                    if let unitString = vo.optDict["ahUnit"] {
+                        unit = HKUnit(from: unitString)
+                    }
+
+                    rthk.performHealthQuery(
+                        displayName: srcName,
+                        targetDate: self.vo.optDict["ahPrevD"] ?? "0" == "1" ? prevDate : dat,
+                        specifiedUnit: unit
+                    ) { results in
+                        self.handleQueryResults(results, for: dat, targD: targD, prevDate: prevDate, dispatchGroup: secondHKDispatchGroup)
+                    }
+                }
             }
             
             secondHKDispatchGroup.notify(queue: .main) {[self] in
@@ -936,6 +989,7 @@ class voNumber: voState, UITextFieldDelegate {
     
     // MARK: - Time Slot Processing
     
+    // rtm not used
     private func processDaily(date: Int, srcName: String, calendar: Calendar, dispatchGroup: DispatchGroup) {
         let ddat = Date(timeIntervalSince1970: TimeInterval(date))
         let components = calendar.dateComponents([.hour, .minute, .second], from: ddat)
@@ -997,7 +1051,6 @@ class voNumber: voState, UITextFieldDelegate {
     
     private func calculateTimeWindow(for slotTimestamp: Int, frequency: String, calendar: Calendar) -> (Date, Date) {
         let slotDate = Date(timeIntervalSince1970: TimeInterval(slotTimestamp))
-        //let components = calendar.dateComponents([.year, .month, .day, .hour], from: slotDate)
         
         let intervalHours: Int
         switch frequency {
@@ -1066,6 +1119,8 @@ class voNumber: voState, UITextFieldDelegate {
             aggregatedValue = values.min()!
         case "max":
             aggregatedValue = values.max()!
+        case "sum":
+            aggregatedValue = values.reduce(0.0, +)
         case "median":
             let sortedValues = values.sorted()
             let count = sortedValues.count
@@ -1093,7 +1148,7 @@ class voNumber: voState, UITextFieldDelegate {
             let sql = "insert into voHKstatus (id, date, stat) values (\(self.vo.vid), \(date), \(hkStatus.noData.rawValue))"
             to.toExecSql(sql: sql)
         } else {
-            var result = results.last!
+            let result = results.last!
             
             if results.count > 1 {
                 // For multiple readings, use the most recent value (no averaging)

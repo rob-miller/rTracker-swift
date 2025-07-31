@@ -991,6 +991,28 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
             return
         }
 
+        // Check if this is sleep data that needs special groupedByNight processing
+        // rtm - not used?
+        if queryConfig.aggregationType == .groupedByNight {
+            // Use sleep-specific processing for nightly aggregation
+            guard let categoryType = hkObjectType as? HKCategoryType else {
+                DBGLog("Invalid category type for nightly grouping in range query.")
+                completion([])
+                return
+            }
+            
+            // Use the same sleep analysis processing as the working code
+            self.handleSleepAnalysisQuery(
+                startDate: startDate,
+                endDate: endDate,
+                specifiedUnit: specifiedUnit ?? queryConfig.unit?.first ?? HKUnit.minute(),
+                queryConfig: queryConfig,
+                completion: completion
+            )
+            return
+        }
+        
+        // For non-sleep data, use the original logic
         let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [])
         
         let query = HKSampleQuery(sampleType: hkObjectType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]) { _, samples, error in
