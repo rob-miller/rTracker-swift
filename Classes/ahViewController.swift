@@ -80,7 +80,7 @@ struct ahViewController: View {
                 hoursMinutesSection
                 
                 // Average data switch
-                averageDataSection
+                // averageDataSection
                 
                 // Previous day switch
                 previousDaySection
@@ -205,6 +205,7 @@ struct ahViewController: View {
         .frame(height: 30)
     }
     
+    /*
     private var averageDataSection: some View {
         ZStack {
             // Show old toggle only for data sources that don't have aggregationType specified
@@ -240,7 +241,7 @@ struct ahViewController: View {
             )
         }
     }
-    
+    */
     private var previousDaySection: some View {
         ZStack {
             
@@ -268,7 +269,7 @@ struct ahViewController: View {
         .sheet(isPresented: $showingPrevDayInfo) {
             infoSheet(
                 title: "For Previous Day",
-                content: "ON: Assigns the data to the following day. Perfect for a sleep tracker, where the activity might affect your sleep the following night.\n\nOFF: Keeps data assigned to the day it was collected. Best for an exercise or calorie tracker where the data belongs to the day of activity."
+                content: "ON: Assigns the data to the following day.  Like active energy for a sleep tracker, where the activity might affect your sleep the following night.\n\nOFF: Keeps data assigned to the day it was collected. Best for an exercise or calorie tracker where the data belongs to the day of activity."
             )
         }
     }
@@ -345,6 +346,7 @@ struct ahViewController: View {
                     
                     Picker("Aggregation", selection: $ahAggregation) {
                         Text("Average").tag("avg")
+                        Text("Sum").tag("sum")
                         Text("First").tag("first")
                         Text("Last").tag("last")
                         Text("Minimum").tag("min")
@@ -389,15 +391,6 @@ struct ahViewController: View {
     // Helper function to find the selected configuration
     private func selectedConfiguration() -> HealthDataQuery? {
         return rthk.configurations.first { $0.displayName == currentSelection }
-    }
-    
-    // Determine if old average toggle should be shown
-    private func shouldShowOldAverageToggle() -> Bool {
-        guard let config = selectedConfiguration() else { return false }
-        
-        // Show old toggle only for data sources without aggregationType specified
-        // or for .lowFrequencyMultiple sources that may benefit from simple averaging
-        return config.aggregationType == nil || config.aggregationType == .lowFrequencyMultiple
     }
     
     // Determine if new controls (frequency/time filter/aggregation) should be shown
