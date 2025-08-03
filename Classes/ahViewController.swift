@@ -46,10 +46,7 @@ struct ahViewController: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 20) {
-                // Extract the info button section to a separate view
-                configInfoSection
-                
+            VStack(spacing: 8) {
                 // Picker (Choice Wheel)
                 dataSourcePicker
                     .onChange(of: currentSelection) { oldSelection, newSelection in
@@ -74,10 +71,15 @@ struct ahViewController: View {
                     }
                 
                 // Unit selection control
-                unitSelectionArea
+                if let selectedConfig = selectedConfiguration(),
+                   selectedConfig.unit != nil {
+                    unitSelectionContent
+                }
                 
                 // Hours:Minutes format switch (only for "min" unit)
-                hoursMinutesSection
+                if currentUnit?.unitString == "min" {
+                    hoursMinutesContent
+                }
                 
                 // Average data switch
                 // averageDataSection
@@ -85,18 +87,23 @@ struct ahViewController: View {
                 // Previous day switch
                 previousDaySection
                 
-                // Frequency selection
-                frequencySection
+                // High frequency controls
+                if shouldShowNewControls() {
+                    frequencyContent
+                    timeFilterContent
+                    aggregationContent
+                }
                 
-                // Time filter selection  
-                timeFilterSection
-                
-                // Aggregation selection
-                aggregationSection
+                // Push everything to top
+                Spacer()
             }
-            .padding()
+            .padding(.horizontal)
+            .padding(.top, 4)
             .navigationTitle("Choose source")
             .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    navigationInfoButton
+                }
                 ToolbarItem(placement: .bottomBar) {
                     bottomToolbar
                 }
@@ -104,27 +111,19 @@ struct ahViewController: View {
         }
     }
     
-    // Extract complex sections into computed properties
-    private var configInfoSection: some View {
+    // Navigation bar info button
+    private var navigationInfoButton: some View {
         Group {
             if let selectedConfig = selectedConfiguration(),
                let info = selectedConfig.info,
                !info.isEmpty {
-                HStack {
-                    Text("Choose data source")
-                        .font(.headline)
-                    
-                    Button(action: {
-                        showingConfigInfo = true
-                    }) {
-                        Image(systemName: "info.circle")
-                            .foregroundColor(.blue)
-                    }
-                    .accessibilityLabel("Source Information")
-                    
-                    Spacer()
+                Button(action: {
+                    showingConfigInfo = true
+                }) {
+                    Image(systemName: "info.circle")
+                        .foregroundColor(.blue)
                 }
-                .padding(.horizontal)
+                .accessibilityLabel("Source Information")
                 .sheet(isPresented: $showingConfigInfo) {
                     infoSheet(title: selectedConfig.displayName, content: info)
                 }
@@ -153,56 +152,44 @@ struct ahViewController: View {
             }
         }
         .pickerStyle(WheelPickerStyle())
+        .frame(maxHeight: 120)
+        .clipped()
     }
     
-    private var unitSelectionArea: some View {
-        ZStack {
-            if let selectedConfig = selectedConfiguration(),
-               selectedConfig.unit != nil {
-                UnitSegmentedControl(selectedConfig: selectedConfig, currentUnit: $currentUnit)
-                    .onChange(of: selectedConfig.identifier) { oldIdentifier, newIdentifier in
-                        if let config = rthk.configurations.first(where: { $0.identifier == newIdentifier }),
-                           config.needUnit && currentUnit == nil {
-                            currentUnit = config.unit?.first
-                        }
-                    }
-                    .onChange(of: currentUnit) { oldUnit, newUnit in
-                        // Reset hrs:mins switch if unit is not minutes
-                        if newUnit?.unitString == "min" {
-                            hrsMinSwitch = previousHrsMinState
-                        } else {
-                            hrsMinSwitch = false
-                        }
-                    }
-            } else {
-                Color.clear
-            }
-        }
-        .frame(height: 60)
-    }
-    
-    // Simplified hours:minutes section with just a label
-    private var hoursMinutesSection: some View {
-        ZStack {
-            if currentUnit?.unitString == "min" {
-                HStack {
-                    Text("Display minutes as hrs:mins")
-                        .font(.system(size: 16))
-                        .foregroundColor(.primary)
-                    
-                    Spacer()
-                    Toggle("", isOn: $hrsMinSwitch)
-                        .labelsHidden()
-                        .onChange(of: hrsMinSwitch) { oldValue, newValue in
-                            previousHrsMinState = newValue
-                        }
+    private var unitSelectionContent: some View {
+        UnitSegmentedControl(selectedConfig: selectedConfiguration()!, currentUnit: $currentUnit)
+            .onChange(of: selectedConfiguration()?.identifier) { oldIdentifier, newIdentifier in
+                if let config = rthk.configurations.first(where: { $0.identifier == newIdentifier }),
+                   config.needUnit && currentUnit == nil {
+                    currentUnit = config.unit?.first
                 }
-                .padding()
-            } else {
-                Color.clear
             }
+            .onChange(of: currentUnit) { oldUnit, newUnit in
+                // Reset hrs:mins switch if unit is not minutes
+                if newUnit?.unitString == "min" {
+                    hrsMinSwitch = previousHrsMinState
+                } else {
+                    hrsMinSwitch = false
+                }
+            }
+            .frame(minHeight: 40)
+    }
+    
+    private var hoursMinutesContent: some View {
+        HStack {
+            Text("Display minutes as hrs:mins")
+                .font(.system(size: 16))
+                .foregroundColor(.primary)
+            
+            Spacer()
+            Toggle("", isOn: $hrsMinSwitch)
+                .labelsHidden()
+                .onChange(of: hrsMinSwitch) { oldValue, newValue in
+                    previousHrsMinState = newValue
+                }
         }
-        .frame(height: 30)
+        .padding(.horizontal)
+        .frame(minHeight: 25)
     }
     
     /*
@@ -243,29 +230,26 @@ struct ahViewController: View {
     }
     */
     private var previousDaySection: some View {
-        ZStack {
+        // Always show previous day option regardless of data source type
+        HStack {
+            Text("For previous day")
+                .font(.system(size: 16))
+                .foregroundColor(.primary)
             
-            HStack {
-                Text("For previous day")
-                    .font(.system(size: 16))
-                    .foregroundColor(.primary)
-                
-                Button(action: {
-                    showingPrevDayInfo = true
-                }) {
-                    Image(systemName: "info.circle")
-                        .foregroundColor(.blue)
-                }
-                .accessibilityLabel("Previous Day Information")
-                
-                Spacer()
-                Toggle("", isOn: $prevDateSwitch)
-                    .labelsHidden()
+            Button(action: {
+                showingPrevDayInfo = true
+            }) {
+                Image(systemName: "info.circle")
+                    .foregroundColor(.blue)
             }
-            .padding()
+            .accessibilityLabel("Previous Day Information")
             
+            Spacer()
+            Toggle("", isOn: $prevDateSwitch)
+                .labelsHidden()
         }
-        .frame(height: 30)
+        .padding(.horizontal)
+        .frame(minHeight: 25)
         .sheet(isPresented: $showingPrevDayInfo) {
             infoSheet(
                 title: "For Previous Day",
@@ -274,93 +258,75 @@ struct ahViewController: View {
         }
     }
     
-    private var frequencySection: some View {
-        ZStack {
-            if shouldShowNewControls() {
-                VStack {
-                    HStack {
-                        Text("Frequency")
-                            .font(.system(size: 16))
-                            .foregroundColor(.primary)
-                        Spacer()
-                    }
-                    
-                    Picker("Frequency", selection: $ahFrequency) {
-                        Text("Daily").tag("daily")
-                        Text("Every 1h").tag("every_1h")
-                        Text("Every 2h").tag("every_2h")
-                        Text("Every 4h").tag("every_4h")
-                        Text("Every 6h").tag("every_6h")
-                        Text("Every 8h").tag("every_8h")
-                        Text("Twice daily").tag("twice_daily")
-                    }
-                    .pickerStyle(MenuPickerStyle())
-                }
-                .padding()
-            } else {
-                Color.clear
+    private var frequencyContent: some View {
+        VStack {
+            HStack {
+                Text("Frequency")
+                    .font(.system(size: 16))
+                    .foregroundColor(.primary)
+                Spacer()
             }
+            
+            Picker("Frequency", selection: $ahFrequency) {
+                Text("Daily").tag("daily")
+                Text("Every 1h").tag("every_1h")
+                Text("Every 2h").tag("every_2h")
+                Text("Every 4h").tag("every_4h")
+                Text("Every 6h").tag("every_6h")
+                Text("Every 8h").tag("every_8h")
+                Text("Twice daily").tag("twice_daily")
+            }
+            .pickerStyle(MenuPickerStyle())
         }
-        .frame(height: 60)
+        .padding(.horizontal)
+        .frame(minHeight: 45)
     }
     
-    private var timeFilterSection: some View {
-        ZStack {
-            if shouldShowNewControls() {
-                VStack {
-                    HStack {
-                        Text("Time Filter")
-                            .font(.system(size: 16))
-                            .foregroundColor(.primary)
-                        Spacer()
-                    }
-                    
-                    Picker("Time Filter", selection: $ahTimeFilter) {
-                        Text("All day").tag("all_day")
-                        Text("Morning").tag("morning")
-                        Text("Daytime").tag("daytime")
-                        Text("Evening").tag("evening")
-                        Text("Sleep hours").tag("sleep_hours")
-                        Text("Wake hours").tag("wake_hours")
-                    }
-                    .pickerStyle(MenuPickerStyle())
-                }
-                .padding()
-            } else {
-                Color.clear
+    private var timeFilterContent: some View {
+        VStack {
+            HStack {
+                Text("Time Filter")
+                    .font(.system(size: 16))
+                    .foregroundColor(.primary)
+                Spacer()
             }
+            
+            Picker("Time Filter", selection: $ahTimeFilter) {
+                Text("All day").tag("all_day")
+                Text("Morning").tag("morning")
+                Text("Daytime").tag("daytime")
+                Text("Evening").tag("evening")
+                Text("Sleep hours").tag("sleep_hours")
+                Text("Wake hours").tag("wake_hours")
+            }
+            .pickerStyle(MenuPickerStyle())
         }
-        .frame(height: 60)
+        .padding(.horizontal)
+        .frame(minHeight: 45)
     }
     
-    private var aggregationSection: some View {
-        ZStack {
-            if shouldShowNewControls() {
-                VStack {
-                    HStack {
-                        Text("Aggregation")
-                            .font(.system(size: 16))
-                            .foregroundColor(.primary)
-                        Spacer()
-                    }
-                    
-                    Picker("Aggregation", selection: $ahAggregation) {
-                        Text("Average").tag("avg")
-                        Text("Sum").tag("sum")
-                        Text("First").tag("first")
-                        Text("Last").tag("last")
-                        Text("Minimum").tag("min")
-                        Text("Maximum").tag("max")
-                        Text("Median").tag("median")
-                    }
-                    .pickerStyle(MenuPickerStyle())
-                }
-                .padding()
-            } else {
-                Color.clear
+    private var aggregationContent: some View {
+        VStack {
+            HStack {
+                Text("Aggregation")
+                    .font(.system(size: 16))
+                    .foregroundColor(.primary)
+                Spacer()
             }
+            
+            Picker("Aggregation", selection: $ahAggregation) {
+                Text("Average").tag("avg")
+                Text("Sum").tag("sum")
+                Text("First").tag("first")
+                Text("Last").tag("last")
+                Text("Minimum").tag("min")
+                Text("Maximum").tag("max")
+                Text("Median").tag("median")
+            }
+            .pickerStyle(MenuPickerStyle())
         }
-        .frame(height: 60)
+        .padding(.horizontal)
+        .frame(minHeight: 45)
     }
     
     private var bottomToolbar: some View {
