@@ -16,13 +16,6 @@ rTracker is an iOS app for creating local databases ("trackers") to log timestam
   - Modern iOS Charts system in `Classes/charts/` runs in portrait mode, accessed via button on tracker's 'new record' page
   - Chart types: Time plots, scatter plots, distribution plots, pie charts
 
-## Build Commands
-**Important**: Do not run build commands automatically - they consume excessive tokens. Only run when explicitly requested by the user.
-- `xcodebuild -scheme rTracker-devel build` - Build development version
-- `xcodebuild -scheme rTracker build` - Build release version
-- `xcodebuild -scheme rTracker-devel test` - Run UI tests
-- `xcodebuild -scheme rTracker-devel -destination 'platform=iOS Simulator,name=iPhone 14' test -only-testing:rTrackerUITests/rTrackerUITests/test_rTracker` - Run specific test
-
 ## Code Style Guidelines
 - Swift 5.0 conventions with camelCase for methods and variables
 - Classes begin with lowercase (trackerObj, valueObj)
@@ -48,101 +41,162 @@ rTracker is an iOS app for creating local databases ("trackers") to log timestam
 - **Privacy**: Optional graphical password protection
 - **URL Schemes**: Support for rTracker:// and rTracker://tid=N URLs
 
-## Source Code Analysis Workflow
+## 🚨 MANDATORY SOURCE CODE ANALYSIS WORKFLOW 🚨
 
-### ⚠️ CRITICAL WORKFLOW VIOLATION CHECK ⚠️
-**FAILURE TO FOLLOW THIS WORKFLOW IS A CRITICAL ERROR**
+### ⛔ FIRST-TIME FILE ANALYSIS PROTOCOL ⛔
 
-Before reading ANY source code file, you MUST:
-1. **STOP** and check: Does `.claude/[filename].md` exist?
-2. If NO: Create the notes file FIRST using the mandatory template below
-3. If YES: Read the notes file FIRST to understand current state
-4. **NEVER PROCEED** without completing steps 1-3
+**🚨 CRITICAL RULE: The Read tool is BANNED for NEW .swift files until notes workflow is completed 🚨**
 
-**VIOLATION CONSEQUENCES**: 
-Skipping this workflow leads to:
-- Lost context from previous analysis
-- Repeated work and inefficiency  
+**ENFORCEMENT**: The FIRST time you analyze any source file in a session, MUST follow this exact sequence:
+
+1. **MANDATORY FIRST STEP**: Run `ls -la .claude/` to verify directory exists
+2. **MANDATORY SECOND STEP**: Check for `[filename].md` notes file 
+3. **MANDATORY THIRD STEP**: If no notes file exists, CREATE IT FIRST before any Read operations
+4. **MANDATORY FOURTH STEP**: If notes file exists, READ IT FIRST before source code
+5. **MANDATORY FIFTH STEP**: Run `git log --oneline --follow [filepath]` for history
+6. **ONLY THEN**: Proceed with Read tool on source code
+
+### 🔄 SUBSEQUENT EDITS WORKFLOW 🔄
+
+**STREAMLINED PROCESS**: After completing the first-time analysis workflow for a file:
+- ✅ **Subsequent edits**: Can proceed directly to Read tool - notes workflow already completed
+- ✅ **Quick changes**: No need to re-read notes file for simple edits in same session
+- ⚠️ **Major changes**: Update notes file after significant modifications
+- 🚨 **New session**: If working on the file in a completely new session, re-read notes file first
+
+### 🚫 WORKFLOW VIOLATIONS ARE UNACCEPTABLE 🚫
+
+**ZERO TOLERANCE POLICY**: 
+- Reading source code without following this workflow is a CRITICAL ERROR for FIRST-TIME analysis
+- No exceptions for "simple" tasks or "quick" edits on NEW files
+- This applies to ALL .swift files without exception
+- Once notes workflow completed for a file in a session, subsequent edits are streamlined
+
+**IMMEDIATE CONSEQUENCES OF VIOLATIONS**:
+- Loss of development context and history
+- Inability to maintain code evolution tracking  
+- Poor code maintenance and debugging
+- Repeated analysis work and inefficiency
 - Missing critical implementation details
-- Inability to track code evolution
-- Poor debugging and maintenance
 
----
+### 📋 FIRST-TIME FILE ANALYSIS CHECKLIST
 
-### Pre-Analysis Checklist (MANDATORY)
-Before analyzing any source file, complete this checklist:
-- [ ] File path identified: _______________
-- [ ] Checked for existing notes file in `.claude/[filename].md`
-- [ ] Notes file exists? If NO, create using template below
-- [ ] Git history reviewed with: `git log --oneline --follow [filepath]`
-- [ ] Notes file read/updated to reflect CURRENT state
-- [ ] Ready to proceed with analysis
+**⚠️ ONLY for FIRST time analyzing a .swift file in a session ⚠️**
 
-**CHECKPOINT**: Before using Read tool on any .swift file:
-- Have you checked for and created/updated the notes file?
-- Have you reviewed recent git history?
-- Are you ready to update the notes file with new findings?
+**STEP 1: DIRECTORY VERIFICATION (REQUIRED ONCE PER SESSION)**
+```bash
+# Run this command FIRST, always:
+ls -la .claude/
+```
+- [ ] ✅ Confirmed `.claude/` directory exists and contains files
+- [ ] ⚠️ If no `.claude/` directory: You are in WRONG DIRECTORY - cd to correct path
+- [ ] 🛑 If still no directory: STOP and ASK FOR HELP
 
-**If any answer is NO, STOP and complete the missing steps.**
+**STEP 2: NOTES FILE CHECK (REQUIRED FOR NEW FILE)**  
+- [ ] ✅ Target file identified: `[Classes/filename.swift]`
+- [ ] ✅ Checked for existing notes file: `.claude/[filename.swift.md]`
+- [ ] ✅ Notes file status determined: EXISTS / MISSING
 
----
+**STEP 3A: IF NOTES FILE MISSING (REQUIRED CREATION)**
+- [ ] ✅ Git history reviewed: `git log --oneline --follow [filepath]`
+- [ ] ✅ Notes file created using EXACT template below
+- [ ] ✅ Template filled with basic information from git history
+- [ ] 🚨 **NO Read tool usage until notes file created**
 
-### MANDATORY Steps for Source Code Analysis:
+**STEP 3B: IF NOTES FILE EXISTS (REQUIRED FIRST READ)**
+- [ ] ✅ Existing notes file read completely
+- [ ] ✅ Current state and issues understood
+- [ ] ✅ Recent development history reviewed
+- [ ] ✅ Ready to update notes with new findings
 
-**Step 1: Notes File Audit (ALWAYS FIRST)**
-Before beginning any code analysis:
-1. List all files you plan to examine
-2. Check for existing notes files for each in `.claude/` directory
-3. Create missing notes files using the template below
-4. Only then proceed with analysis
+**STEP 4: FIRST-TIME AUTHORIZATION (REQUIRED)**
+- [ ] ✅ All above steps completed
+- [ ] ✅ Notes workflow fully satisfied  
+- [ ] ✅ Authorization granted to use Read tool
+- [ ] ✅ **FILE MARKED AS ANALYZED** - subsequent edits can proceed directly
 
-**Step 2: Check for existing notes file**
-Look in `.claude/` directory for a file named after the source file (e.g., for `Classes/trackerObj.swift`, check `.claude/trackerObj.swift.md`)
+**🛑 CHECKPOINT: If ANY checkbox above is unchecked, STOP and complete it NOW**
 
-**Step 3: Review development history** 
-Use `git log --oneline --follow [filepath]` to understand recent changes and development patterns for the file
+### 📋 SUBSEQUENT EDITS CHECKLIST
 
-**Step 4: Create notes file if missing**
-If no notes file exists, you MUST create one with the following structure:
-   ```markdown
-   # [FileName] Analysis Notes
-   
-   ## Purpose & Role
-   [Brief description of what this file does]
-   
-   ## Key Classes/Structs/Protocols
-   [List main types defined]
-   
-   ## Important Methods/Functions
-   [Key functions and their purposes]
-   
-   ## Dependencies & Relationships
-   [What this file imports/depends on, what depends on it]
-   
-   ## Notable Patterns & Conventions
-   [Code style, patterns, quirks specific to this file]
-   
-   ## Implementation Details
-   [Important implementation notes, gotchas, performance considerations]
-   
-   ## Recent Development History
-   [Key recent commits and changes from git log]
-   ```
+**✅ STREAMLINED: For files already analyzed in current session**
 
-**Step 5: Update notes during analysis**
-While working with the file, you MUST update the notes file to reflect the CURRENT state:
-   - **Remove resolved issues**: If you fix a bug or performance problem, remove the issue description from the notes
-   - **Add new issues**: If you discover new problems, add them to the appropriate section
-   - **Update descriptions**: If your changes significantly alter the file's purpose or key methods, update those sections
-   - **Keep current**: The notes should always describe the file as it exists NOW, not its historical problems
-   - **Use git history section**: Track significant changes and detect regressions by referencing recent commits
+- [ ] ✅ File previously analyzed with notes workflow completed
+- [ ] ✅ Notes file exists and was read during first analysis  
+- [ ] ✅ Proceed directly to Read tool - no additional workflow required
+- [ ] ⚠️ **Remember**: Update notes file after making significant changes
 
-**Step 6: Keep notes current and concise**
-The notes file should be a snapshot of the file's current state to enable rapid analysis. Use the "Recent Development History" section to track when major changes occurred, but don't accumulate a list of every issue ever fixed.
+### 📝 MANDATORY NOTES FILE TEMPLATE
 
----
+**⚠️ Use this EXACT template for ALL new notes files:**
 
-### FINAL WARNING
-**Do not proceed with any file analysis without completing Steps 1-4. This workflow is required for ALL source code files to maintain consistency and facilitate future work.**
+```markdown
+# [FileName] Analysis Notes
 
-**WORKFLOW VALIDATION**: If you realize you've read a source file without following this workflow, immediately stop what you're doing and create the missing notes file before continuing.
+## Purpose & Role
+[Brief description of what this file does - REQUIRED]
+
+## Key Classes/Structs/Protocols  
+[List main types defined - REQUIRED]
+
+## Important Methods/Functions
+[Key functions and their purposes - REQUIRED]
+
+## Dependencies & Relationships
+[What this file imports/depends on, what depends on it - REQUIRED]
+
+## Notable Patterns & Conventions
+[Code style, patterns, quirks specific to this file - REQUIRED]
+
+## Implementation Details
+[Important implementation notes, gotchas, performance considerations - REQUIRED]
+
+## Current Issues & TODOs
+[Any known problems, incomplete features, or planned improvements - UPDATE FREQUENTLY]
+
+## Recent Development History
+[Key recent commits and changes from git log - REQUIRED]
+
+## Last Updated
+[Date and brief description of last analysis - UPDATE AFTER EACH SESSION]
+```
+
+### 🔄 NOTES MAINTENANCE REQUIREMENTS
+
+**DURING EVERY SESSION:**
+- ✅ Update "Current Issues & TODOs" section with new findings
+- ✅ Remove resolved issues from notes
+- ✅ Add new problems discovered during analysis
+- ✅ Update "Last Updated" section with current date
+- ✅ Keep notes current with actual file state
+
+**AFTER MAKING CHANGES:**
+- ✅ Update relevant sections to reflect new code state
+- ✅ Document significant modifications in "Recent Development History"
+- ✅ Remove outdated information that no longer applies
+
+### 🚨 EMERGENCY WORKFLOW VIOLATION PROTOCOL 🚨
+
+**If you realize you've read source code without following this workflow:**
+
+1. **IMMEDIATELY STOP** all current analysis
+2. **CONFESS** the violation explicitly
+3. **CREATE** the missing notes file using the template
+4. **BACKFILL** the notes with information from the code you already read
+5. **CONTINUE** only after notes are properly created and populated
+
+### ⛔ FINAL ENFORCEMENT STATEMENT ⛔
+
+**This workflow is NON-NEGOTIABLE and applies to:**
+- ✅ **FIRST-TIME ANALYSIS**: All .swift files require notes workflow before first Read operation
+- ✅ **NEW SESSIONS**: Re-read notes file when starting work on a file in a new session  
+- ✅ **SUBSEQUENT EDITS**: Streamlined process after first-time workflow completed
+- ✅ **NOTES MAINTENANCE**: Always update notes after significant changes
+
+**WORKFLOW SUMMARY:**
+- 🚨 **First time touching a file**: Complete full notes workflow
+- ⚡ **Additional edits same session**: Proceed directly to Read tool
+- 📝 **Always**: Keep notes current with code changes
+- 🔄 **New session**: Re-read existing notes file first
+
+**NO EXCEPTIONS FOR FIRST-TIME ANALYSIS. STREAMLINED FOR SUBSEQUENT EDITS.**
