@@ -344,58 +344,58 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     }
     
     // Called when pull-to-refresh starts or continues
-        @objc func pullToRefreshStarted(_ refreshControl: UIRefreshControl) {
-            DispatchQueue.main.async {
-                refreshControl.endRefreshing()  // do our own indicators
-            }
-            // If we're already in a refresh operation, do nothing
-            if isRefreshInProgress || loadingData {
-                return
-            }
+    @objc func pullToRefreshStarted(_ refreshControl: UIRefreshControl) {
+        DispatchQueue.main.async {
+            refreshControl.endRefreshing()  // do our own indicators
+        }
+        // If we're already in a refresh operation, do nothing
+        if isRefreshInProgress || loadingData {
+            return
+        }
+        
+        // Increment the pull counter
+        pullCounter += 1
+        DBGLog("Pull counter incremented to \(pullCounter)")
+        
+        if pullCounter == 1 {
+            // First pull - light feedback and start timer
+            let feedbackGenerator = UIImpactFeedbackGenerator(style: .light)
+            feedbackGenerator.impactOccurred()
             
-            // Increment the pull counter
-            pullCounter += 1
-            DBGLog("Pull counter incremented to \(pullCounter)")
+            // Cancel any existing timer
+            refreshTimer?.invalidate()
             
-            if pullCounter == 1 {
-                // First pull - light feedback and start timer
-                let feedbackGenerator = UIImpactFeedbackGenerator(style: .light)
-                feedbackGenerator.impactOccurred()
-                
-                // Cancel any existing timer
-                refreshTimer?.invalidate()
-                
-                // Start a timer for the single pull refresh
-                refreshTimer = Timer.scheduledTimer(timeInterval: 2.0, target: self, selector: #selector(handleSinglePullTimeout), userInfo: nil, repeats: false)
-                
-                // Show a new spinner during the full refresh
-                startRAI()
-                rTracker_resource.addTimedLabel(text:"Pull again to refresh all", tag:self.refreshLabelId2, sv:self.view, ti:2.0)
+            // Start a timer for the single pull refresh
+            refreshTimer = Timer.scheduledTimer(timeInterval: 2.0, target: self, selector: #selector(handleSinglePullTimeout), userInfo: nil, repeats: false)
+            
+            // Show a new spinner during the full refresh
+            startRAI()
+            rTracker_resource.addTimedLabel(text:"Pull again to refresh all", tag:self.refreshLabelId2, sv:self.view, ti:2.0)
 
-            } else if pullCounter >= 2 {
-                // Multiple pulls - stronger feedback and full refresh
-                let feedbackGenerator = UIImpactFeedbackGenerator(style: .heavy)
-                feedbackGenerator.impactOccurred()
-                
-                // Cancel the timer for single pull
-                refreshTimer?.invalidate()
-                refreshTimer = nil
-                
-                // Reset counter
-                pullCounter = 0
-                
-                // Remove spinner as we'll use the progress bar instead
-                endRAI()
-                
-                // Show visual indicator for full refresh
-                DispatchQueue.main.async {
-                    rTracker_resource.addTimedLabel(text:"Full refresh in progress...", tag:self.refreshLabelId, sv:self.view, ti:3.0)
-                    // Start the full refresh
-                    self.isRefreshInProgress = true
-                    self.handleFullRefresh()
-                }
+        } else if pullCounter >= 2 {
+            // Multiple pulls - stronger feedback and full refresh
+            let feedbackGenerator = UIImpactFeedbackGenerator(style: .heavy)
+            feedbackGenerator.impactOccurred()
+            
+            // Cancel the timer for single pull
+            refreshTimer?.invalidate()
+            refreshTimer = nil
+            
+            // Reset counter
+            pullCounter = 0
+            
+            // Remove spinner as we'll use the progress bar instead
+            endRAI()
+            
+            // Show visual indicator for full refresh
+            DispatchQueue.main.async {
+                rTracker_resource.addTimedLabel(text:"Full refresh in progress...", tag:self.refreshLabelId, sv:self.view, ti:3.0)
+                // Start the full refresh
+                self.isRefreshInProgress = true
+                self.handleFullRefresh()
             }
         }
+    }
     
     
     // Timer handler for single pull timeout
