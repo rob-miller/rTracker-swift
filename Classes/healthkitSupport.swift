@@ -897,7 +897,8 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
 
     func performHealthQuery(
         displayName: String,
-        targetDate: Int,
+        startDate: Date,
+        endDate: Date? = nil,  // nil = single point query, Date = range query
         specifiedUnit: HKUnit?,
         completion: @escaping ([HealthQueryResult]) -> Void
     ) {
@@ -907,38 +908,38 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
             return
         }
 
-        //DBGLog("query name \(displayName)")
         let calendar = Calendar.current
-
-        let startDate: Date
-        let endDate: Date
+        let finalStartDate: Date
+        let finalEndDate: Date
         
-        if let aggregationTime = queryConfig.aggregationTime {
-            // Define endDate as the targetDate's day at the aggregationTime
-
-            endDate = calendar.date(bySettingHour: aggregationTime.hour ?? 0,
-                                    minute: aggregationTime.minute ?? 0,
-                                    second: aggregationTime.second ?? 0,
-                                    of: Date(timeIntervalSince1970: TimeInterval(targetDate))) ??
-                     Date(timeIntervalSince1970: TimeInterval(targetDate))
-
-            // startDate is one day before endDate
-            startDate = calendar.date(byAdding: .day, value: -1, to: endDate) ??
-                        Date(timeIntervalSince1970: TimeInterval(targetDate) - 86400) // Default to one day earlier
-            
-            //DBGLog("startDate \(startDate)  endDate  \(endDate)")
-            //DBGLog("hello")
+        if let providedEndDate = endDate {
+            // Range query - use provided dates
+            finalStartDate = startDate
+            finalEndDate = providedEndDate
         } else {
-            // Default time range: ±10 hours around the targetDate
-            startDate = Date(timeIntervalSince1970: TimeInterval(targetDate) - 10 * 3600)
-            endDate = Date(timeIntervalSince1970: TimeInterval(targetDate) + 10 * 3600)
+            // Single point query - calculate appropriate range
+            if let aggregationTime = queryConfig.aggregationTime {
+                // Define endDate as the startDate's day at the aggregationTime
+                finalEndDate = calendar.date(bySettingHour: aggregationTime.hour ?? 0,
+                                        minute: aggregationTime.minute ?? 0,
+                                        second: aggregationTime.second ?? 0,
+                                        of: startDate) ?? startDate
+
+                // startDate is one day before endDate
+                finalStartDate = calendar.date(byAdding: .day, value: -1, to: finalEndDate) ??
+                            Date(timeIntervalSince1970: startDate.timeIntervalSince1970 - 86400)
+            } else {
+                // Default time range: ±12 hours around the startDate
+                finalStartDate = Date(timeIntervalSince1970: startDate.timeIntervalSince1970 - 12 * 3600)
+                finalEndDate = Date(timeIntervalSince1970: startDate.timeIntervalSince1970 + 12 * 3600)
+            }
         }
         
         if queryConfig.identifier == "HKCategoryTypeIdentifierSleepAnalysis" {
             let unit = specifiedUnit ?? queryConfig.unit?.first ?? HKUnit.hour()
-            handleSleepAnalysisQuery(startDate: startDate, endDate: endDate, specifiedUnit:unit, queryConfig: queryConfig, completion: completion)
+            handleSleepAnalysisQuery(startDate: finalStartDate, endDate: finalEndDate, specifiedUnit:unit, queryConfig: queryConfig, completion: completion)
         } else {
-            handleQuantityTypeQuery(queryConfig: queryConfig, startDate: startDate, endDate: endDate, specifiedUnit: specifiedUnit, completion: completion)
+            handleQuantityTypeQuery(queryConfig: queryConfig, startDate: finalStartDate, endDate: finalEndDate, specifiedUnit: specifiedUnit, completion: completion)
         }
     }
 
@@ -970,83 +971,6 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
 #endif
     }
     
-    func performHealthQueryRange(
-        displayName: String,
-        startDate: Date,
-        endDate: Date,
-        specifiedUnit: HKUnit?,
-        completion: @escaping ([HealthQueryResult]) -> Void
-    ) {
-        guard let queryConfig = healthDataQueries.first(where: { $0.displayName == displayName }) else {
-            DBGLog("No query configuration found for displayName: \(displayName)")
-            completion([])
-            return
-        }
-
-        guard let hkObjectType = queryConfig.identifier.hasPrefix("HKQuantityTypeIdentifier") ?
-            HKObjectType.quantityType(forIdentifier: HKQuantityTypeIdentifier(rawValue: queryConfig.identifier)) :
-            HKObjectType.categoryType(forIdentifier: HKCategoryTypeIdentifier(rawValue: queryConfig.identifier)) else {
-            DBGLog("No HealthKit identifier found for display name: \(displayName)")
-            completion([])
-            return
-        }
-
-        // Check if this is sleep data that needs special groupedByNight processing
-        // rtm - not used?
-        if queryConfig.aggregationType == .groupedByNight {
-            // Use sleep-specific processing for nightly aggregation
-            guard let categoryType = hkObjectType as? HKCategoryType else {
-                DBGLog("Invalid category type for nightly grouping in range query.")
-                completion([])
-                return
-            }
-            
-            // Use the same sleep analysis processing as the working code
-            self.handleSleepAnalysisQuery(
-                startDate: startDate,
-                endDate: endDate,
-                specifiedUnit: specifiedUnit ?? queryConfig.unit?.first ?? HKUnit.minute(),
-                queryConfig: queryConfig,
-                completion: completion
-            )
-            return
-        }
-        
-        // For non-sleep data, use the original logic
-        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [])
-        
-        let query = HKSampleQuery(sampleType: hkObjectType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]) { _, samples, error in
-            guard let samples = samples else {
-                DBGErr("Error fetching HealthKit samples for range query: \(error?.localizedDescription ?? "Unknown error")")
-                completion([])
-                return
-            }
-            
-            var results: [HealthQueryResult] = []
-            
-            for sample in samples {
-                let value: Double
-                let unit: HKUnit
-                
-                if let quantitySample = sample as? HKQuantitySample {
-                    let targetUnit = specifiedUnit ?? queryConfig.unit?.first ?? HKUnit.count()
-                    unit = targetUnit
-                    value = quantitySample.quantity.doubleValue(for: targetUnit)
-                } else if let categorySample = sample as? HKCategorySample {
-                    unit = HKUnit.count()
-                    value = Double(categorySample.value)
-                } else {
-                    continue
-                }
-                
-                results.append(HealthQueryResult(date: sample.startDate, value: value, unit: unit))
-            }
-            
-            completion(results)
-        }
-        
-        healthStore.execute(query)
-    }
 
     func getHealthKitDates(
         for displayName: String,
@@ -1166,7 +1090,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                     
                     let calendar = Calendar.current
 
-                    // Aggregation time (e.g., 12:00 PM)
+                    // Aggregation time (e.g., 12:00 PM) noon is default for groupedByNight sleep
                     let aggregationTime = queryConfig.aggregationTime ?? DateComponents(hour: 12, minute: 0)
 
                     let groupedByAggregationTime = Dictionary(grouping: samples) { sample -> Date in
