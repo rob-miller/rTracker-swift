@@ -27,6 +27,27 @@ rTracker is an iOS app for creating local databases ("trackers") to log timestam
 - Use MARK: comments for code organization
 - The codebase was converted from Objective-C using Swiftify
 
+### Code Consolidation Principles
+
+**Always minimize code duplication by consolidating similar functionality:**
+
+- **Single Source of Truth**: Prefer one function handling a conceptual task everywhere it's needed instead of multiple bespoke variants with minor differences
+- **Data-Driven Behavior**: Always prefer data parameters to naturally determine behavior instead of complex conditionals
+- **Natural Flow**: Let the data flow determine behavior rather than testing for cases
+- **Completion-Driven Context**: Use completion handlers to let the calling context determine what to do with results, rather than passing flags or mode parameters
+- **Unified Processing**: Apply consistent processing (filtering, aggregation, validation) across all code paths to handle edge cases automatically
+
+**Examples of Good Consolidation:**
+- ✅ `processHealthQuery()` - Single function handles all HealthKit scenarios using frequency and configuration parameters
+- ✅ `performHealthQuery(startDate:endDate:)` - Single function where `endDate = nil` triggers point query, `endDate = Date` triggers range query  
+- ✅ Always apply filtering and aggregation - handles unexpected multi-result cases automatically
+
+**Anti-Patterns to Avoid:**
+- ❌ Separate `processDaily()` and `processTimeSlot()` functions with mostly identical logic
+- ❌ Complex conditional logic testing for `needsTimeSlotProcessing` flags  
+- ❌ Multiple similar functions that differ only in parameter handling
+- ❌ Bespoke result processing in each calling context
+
 ## Debug Configuration
 - Debug flags are set in build configurations (Debug no-log, Debug reminder, etc.)
 - Main debug controls in `Classes/dbg-defs.swift` 
