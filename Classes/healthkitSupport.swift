@@ -1128,5 +1128,178 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
             DBGErr("aggregation Style \(queryConfig.aggregationStyle) not handled")
         }
     }
+    
+    func getHealthKitDataCount(
+        for displayName: String,
+        lastDate: Int?,
+        completion: @escaping (Int) -> Void
+    ) {
+        // Fast count method - gets count of HK data points without fetching all samples
+        
+        // Find the query configuration for the given displayName
+        guard let queryConfig = healthDataQueries.first(where: { $0.displayName == displayName }),
+              let hkObjectType = queryConfig.identifier.hasPrefix("HKQuantityTypeIdentifier") ?
+                HKObjectType.quantityType(forIdentifier: HKQuantityTypeIdentifier(rawValue: queryConfig.identifier)) :
+                HKObjectType.categoryType(forIdentifier: HKCategoryTypeIdentifier(rawValue: queryConfig.identifier)) else {
+            DBGLog("No HealthKit identifier found for display name: \(displayName)")
+            completion(0)
+            return
+        }
+
+        // Use same predicate logic as getHealthKitDates
+        let startDate = (lastDate ?? 0 > 0 ? Date(timeIntervalSince1970: Double(lastDate!)) : Date.distantPast)
+        let timePredicate = HKQuery.predicateForSamples(withStart: startDate, end: Date(), options: [])
+        
+        var predicate: NSPredicate = timePredicate
+        
+        if let categories = queryConfig.categories, !categories.isEmpty {
+            if hkObjectType is HKCategoryType {
+                // For category types, create separate predicates for each category and combine with OR
+                let categoryPredicates = categories.map { categoryValue in
+                    return HKQuery.predicateForCategorySamples(with: .equalTo, value: categoryValue)
+                }
+                
+                // Combine all category predicates with OR
+                let categoriesCompoundPredicate = NSCompoundPredicate(orPredicateWithSubpredicates: categoryPredicates)
+                
+                // Combine time predicate with categories predicate using AND
+                predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [timePredicate, categoriesCompoundPredicate])
+            } else {
+                // For non-category types, continue with your original approach
+                let categoryPredicate = NSPredicate(format: "value IN %@", categories)
+                predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [timePredicate, categoryPredicate])
+            }
+        }
+        
+        switch queryConfig.aggregationStyle {
+        case .discreteArithmetic:
+            // For discrete data, use statistics query to get count efficiently
+            if let quantityType = hkObjectType as? HKQuantityType {
+                let statisticsQuery = HKStatisticsQuery(
+                    quantityType: quantityType,
+                    quantitySamplePredicate: predicate,
+                    options: []
+                ) { _, statistics, error in
+                    guard error == nil else {
+                        DBGLog("Error counting HealthKit data: \(error!.localizedDescription)")
+                        completion(0)
+                        return
+                    }
+                    
+                    // For discrete data, we need to count individual samples
+                    // Statistics query doesn't give us sample count directly, so fall back to sample query
+                    let sampleQuery = HKSampleQuery(sampleType: hkObjectType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, error in
+                        guard error == nil else {
+                            DBGLog("Error counting HealthKit samples: \(error!.localizedDescription)")
+                            completion(0)
+                            return
+                        }
+                        completion(samples?.count ?? 0)
+                    }
+                    self.healthStore.execute(sampleQuery)
+                }
+                healthStore.execute(statisticsQuery)
+            } else {
+                // For category types, count samples directly
+                let sampleQuery = HKSampleQuery(sampleType: hkObjectType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, error in
+                    guard error == nil else {
+                        DBGLog("Error counting HealthKit samples: \(error!.localizedDescription)")
+                        completion(0)
+                        return
+                    }
+                    completion(samples?.count ?? 0)
+                }
+                healthStore.execute(sampleQuery)
+            }
+            
+        case .cumulative:
+            if queryConfig.aggregationType == nil {
+                // Use HKStatisticsCollectionQuery for daily aggregation - count the days
+                guard let quantityType = hkObjectType as? HKQuantityType else {
+                    DBGLog("Invalid quantity type for cumulative daily aggregation.")
+                    completion(0)
+                    return
+                }
+                
+                let calendar = Calendar.current
+                let anchorDate = calendar.startOfDay(for: Date())
+                let interval = DateComponents(day: 1)
+                
+                let statsQuery = HKStatisticsCollectionQuery(
+                    quantityType: quantityType,
+                    quantitySamplePredicate: predicate,
+                    options: .cumulativeSum,
+                    anchorDate: anchorDate,
+                    intervalComponents: interval
+                )
+                
+                statsQuery.initialResultsHandler = { _, statisticsCollection, error in
+                    guard let statisticsCollection = statisticsCollection else {
+                        DBGLog("Error fetching statistics: \(error?.localizedDescription ?? "Unknown error")")
+                        completion(0)
+                        return
+                    }
+                    
+                    completion(statisticsCollection.statistics().count)
+                }
+                
+                healthStore.execute(statsQuery)
+            } else if queryConfig.aggregationType == .groupedByNight {
+                // Group sleep data into nights - estimate based on date range
+                guard let categoryType = hkObjectType as? HKCategoryType else {
+                    DBGLog("Invalid category type for nightly grouping.")
+                    completion(0)
+                    return
+                }
+                
+                // For sleep data, count samples and estimate nights
+                let query = HKSampleQuery(sampleType: categoryType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, error in
+                    guard let samples = samples as? [HKCategorySample], error == nil else {
+                        DBGLog("Error fetching sleep samples: \(error?.localizedDescription ?? "Unknown error")")
+                        completion(0)
+                        return
+                    }
+                    
+                    if samples.isEmpty {
+                        completion(0)
+                        return
+                    }
+                    
+                    // Estimate nights by grouping samples by date
+                    let calendar = Calendar.current
+                    let aggregationTime = queryConfig.aggregationTime ?? DateComponents(hour: 12, minute: 0)
+                    
+                    let groupedByAggregationTime = Dictionary(grouping: samples) { sample -> Date in
+                        let startOfDay = calendar.startOfDay(for: sample.startDate)
+                        let aggregationDate = calendar.date(bySettingHour: aggregationTime.hour ?? 0,
+                                                            minute: aggregationTime.minute ?? 0,
+                                                            second: aggregationTime.second ?? 0,
+                                                            of: startOfDay)!
+                        
+                        if sample.startDate >= aggregationDate {
+                            return calendar.date(byAdding: .day, value: 1, to: aggregationDate)!
+                        } else {
+                            return aggregationDate
+                        }
+                    }
+                    
+                    completion(groupedByAggregationTime.keys.count)
+                }
+                
+                healthStore.execute(query)
+                
+            } else {
+                DBGErr(".cumulative HealthDataQuery aggregationType \(queryConfig.aggregationType!) not handled")
+                completion(0)
+            }
+        case .discreteEquivalentContinuousLevel:
+            fallthrough
+        case .discreteTemporallyWeighted:
+            fallthrough
+        default:
+            DBGErr("aggregation Style \(queryConfig.aggregationStyle) not handled")
+            completion(0)
+        }
+    }
 
 }
