@@ -1181,7 +1181,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                     options: []
                 ) { _, statistics, error in
                     guard error == nil else {
-                        DBGLog("Error counting HealthKit data: \(error!.localizedDescription)")
+                        DBGErr("Error counting HealthKit data: \(error!.localizedDescription)")
                         completion(0)
                         return
                     }
@@ -1190,7 +1190,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                     // Statistics query doesn't give us sample count directly, so fall back to sample query
                     let sampleQuery = HKSampleQuery(sampleType: hkObjectType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, error in
                         guard error == nil else {
-                            DBGLog("Error counting HealthKit samples: \(error!.localizedDescription)")
+                            DBGErr("Error counting HealthKit samples: \(error!.localizedDescription)")
                             completion(0)
                             return
                         }
@@ -1203,7 +1203,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                 // For category types, count samples directly
                 let sampleQuery = HKSampleQuery(sampleType: hkObjectType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, error in
                     guard error == nil else {
-                        DBGLog("Error counting HealthKit samples: \(error!.localizedDescription)")
+                        DBGErr("Error counting HealthKit samples: \(error!.localizedDescription)")
                         completion(0)
                         return
                     }
@@ -1235,7 +1235,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                 
                 statsQuery.initialResultsHandler = { _, statisticsCollection, error in
                     guard let statisticsCollection = statisticsCollection else {
-                        DBGLog("Error fetching statistics: \(error?.localizedDescription ?? "Unknown error")")
+                        DBGErr("Error fetching statistics: \(error?.localizedDescription ?? "Unknown error")")
                         completion(0)
                         return
                     }
@@ -1255,7 +1255,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                 // For sleep data, count samples and estimate nights
                 let query = HKSampleQuery(sampleType: categoryType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, error in
                     guard let samples = samples as? [HKCategorySample], error == nil else {
-                        DBGLog("Error fetching sleep samples: \(error?.localizedDescription ?? "Unknown error")")
+                        DBGErr("Error fetching sleep samples: \(error?.localizedDescription ?? "Unknown error")")
                         completion(0)
                         return
                     }
