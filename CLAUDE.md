@@ -229,3 +229,19 @@ ls -la .claude/
 - 🔄 **New session**: Re-read existing notes file first
 
 **NO EXCEPTIONS FOR FIRST-TIME ANALYSIS. STREAMLINED FOR SUBSEQUENT EDITS.**
+
+# 🚫 BUILD AND TEST RESTRICTIONS 🚫
+
+## CRITICAL: Never Run Build Commands
+**ABSOLUTELY NEVER** run xcodebuild, swift build, or any compilation commands as they consume excessive tokens and time.
+
+**Instead of building:**
+- ✅ **Review code for syntax errors** - Look for missing semicolons, brackets, type mismatches
+- ✅ **Check method signatures** - Ensure protocol conformance and parameter types match
+- ✅ **Verify imports and dependencies** - Make sure all required modules are imported
+- ✅ **Logic review** - Check for potential runtime issues and edge cases
+
+## Testing Guidelines
+- **NEVER assume test frameworks** - Always check README or search codebase for testing approach
+- **No automatic test runs** - Ask user for specific test commands if needed
+- **Manual verification preferred** - Use code review instead of compilation to catch errors
