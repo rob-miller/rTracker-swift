@@ -154,7 +154,7 @@ class voState: NSObject, voProtocol {
              if let delegate = to.refreshDelegate, (date == nil || date == 0) {
                  // Only update progress during a full refresh (indicated by delegate and no specific date)
                  DispatchQueue.main.async {
-                     delegate.updateFullRefreshProgress(step: 1, phase: nil)
+                     delegate.updateFullRefreshProgress(step: 1, phase: nil, totalSteps: nil)
                  }
              }
             

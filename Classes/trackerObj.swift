@@ -25,7 +25,7 @@ import Foundation
 import UIKit
 
 protocol RefreshProgressDelegate: AnyObject {
-    func updateFullRefreshProgress(step: Int, phase: String?)
+    func updateFullRefreshProgress(step: Int, phase: String?, totalSteps: Int?)
 }
 
 // to config checkbutton default states
@@ -218,7 +218,7 @@ class trackerObj: tObjBase {
         // Check if we're already on the main thread
         if Thread.isMainThread {
             // Execute directly
-            refreshDelegate?.updateFullRefreshProgress(step: 0, phase: phase)
+            refreshDelegate?.updateFullRefreshProgress(step: 0, phase: phase, totalSteps: nil)
             
             // Force UI updates
             if let controller = refreshDelegate as? UIViewController {
@@ -228,7 +228,7 @@ class trackerObj: tObjBase {
         } else {
             // Force execution on main thread and wait for it to complete
             DispatchQueue.main.async {
-                self.refreshDelegate?.updateFullRefreshProgress(step: 0, phase: phase)
+                self.refreshDelegate?.updateFullRefreshProgress(step: 0, phase: phase, totalSteps: nil)
                 
                 // Force UI updates
                 if let controller = self.refreshDelegate as? UIViewController {
@@ -246,10 +246,66 @@ class trackerObj: tObjBase {
         DBGLog("Phase report complete for: \(phase)")
     }
     
+    // MARK: - Progress counting methods for phase-based progress bar
+    
+    func countHKsteps() -> Int {
+        var hkCount = 0
+        for vo in valObjTable {
+            if vo.optDict["ahksrc"] ?? "0" != "0" {
+                hkCount += 1
+            }
+        }
+        DBGLog("countHKsteps: Found \(hkCount) HealthKit valueObjs")
+        return hkCount
+    }
+    
+    func countOTsteps() -> Int {
+        var otCount = 0
+        for vo in valObjTable {
+            if vo.optDict["otsrc"] ?? "0" != "0" {
+                otCount += 1
+            }
+        }
+        
+        // Load OT dates if needed and count total dates to process
+        loadOTdates()
+        let dateCountSql = "SELECT COUNT(date) FROM trkrData"
+        let dateCount = toQry2Int(sql: dateCountSql)
+        
+        let totalOTSteps = otCount * dateCount
+        DBGLog("countOTsteps: Found \(otCount) OT valueObjs over \(dateCount) dates = \(totalOTSteps) total steps")
+        return totalOTSteps
+    }
+    
+    func countFNsteps() -> Int {
+        var fnCount = 0
+        for vo in valObjTable {
+            if vo.vtype == VOT_FUNC {
+                fnCount += 1
+            }
+        }
+        
+        // Count total dates to process for function calculations
+        let dateCountSql = "SELECT COUNT(date) FROM trkrData"
+        let dateCount = toQry2Int(sql: dateCountSql)
+        
+        DBGLog("countFNsteps: Found \(fnCount) FN valueObjs over \(dateCount) dates = \(dateCount) total steps")
+        return dateCount  // FN processing happens once per date, not per valueObj
+    }
+    
     func loadHKdata(forDate date: Int? = nil, dispatchGroup: DispatchGroup?, completion: (() -> Void)? = nil) -> Bool {
-        // Report explicit phase update at the start
+        // For full refresh operations, check if progress bar should be initialized
         if dispatchGroup == nil && refreshDelegate != nil {
-            reportProgressPhase("Loading HealthKit data")
+            let hkSteps = countHKsteps()
+            let threshold = 1
+            
+            if hkSteps > threshold {
+                // Initialize progress bar for this phase
+                refreshDelegate?.updateFullRefreshProgress(step: 0, phase: "Loading HealthKit data", totalSteps: hkSteps)
+            } else {
+                // Just report phase without initializing progress bar
+                reportProgressPhase("Loading HealthKit data")
+            }
         }
         dispatchGroup?.enter()
         let localGroup = DispatchGroup()
@@ -313,7 +369,7 @@ class trackerObj: tObjBase {
             }
             
             // Update progress after all HealthKit processing is done
-            self.refreshDelegate?.updateFullRefreshProgress(step: hkValueObjIDs.count, phase: nil)
+            self.refreshDelegate?.updateFullRefreshProgress(step: hkValueObjIDs.count, phase: nil, totalSteps: nil)
             
             completion?()
             dispatchGroup?.leave()
@@ -500,12 +556,23 @@ class trackerObj: tObjBase {
     }
     
     func loadOTdata(forDate date: Int? = nil, otSelf: Bool = false, dispatchGroup: DispatchGroup?, completion: (() -> Void)? = nil) -> Bool {
-        // Report phase update at the start
+        // For full refresh operations, check if progress bar should be initialized
         if dispatchGroup == nil && refreshDelegate != nil {
             if otSelf {
+                // Self-referencing OT data - don't initialize new progress bar, continue with existing
                 reportProgressPhase("Finishing up...")
             } else {
-                reportProgressPhase("Loading data from other trackers")
+                // Non-self OT data - check if progress bar should be initialized
+                let otSteps = countOTsteps()
+                let threshold = 5  // Higher threshold since OT queries are fast
+                
+                if otSteps > threshold {
+                    // Initialize progress bar for this phase
+                    refreshDelegate?.updateFullRefreshProgress(step: 0, phase: "Loading data from other trackers", totalSteps: otSteps)
+                } else {
+                    // Just report phase without initializing progress bar
+                    reportProgressPhase("Loading data from other trackers")
+                }
             }
         }
         
@@ -559,7 +626,7 @@ class trackerObj: tObjBase {
                     // Batch updates to avoid overwhelming the main thread
                     if processedCount % 5 == 0 || processedCount == otValueObjCount {
                         DispatchQueue.main.async {
-                            self.refreshDelegate?.updateFullRefreshProgress(step: processedCount % 5 == 0 ? 5 : processedCount % 5, phase: nil)
+                            self.refreshDelegate?.updateFullRefreshProgress(step: processedCount % 5 == 0 ? 5 : processedCount % 5, phase: nil, totalSteps: nil)
                         }
                         
                         // Small yield to give main thread breathing room
@@ -573,7 +640,7 @@ class trackerObj: tObjBase {
             // Final updates on main thread
             DispatchQueue.main.async {
                 // Update progress after all OtherTracker processing is done
-                self.refreshDelegate?.updateFullRefreshProgress(step: 1, phase: nil)
+                self.refreshDelegate?.updateFullRefreshProgress(step: 1, phase: nil, totalSteps: nil)
                 
                 // Call completion and leave dispatch group
                 completion?()
@@ -598,9 +665,18 @@ class trackerObj: tObjBase {
     private func processFnData(forDate date: Int? = nil, dispatchGroup: DispatchGroup? = nil, forceAll: Bool = false, completion: (() -> Void)? = nil) -> Bool {
         // Diagnostic step 1: Verify delegate is set
         DBGLog("[\(Date())] processFnData called - refreshDelegate is \(refreshDelegate != nil ? "SET" : "NOT SET!")")
-        // Report phase update before background processing begins
+        // For full refresh operations, check if progress bar should be initialized
         if dispatchGroup == nil && refreshDelegate != nil {
-            reportProgressPhase("Computing functions")
+            let fnSteps = countFNsteps()
+            let threshold = 1
+            
+            if fnSteps > threshold {
+                // Initialize progress bar for this phase
+                refreshDelegate?.updateFullRefreshProgress(step: 0, phase: "Computing functions", totalSteps: fnSteps)
+            } else {
+                // Just report phase without initializing progress bar
+                reportProgressPhase("Computing functions")
+            }
         }
         
         //let localGroup = DispatchGroup()
@@ -672,7 +748,7 @@ class trackerObj: tObjBase {
                     progressState.datesProcessed += 1
                     if progressState.datesProcessed % 5 == 0 {
                         DispatchQueue.main.async {
-                            self.refreshDelegate?.updateFullRefreshProgress(step: 5, phase: nil)
+                            self.refreshDelegate?.updateFullRefreshProgress(step: 5, phase: nil, totalSteps: nil)
                         }
                         
                         // Small yield to give main thread breathing room
@@ -700,7 +776,7 @@ class trackerObj: tObjBase {
                 self.toExecSql(sql: sql)
                 
                 // Update progress after function calculations
-                self.refreshDelegate?.updateFullRefreshProgress(step: progressState.datesProcessed, phase: nil)
+                self.refreshDelegate?.updateFullRefreshProgress(step: progressState.datesProcessed, phase: nil, totalSteps: nil)
                 
                 // Set result and call completion
                 rslt = true

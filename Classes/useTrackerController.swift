@@ -91,6 +91,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     private var totalProgressSteps = 0
     private var currentProgressStep = 0
     private var currentRefreshPhase = ""
+    private var currentProgressMaxValue: Float = 1.0  // Track current phase max value
     private var fullRefreshProgressContainerView: UIView?
     private var frDate: Date?  // trackerDate shown when full refresh started
     
@@ -345,9 +346,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     
     // Called when pull-to-refresh starts or continues
     @objc func pullToRefreshStarted(_ refreshControl: UIRefreshControl) {
-        DispatchQueue.main.async {
-            refreshControl.endRefreshing()  // do our own indicators
-        }
+        // Stop native spinner immediately for smoother transition to our custom spinner
+        refreshControl.endRefreshing()
         // If we're already in a refresh operation, do nothing
         if isRefreshInProgress || loadingData {
             return
@@ -385,7 +385,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             pullCounter = 0
             
             // Remove spinner as we'll use the progress bar instead
-            endRAI()
+            // endRAI()
             
             // Show visual indicator for full refresh
             DispatchQueue.main.async {
@@ -467,8 +467,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         
         // Put everything in a small delay to ensure UI can update
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            // Update phase explicitly before each step
-            self.updateFullRefreshProgress(phase: "Preparing data refresh")
+            // Preparation phase - no progress bar needed
             
             // Delete all voData sourced from HealthKit and other trackers
             for vo in self.tracker!.valObjTable {
@@ -510,8 +509,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                                 
                                 // Just to make sure we clean up properly
                                 self.endRAI()
-                                
-                                self.setTrackerDate(Int(self.frDate?.timeIntervalSince1970 ?? 0))
+                                self.tracker!.trackerDate = self.frDate  // set hard, not setTrackerDate!
                                 if !self.tracker!.loadData(Int(self.tracker!.trackerDate!.timeIntervalSince1970)) { // does nothing if currentDate not in db
                                     // so only choice is to reset UI to nothing, assume frDate is now plus some seconds
                                     for vo in self.tracker!.valObjTable {
@@ -934,11 +932,10 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             // Bring to front to ensure visibility
             view.bringSubviewToFront(container)
             
-            // Slight animation to draw attention
-            container.alpha = 0
-            UIView.animate(withDuration: 0.3) {
-                container.alpha = 1
-            }
+            // Keep hidden initially - will be shown when a phase exceeds threshold
+            container.isHidden = true
+            progressBar.isHidden = true
+            label.isHidden = true
         }
     }
 
@@ -959,15 +956,58 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             self.currentProgressStep = 0
             self.totalProgressSteps = 0
             self.currentRefreshPhase = ""
+            self.currentProgressMaxValue = 1.0
         })
     }
 
     // Update progress bar and label - implements RefreshProgressDelegate protocol
-    func updateFullRefreshProgress(step: Int = 1, phase: String? = nil) {
-        // Diagnostic step 2: Add timestamp to track when method is called
-        //DBGLog("[\(Date())] updateFullRefreshProgress called with step=\(step), phase=\(phase ?? "nil")")
+    func updateFullRefreshProgress(step: Int = 1, phase: String? = nil, totalSteps: Int? = nil) {
+        // If totalSteps provided, initialize/reset the progress bar for this phase
+        if let totalSteps = totalSteps {
+            DBGLog("[\(Date())] Initializing progress bar for phase '\(phase ?? "unknown")' with \(totalSteps) total steps")
+            currentProgressStep = 0
+            
+            if let phase = phase {
+                currentRefreshPhase = phase
+            }
+            
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                
+                // Set maximum value and reset progress to 0
+                self.currentProgressMaxValue = Float(totalSteps)
+                self.fullRefreshProgressBar?.progress = 0.0
+                
+                // Check if container was hidden before showing it
+                let wasHidden = self.fullRefreshProgressContainerView?.isHidden ?? true
+                
+                // Show the progress bar and stop spinner
+                self.fullRefreshProgressBar?.isHidden = false
+                self.fullRefreshProgressLabel?.isHidden = false
+                self.fullRefreshProgressContainerView?.isHidden = false
+                self.endRAI()
+                
+                // Set initial phase text
+                self.fullRefreshProgressLabel?.text = "\(self.currentRefreshPhase) - 0%"
+                
+                // Animate appearance only when first showing (if previously hidden)
+                if wasHidden, let container = self.fullRefreshProgressContainerView {
+                    container.alpha = 0
+                    UIView.animate(withDuration: 0.3) {
+                        container.alpha = 1
+                    }
+                }
+                
+                // Force layout update
+                self.fullRefreshProgressContainerView?.setNeedsLayout()
+                self.fullRefreshProgressContainerView?.layoutIfNeeded()
+            }
+            return
+        }
         
-        if totalProgressSteps == 0 {
+        // Check if progress bar is initialized (visible) before processing step updates
+        guard let progressBar = fullRefreshProgressBar, !progressBar.isHidden else {
+            // Progress bar not initialized, ignore step updates (spinner continues)
             return
         }
         
@@ -978,8 +1018,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             DBGLog("Progress phase changed to: \(phase)")
         }
         
-        // Ensure we don't exceed 100%
-        let progressValue = min(Float(currentProgressStep) / Float(totalProgressSteps), 1.0)
+        // Calculate progress based on current maximum value
+        let progressValue = min(Float(currentProgressStep) / currentProgressMaxValue, 1.0)
         
         // IMPORTANT: Always use async to avoid potential deadlocks, especially during function processing
         DispatchQueue.main.async { [weak self] in
@@ -994,9 +1034,6 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             } else {
                 self.fullRefreshProgressLabel?.text = "Processing data - \(Int(progressValue * 100))%"
             }
-            
-            // Log for debugging
-            //DBGLog("Progress updated: \(self.currentProgressStep)/\(self.totalProgressSteps) = \(Int(progressValue * 100))% during '\(self.currentRefreshPhase)'")
             
             // Force immediate layout update with animation transaction for better rendering
             CATransaction.begin()

@@ -738,7 +738,7 @@ class voNumber: voState, UITextFieldDelegate {
                     // Update progress
                     if let delegate = to?.refreshDelegate {
                         DispatchQueue.main.async {
-                            delegate.updateFullRefreshProgress(step: 1, phase: nil)
+                            delegate.updateFullRefreshProgress(step: 1, phase: nil, totalSteps: nil)
                         }
                     }
                 }
