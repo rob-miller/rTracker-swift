@@ -2,6 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🚨 CORE DEVELOPMENT PRINCIPLE 🚨
+
+**MANDATORY REQUIREMENT UNDERSTANDING:**
+- **NEVER write any code until you fully understand the user's requirements**
+- **ASK QUESTIONS until you are completely clear on what is needed**
+- **CONFIRM your understanding before proceeding with implementation**
+- **Better to ask too many clarifying questions than to implement the wrong solution**
+
 ## Project Overview
 rTracker is an iOS app for creating local databases ("trackers") to log timestamped data. Each tracker uses sqlite3 for data storage, with the tracker list itself stored in a separate database. The app supports various UI controls (number/text fields, sliders, radio buttons, checkboxes) for data entry and provides graphical data visualization.
 
