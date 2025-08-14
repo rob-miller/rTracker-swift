@@ -92,7 +92,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     private var currentRefreshPhase = ""
     private var currentProgressMaxValue: Float = 1.0  // Track current phase max value
     private var fullRefreshProgressContainerView: UIView?
-    private var frDate: Date?  // trackerDate shown when full refresh started
+    private var frDate: Int = 0  // Date?  // trackerDate shown when full refresh started
     
     let refreshLabelId = 1002
     let refreshLabelId2 = 1003
@@ -289,19 +289,40 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
             // Show the spinner
             startRAI()
+            self.frDate = 0
 
             self.loadingData = true
             self.tracker!.loadingDbData = true
-            
-            // Load HealthKit data first
+            self.isRefreshInProgress = true
+
+            // Setup progress UI before starting operations
+            self.setupFullRefreshProgressUI()
+            // Set the tracker as the delegate for progress updates
+            self.tracker!.refreshDelegate = self
+
             dispatchGroup.enter()
-            self.hkDataSource = self.tracker!.loadHKdata(dispatchGroup: dispatchGroup, completion: {
+            self.hkDataSource = self.tracker!.loadHKdata(dispatchGroup: nil, completion: {
                 // have hk data, load OT data for really other trackers
-                self.otDataSource = self.tracker!.loadOTdata(otSelf:false, dispatchGroup: dispatchGroup, completion:{
+                self.otDataSource = self.tracker!.loadOTdata(otSelf:false, dispatchGroup: nil, completion:{
                     // now can compute fn results
-                    _ = self.tracker!.loadFNdata(dispatchGroup: dispatchGroup, completion:{
+                    _ = self.tracker!.loadFNdata(dispatchGroup: nil, completion:{
                         // now load ot data that look at self
-                        _ = self.tracker!.loadOTdata(otSelf:true, dispatchGroup: dispatchGroup, completion: {
+                        _ = self.tracker!.loadOTdata(otSelf:true, dispatchGroup: nil, completion: {
+                            // Clean up progress UI
+                            self.cleanupFullRefreshProgressUI()
+                            
+                            // Clear tracker delegate
+                            self.tracker!.refreshDelegate = nil
+                            // Stop and remove the spinner
+                            self.endRAI()
+
+                            // loadFNdata above left data loaded for last db date, so clear here and get to current date
+                            self.loadTrackerDate(0)
+                            self.tableView?.reloadData()
+                            self.tracker?.cleanDb()  // no orphaned data
+                            self.loadingData = false
+                            self.tracker!.loadingDbData = false
+                            self.isRefreshInProgress = false
                             dispatchGroup.leave()
                         })
                     })
@@ -311,26 +332,9 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             
             // Notify when all operations are completed
             dispatchGroup.notify(queue: .main) {
-                // loadFNdata above left data loaded for last db date, so clear here and get to current date
-                /*
-                self.tracker!.trackerDate = Date()  // not loadTrackerDate because want ot/hk/fn data not reset
-                for vo in self.tracker!.valObjTable {
-                    if vo.optDict["otsrc"] ?? "0" == "0" && vo.optDict["ahksrc"] ?? "0" == "0" && vo.vtype != VOT_FUNC {
-                        vo.resetData()  // clear data for non ot/hk/fn valueObjs
-                    }
-                }
-                */
-                self.loadTrackerDate(0)
-                
-                // Stop and remove the spinner
-                self.endRAI()
-
                 // Perform any UI updates after data loading
                 DBGLog("HealthKit and Othertracker data loaded.")
-                self.tableView?.reloadData()
-                self.loadingData = false
-                self.tracker!.loadingDbData = false
-                
+
                 if self.hkDataSource || self.otDataSource {
                     let refreshControl = UIRefreshControl()
                     
@@ -435,14 +439,16 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             
             // Load data only for the current record
             dispatchGroup.enter()
-            _ = self.tracker!.loadHKdata(forDate: currentDate, dispatchGroup: dispatchGroup, completion: {
-                _ = self.tracker!.loadOTdata( forDate: currentDate, otSelf: false, dispatchGroup: dispatchGroup, completion: {
-                    _ = self.tracker!.loadFNdata(forDate: currentDate, dispatchGroup: dispatchGroup, completion: {
-                        _ = self.tracker!.loadOTdata(forDate: currentDate, otSelf: true, dispatchGroup: dispatchGroup)
+            _ = self.tracker!.loadHKdata(forDate: currentDate, dispatchGroup: nil, completion: {
+                _ = self.tracker!.loadOTdata( forDate: currentDate, otSelf: false, dispatchGroup: nil, completion: {
+                    _ = self.tracker!.loadFNdata(forDate: currentDate, dispatchGroup: nil, completion: {
+                        _ = self.tracker!.loadOTdata(forDate: currentDate, otSelf: true, dispatchGroup: nil, completion: {
+                            dispatchGroup.leave()
+                        })
                     })
                 })
             })
-            dispatchGroup.leave()
+
             
             dispatchGroup.notify(queue: .main) {
                 DBGLog("Current record data refreshed")
@@ -457,7 +463,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     // full data reload
     @objc func handleFullRefresh() {
         DBGLog("[\(Date())] Full Refresh initiated")
-        frDate = tracker!.trackerDate!
+        frDate = Int(tracker!.trackerDate!.timeIntervalSince1970)
+
 
         // Delete all voData sourced from HealthKit and other trackers
         for vo in self.tracker!.valObjTable {
@@ -470,7 +477,11 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         let sql = "delete from trkrdata where date not in (select date from voData where voData.date = trkrdata.date)"
         self.tracker?.toExecSql(sql: sql)
         
-        
+        let dispatchGroup = DispatchGroup()
+
+        self.loadingData = true
+        self.tracker!.loadingDbData = true
+
         // Setup progress UI before starting operations
         self.setupFullRefreshProgressUI()
         
@@ -479,7 +490,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         
         // CRITICAL: Use sequential direct method calls instead of nesting callbacks
         // Each method will now handle its own phase reporting
-        
+
+        dispatchGroup.enter()
         // Process HealthKit data
         _ = self.tracker!.loadHKdata(dispatchGroup: nil) {
             // Process other tracker data (non-self references)
@@ -489,37 +501,35 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                     _ = self.tracker!.loadOTdata(otSelf: true, dispatchGroup: nil) {
                         // All operations complete
                         DispatchQueue.main.async {
-                            DBGLog("Full refresh completed - All data loaded and SQL inserts completed.")
-                            self.tracker?.cleanDb()  // no orphaned data
-                            
-                            // Add a small success indicator message
-                            rTracker_resource.addTimedLabel(text: "Refresh completed successfully", tag: self.refreshLabelId, sv: self.view, ti: 3.0)
-                            
+
                             // Clean up progress UI
                             self.cleanupFullRefreshProgressUI()
                             
                             // Clear tracker delegate
                             self.tracker!.refreshDelegate = nil
                             
-                            // Just to make sure we clean up properly
+                            // clean up properly if still shown
                             self.endRAI()
-                            self.tracker!.resetData()
-                            self.tracker!.trackerDate = self.frDate
-                            if !self.tracker!.loadData(Int(self.tracker!.trackerDate!.timeIntervalSince1970)) { // does nothing if currentDate not in db
-                                // so only choice is to reset UI to nothing, assume frDate is now plus some seconds
-                                // not loadTrackerDate because want ot/hk/fn data not reset
-                                for vo in self.tracker!.valObjTable {
-                                    if vo.optDict["otsrc"] ?? "0" == "0" && vo.optDict["ahksrc"] ?? "0" == "0" && vo.vtype != VOT_FUNC {
-                                        vo.resetData()  // clear data for non ot/hk/fn valueObjs
-                                    }
-                                }
-                            }
-                            self.updateTrackerTableView()
+
+                            self.loadTrackerDate(self.frDate)
+
+                            self.tableView?.reloadData()
+                            self.tracker?.cleanDb()  // no orphaned data
+                            self.loadingData = false
+                            self.tracker!.loadingDbData = false
                             self.isRefreshInProgress = false
+                            dispatchGroup.leave()
                         }
                     }
                 }
             }
+        }
+
+        dispatchGroup.notify(queue: .main) {
+            DBGLog("Full refresh completed - All data loaded and SQL inserts completed.")
+
+            // Add a small success indicator message
+            rTracker_resource.addTimedLabel(text: "Refresh completed successfully", tag: self.refreshLabelId, sv: self.view, ti: 3.0)
         }
         
     }
@@ -1218,10 +1228,10 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         let lastD = tracker!.lastDate()
         let currD = Int(tracker!.trackerDate?.timeIntervalSince1970 ?? 0)
         /*
-        	DBGLog(@"prevD = %d %@",prevD,[NSDate dateWithTimeIntervalSince1970:prevD]);
-        	DBGLog(@"currD = %d %@",currD,[NSDate dateWithTimeIntervalSince1970:currD]);
-        	DBGLog(@"postD = %d %@",postD,[NSDate dateWithTimeIntervalSince1970:postD]);
-        	DBGLog(@"lastD = %d %@",lastD,[NSDate dateWithTimeIntervalSince1970:lastD]);
+            DBGLog(@"prevD = %d %@",prevD,[NSDate dateWithTimeIntervalSince1970:prevD]);
+            DBGLog(@"currD = %d %@",currD,[NSDate dateWithTimeIntervalSince1970:currD]);
+            DBGLog(@"postD = %d %@",postD,[NSDate dateWithTimeIntervalSince1970:postD]);
+            DBGLog(@"lastD = %d %@",lastD,[NSDate dateWithTimeIntervalSince1970:lastD]);
         */
         _currDateBtn = nil
 
@@ -1347,15 +1357,17 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             return
         }
 
-        if targD == 0 {
+        if targD > 0 {
+            DBGLog(String(" setTrackerDate: \(targD) = \(Date(timeIntervalSince1970: TimeInterval(targD)))"))
+            if !tracker!.loadData(targD) {
+                DBGLog("date not found! resetting tracker")
+                tracker!.resetData()
+            }
+        } else {
             DBGLog(String(" setTrackerDate: \(targD) = reset to now"))
             tracker!.resetData()
-        } else if targD < 0 {
-            DBGLog(String("setTrackerDate: \(targD) = no earlier date"))
-        } else {
-            DBGLog(String(" setTrackerDate: \(targD) = \(Date(timeIntervalSince1970: TimeInterval(targD)))"))
-            _ = tracker!.loadData(targD)
         }
+
         needSave = false // dumping anything not saved by going to another date.
         showSaveBtn()
         updateToolBar()
