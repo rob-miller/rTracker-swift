@@ -656,8 +656,13 @@ class voNumber: voState, UITextFieldDelegate {
         
         // Wait for getHealthKitDates processing to complete before proceeding
         hkDispatchGroup.notify(queue: .main) { [self] in
-            DBGLog("HealthKit dates processed, continuing with loadHKdata.")
-            
+            DBGLog("HealthKit dates for \(srcName) processed, continuing with loadHKdata.")
+            // clock 1 progress unit for chunk of healthKitDates queried
+            if let delegate = to.refreshDelegate {
+                DispatchQueue.main.async {
+                    delegate.updateFullRefreshProgress(step: 1, phase: nil, totalSteps: nil)
+                }
+            }
             // Fetch dates from trkrData for processing
             // will update where we don't have data sourced from healthkit already
             // since the last time valid data was loaded for this vid
@@ -698,7 +703,7 @@ class voNumber: voState, UITextFieldDelegate {
             
             let dateSet = to.toQry2AryI(sql: sql)
             
-            DBGLog("Query complete, count is \(dateSet.count)")
+            DBGLog("dates to process for \(srcName) Query complete, count is \(dateSet.count)")
             //debugHealthKitDateQuery(tracker: to, valueObjID: vo.vid)
             
             let calendar = Calendar.current
@@ -735,15 +740,18 @@ class voNumber: voState, UITextFieldDelegate {
                         to?.toExecSql(sql: sql)
                     }
                     
-                    // Update progress
+                    /*
+                    // Update progress for each health query processed
                     if let delegate = to?.refreshDelegate {
                         DispatchQueue.main.async {
                             delegate.updateFullRefreshProgress(step: 1, phase: nil, totalSteps: nil)
                         }
                     }
+                     */
                 }
             }
             
+            // wait on all processHealthQuery's to complete
             secondHKDispatchGroup.notify(queue: .main) {[self] in
                 // ensure trkrData has lowest priv if just added a lower privacy valuObj to a trkrData entry
                 let priv = max(MINPRIV, self.vo.vpriv)  // priv needs to be at least minpriv if vpriv = 0
@@ -759,7 +767,15 @@ class voNumber: voState, UITextFieldDelegate {
                   );
                 """
                 to.toExecSql(sql: sql)
-                DBGLog("Done loadHKdata with \(dateSet.count) records.")
+                DBGLog("Done loadHKdata for \(srcName) with \(dateSet.count) records.")
+                
+                // clock 1 progress unit for chunk of healthKitDates processed
+                if let delegate = to.refreshDelegate {
+                    DispatchQueue.main.async {
+                        delegate.updateFullRefreshProgress(step: 1, phase: nil, totalSteps: nil)
+                    }
+                }
+                
                 dispatchGroup?.leave()  // done with enter before getHealthkitDates processing overall
             }
         }

@@ -255,15 +255,19 @@ class trackerObj: tObjBase {
                 hkCount += 1
             }
         }
+        hkCount *= 2  // count dates query and data query
         DBGLog("countHKsteps: Found \(hkCount) HealthKit valueObjs")
         return hkCount
     }
     
-    func countOTsteps() -> Int {
+    func countOTsteps(otSelf: Bool) -> Int {
         var otCount = 0
         for vo in valObjTable {
             if vo.optDict["otsrc"] ?? "0" != "0" {
-                otCount += 1
+                let otTracker = vo.optDict["otTracker"]
+                if (otSelf && otTracker == trackerName) || (!otSelf && otTracker != trackerName) {
+                    otCount += 1
+                }
             }
         }
         
@@ -318,7 +322,7 @@ class trackerObj: tObjBase {
                 rslt = true
             }
         }
-        // Wait for our local operations to complete before calling completion
+        // Waiting for all voNumber hk operations to complete, then mark any missing hkStatus as noData
         localGroup.notify(queue: .main) {
             
             // processing multiple
@@ -368,8 +372,10 @@ class trackerObj: tObjBase {
                 //DBGLog("Added voHKstatus entries for all dates in trkrData for all HK valueObjs")
             }
             
+            /*
             // Update progress after all HealthKit processing is done
             self.refreshDelegate?.updateFullRefreshProgress(step: hkValueObjIDs.count, phase: nil, totalSteps: nil)
+             */
             
             completion?()
             dispatchGroup?.leave()
@@ -558,22 +564,21 @@ class trackerObj: tObjBase {
     func loadOTdata(forDate date: Int? = nil, otSelf: Bool = false, dispatchGroup: DispatchGroup?, completion: (() -> Void)? = nil) -> Bool {
         // For full refresh operations, check if progress bar should be initialized
         if dispatchGroup == nil && refreshDelegate != nil {
-            if otSelf {
-                // Self-referencing OT data - don't initialize new progress bar, continue with existing
-                reportProgressPhase("Finishing up...")
-            } else {
-                // Non-self OT data - check if progress bar should be initialized
-                let otSteps = countOTsteps()
-                let threshold = 5  // Higher threshold since OT queries are fast
-                
-                if otSteps > threshold {
-                    // Initialize progress bar for this phase
-                    refreshDelegate?.updateFullRefreshProgress(step: 0, phase: "Loading data from other trackers", totalSteps: otSteps)
-                } else {
-                    // Just report phase without initializing progress bar
-                    reportProgressPhase("Loading data from other trackers")
-                }
+            
+            let phaseText = otSelf ? "Loading self-referencing data" : "Loading data from other trackers"
+
+            // Non-self OT data - check if progress bar should be initialized
+            let otSteps = countOTsteps(otSelf:otSelf)
+            let threshold = 5  // Higher threshold since OT queries are fast
+            
+            if otSteps > threshold {
+                // Initialize progress bar for this phase
+                refreshDelegate?.updateFullRefreshProgress(step: 0, phase: phaseText, totalSteps: otSteps)
+            } else if otSteps > 0 {
+                // Just report phase without initializing progress bar if any steps to do but under threshold
+                reportProgressPhase(phaseText)
             }
+            
         }
         
         dispatchGroup?.enter()
@@ -775,8 +780,10 @@ class trackerObj: tObjBase {
                 let sql = "delete from trkrInfo where field='dirtyFns';"
                 self.toExecSql(sql: sql)
                 
+                /*
                 // Update progress after function calculations
                 self.refreshDelegate?.updateFullRefreshProgress(step: progressState.datesProcessed, phase: nil, totalSteps: nil)
+                */
                 
                 // Set result and call completion
                 rslt = true
@@ -1175,7 +1182,7 @@ class trackerObj: tObjBase {
         // Step 2: Debug daily_entries CTE
         DBGLog("=== STREAK DEBUG: Daily entries (after grouping) ===")
         let dailyEntriesQuery = """
-            SELECT 
+            SELECT
                 date(datetime(date, 'unixepoch')) as entry_date,
                 count(*) as entries_count
             FROM trkrData
@@ -1188,18 +1195,18 @@ class trackerObj: tObjBase {
             DBGLog("Daily entry: \(entryDate), Count: \(count)")
         }
         
-        // Step 3: Debug date_gaps CTE  
+        // Step 3: Debug date_gaps CTE
         DBGLog("=== STREAK DEBUG: Date gaps calculation ===")
         let dateGapsQuery = """
             WITH daily_entries AS (
-                SELECT 
+                SELECT
                     date(datetime(date, 'unixepoch')) as entry_date
                 FROM trkrData
                 GROUP BY entry_date
             )
-            SELECT 
+            SELECT
                 entry_date,
-                COALESCE(CAST(julianday(entry_date) - 
+                COALESCE(CAST(julianday(entry_date) -
                 julianday(lag(entry_date, 1) OVER (ORDER BY entry_date)) AS TEXT), 'NULL') as gap_text
             FROM daily_entries
             ORDER BY entry_date DESC
@@ -1215,24 +1222,24 @@ class trackerObj: tObjBase {
         DBGLog("=== STREAK DEBUG: Streak groups ===")
         let streakGroupsQuery = """
             WITH daily_entries AS (
-                SELECT 
+                SELECT
                     date(datetime(date, 'unixepoch')) as entry_date
                 FROM trkrData
                 GROUP BY entry_date
             ),
             date_gaps AS (
-                SELECT 
+                SELECT
                     entry_date,
-                    julianday(entry_date) - 
+                    julianday(entry_date) -
                     julianday(lag(entry_date, 1) OVER (ORDER BY entry_date)) as gap
                 FROM daily_entries
                 ORDER BY entry_date DESC
             )
-            SELECT 
+            SELECT
                 entry_date,
                 COALESCE(CAST(gap AS TEXT), 'NULL') as gap_text,
                 CASE WHEN gap > 1.5 THEN 1 ELSE 0 END as is_break,
-                sum(CASE WHEN gap > 1.5 THEN 1 ELSE 0 END) 
+                sum(CASE WHEN gap > 1.5 THEN 1 ELSE 0 END)
                     OVER (ORDER BY entry_date DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as streak_group
             FROM date_gaps
             ORDER BY entry_date DESC
@@ -1247,23 +1254,23 @@ class trackerObj: tObjBase {
         DBGLog("=== STREAK DEBUG: Group 0 count (current streak) ===")
         let group0CountQuery = """
             WITH daily_entries AS (
-                SELECT 
+                SELECT
                     date(datetime(date, 'unixepoch')) as entry_date
                 FROM trkrData
                 GROUP BY entry_date
             ),
             date_gaps AS (
-                SELECT 
+                SELECT
                     entry_date,
-                    julianday(entry_date) - 
+                    julianday(entry_date) -
                     julianday(lag(entry_date, 1) OVER (ORDER BY entry_date)) as gap
                 FROM daily_entries
                 ORDER BY entry_date DESC
             ),
             streak_groups AS (
-                SELECT 
+                SELECT
                     entry_date,
-                    sum(CASE WHEN gap > 1.5 THEN 1 ELSE 0 END) 
+                    sum(CASE WHEN gap > 1.5 THEN 1 ELSE 0 END)
                         OVER (ORDER BY entry_date DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as streak_group
                 FROM date_gaps
             )

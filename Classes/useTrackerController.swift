@@ -88,7 +88,6 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     // refresh progress bar
     private var fullRefreshProgressBar: UIProgressView?
     private var fullRefreshProgressLabel: UILabel?
-    private var totalProgressSteps = 0
     private var currentProgressStep = 0
     private var currentRefreshPhase = ""
     private var currentProgressMaxValue: Float = 1.0  // Track current phase max value
@@ -458,10 +457,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     @objc func handleFullRefresh() {
         DBGLog("[\(Date())] Full Refresh initiated")
         frDate = tracker!.trackerDate!
-        // Calculate total progress steps
-        totalProgressSteps = calculateTotalProgressSteps()
-        currentProgressStep = 0
-        
+
         // Setup progress UI before starting operations
         setupFullRefreshProgressUI()
         
@@ -954,7 +950,6 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             
             // Reset tracking variables
             self.currentProgressStep = 0
-            self.totalProgressSteps = 0
             self.currentRefreshPhase = ""
             self.currentProgressMaxValue = 1.0
         })
@@ -1020,6 +1015,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         
         // Calculate progress based on current maximum value
         let progressValue = min(Float(currentProgressStep) / currentProgressMaxValue, 1.0)
+        DBGLog("[\(Date())] stepvalue \(step) for phase '\(currentRefreshPhase)' - progress \(currentProgressStep) of \(currentProgressMaxValue) (value: \(progressValue) ")
         
         // IMPORTANT: Always use async to avoid potential deadlocks, especially during function processing
         DispatchQueue.main.async { [weak self] in
@@ -1056,6 +1052,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     }
 
     // Calculate the total number of steps for progress tracking
+    // rtm not used after shift to 100% per phase
     private func calculateTotalProgressSteps() -> Int {
         let to = self.tracker!
         var totalSteps = 0
