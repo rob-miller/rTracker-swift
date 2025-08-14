@@ -916,6 +916,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                 case FN2ARGAND:
                     // Handle nil values as false
                     // Only return true (non-nil) if both operands are truthy
+                    let prevResult = result
                     if result == nil || result == 0 || nextResult == nil || nextResult == 0 {
                         // If either is falsy (nil or 0), result is false (nil)
                         result = nil
@@ -927,7 +928,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                         result = 1.0
                     }
                     #if FUNCTIONDBG
-                    DBGLog(String("fndbg AND [\(String(describing: nextResult))]: result= \(String(describing: result))"))
+                    DBGLog(String("fndbg \(String(describing: prevResult)) AND [\(String(describing: nextResult))]: result= \(String(describing: result))"))
                     #endif
                     
                 case FN2ARGOR:

@@ -304,7 +304,7 @@ extension voFunction {
             if !closePending {
                 fstr += " "
             }
-            DBGLog(String("loop end: closeP=\(closePending) constantP=\(constantPending) constantCloseP=\(constantClosePending) arg2P=\(arg2Pending) openPC=\(openParenCount) fstr=\(fstr)"))
+            //DBGLog(String("loop end: closeP=\(closePending) constantP=\(constantPending) constantCloseP=\(constantClosePending) arg2P=\(arg2Pending) openPC=\(openParenCount) fstr=\(fstr)"))
         }
         if arg2Pending || closePending || constantPending || constantClosePending || openParenCount != 0 {
             fstr += " ❌"
