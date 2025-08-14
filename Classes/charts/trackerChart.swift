@@ -1962,7 +1962,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             // Get the useTrackerController from the navigation stack
             if let useTrackerVC = navigationController?.viewControllers.last as? useTrackerController {
                 // Use setTrackerDate to navigate to the first record
-                useTrackerVC.setTrackerDate(firstRecordTimestamp)
+                useTrackerVC.loadTrackerDate(firstRecordTimestamp)
             }
         }
     }
