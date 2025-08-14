@@ -202,32 +202,35 @@ class voNumber: voState, UITextFieldDelegate {
                     return dtf
                 }
                 let calendar = Calendar.current
+                let semaphore = DispatchSemaphore(value: 0)
+                var healthKitResult: String?
+                
                 processHealthQuery(
                     timestamp: Int(targD.timeIntervalSince1970),
                     srcName: vo.optDict["ahSource"]!,
                     frequency: vo.optDict["ahFrequency"] ?? "daily",
                     calendar: calendar
                 ) { [weak self] result in
-                    DispatchQueue.main.async {
-                        if let result = result {
-                            // Handle hours:minutes formatting if needed
-                            let displayValue: String
-                            if self?.vo.optDict["hrsmins"] ?? "0" == "1", let numValue = Double(result) {
-                                let rv = Int(round(numValue))
-                                displayValue = String(format: "%d:%02d", rv/60, rv % 60)
-                            } else {
-                                displayValue = result
-                            }
-                            self?.dtf.text = displayValue
-                            Self.healthKitCache[cacheKey] = displayValue
+                    if let result = result {
+                        // Handle hours:minutes formatting if needed
+                        if self?.vo.optDict["hrsmins"] ?? "0" == "1", let numValue = Double(result) {
+                            let rv = Int(round(numValue))
+                            healthKitResult = String(format: "%d:%02d", rv/60, rv % 60)
                         } else {
-                            self?.dtf.text = self?.noHKdataMsg
+                            healthKitResult = result
                         }
-                        if let dtf = self?.dtf {
-                            self?.vo.vos?.addExternalSourceOverlay(to: dtf)
-                        }
+                        Self.healthKitCache[cacheKey] = healthKitResult!
+                    } else {
+                        healthKitResult = self?.noHKdataMsg
                     }
+                    semaphore.signal()
                 }
+                
+                semaphore.wait()  // warning about lower QoS wait is necessary or can return empty text field, but need to see the value
+                
+                // Apply the result synchronously on main thread
+                dtf.text = healthKitResult
+                self.vo.vos?.addExternalSourceOverlay(to: self.dtf)
             } else if vo.optDict["otsrc"] == "1" {
                 self.vo.vos?.addExternalSourceOverlay(to: self.dtf)  // no taps
                 if let xrslt = vo.vos?.getOTrslt() {
@@ -244,19 +247,17 @@ class voNumber: voState, UITextFieldDelegate {
                 dtf.text = ""
             }
         } else {
-            DispatchQueue.main.async { [self] in
-                dtf.backgroundColor = .secondarySystemBackground
-                dtf.textColor = .label
-                if vo.optDict["hrsmins"] ?? "0" == "1", let result = Double(vo.value) {
-                    let ri = Int(round(result))
-                    let formattedValue = String(format: "%d:%02d", ri/60, ri % 60)
-                    dtf.text = formattedValue
-                } else {
-                    dtf.text = vo.value
-                }
-                if vo.optDict["ahksrc"] == "1" || vo.optDict["otsrc"] == "1" {
-                    self.vo.vos?.addExternalSourceOverlay(to: self.dtf)  // no taps
-                }
+            dtf.backgroundColor = .secondarySystemBackground
+            dtf.textColor = .label
+            if vo.optDict["hrsmins"] ?? "0" == "1", let result = Double(vo.value) {
+                let ri = Int(round(result))
+                let formattedValue = String(format: "%d:%02d", ri/60, ri % 60)
+                dtf.text = formattedValue
+            } else {
+                dtf.text = vo.value
+            }
+            if vo.optDict["ahksrc"] == "1" || vo.optDict["otsrc"] == "1" {
+                self.vo.vos?.addExternalSourceOverlay(to: self.dtf)  // no taps
             }
         }
 
