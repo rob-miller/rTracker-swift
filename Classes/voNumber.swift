@@ -624,8 +624,16 @@ class voNumber: voState, UITextFieldDelegate {
             DBGLog("specifiedDate is \(specifiedDate)  \(Date(timeIntervalSince1970: TimeInterval(specifiedDate)))")
         }
         DBGLog("lastDate is \(Date(timeIntervalSince1970:TimeInterval(lastDate)))")
+        
+        #if DEBUGLOG
+        let startTime = CFAbsoluteTimeGetCurrent()
+        #endif
+        
         rthk.getHealthKitDates(for: srcName, lastDate: lastDate) { hkDates in
-            DBGLog("hk dates for \(srcName)")
+            #if DEBUGLOG
+            let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
+            DBGLog("HKPROFILE: getHealthKitDates for \(srcName) (vid: \(self.vo.vid)) took \(String(format: "%.3f", timeElapsed))s, found \(hkDates.count) dates")
+            #endif
 
             var newDates: [TimeInterval]
             let frequency = self.vo.optDict["ahFrequency"] ?? "daily"
@@ -787,11 +795,8 @@ class voNumber: voState, UITextFieldDelegate {
         var sql = ""
         if let specificDate = date {
             DBGLog("checking date \(specificDate) \(Date(timeIntervalSince1970: TimeInterval(specificDate)))")
-            let haveHkData = to.toQry2Int(sql: "select 1 from voHKstatus where id = \(vo.vid) and date = \(specificDate)")
-            if haveHkData == 1 {
-                to.toExecSql(sql: "delete from voData where id = \(vo.vid) and date = \(specificDate)")
-                to.toExecSql(sql: "delete from voHKstatus where id = \(vo.vid) and date = \(specificDate)")
-            }
+            to.toExecSql(sql: "delete from voData where id = \(vo.vid) and date = \(specificDate)")
+            to.toExecSql(sql: "delete from voHKstatus where id = \(vo.vid) and date = \(specificDate)")
             
             // Clear cache entries for this specific date
             if let ahSource = vo.optDict["ahSource"] {

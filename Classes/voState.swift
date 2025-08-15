@@ -146,8 +146,10 @@ class voState: NSObject, voProtocol {
                 sql = "insert into voOTstatus (id, date, stat) values (\(self.vo.vid), \(md), \(otStatus.otData.rawValue))"
                 to.toExecSql(sql: sql)
             } else {
+                // No data found - create noData status (processed but no data available)
                 DBGLog("no data for \(sql)")
-                //DBGLog("hello")
+                sql = "insert into voOTstatus (id, date, stat) values (\(self.vo.vid), \(md), \(otStatus.noData.rawValue))"
+                to.toExecSql(sql: sql)
             }
             
             // Update progress tracking
@@ -185,11 +187,8 @@ class voState: NSObject, voProtocol {
         let to = vo.parentTracker
         var sql = ""
         if let specificDate = date {
-            let haveOTdata = to.toQry2Int(sql: "select 1 from voOTstatus where id = \(vo.vid) and date = \(specificDate)")
-            if haveOTdata == 1 {
-                to.toExecSql(sql: "delete from voData where id = \(vo.vid) and date = \(specificDate)")
-                to.toExecSql(sql: "delete from voOTstatus where id = \(vo.vid) and date = \(specificDate)")
-            }
+            to.toExecSql(sql: "delete from voData where id = \(vo.vid) and date = \(specificDate)")
+            to.toExecSql(sql: "delete from voOTstatus where id = \(vo.vid) and date = \(specificDate)")
         } else {
             sql = "delete from voData where (id, date) in (select id, date from voOTstatus where id = \(vo.vid))"
             to.toExecSql(sql: sql)

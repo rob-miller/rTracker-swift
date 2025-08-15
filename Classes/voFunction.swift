@@ -1371,28 +1371,27 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         // vo.value is computed for this tracker date from loaded tracker data when we read it here because reading calls update()
         // but db must be cleared for vot_function s or will just get db value
         if vo.value == "" {
-            // if value is empty we should not have data in db
+            // Function processed but couldn't calculate (insufficient data)
+            sql = "insert or replace into voFNstatus (id, date, stat) values (\(vo.vid), \(date), \(fnStatus.noData.rawValue))"
+            MyTracker.toExecSql(sql: sql)
+            // Remove any voData since no calculable result
             sql = "delete from voData where id = \(vo.vid) and date = \(date);"
-            MyTracker.toExecSql(sql:sql)
-            sql = "delete from voFNstatus where id = \(vo.vid) and date = \(date);"
-            MyTracker.toExecSql(sql:sql)
+            MyTracker.toExecSql(sql: sql)
         } else {
+            // Function calculated successfully
             let val = rTracker_resource.toSqlStr(vo.value)
             sql = "insert or replace into voData (id, date, val) values (\(vo.vid), \(date),'\(val)');"
-            MyTracker.toExecSql(sql:sql)
-            sql = "insert into voFNstatus (id, date, stat) values (\(vo.vid), \(date), \(fnStatus.fnData.rawValue))"
-            MyTracker.toExecSql(sql:sql)
+            MyTracker.toExecSql(sql: sql)
+            sql = "insert or replace into voFNstatus (id, date, stat) values (\(vo.vid), \(date), \(fnStatus.fnData.rawValue))"
+            MyTracker.toExecSql(sql: sql)
         }
     }
 
     override func clearFNdata(forDate date: Int? = nil) {
         let to = vo.parentTracker
         if let specificDate = date {
-            let haveFNdata = to.toQry2Int(sql: "select 1 from voFNstatus where id = \(vo.vid) and date = \(specificDate)")
-            if haveFNdata == 1 {
-                to.toExecSql(sql: "delete from voData where id = \(vo.vid) and date = \(specificDate)")
-                to.toExecSql(sql: "delete from voFNstatus where id = \(vo.vid) and date = \(specificDate)")
-            }
+            to.toExecSql(sql: "delete from voData where id = \(vo.vid) and date = \(specificDate)")
+            to.toExecSql(sql: "delete from voFNstatus where id = \(vo.vid) and date = \(specificDate)")
         } else {
             var sql = "delete from voData where (id, date) in (select id, date from voFNstatus where id = \(vo.vid))"
             to.toExecSql(sql: sql)

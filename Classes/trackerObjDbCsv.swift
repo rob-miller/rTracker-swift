@@ -399,7 +399,11 @@ extension trackerObj {
         sql = ""
         if let vo = vo {
             if vo.vtype == VOT_FUNC {
-                sql = "insert or replace into voFNstatus (id, date, stat) values (\(vid),\(date),\(fnStatus.fnData.rawValue));"
+                // Only create fnData status when val is not empty
+                // noData status is handled in voFunction.setFnVal()
+                if !val.isEmpty {
+                    sql = "insert or replace into voFNstatus (id, date, stat) values (\(vid),\(date),\(fnStatus.fnData.rawValue));"
+                }
             } else if vo.optDict["otsrc"] ?? "0" != "0" {
                 sql = "insert or replace into voOTstatus (id, date, stat) values (\(vid),\(date),\(otStatus.otData.rawValue));"
             } else if vo.optDict["ahksrc"] ?? "0" != "0" {

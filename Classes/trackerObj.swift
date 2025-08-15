@@ -253,64 +253,373 @@ class trackerObj: tObjBase {
         for vo in valObjTable {
             if vo.optDict["ahksrc"] ?? "0" != "0" {
                 hkCount += 1
+                
+                // Call getHealthKitDataCount with the same date calculation as voNumber loadHKdata
+                if let srcName = vo.optDict["ahSource"] {
+                    let sql = "select max(date) from voHKstatus where id = \(vo.vid) and stat = \(hkStatus.hkData.rawValue)"
+                    let lastDate = toQry2Int(sql: sql)
+                    
+                    #if DEBUGLOG
+                    let startTime = CFAbsoluteTimeGetCurrent()
+                    #endif
+                    
+                    rtHealthKit.shared.getHealthKitDataCount(for: srcName, lastDate: lastDate > 0 ? lastDate : nil) { dataCount in
+                        #if DEBUGLOG
+                        let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
+                        DBGLog("HKPROFILE: getHealthKitDataCount for \(srcName) (vid: \(vo.vid)) took \(String(format: "%.3f", timeElapsed))s, found \(dataCount) samples after date \(lastDate)")
+                        #endif
+                    }
+                }
             }
         }
         hkCount *= 2  // count dates query and data query
         DBGLog("countHKsteps: Found \(hkCount) HealthKit valueObjs")
+
+        if hkCount > 0 {
+            // look for trkrData Dates with no hkStatus at all
+            let hkCheckSQL = """
+            SELECT count(*) FROM trkrData 
+            WHERE NOT EXISTS (
+                SELECT 1 FROM voHKstatus 
+                WHERE voHKstatus.date = trkrData.date 
+            )
+            """
+            let missingCount = self.toQry2Int(sql:hkCheckSQL)
+            if missingCount > 0 {
+                // Report missing HealthKit data
+                DBGLog("have \(hkCount/2) hk voNumbers and \(missingCount) missing HealthKit data entries")
+            } else {
+                DBGLog("have \(hkCount/2) hk voNumbers but no missing HealthKit data entries")
+                hkCount = 0
+            }
+        }
+
         return hkCount
+    }
+    
+    func countHKstepsAsync(completion: @escaping (Int) -> Void) {
+        var hkCount = 0
+        let group = DispatchGroup()
+        
+        for vo in valObjTable {
+            if vo.optDict["ahksrc"] ?? "0" != "0" {
+                hkCount += 1
+                
+                // Call getHealthKitDataCount with the same date calculation as voNumber loadHKdata
+                if let srcName = vo.optDict["ahSource"] {
+                    let sql = "select max(date) from voHKstatus where id = \(vo.vid) and stat = \(hkStatus.hkData.rawValue)"
+                    let lastDate = toQry2Int(sql: sql)
+                    
+                    group.enter()
+                    
+                    #if DEBUGLOG
+                    let startTime = CFAbsoluteTimeGetCurrent()
+                    #endif
+                    
+                    rtHealthKit.shared.getHealthKitDataCount(for: srcName, lastDate: lastDate > 0 ? lastDate : nil) { dataCount in
+                        #if DEBUGLOG
+                        let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
+                        DBGLog("HKPROFILE: getHealthKitDataCount for \(srcName) (vid: \(vo.vid)) took \(String(format: "%.3f", timeElapsed))s, found \(dataCount) samples after date \(lastDate)")
+                        #endif
+                        group.leave()
+                    }
+                }
+            }
+        }
+        
+        group.notify(queue: .main) {
+            hkCount *= 2  // count dates query and data query
+            DBGLog("countHKstepsAsync: Found \(hkCount) HealthKit valueObjs")
+
+            if hkCount > 0 {
+                // look for trkrData Dates with no hkStatus at all
+                let hkCheckSQL = """
+                SELECT count(*) FROM trkrData 
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM voHKstatus 
+                    WHERE voHKstatus.date = trkrData.date 
+                )
+                """
+                let missingCount = self.toQry2Int(sql:hkCheckSQL)
+                if missingCount > 0 {
+                    // Report missing HealthKit data
+                    DBGLog("have \(hkCount/2) hk voNumbers and \(missingCount) missing HealthKit data entries")
+                } else {
+                    DBGLog("have \(hkCount/2) hk voNumbers but no missing HealthKit data entries")
+                    hkCount = 0
+                }
+            }
+
+            completion(hkCount)
+        }
+    }
+    
+    func countHKstepsQuick(completion: @escaping (Int) -> Void) {
+        #if DEBUGLOG
+        let startTime = CFAbsoluteTimeGetCurrent()
+        #endif
+        
+        var hkCount = 0
+        var hasOldData = false
+        var hkValueObjIDs: [Int] = []
+        let weekAgo = Int(Date().addingTimeInterval(-7 * 24 * 60 * 60).timeIntervalSince1970)
+        
+        // Count HealthKit valueObjs and check for old lastDates (fast)
+        for vo in valObjTable {
+            if vo.optDict["ahksrc"] ?? "0" != "0" {
+                hkCount += 1
+                hkValueObjIDs.append(vo.vid)
+                
+                // Age-based heuristic: check if lastDate is older than 7 days
+                let sql = "select max(date) from voHKstatus where id = \(vo.vid) and stat = \(hkStatus.hkData.rawValue)"
+                let lastDate = toQry2Int(sql: sql)
+                
+                if lastDate < weekAgo {
+                    hasOldData = true
+                }
+            }
+        }
+        
+        if hkCount == 0 {
+            #if DEBUGLOG
+            let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
+            DBGLog("HKPROFILE: countHKstepsQuick took \(String(format: "%.3f", timeElapsed))s, no HealthKit valueObjs")
+            #endif
+            completion(0)
+            return
+        }
+        
+        // If we found old data, assume it will be slow
+        if hasOldData {
+            let finalCount = hkCount * 2  // dates query and data query
+            #if DEBUGLOG
+            let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
+            DBGLog("HKPROFILE: countHKstepsQuick took \(String(format: "%.3f", timeElapsed))s, found old data, returning \(finalCount)")
+            #endif
+            completion(finalCount)
+            return
+        }
+        
+        // Database heuristic: check for HealthKit valueObjs with no data OR status entries
+        let hkVidsList = hkValueObjIDs.map { String($0) }.joined(separator: ",")
+        let hkCheckSQL = """
+        SELECT count(*) FROM trkrData 
+        WHERE NOT EXISTS (
+            SELECT 1 FROM voData 
+            WHERE voData.date = trkrData.date 
+            AND voData.id IN (\(hkVidsList))
+        )
+        AND NOT EXISTS (
+            SELECT 1 FROM voHKstatus 
+            WHERE voHKstatus.date = trkrData.date 
+            AND voHKstatus.id IN (\(hkVidsList))
+        )
+        """
+        let missingCount = toQry2Int(sql: hkCheckSQL)
+        
+        #if DEBUGLOG
+        // Debug: Show what dates are being counted as missing
+        if missingCount > 0 {
+            let sampleDatesSQL = """
+            SELECT date FROM trkrData 
+            WHERE NOT EXISTS (
+                SELECT 1 FROM voData 
+                WHERE voData.date = trkrData.date 
+                AND voData.id IN (\(hkVidsList))
+            )
+            AND NOT EXISTS (
+                SELECT 1 FROM voHKstatus 
+                WHERE voHKstatus.date = trkrData.date 
+                AND voHKstatus.id IN (\(hkVidsList))
+            )
+            ORDER BY date DESC LIMIT 10
+            """
+            let sampleDates = toQry2AryI(sql: sampleDatesSQL)
+            DBGLog("HKPROFILE: Found \(missingCount) missing HealthKit entries. Sample dates:")
+            debugPrintTrackerData(forDates: sampleDates, prefix: "HK_MISSING")
+        }
+        #endif
+        
+        if missingCount > 100 {
+            let finalCount = hkCount * 2
+            #if DEBUGLOG
+            let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
+            DBGLog("HKPROFILE: countHKstepsQuick took \(String(format: "%.3f", timeElapsed))s, found \(missingCount) missing entries, returning \(finalCount)")
+            #endif
+            completion(finalCount)
+            return
+        }
+        
+        // If we get here, it's likely to be fast or we're uncertain
+        // For uncertain cases, do a circuit breaker sample of the first HealthKit source
+        if let firstHKVO = valObjTable.first(where: { $0.optDict["ahksrc"] ?? "0" != "0" }),
+           let srcName = firstHKVO.optDict["ahSource"] {
+            
+            let sql = "select max(date) from voHKstatus where id = \(firstHKVO.vid) and stat = \(hkStatus.hkData.rawValue)"
+            let lastDate = toQry2Int(sql: sql)
+            
+            #if DEBUGLOG
+            let sampleStartTime = CFAbsoluteTimeGetCurrent()
+            #endif
+            
+            rtHealthKit.shared.getHealthKitDataCount(for: srcName, lastDate: lastDate > 0 ? lastDate : nil) { dataCount in
+                #if DEBUGLOG
+                let sampleTime = CFAbsoluteTimeGetCurrent() - sampleStartTime
+                let totalTime = CFAbsoluteTimeGetCurrent() - startTime
+                #endif
+                
+                let finalCount: Int
+                if dataCount > 100 {
+                    // Lots of data to process, assume slow
+                    finalCount = hkCount * 2
+                } else {
+                    // Reasonable amount of data or no data, assume fast
+                    finalCount = 0
+                }
+                
+                #if DEBUGLOG
+                DBGLog("HKPROFILE: countHKstepsQuick took \(String(format: "%.3f", totalTime))s (sample: \(String(format: "%.3f", sampleTime))s), sample found \(dataCount) items, returning \(finalCount)")
+                #endif
+                
+                completion(finalCount)
+            }
+        } else {
+            // No HealthKit sources with ahSource, assume fast
+            #if DEBUGLOG
+            let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
+            DBGLog("HKPROFILE: countHKstepsQuick took \(String(format: "%.3f", timeElapsed))s, no ahSource found, returning 0")
+            #endif
+            completion(0)
+        }
     }
     
     func countOTsteps(otSelf: Bool) -> Int {
         var otCount = 0
+        var maxMissingCount = 0
+        
+        // Load OT dates if needed
+        loadOTdates()
+        
+        // Count missing dates for each otsrc valueObj individually
         for vo in valObjTable {
             if vo.optDict["otsrc"] ?? "0" != "0" {
                 let otTracker = vo.optDict["otTracker"]
                 if (otSelf && otTracker == trackerName) || (!otSelf && otTracker != trackerName) {
                     otCount += 1
+                    
+                    // Count missing date entries for this specific valueObj
+                    let missingDatesSql = """
+                        SELECT count(*) FROM trkrData 
+                        WHERE NOT EXISTS (
+                            SELECT 1 FROM voOTstatus 
+                            WHERE voOTstatus.date = trkrData.date 
+                            AND voOTstatus.id = \(vo.vid)
+                        )
+                        """
+                    let missingCount = toQry2Int(sql: missingDatesSql)
+                    
+                    // Track the maximum missing count across all valueObjs
+                    if missingCount > maxMissingCount {
+                        maxMissingCount = missingCount
+                    }
                 }
             }
         }
         
-        // Load OT dates if needed and count total dates to process
-        loadOTdates()
-        let dateCountSql = "SELECT COUNT(date) FROM trkrData"
-        let dateCount = toQry2Int(sql: dateCountSql)
-        
-        let totalOTSteps = otCount * dateCount
-        DBGLog("countOTsteps: Found \(otCount) OT valueObjs over \(dateCount) dates = \(totalOTSteps) total steps")
+        let totalOTSteps = otCount * maxMissingCount
+        DBGLog("countOTsteps: Found \(otCount) OT valueObjs, max missing dates per valueObj: \(maxMissingCount) = \(totalOTSteps) total steps")
         return totalOTSteps
+    }
+    
+    // MARK: - Debug helper method
+    func debugPrintTrackerData(forDates dates: [Int], prefix: String = "TRACKER_DATA") {
+        #if DEBUGLOG
+        for date in dates {
+            let dateObj = Date(timeIntervalSince1970: TimeInterval(date))
+            var dataEntries: [String] = []
+            
+            // Get all valueObjs that have data for this date
+            for vo in valObjTable {
+                let sql = "SELECT val FROM voData WHERE id = \(vo.vid) AND date = \(date)"
+                let val = toQry2Str(sql: sql)
+                if !val.isEmpty {
+                    dataEntries.append("\(vo.valueName ?? "vid:\(vo.vid)"):\(val)")
+                }
+            }
+            
+            if dataEntries.isEmpty {
+                DBGLog("\(prefix): \(dateObj) - NO DATA")
+            } else {
+                DBGLog("\(prefix): \(dateObj) - \(dataEntries.joined(separator: ", "))")
+            }
+        }
+        #endif
     }
     
     func countFNsteps() -> Int {
         var fnCount = 0
+        var maxMissingCount = 0
+        
+        // Count missing dates for each function valueObj individually
         for vo in valObjTable {
             if vo.vtype == VOT_FUNC {
                 fnCount += 1
+                
+                // Count missing date entries for this specific function valueObj
+                let fnCheckSQL = """
+                SELECT count(*) FROM trkrData 
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM voFNstatus 
+                    WHERE voFNstatus.date = trkrData.date 
+                    AND voFNstatus.id = \(vo.vid)
+                )
+                """
+                let missingCount = toQry2Int(sql: fnCheckSQL)
+                
+                // Track the maximum missing count across all function valueObjs
+                if missingCount > maxMissingCount {
+                    maxMissingCount = missingCount
+                }
             }
         }
         
-        // Count total dates to process for function calculations
-        let dateCountSql = "SELECT COUNT(date) FROM trkrData"
-        let dateCount = toQry2Int(sql: dateCountSql)
-        
-        DBGLog("countFNsteps: Found \(fnCount) FN valueObjs over \(dateCount) dates = \(dateCount) total steps")
-        return dateCount  // FN processing happens once per date, not per valueObj
+        if fnCount > 0 {
+            if maxMissingCount > 0 {
+                DBGLog("have \(fnCount) fn valueObjs, max missing dates per valueObj: \(maxMissingCount)")
+            } else {
+                DBGLog("have \(fnCount) fn valueObjs but no missing data entries")
+            }
+        }
+
+        return maxMissingCount  // Return maximum missing count across all function valueObjs
     }
     
     func loadHKdata(forDate date: Int? = nil, dispatchGroup: DispatchGroup?, completion: (() -> Void)? = nil) -> Bool {
         // For full refresh operations, check if progress bar should be initialized
         if dispatchGroup == nil && refreshDelegate != nil {
-            let hkSteps = countHKsteps()
-            let threshold = 1
-            
-            if hkSteps > threshold {
-                // Initialize progress bar for this phase
-                refreshDelegate?.updateFullRefreshProgress(step: 0, phase: "Loading HealthKit data", totalSteps: hkSteps)
-            } else {
-                // Just report phase without initializing progress bar
-                reportProgressPhase("Loading HealthKit data")
+            // Use quick version with fast heuristics to decide on progress bar
+            countHKstepsQuick { hkSteps in
+                let threshold = 1
+                
+                if hkSteps > threshold {
+                    // Initialize progress bar for this phase
+                    self.refreshDelegate?.updateFullRefreshProgress(step: 0, phase: "Loading HealthKit data", totalSteps: hkSteps)
+                } else {
+                    // Just report phase without initializing progress bar
+                    self.reportProgressPhase("Loading HealthKit data")
+                }
+                
+                // Now proceed with the actual HealthKit data loading
+                _ = self.continueLoadHKdata(forDate: date, dispatchGroup: dispatchGroup, completion: completion)
             }
+            return true // Return early since we're handling async
+        } else {
+            // Non-refresh case, proceed directly
+            return continueLoadHKdata(forDate: date, dispatchGroup: dispatchGroup, completion: completion)
         }
+    }
+    
+    private func continueLoadHKdata(forDate date: Int? = nil, dispatchGroup: DispatchGroup?, completion: (() -> Void)? = nil) -> Bool {
         dispatchGroup?.enter()
         let localGroup = DispatchGroup()
         var rslt = false
@@ -709,7 +1018,8 @@ class trackerObj: tObjBase {
         } else if let specifiedDate = date {
             nextDate = specifiedDate
         } else {
-            let sql = "select max(date) from voFNstatus where stat = \(fnStatus.fnData.rawValue)"
+            //let sql = "select max(date) from voFNstatus where stat = \(fnStatus.fnData.rawValue)"
+            let sql = "select max(date) from voFNstatus" // allow .noData - must full refresh to recalculate
             nextDate = toQry2Int(sql: sql)
             if nextDate == 0 || (optDict["dirtyFns"] as? String) == "1" {
                 nextDate = firstDate()

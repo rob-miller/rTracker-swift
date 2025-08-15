@@ -84,6 +84,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     private var refreshTimer: Timer?
     private var isRefreshInProgress = false
     private var refreshActivityIndicator: UIActivityIndicatorView?
+    private var raiDelayedWork: DispatchWorkItem?
     
     // refresh progress bar
     private var fullRefreshProgressBar: UIProgressView?
@@ -184,17 +185,34 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     }
 
     func startRAI() {
-        DispatchQueue.main.async {
-            self.refreshActivityIndicator = UIActivityIndicatorView(style: .large)
-            if let rai = self.refreshActivityIndicator {
-                rai.center = self.view.center
-                rai.startAnimating()
-                self.view.addSubview(rai)
+        // Cancel any existing delayed work
+        raiDelayedWork?.cancel()
+        
+        // Create new delayed work to show activity indicator after 0.3 seconds
+        raiDelayedWork = DispatchWorkItem { [weak self] in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                self.refreshActivityIndicator = UIActivityIndicatorView(style: .large)
+                if let rai = self.refreshActivityIndicator {
+                    rai.center = self.view.center
+                    rai.startAnimating()
+                    self.view.addSubview(rai)
+                }
             }
+        }
+        
+        // Execute after 0.3 seconds
+        if let delayedWork = raiDelayedWork {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: delayedWork)
         }
     }
     
     func endRAI() {  // end refresh activity indicator
+        // Cancel any pending delayed work to prevent showing
+        raiDelayedWork?.cancel()
+        raiDelayedWork = nil
+        
+        // Remove existing activity indicator if shown
         refreshActivityIndicator?.stopAnimating()
         refreshActivityIndicator?.removeFromSuperview()
         refreshActivityIndicator = nil
@@ -430,7 +448,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         let currentDate = Int(tracker!.trackerDate!.timeIntervalSince1970)
         
         DispatchQueue.main.async {
-            // Clear only the current record's HK and OT data
+            // Clear only the current record's HK ,FN and OT data
             for vo in self.tracker!.valObjTableH {
                 vo.vos?.clearHKdata(forDate: currentDate)
                 vo.vos?.clearOTdata(forDate: currentDate)
