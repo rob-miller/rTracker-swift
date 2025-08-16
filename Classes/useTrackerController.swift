@@ -67,6 +67,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     
     var hkDataSource = false
     var otDataSource = false
+    var fnDataSource = false
+
     private var loadingData = false
     
     var gt: UIViewController?
@@ -222,6 +224,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     override func viewDidLoad() {
 
         super.viewDidLoad()
+        DBGLog("STATE: useTrackerController viewDidLoad start")
 
         //DBGLog(@"utc: viewDidLoad dpvc=%d", (self.dpvc == nil ? 0 : 1));
         fwdRotations = true
@@ -320,12 +323,16 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
             dispatchGroup.enter()
             self.hkDataSource = self.tracker!.loadHKdata(dispatchGroup: nil, completion: {
+                DBGLog("STATE: loadHKdata completed")
                 // have hk data, load OT data for really other trackers
                 self.otDataSource = self.tracker!.loadOTdata(otSelf:false, dispatchGroup: nil, completion:{
+                    DBGLog("STATE: loadOTdata completed")
                     // now can compute fn results
-                    _ = self.tracker!.loadFNdata(dispatchGroup: nil, completion:{
+                    self.fnDataSource = self.tracker!.loadFNdata(dispatchGroup: nil, completion:{
+                        DBGLog("STATE: loadFNdata completed")
                         // now load ot data that look at self
                         _ = self.tracker!.loadOTdata(otSelf:true, dispatchGroup: nil, completion: {
+                            DBGLog("STATE: loadOTdata (self) completed")
                             // Clean up progress UI
                             self.cleanupFullRefreshProgressUI()
                             
@@ -353,7 +360,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 // Perform any UI updates after data loading
                 DBGLog("HealthKit and Othertracker data loaded.")
 
-                if self.hkDataSource || self.otDataSource {
+                if self.hkDataSource || self.otDataSource || self.fnDataSource {
                     let refreshControl = UIRefreshControl()
                     
                     // Add target for when pull begins
@@ -581,7 +588,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     override func viewWillAppear(_ animated: Bool) {
 
-        //DBGLog(@"utc: view will appear");
+        DBGLog("STATE: view will appear start");
 
         viewDisappearing = false
 
@@ -698,7 +705,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     override func viewDidAppear(_ animated: Bool) {
 
-        //DBGLog(@"utc view did appear!");
+        DBGLog("STATE: view did appear start");
         // in case we just regained active after interruption -- sadly view still seen if done in viewWillAppear
         if (nil != tracker) && (tracker!.getPrivacyValue() > privacyValue) {
             //[self.navigationController popViewControllerAnimated:YES];
