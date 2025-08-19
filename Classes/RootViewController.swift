@@ -328,6 +328,16 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
             tlist.updateShortcutItems()
         }
         
+        // Pre-initialize rtHealthKit if user has previously authorized HealthKit
+        // This prevents threading violations when countHKstepsQuick runs on background thread
+        let sql = "select count(*) from rthealthkit"
+        if tlist.toQry2Int(sql: sql) > 0 {
+            _ = rtHealthKit.shared
+            #if DEBUGLOG
+            DBGLog("Pre-initialized rtHealthKit.shared - user has previous HealthKit authorization")
+            #endif
+        }
+        
         refreshView()
     }
 
