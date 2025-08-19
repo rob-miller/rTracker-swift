@@ -27,19 +27,58 @@ import UIKit
 
 //#import "trackerObj.h"
 
-// supported valueObj types ; note these defns tied to rTracker-resource vtypeNames array
-let VOT_NUMBER = 0
-let VOT_TEXT = 1
-let VOT_TEXTB = 2
-let VOT_SLIDER = 3
-let VOT_CHOICE = 4
-let VOT_BOOLEAN = 5
-let VOT_FUNC = 6
-let VOT_INFO = 7
+// ValueObjectType enum provides tight coupling between integer values and string names
+enum ValueObjectType: Int, CaseIterable {
+    case VOT_NUMBER = 0
+    case VOT_TEXT = 1
+    case VOT_TEXTB = 2
+    case VOT_SLIDER = 3
+    case VOT_CHOICE = 4
+    case VOT_BOOLEAN = 5
+    case VOT_FUNC = 6
+    case VOT_INFO = 7
+    case VOT_NONE = 8
+    
+    var stringValue: String {
+        switch self {
+        case .VOT_NUMBER: return "number"
+        case .VOT_TEXT: return "text"
+        case .VOT_TEXTB: return "textbox"
+        case .VOT_SLIDER: return "slider"
+        case .VOT_CHOICE: return "choice"
+        case .VOT_BOOLEAN: return "yes/no"
+        case .VOT_FUNC: return "function"
+        case .VOT_INFO: return "info"
+        case .VOT_NONE: return "none"
+        }
+    }
+    
+    static var typeNames: [String] {
+        return [VOT_NUMBER, VOT_TEXT, VOT_TEXTB, VOT_SLIDER, VOT_CHOICE, VOT_BOOLEAN, VOT_FUNC, VOT_INFO].map { $0.stringValue }
+    }
+    
+    init?(stringValue: String) {
+        if let type = Self.allCases.first(where: { $0.stringValue == stringValue }) {
+            self = type
+        } else {
+            return nil
+        }
+    }
+}
 
-let VOT_NONE = 8
+// Backward compatibility constants - existing code continues to work unchanged
+let VOT_NUMBER = ValueObjectType.VOT_NUMBER.rawValue
+let VOT_TEXT = ValueObjectType.VOT_TEXT.rawValue
+let VOT_TEXTB = ValueObjectType.VOT_TEXTB.rawValue
+let VOT_SLIDER = ValueObjectType.VOT_SLIDER.rawValue
+let VOT_CHOICE = ValueObjectType.VOT_CHOICE.rawValue
+let VOT_BOOLEAN = ValueObjectType.VOT_BOOLEAN.rawValue
+let VOT_FUNC = ValueObjectType.VOT_FUNC.rawValue
+let VOT_INFO = ValueObjectType.VOT_INFO.rawValue
 
-let VOT_MAX = 7
+let VOT_NONE = ValueObjectType.VOT_NONE.rawValue
+
+let VOT_MAX = ValueObjectType.VOT_INFO.rawValue
 
 // image not yet
 // #define VOT_IMAGE    7

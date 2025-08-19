@@ -1388,6 +1388,11 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
     }
 
     override func clearFNdata(forDate date: Int? = nil) {
+        // Only clear FN data for valueObjs that are function types
+        guard vo.vtype == VOT_FUNC else {
+            return
+        }
+        
         let to = vo.parentTracker
         if let specificDate = date {
             to.toExecSql(sql: "delete from voData where id = \(vo.vid) and date = \(specificDate)")

@@ -791,6 +791,11 @@ class voNumber: voState, UITextFieldDelegate {
     }
 
     override func clearHKdata(forDate date: Int? = nil) {
+        // Only clear HK data for valueObjs that are configured as HealthKit sources
+        guard vo.optDict["ahksrc"] == "1" else {
+            return
+        }
+        
         let to = vo.parentTracker
         var sql = ""
         if let specificDate = date {

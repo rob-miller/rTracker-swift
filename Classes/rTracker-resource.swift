@@ -517,17 +517,7 @@ class rTracker_resource: NSObject {
         UIColor.magenta           // Magenta (back to red spectrum)
     ]
 
-    // indexes must match defns in valueObj.h 
-    static let vtypeNames: [String] = [
-        "number",
-        "text",
-        "textbox",
-        "slider",
-        "choice",
-        "yes/no",
-        "function",
-        "info"
-    ]
+    // vtypeNames array removed - now handled by ValueObjectType enum in valueObj.swift
 
     class func startActivityIndicator(_ view: UIView?, navItem: UINavigationItem?, disable: Bool, str: String?) {
         DBGLog("start spinner")

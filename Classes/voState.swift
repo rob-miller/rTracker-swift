@@ -184,6 +184,11 @@ class voState: NSObject, voProtocol {
     }
 
     func clearOTdata(forDate date: Int? = nil) {
+        // Only clear OT data for valueObjs that are configured as other tracker sources
+        guard vo.optDict["otsrc"] == "1" else {
+            return
+        }
+        
         let to = vo.parentTracker
         var sql = ""
         if let specificDate = date {
