@@ -306,57 +306,12 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             showSaveBtn()
         } else {
             // otherwise see if can load data from healthkit and other sources
-            let dispatchGroup = DispatchGroup()
-
             // Show the spinner
             startRAI()
+
             self.frDate = 0
 
-            self.loadingData = true
-            self.tracker!.loadingDbData = true
-            self.isRefreshInProgress = true
-
-            // Setup progress UI before starting operations
-            self.setupFullRefreshProgressUI()
-            // Set the tracker as the delegate for progress updates
-            self.tracker!.refreshDelegate = self
-
-            dispatchGroup.enter()
-            self.hkDataSource = self.tracker!.loadHKdata(dispatchGroup: nil, completion: {
-                DBGLog("STATE: loadHKdata completed")
-                // have hk data, load OT data for really other trackers
-                self.otDataSource = self.tracker!.loadOTdata(otSelf:false, dispatchGroup: nil, completion:{
-                    DBGLog("STATE: loadOTdata completed")
-                    // now can compute fn results
-                    self.fnDataSource = self.tracker!.loadFNdata(dispatchGroup: nil, completion:{
-                        DBGLog("STATE: loadFNdata completed")
-                        // now load ot data that look at self
-                        _ = self.tracker!.loadOTdata(otSelf:true, dispatchGroup: nil, completion: {
-                            DBGLog("STATE: loadOTdata (self) completed")
-                            // Clean up progress UI
-                            self.cleanupFullRefreshProgressUI()
-                            
-                            // Clear tracker delegate
-                            self.tracker!.refreshDelegate = nil
-                            // Stop and remove the spinner
-                            self.endRAI()
-
-                            // loadFNdata above left data loaded for last db date, so clear here and get to current date
-                            self.loadTrackerDate(0)
-                            self.tableView?.reloadData()
-                            self.tracker?.cleanDb()  // no orphaned data
-                            self.loadingData = false
-                            self.tracker!.loadingDbData = false
-                            self.isRefreshInProgress = false
-                            dispatchGroup.leave()
-                        })
-                    })
-                })
-            })
-            
-            
-            // Notify when all operations are completed
-            dispatchGroup.notify(queue: .main) {
+            performDataLoadingSequence {
                 // Perform any UI updates after data loading
                 DBGLog("HealthKit and Othertracker data loaded.")
 
@@ -420,7 +375,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             DispatchQueue.main.async {
                 rTracker_resource.addTimedLabel(text:"Full refresh in progress...", tag:self.refreshLabelId, sv:self.view, ti:3.0)
                 // Start the full refresh
-                self.isRefreshInProgress = true
+
                 self.handleFullRefresh()
             }
         }
@@ -441,7 +396,6 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             pullCounter = 0
             DispatchQueue.main.async {
                 // Refresh only the current record
-                self.isRefreshInProgress = true
                 self.refreshCurrentRecord(refreshControl)
             }
         }
@@ -453,7 +407,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         
         let dispatchGroup = DispatchGroup()
         let currentDate = Int(tracker!.trackerDate!.timeIntervalSince1970)
-        
+        self.isRefreshInProgress = true
+
         DispatchQueue.main.async {
             // Clear only the current record's HK ,FN and OT data
             for vo in self.tracker!.valObjTableH {
@@ -488,7 +443,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     // full data reload
     @objc func handleFullRefresh() {
         DBGLog("[\(Date())] Full Refresh initiated")
-        frDate = Int(tracker!.trackerDate!.timeIntervalSince1970)
+        
 
 
         // Delete all voData sourced from HealthKit and other trackers
@@ -502,42 +457,50 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         let sql = "delete from trkrdata where date not in (select date from voData where voData.date = trkrdata.date)"
         self.tracker?.toExecSql(sql: sql)
         
+        self.frDate = Int(tracker!.trackerDate!.timeIntervalSince1970)
+
+        performDataLoadingSequence {
+            DBGLog("Full refresh completed - All data loaded and SQL inserts completed.")
+
+            // Add a small success indicator message
+            rTracker_resource.addTimedLabel(text: "Refresh completed successfully", tag: self.refreshLabelId, sv: self.view, ti: 3.0)
+        }
+        
+    }
+    
+    // MARK: - Data Loading Sequence
+    
+    private func performDataLoadingSequence(completion: @escaping () -> Void) {
         let dispatchGroup = DispatchGroup()
 
         self.loadingData = true
         self.tracker!.loadingDbData = true
+        self.isRefreshInProgress = true
 
         // Setup progress UI before starting operations
         self.setupFullRefreshProgressUI()
-        
         // Set the tracker as the delegate for progress updates
         self.tracker!.refreshDelegate = self
-        
-        // CRITICAL: Use sequential direct method calls instead of nesting callbacks
-        // Each method will now handle its own phase reporting
 
         dispatchGroup.enter()
-        // Process HealthKit data
-        _ = self.tracker!.loadHKdata(dispatchGroup: nil) {
-            // Process other tracker data (non-self references)
-            _ = self.tracker!.loadOTdata(otSelf: false, dispatchGroup: nil) {
-                _ = self.tracker!.loadFNdata(dispatchGroup: nil) {
-                    // Process other tracker data (self references)
-                    _ = self.tracker!.loadOTdata(otSelf: true, dispatchGroup: nil) {
-                        // All operations complete
+        self.hkDataSource = self.tracker!.loadHKdata(dispatchGroup: nil, completion: {
+            // have hk data, load OT data for really other trackers
+            self.otDataSource = self.tracker!.loadOTdata(otSelf:false, dispatchGroup: nil, completion:{
+                // now can compute fn results
+                self.fnDataSource = self.tracker!.loadFNdata(dispatchGroup: nil, completion:{
+                    // now load ot data that look at self
+                    _ = self.tracker!.loadOTdata(otSelf:true, dispatchGroup: nil, completion: {
                         DispatchQueue.main.async {
-
                             // Clean up progress UI
                             self.cleanupFullRefreshProgressUI()
                             
                             // Clear tracker delegate
                             self.tracker!.refreshDelegate = nil
-                            
-                            // clean up properly if still shown
+                            // Stop and remove the spinner
                             self.endRAI()
 
+                            // loadFNdata above left data loaded for last db date, so clear here and get to current date
                             self.loadTrackerDate(self.frDate)
-
                             self.tableView?.reloadData()
                             self.tracker?.cleanDb()  // no orphaned data
                             self.loadingData = false
@@ -545,18 +508,15 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                             self.isRefreshInProgress = false
                             dispatchGroup.leave()
                         }
-                    }
-                }
-            }
-        }
-
-        dispatchGroup.notify(queue: .main) {
-            DBGLog("Full refresh completed - All data loaded and SQL inserts completed.")
-
-            // Add a small success indicator message
-            rTracker_resource.addTimedLabel(text: "Refresh completed successfully", tag: self.refreshLabelId, sv: self.view, ti: 3.0)
-        }
+                    })
+                })
+            })
+        })
         
+        // Notify when all operations are completed
+        dispatchGroup.notify(queue: .main) {
+            completion()
+        }
     }
     
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
