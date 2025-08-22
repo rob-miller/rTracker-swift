@@ -120,8 +120,17 @@ class voState: NSObject, voProtocol {
             myDates = to.toQry2AryI(sql: "select date from trkrData where date = \(specificDate)")
             prevDate = specificDate
         } else {
-            // Original implementation - get all dates after lastDate
-            myDates = to.toQry2AryI(sql: "select date from trkrData where date > \(lastDate) order by date asc")
+            // Get all dates after lastDate PLUS any with missing voOTstatus entries
+            myDates = to.toQry2AryI(sql: """
+                SELECT DISTINCT date FROM trkrData 
+                WHERE date > \(lastDate) 
+                   OR NOT EXISTS (
+                       SELECT 1 FROM voOTstatus 
+                       WHERE voOTstatus.date = trkrData.date 
+                       AND voOTstatus.id = \(vo.vid)
+                   )
+                ORDER BY date ASC
+            """)
         }
         
         for md in myDates {
