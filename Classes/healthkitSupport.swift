@@ -546,6 +546,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                     
                     //if totalValue != 0.0 {  // don't add 0 value records, e.g. from no deep sleep data when have in bed data
                     // actually this is correct - need to handle 0.0 time awake
+                    // this allows HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue (sleep other) to insert spurious 0 values
                         if specifiedUnit == HKUnit.hour() {
                             totalValue /= 60.0
                         }
@@ -580,7 +581,10 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                 }
             }
             DBGLog("have Sleep Analysis Query Results for \(queryConfig.displayName) : \(results)")
+            
+
             completion(results)
+            
         }
         
         healthStore.execute(query)

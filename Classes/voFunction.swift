@@ -106,6 +106,8 @@ let FN2ARGGREATER = FN2ARGNOTEQUAL - 1
 let FN2ARGLESS = FN2ARGGREATER - 1
 let FN2ARGGREATEREQUAL = FN2ARGLESS - 1
 let FN2ARGLESSEQUAL = FN2ARGGREATEREQUAL - 1
+let FN2ARGMIN2 = FN2ARGLESSEQUAL - 1
+let FN2ARGMAX2 = FN2ARGMIN2 - 1
 
 let FNNEW2ARGLAST = FNNEW2ARGFIRST - 100
 
@@ -132,11 +134,11 @@ let FNCONSTANT_TITLE = "constant"
 
 
 let ARG1FNS = [FN1ARGDELTA,FN1ARGSUM,FN1ARGPOSTSUM,FN1ARGPRESUM,FN1ARGAVG,FN1ARGMIN,FN1ARGMAX,FN1ARGCOUNT,FN1ARGONRATIO,FN1ARGNORATIO,FN1ARGELAPSEDWEEKS,FN1ARGELAPSEDDAYS,FN1ARGELAPSEDHOURS,FN1ARGELAPSEDMINS,FN1ARGELAPSEDSECS,FN1ARGDELAY, FN1ARGROUND, FN1ARGCLASSIFY, FN1ARGNOT]
-let ARG1STRS = ["change_in","sum","post-sum","pre-sum","avg","min","max","count","old/new","new/old","elapsed_weeks","elapsed_days","elapsed_hrs","elapsed_mins","elapsed_secs", "delay", "round", "classify", "!"]
+let ARG1STRS = ["change_in","sum","post-sum","pre-sum","avg","min","max","count","old/new","new/old","elapsed_weeks","elapsed_days","elapsed_hrs","elapsed_mins","elapsed_secs", "delay", "round", "classify", "¬"]
 let ARG1CNT = ARG1FNS.count
 
-let ARG2FNS = [FN2ARGPLUS,FN2ARGMINUS,FN2ARGTIMES,FN2ARGDIVIDE, FN2ARGAND, FN2ARGOR, FN2ARGXOR, FN2ARGEQUALTO, FN2ARGNOTEQUAL, FN2ARGGREATER, FN2ARGLESS, FN2ARGGREATEREQUAL, FN2ARGLESSEQUAL]
-let ARG2STRS = ["+","-","*","/", "&", "|", "^", "==", "!=", ">", "<", ">=", "<="]
+let ARG2FNS = [FN2ARGPLUS,FN2ARGMINUS,FN2ARGTIMES,FN2ARGDIVIDE, FN2ARGAND, FN2ARGOR, FN2ARGXOR, FN2ARGEQUALTO, FN2ARGNOTEQUAL, FN2ARGGREATER, FN2ARGLESS, FN2ARGGREATEREQUAL, FN2ARGLESSEQUAL, FN2ARGMIN2, FN2ARGMAX2]
+let ARG2STRS = ["+","-","*","/", "∧", "∨", "⊕", "==", "!=", ">", "<", ">=", "<=", "⌊", "⌈"]
 let ARG2CNT = ARG2FNS.count
 
 let PARENFNS = [FNPARENOPEN, FNPARENCLOSE]
@@ -1046,7 +1048,37 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                     DBGLog(String("fndbg less than or equal [\(String(describing: nextResult))]: result= \(String(describing: result))"))
                     #endif
 
-                    
+                case FN2ARGMIN2:
+                    // return the minimum of the two, treating nil as absent
+                    if result == nil  {
+                        result = nextResult
+                    } else if nextResult == nil {
+                        //result = result
+                    } else if result! < nextResult! {
+                        //result = result
+                    } else {
+                        // nextResult is <= result
+                        result = nextResult
+                    } 
+                    #if FUNCTIONDBG
+                    DBGLog(String("fndbg min2 [\(String(describing: nextResult))]: result= \(String(describing: result))"))
+                    #endif
+
+                case FN2ARGMAX2:
+                    // return the maximum of the two, treating nil as absent
+                    if result == nil  {
+                        result = nextResult
+                    } else if nextResult == nil {
+                        //result = result
+                    } else if result! > nextResult! {
+                        //result = result
+                    } else {
+                        // nextResult is >= result
+                        result = nextResult
+                    }
+                    #if FUNCTIONDBG
+                    DBGLog(String("fndbg max2 [\(String(describing: nextResult))]: result= \(String(describing: result))"))
+                    #endif
                 default:
                     break
                 }
@@ -1234,6 +1266,12 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         var valstr = vo.value // evaluated on read so make copy
         if FnErr {
             valstr = "❌ " + (valstr)
+        } else {
+            // Handle hours:minutes formatting if needed
+            if vo.optDict["hrsmins"] ?? "0" == "1", let numValue = Double(valstr) {
+                let rv = Int(round(numValue))
+                valstr = String(format: "%d:%02d", rv/60, rv % 60)
+            }
         }
         if valstr != "" {
             rlab?.backgroundColor = .clear // was whiteColor
@@ -1439,6 +1477,9 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         if nil == vo.optDict["func"] {
             vo.optDict["func"] = ""
         }
+        if nil == vo.optDict["hrsmins"] {
+            vo.optDict["hrsmins"] = "\(HRSMINSDFLT)"
+        }
         if nil == vo.optDict["autoscale"] {
             vo.optDict["autoscale"] = AUTOSCALEDFLT ? "1" : "0"
         }
@@ -1460,6 +1501,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             || ((key == "frep1") && (Int(val!) == FREPDFLT))
             || ((key == "fnddp") && (Int(val!) == FDDPDFLT))
             || ((key == "func") && (val! == ""))
+            || ((key == "hrsmins") && (val! == (HRSMINSDFLT ? "1" : "0")))
             || ((key == "autoscale") && (val! == (AUTOSCALEDFLT ? "1" : "0")))
             || ((key == "calOnlyLast") && (val! == (CALONLYLASTDFLT ? "1" : "0"))) {
             vo.optDict.removeValue(forKey: key)

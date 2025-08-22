@@ -625,6 +625,19 @@ extension voFunction {
             text: vo.optDict["fnddp"],
             addsv: true)
 
+        // Display minutes as hrs:mins switch
+        frame.origin.x = MARGIN
+        frame.origin.y += MARGIN + (labframe?.size.height ?? 0.0)
+
+        labframe = ctvovcp?.configLabel("Display minutes as hrs:mins:", frame: frame, key: "hrsminsLab", addsv: true)
+
+        frame = CGRect(x: (labframe?.size.width ?? 0.0) + MARGIN + SPACE, y: frame.origin.y, width: labframe?.size.height ?? 0.0, height: labframe?.size.height ?? 0.0)
+
+        frame = ctvovcp?.configSwitch(
+            frame,
+            key: "hrsminsBtn",
+            state: (vo.optDict["hrsmins"] == "1") /* default:0 */,
+            addsv: true) ?? CGRect.zero
 
         frame.origin.x = MARGIN
         frame.origin.y += MARGIN + (labframe?.size.height ?? 0.0)
