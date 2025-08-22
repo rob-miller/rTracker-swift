@@ -20,14 +20,19 @@ extension TrackerChart {
             subview.removeFromSuperview()
         }
         
-        // Create button for data selection
-        pieDataButton = createConfigButton(title: "Select Data", action: #selector(selectPieData))
+        // Create buttons for pie chart source selection
+        pieSource1Button = createConfigButton(title: "Select Data Source 1", action: #selector(selectPieSource1))
+        pieSource2Button = createConfigButton(title: "Select Data Source 2 (Optional)", action: #selector(selectPieSource2))
+        pieSource3Button = createConfigButton(title: "Select Data Source 3 (Optional)", action: #selector(selectPieSource3))
+        pieSource4Button = createConfigButton(title: "Select Data Source 4 (Optional)", action: #selector(selectPieSource4))
         
         // Configure layout
         let stackView = UIStackView(arrangedSubviews: [
             sliderContainer,
-            pieDataButton
-            
+            pieSource1Button,
+            pieSource2Button,
+            pieSource3Button,
+            pieSource4Button
         ])
         stackView.axis = .vertical
         stackView.spacing = 12
@@ -49,30 +54,81 @@ extension TrackerChart {
     
     // Add new function to generate pie chart data
     func generatePieChartData() {
-        guard let pieDataID = selectedValueObjIDs["pieData"],
-              let startDate = selectedStartDate,
+        guard let startDate = selectedStartDate,
               let endDate = selectedEndDate,
-              let tracker = tracker else {
+              let tracker = tracker,
+              pieChartSources[0] != -1 else { // Source 1 is required
             return
         }
         
         let startTimestamp = Int(startDate.timeIntervalSince1970)
         let endTimestamp = Int(endDate.timeIntervalSince1970)
         
-        // Get total number of entries in date range
-        let totalCountSQL = "SELECT COUNT(*) FROM trkrData WHERE date >= \(startTimestamp) AND date <= \(endTimestamp) AND minpriv <= \(privacyValue)"
-        let totalPossibleEntries = tracker.toQry2Int(sql: totalCountSQL)
-        
-        // Fetch data for the selected value object
-        // For choice and numeric data, exclude empty values to get accurate counts
-        let valueObj = tracker.valObjTable.first(where: { $0.vid == pieDataID })
-        let excludeEmpty = valueObj?.vtype == VOT_CHOICE || valueObj?.vtype == VOT_NUMBER || valueObj?.vtype == VOT_FUNC
-        let data = fetchDataForValueObj(id: pieDataID, startTimestamp: startTimestamp, endTimestamp: endTimestamp, excludeEmptyValues: excludeEmpty)
+        // Determine how many sources are selected
+        let selectedSources = pieChartSources.filter { $0 != -1 }
+        let isMultiSource = selectedSources.count > 1
         
         var valueCounts: [String: Int] = [:]
         
-        // Process the data based on the valueObj type
-        if let valueObj = tracker.valObjTable.first(where: { $0.vid == pieDataID }) {
+        if isMultiSource {
+            // MULTI-SOURCE MODE: Show proportion of each source's total contribution
+            DBGLog("=== Multi-Source Pie Chart Mode ===")
+            
+            // For each selected source, calculate its total contribution over the date range
+            for sourceID in selectedSources {
+                guard let valueObj = tracker.valObjTable.first(where: { $0.vid == sourceID }) else { continue }
+                
+                // Fetch data for this source
+                let excludeEmpty = valueObj.vtype == VOT_CHOICE || valueObj.vtype == VOT_NUMBER || valueObj.vtype == VOT_FUNC
+                let data = fetchDataForValueObj(id: sourceID, startTimestamp: startTimestamp, endTimestamp: endTimestamp, excludeEmptyValues: excludeEmpty)
+                
+                // Calculate total for this source based on its type
+                var sourceTotal: Double = 0
+                
+                switch valueObj.vtype {
+                case VOT_BOOLEAN:
+                    // For boolean, count "true" values as 1, "false" as 0
+                    sourceTotal = data.reduce(0) { total, entry in
+                        total + (entry.1 >= 0.5 ? 1.0 : 0.0)
+                    }
+                    
+                case VOT_CHOICE:
+                    // For choice, count each entry as 1 (just count occurrences)
+                    sourceTotal = Double(data.count)
+                    
+                case VOT_NUMBER, VOT_FUNC:
+                    // For numeric, sum all values
+                    sourceTotal = data.reduce(0) { total, entry in
+                        total + entry.1
+                    }
+                    
+                default:
+                    sourceTotal = Double(data.count)
+                }
+                
+                // Store the total for this source using the source name
+                let sourceName = valueObj.valueName ?? "Unknown Source"
+                valueCounts[sourceName] = Int(sourceTotal)
+                
+                DBGLog("Source \(sourceName): Total = \(sourceTotal)")
+            }
+            
+        } else {
+            // SINGLE-SOURCE MODE: Show detailed breakdown of values within the single source
+            DBGLog("=== Single-Source Pie Chart Mode ===")
+            
+            let pieDataID = pieChartSources[0]
+            guard let valueObj = tracker.valObjTable.first(where: { $0.vid == pieDataID }) else { return }
+            
+            // Get total number of entries in date range for "No Entry" calculation
+            let totalCountSQL = "SELECT COUNT(*) FROM trkrData WHERE date >= \(startTimestamp) AND date <= \(endTimestamp) AND minpriv <= \(privacyValue)"
+            let totalPossibleEntries = tracker.toQry2Int(sql: totalCountSQL)
+            
+            // Fetch data for the selected value object
+            let excludeEmpty = valueObj.vtype == VOT_CHOICE || valueObj.vtype == VOT_NUMBER || valueObj.vtype == VOT_FUNC
+            let data = fetchDataForValueObj(id: pieDataID, startTimestamp: startTimestamp, endTimestamp: endTimestamp, excludeEmptyValues: excludeEmpty)
+            
+            // Process the data based on the valueObj type (original single-source logic)
             switch valueObj.vtype {
             case VOT_BOOLEAN:
                 // For boolean, we'll only have "True" and "False" (which includes no entry)
@@ -104,7 +160,6 @@ extension TrackerChart {
                         valueCounts[category]? += 1
                     } else {
                         DBGLog("no category for \(value)")
-                        DBGLog("valueObj: \(valueObj)")
                     }
                 }
                 
@@ -122,19 +177,9 @@ extension TrackerChart {
                     valueCounts.removeValue(forKey: "")
                 }
                 
-                DBGLog("=== Initial Pie Data Categories ===")
-                for (key, count) in valueCounts {
-                    DBGLog("Category (before No Entry calc): \"\(key)\" - Count: \(count)")
-                }
-                
                 // Calculate no entries
                 let totalEntries = valueCounts.values.reduce(0, +)
                 valueCounts["No Entry"] = totalPossibleEntries - totalEntries
-
-
-                DBGLog("Total possible entries: \(totalPossibleEntries)")
-                DBGLog("Total counted entries: \(totalEntries)")
-                DBGLog("No Entry count: \(totalPossibleEntries - totalEntries)")
                 
             case VOT_NUMBER, VOT_FUNC:
                 // For numeric data, create bins based on data range
@@ -165,13 +210,7 @@ extension TrackerChart {
                         for i in 0..<binCount {
                             let binMin = minValue + Double(i) * binWidth
                             let binMax = minValue + Double(i + 1) * binWidth
-                            
-                            if i == binCount - 1 {
-                                // Last bin includes the maximum value
-                                binLabels.append(String(format: rangeFormatString, binMin, binMax))
-                            } else {
-                                binLabels.append(String(format: rangeFormatString, binMin, binMax))
-                            }
+                            binLabels.append(String(format: rangeFormatString, binMin, binMax))
                         }
                         
                         // Assign values to bins
@@ -206,6 +245,7 @@ extension TrackerChart {
         
         // Store the complete data
         chartData["pieData"] = valueCounts
+        chartData["isMultiSource"] = isMultiSource
         
         // Calculate total for percentages
         let total = valueCounts.values.reduce(0, +)
@@ -215,8 +255,13 @@ extension TrackerChart {
         }
         chartData["piePercentages"] = percentages
         
-        // Determine which segment contains the most recent data entry
-        determineRecentDataSegment()
+        // Determine which segment contains the most recent data entry (only for single source)
+        if !isMultiSource {
+            determineRecentDataSegment()
+        } else {
+            // Clear recent data segment for multi-source mode
+            chartData["recentDataSegment"] = nil
+        }
         
         // Trigger chart update
         renderPieChart()
@@ -226,13 +271,17 @@ extension TrackerChart {
     
     // Determine which segment contains the most recent data entries
     internal func determineRecentDataSegment() {
-        guard let pieDataID = selectedValueObjIDs["pieData"],
+        // Only work in single-source mode
+        guard pieChartSources[0] != -1,
+              pieChartSources.filter({ $0 != -1 }).count == 1,
               let startDate = selectedStartDate,
               let endDate = selectedEndDate,
               let tracker = tracker else {
             chartData["recentDataSegment"] = nil
             return
         }
+        
+        let pieDataID = pieChartSources[0]
         
         let startTimestamp = Int(startDate.timeIntervalSince1970)
         let endTimestamp = Int(endDate.timeIntervalSince1970)
@@ -331,11 +380,14 @@ extension TrackerChart {
 
     // Add this method to the TrackerChart extension in trackerChartPlots.swift
     @objc internal func toggleNoEntryInPieChart(_ sender: UITapGestureRecognizer) {
+        // Only work in single-source mode
+        let isMultiSource = chartData["isMultiSource"] as? Bool ?? false
+        guard !isMultiSource else { return }
+        
         // Check if we have a "No Entry" category to toggle
         if let valueCounts = chartData["pieData"] as? [String: Int],
-           let valueObj = selectedValueObjIDs["pieData"].flatMap({ id in
-               tracker?.valObjTable.first(where: { $0.vid == id })
-           }) {
+           pieChartSources[0] != -1,
+           let valueObj = tracker?.valObjTable.first(where: { $0.vid == pieChartSources[0] }) {
             
             // Boolean data doesn't separate "No Entry" from "False"
             if valueObj.vtype == VOT_BOOLEAN {
@@ -387,9 +439,15 @@ extension TrackerChart {
         // log whether we're showing "No Entry" or not
         DBGLog("showNoEntryInPieChart: \(showNoEntryInPieChart)")
         
-        // Get valueObj type and prepare colors
-        let valueObj = selectedValueObjIDs["pieData"].flatMap { pieDataID in
-            tracker?.valObjTable.first(where: { $0.vid == pieDataID })
+        // Get chart mode and handle data accordingly
+        let isMultiSource = chartData["isMultiSource"] as? Bool ?? false
+        
+        // Get valueObj type for single-source mode (needed for "No Entry" filtering)
+        let valueObj: valueObj?
+        if !isMultiSource && pieChartSources[0] != -1 {
+            valueObj = tracker?.valObjTable.first(where: { $0.vid == pieChartSources[0] })
+        } else {
+            valueObj = nil
         }
         
         // Check if we have a value object to determine if this is boolean data
@@ -398,8 +456,8 @@ extension TrackerChart {
         // For boolean data, never filter out "No Entry" (it's already handled as part of "False")
         let hasNoEntry = valueCounts["No Entry"] != nil
         
-        // Filter out "No Entry" if hidden and this is not boolean data
-        if !showNoEntryInPieChart && hasNoEntry && !isBooleanData {
+        // Filter out "No Entry" if hidden and this is single-source mode with non-boolean data
+        if !isMultiSource && !showNoEntryInPieChart && hasNoEntry && !isBooleanData {
             valueCounts.removeValue(forKey: "No Entry")
             
             DBGLog("=== After removing No Entry ===")
@@ -444,7 +502,19 @@ extension TrackerChart {
         
         var entries: [(key: String, value: Int, color: UIColor)] = []
         
-        if let vo = valueObj {
+        if isMultiSource {
+            // MULTI-SOURCE MODE: Use consistent colors for source names
+            let sortedKeys = Array(valueCounts.keys).sorted()
+            let colors = generateConsistentColors(keys: sortedKeys)
+            
+            entries = sortedKeys.compactMap { key in
+                if let count = valueCounts[key] {
+                    return (key, count, colors[key] ?? .systemGray)
+                }
+                return nil
+            }
+        } else if let vo = valueObj {
+            // SINGLE-SOURCE MODE: Use original color logic based on valueObj type
             switch vo.vtype {
             case VOT_BOOLEAN:
                 // Fixed boolean colors - only True and False for boolean data
@@ -507,6 +577,17 @@ extension TrackerChart {
                     }
                     return nil
                 }
+            }
+        } else {
+            // Fallback for cases where we don't have a valueObj
+            let sortedKeys = Array(valueCounts.keys).sorted()
+            let colors = generateConsistentColors(keys: sortedKeys)
+            
+            entries = sortedKeys.compactMap { key in
+                if let count = valueCounts[key] {
+                    return (key, count, colors[key] ?? .systemGray)
+                }
+                return nil
             }
         }
         
@@ -810,8 +891,8 @@ extension TrackerChart {
             pieChartView.addSubview(labelData.label)
         }
         
-        // Draw recent data indicator line if needed
-        if recentDataIndicatorState > 0,
+        // Draw recent data indicator line if needed (only in single-source mode)
+        if !isMultiSource && recentDataIndicatorState > 0,
            let recentSegmentKey = chartData["recentDataSegment"] as? String {
             drawRecentDataIndicatorLine(in: pieChartView, center: center, radius: size / 2, for: recentSegmentKey, entries: entries, filteredValueCounts: valueCounts)
         }

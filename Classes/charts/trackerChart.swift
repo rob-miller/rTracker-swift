@@ -79,7 +79,11 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     internal var showStatCounts: Bool = false
     
     // Pie chart configuration
-    internal var pieDataButton: UIButton!
+    internal var pieSource1Button: UIButton!
+    internal var pieSource2Button: UIButton!
+    internal var pieSource3Button: UIButton!
+    internal var pieSource4Button: UIButton!
+    internal var pieChartSources: [Int] = [-1, -1, -1, -1]  // Up to 4 data sources for pie chart
     internal var showNoEntryInPieChart: Bool = true
     
     // Add time chart specific properties
@@ -862,7 +866,10 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             "color": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_BOOLEAN, VOT_CHOICE],
             "background": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_CHOICE],
             "selection": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_BOOLEAN, VOT_CHOICE],
-            "pieData": [VOT_BOOLEAN, VOT_CHOICE, VOT_NUMBER, VOT_FUNC],
+            "pieSource1": [VOT_BOOLEAN, VOT_CHOICE, VOT_NUMBER, VOT_FUNC],
+            "pieSource2": [VOT_BOOLEAN, VOT_CHOICE, VOT_NUMBER, VOT_FUNC],
+            "pieSource3": [VOT_BOOLEAN, VOT_CHOICE, VOT_NUMBER, VOT_FUNC],
+            "pieSource4": [VOT_BOOLEAN, VOT_CHOICE, VOT_NUMBER, VOT_FUNC],
             "timeSource1": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_BOOLEAN],
             "timeSource2": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_BOOLEAN],
             "timeSource3": [VOT_NUMBER, VOT_FUNC, VOT_SLIDER, VOT_BOOLEAN],
@@ -908,8 +915,24 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         showPickerForValueObjSelection(type: "color")
     }
     
-    @objc internal func selectPieData() {
-        showPickerForValueObjSelection(type: "pieData")
+    @objc internal func selectPieSource1() {
+        currentPickerType = "pieSource1"
+        showPickerForValueObjSelection(type: "pieSource1")
+    }
+    
+    @objc internal func selectPieSource2() {
+        currentPickerType = "pieSource2"
+        showPickerForValueObjSelection(type: "pieSource2")
+    }
+    
+    @objc internal func selectPieSource3() {
+        currentPickerType = "pieSource3"
+        showPickerForValueObjSelection(type: "pieSource3")
+    }
+    
+    @objc internal func selectPieSource4() {
+        currentPickerType = "pieSource4"
+        showPickerForValueObjSelection(type: "pieSource4")
     }
 
     
@@ -974,6 +997,12 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
                     if sourceIndex >= 0 && sourceIndex < timeChartSources.count {
                         timeChartSources[sourceIndex] = -1 // Set to -1 to indicate "none"
                     }
+                } else if currentPickerType.hasPrefix("pieSource") {
+                    // For pie sources, update the corresponding pieChartSources array
+                    let sourceIndex = Int(currentPickerType.dropFirst("pieSource".count))! - 1
+                    if sourceIndex >= 0 && sourceIndex < pieChartSources.count {
+                        pieChartSources[sourceIndex] = -1 // Set to -1 to indicate "none"
+                    }
                 } else {
                     // For other fields, set to -1 to indicate "none selected"
                     selectedValueObjIDs[currentPickerType] = -1
@@ -987,6 +1016,12 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
                     let sourceIndex = Int(currentPickerType.dropFirst("timeSource".count))! - 1
                     if sourceIndex >= 0 && sourceIndex < timeChartSources.count {
                         timeChartSources[sourceIndex] = selected.vid
+                    }
+                } else if currentPickerType.hasPrefix("pieSource") {
+                    // Update pieChartSources if this is a pie source selection
+                    let sourceIndex = Int(currentPickerType.dropFirst("pieSource".count))! - 1
+                    if sourceIndex >= 0 && sourceIndex < pieChartSources.count {
+                        pieChartSources[sourceIndex] = selected.vid
                     }
                 }
             }
@@ -1018,8 +1053,18 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
                     generateDistributionPlotData()
                 }
             } else if segmentedControl.selectedSegmentIndex == CHART_TYPE_PIE {
-                if selectedValueObjIDs["pieData"] != -1 {
+                // Update chart if source 1 is selected (required for pie charts)
+                if pieChartSources[0] != -1 {
                     generatePieChartData()
+                } else {
+                    // If source 1 is cleared, reset the chart view
+                    for subview in chartView.subviews {
+                        if subview != noDataLabel {
+                            subview.removeFromSuperview()
+                        }
+                    }
+                    noDataLabel.text = "Configure chart options below"
+                    noDataLabel.isHidden = false
                 }
             } else if segmentedControl.selectedSegmentIndex == CHART_TYPE_TIME {
                 // Update chart if at least one source is selected
@@ -1039,6 +1084,11 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             
             // Update button title
             updateButtonTitles()
+            
+            // Update action button visibility for pie charts when sources change
+            if segmentedControl.selectedSegmentIndex == CHART_TYPE_PIE {
+                updateActionButtonForChartType()
+            }
         }
         
         // Hide picker
@@ -1127,13 +1177,52 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
                 }
             }
         } else {
-            // Update pie chart button title
-            if let pieID = selectedValueObjIDs["pieData"], pieID != -1 {
-                let pieVO = tracker?.valObjTable.first { $0.vid == pieID }
-                pieDataButton.setTitle(pieVO?.valueName ?? "Data", for: .normal)
-            } else {
-                pieDataButton.setTitle("Select Data", for: .normal)
+            // Update pie chart source button titles
+            for i in 0..<pieChartSources.count {
+                let sourceID = pieChartSources[i]
+                if sourceID != -1 {
+                    let sourceVO = tracker?.valObjTable.first { $0.vid == sourceID }
+                    let buttonTitle = sourceVO?.valueName ?? "Source \(i+1)"
+                    
+                    switch i {
+                    case 0:
+                        pieSource1Button.setTitle(buttonTitle, for: .normal)
+                    case 1:
+                        pieSource2Button.setTitle(buttonTitle, for: .normal)
+                    case 2:
+                        pieSource3Button.setTitle(buttonTitle, for: .normal)
+                    case 3:
+                        pieSource4Button.setTitle(buttonTitle, for: .normal)
+                    default:
+                        break
+                    }
+                } else {
+                    // Reset to default titles
+                    switch i {
+                    case 0:
+                        pieSource1Button.setTitle("Select Data Source 1", for: .normal)
+                    case 1:
+                        pieSource2Button.setTitle("Select Data Source 2 (Optional)", for: .normal)
+                    case 2:
+                        pieSource3Button.setTitle("Select Data Source 3 (Optional)", for: .normal)
+                    case 3:
+                        pieSource4Button.setTitle("Select Data Source 4 (Optional)", for: .normal)
+                    default:
+                        break
+                    }
+                }
             }
+            
+            // Update button states - disable sources 2,3,4 if source 1 is not selected
+            let source1Selected = pieChartSources[0] != -1
+            pieSource2Button.isEnabled = source1Selected
+            pieSource3Button.isEnabled = source1Selected
+            pieSource4Button.isEnabled = source1Selected
+            
+            // Update button alpha to show disabled state
+            pieSource2Button.alpha = source1Selected ? 1.0 : 0.5
+            pieSource3Button.alpha = source1Selected ? 1.0 : 0.5
+            pieSource4Button.alpha = source1Selected ? 1.0 : 0.5
         }
     }
     
@@ -1436,8 +1525,8 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         } else {
             setupPieChartConfig()
             
-            // Check if pie data is selected
-            if selectedValueObjIDs["pieData"] != -1 {
+            // Check if pie source 1 is selected
+            if pieChartSources[0] != -1 {
                 generatePieChartData()
             } else {
                 // Clear the chart and show instruction
@@ -1718,6 +1807,62 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
                 results.append(contentsOf: filtered)
                 return results
             }
+        } else if configType.hasPrefix("pieSource") {
+            let sourceIndex = Int(configType.dropFirst("pieSource".count))! - 1
+            
+            // pieSource1 is required, no "None" option
+            if sourceIndex == 0 {
+                // Get allowed types for this configuration
+                let allowedTypes = allowedValueObjTypes[configType] ?? []
+                
+                // Filter valueObjs based on type and privacy
+                let eligibleVOs = tracker.valObjTable.filter { vo in
+                    // Check if type is allowed
+                    guard allowedTypes.contains(vo.vtype) else { return false }
+                    
+                    // Check privacy settings (if applicable)
+                    let privacy = vo.optDict["privacy"] ?? "0"
+                    return Int(privacy) ?? 0 <= privacyValue
+                }
+                
+                return eligibleVOs
+            } else {
+                // pieSource2,3,4 are optional and can be set to "None"
+                // But only if pieSource1 is selected
+                if pieChartSources[0] == -1 {
+                    // If source 1 is not selected, return empty array (buttons should be disabled)
+                    return []
+                }
+                
+                // Skip adding "None" if this source is already None
+                if sourceIndex >= 0 && sourceIndex < pieChartSources.count && pieChartSources[sourceIndex] == -1 {
+                    // If this pie source is already None, don't add the None option
+                } else {
+                    // Add None option for pie chart sources 2,3,4
+                    var results: [valueObj] = [noneVO]
+                    
+                    // Get allowed types for this configuration
+                    let allowedTypes = allowedValueObjTypes[configType] ?? []
+                    
+                    // Filter valueObjs based on type and privacy
+                    let eligibleVOs = tracker.valObjTable.filter { vo in
+                        // Check if type is allowed
+                        guard allowedTypes.contains(vo.vtype) else { return false }
+                        
+                        // Check privacy settings (if applicable)
+                        let privacy = vo.optDict["privacy"] ?? "0"
+                        return Int(privacy) ?? 0 <= privacyValue
+                    }
+                    
+                    // Filter out already selected pie sources
+                    let filtered = eligibleVOs.filter { vo in
+                        !pieChartSources.contains(vo.vid)
+                    }
+                    
+                    results.append(contentsOf: filtered)
+                    return results
+                }
+            }
         } else if configType == "color" || configType == "selection" {
             // Add None option for these optional fields
             var results: [valueObj] = [noneVO]
@@ -1922,12 +2067,22 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             actionButton.tintColor = .systemBlue
             
         case CHART_TYPE_PIE:
-            // Pie chart: show as recent data indicator
-            actionButton.isHidden = false
-            actionButton.setImage(nil, for: .normal) // Clear any image
-            actionButton.setTitle("○", for: .normal)
-            actionButton.tintColor = .black
-            recentDataIndicatorState = 0 // Reset state when switching chart types
+            // Pie chart: show as recent data indicator only in single-source mode
+            let selectedPieSources = pieChartSources.filter { $0 != -1 }
+            let isMultiSourcePie = selectedPieSources.count > 1
+            
+            if isMultiSourcePie {
+                // Hide action button in multi-source mode
+                actionButton.isHidden = true
+                recentDataIndicatorState = 0 // Disable indicator state
+            } else {
+                // Show action button in single-source mode
+                actionButton.isHidden = false
+                actionButton.setImage(nil, for: .normal) // Clear any image
+                actionButton.setTitle("○", for: .normal)
+                actionButton.tintColor = .black
+                recentDataIndicatorState = 0 // Reset state when switching chart types
+            }
             
         default:
             // Scatter charts: hide the button
@@ -1985,7 +2140,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
                 generateTimeChartData()
             }
         case CHART_TYPE_PIE:
-            if selectedValueObjIDs["pieData"] != -1 {
+            if pieChartSources[0] != -1 {
                 generatePieChartData()
             }
         default:
