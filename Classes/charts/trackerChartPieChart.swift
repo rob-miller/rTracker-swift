@@ -849,9 +849,9 @@ extension TrackerChart {
                     y: center.y + sin(labelAngle) * (size / 2 * 1.1)
                 )
                 
-                // Determine text color based on segment color
-                let brightness = color.getBrightness()
-                label.textColor = brightness > 0.6 ? .black : .white
+                // Determine text color based on chart background (not segment color) since label is outside pie
+                let isDarkMode = traitCollection.userInterfaceStyle == .dark
+                label.textColor = isDarkMode ? .white : .black
             }
             
             // Center label around calculated point

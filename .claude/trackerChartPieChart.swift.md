@@ -53,4 +53,5 @@ Extension of TrackerChart that implements pie chart functionality. Creates circu
 - **848f8d8**: Major refactoring to separate chart functionality into individual files
 
 ## Last Updated
+2025-08-23: Fixed pie chart label visibility issue - outside labels now use chart background color (dark/light mode) instead of segment color for text contrast
 2025-08-22: Completed multi-source pie chart implementation with dual-mode operation and comprehensive feature integration
