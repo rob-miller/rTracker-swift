@@ -1160,7 +1160,11 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                 #endif
             } else {
                 // remaining option is we have some vid as currTok, return its value up the chain
-                let lvo = to.getValObj(currTok)!
+                guard let lvo = to.getValObj(currTok) else {
+                    DBGLog("voFunction: valueObj with vid \(currTok) not found (may have been deleted)")
+                    result = nil
+                    break
+                }
                 result = lvo.vos!.getNumVal()  // Double(lvo.value) ?? 0
                 #if FUNCTIONDBG
                 DBGLog(String("vid \(lvo.vid): result= \(String(describing: result))"))
