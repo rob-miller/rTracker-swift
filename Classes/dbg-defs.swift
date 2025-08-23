@@ -90,7 +90,8 @@ func DBGLog(_ message: String, file: String = #file, function: String = #functio
 #if DEBUGLOG
     //#define DBGLog(args...) NSLog(@"%s%d: %@",__PRETTY_FUNCTION__,__LINE__,[NSString stringWithFormat: args])
     let fileName = file.components(separatedBy: "/").last ?? ""
-    print("[\(fileName):\(line)] \(function): \(message)")
+    let tim = CFAbsoluteTimeGetCurrent()
+    print("\(tim):[\(fileName):\(line)] \(function): \(message)")
 #endif
 }
 
@@ -98,7 +99,8 @@ func DBGWarn(_ message: String, file: String = #file, function: String = #functi
 #if DEBUGWARN
     //print("dbgwarn enabled")
     let fileName = file.components(separatedBy: "/").last ?? ""
-    print("**warning** [\(fileName):\(line)] \(function): \(message)")
+    let tim = CFAbsoluteTimeGetCurrent()
+    print("\(tim):**warning** [\(fileName):\(line)] \(function): \(message)")
     //#define DBGWarn(args...) NSLog(@"%@",[NSString stringWithFormat: args])
     //#define DBGWarn(args...) NSLog(@"%s%d: **WARNING** %@",__PRETTY_FUNCTION__,__LINE__,[NSString stringWithFormat: args])
 #endif
@@ -107,7 +109,8 @@ func DBGWarn(_ message: String, file: String = #file, function: String = #functi
 func DBGErr(_ message: String, file: String = #file, function: String = #function, line: Int = #line) {
 #if DEBUGERR
     let fileName = file.components(separatedBy: "/").last ?? ""
-    print("**error** [\(fileName):\(line)] \(function): \(message)")
+    let tim = CFAbsoluteTimeGetCurrent()
+    print("\(tim):**error** [\(fileName):\(line)] \(function): \(message)")
     //#define DBGErr(args...) NSLog(@"%s%d: **ERROR** %@",__PRETTY_FUNCTION__,__LINE__,[NSString stringWithFormat: args])
 #endif
 }
