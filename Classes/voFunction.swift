@@ -809,6 +809,14 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                     #if FUNCTIONDBG
                     DBGLog(String("delay: result= \(String(describing: result))"))
                     #endif
+                    case FN1ARGNOT:
+                        // NOT logical operation - invert truthy/falsy value
+                        // if nil or 0 return 1.0 else return nil
+                        result = nullV1 ? 1.0 : v1 == 0.0 ? 1.0 : nil
+
+                        #if FUNCTIONDBG
+                        DBGLog(String("not: result= \(String(describing: result))"))
+                        #endif
                 default:
                     // remaining options for fn w/ 1 arg are pre/post/all sum
                     switch currTok {
@@ -846,13 +854,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                         #if FUNCTIONDBG
                         DBGLog("postsum: set sql")
                         #endif
-                    case FN1ARGNOT:
-                        // NOT logical operation - invert truthy/falsy value
-                        result = nullV1 ? 1.0 : v1 == 0.0 ? 1.0 : nil
 
-                        #if FUNCTIONDBG
-                        DBGLog(String("not: result= \(String(describing: result))"))
-                        #endif
                     default:
                         break
                     }
