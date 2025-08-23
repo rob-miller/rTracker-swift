@@ -189,8 +189,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     func startRAI() {
         // Cancel any existing delayed work
         raiDelayedWork?.cancel()
-        
-        // Create new delayed work to show activity indicator after 0.3 seconds
+
+        // Create new delayed work to show activity indicator after 0.05 seconds
         raiDelayedWork = DispatchWorkItem { [weak self] in
             DispatchQueue.main.async {
                 guard let self = self else { return }
@@ -199,13 +199,15 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                     rai.center = self.view.center
                     rai.startAnimating()
                     self.view.addSubview(rai)
+                    DBGLog("started RAI!")
                 }
             }
         }
         
-        // Execute after 0.3 seconds
+        // Execute after 0.05 seconds
         if let delayedWork = raiDelayedWork {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: delayedWork)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05, execute: delayedWork)
+            DBGLog("scheduled RAI delayed work")
         }
     }
     
@@ -975,7 +977,10 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 self.fullRefreshProgressBar?.isHidden = false
                 self.fullRefreshProgressLabel?.isHidden = false
                 self.fullRefreshProgressContainerView?.isHidden = false
+ 
                 self.endRAI()
+                DBGLog("endRAI called from progress init for phase \(self.currentRefreshPhase)")
+
                 
                 // Set initial phase text
                 self.fullRefreshProgressLabel?.text = "\(self.currentRefreshPhase) - 0%"
