@@ -1758,6 +1758,14 @@ extension TrackerChart {
         let calendar = Calendar.current
         let totalInterval = endDate.timeIntervalSince(startDate)
         
+        // Calculate total years in span
+        let startYear = calendar.component(.year, from: startDate)
+        let endYear = calendar.component(.year, from: endDate)
+        let totalYears = endYear - startYear + 1
+        
+        // Determine optimal year interval and label format based on span and available space
+        let (yearInterval, useAbbreviated) = calculateOptimalYearInterval(totalYears: totalYears, graphWidth: graphWidth)
+        
         // Get start year rounded down to the beginning of the year
         var components = calendar.dateComponents([.year], from: startDate)
         components.month = 1
@@ -1768,30 +1776,103 @@ extension TrackerChart {
         
         guard let roundedStartDate = calendar.date(from: components) else { return }
         
-        // Iterate through years within the range
+        // Track label positions to prevent overlap
+        var labelPositions: [CGFloat] = []
+        let minimumLabelSpacing: CGFloat = useAbbreviated ? 25 : 35 // Minimum space between label centers
+        
+        // Iterate through years within the range at calculated interval
         var currentDate = roundedStartDate
+        var yearCount = 0
+        
         while currentDate <= endDate {
-            // Calculate position
-            let progress = currentDate.timeIntervalSince(startDate) / totalInterval
-            let x = leftMargin + CGFloat(progress) * graphWidth
+            let currentYear = calendar.component(.year, from: currentDate)
             
-            // Only show if within the graph bounds
-            if x >= leftMargin && x <= leftMargin + graphWidth {
-                // Draw tick mark
-                let tick = UIView(frame: CGRect(x: x, y: topMargin + graphHeight, width: 1, height: 5))
-                tick.backgroundColor = .label
-                axesView.addSubview(tick)
+            // Only show labels at the calculated interval, plus always show start and end years
+            let shouldShowLabel = (yearCount % yearInterval == 0) || 
+                                  (currentYear == startYear) || 
+                                  (currentYear == endYear) ||
+                                  (currentYear % 10 == 0) // Always show decade boundaries
+            
+            if shouldShowLabel {
+                // Calculate position
+                let progress = currentDate.timeIntervalSince(startDate) / totalInterval
+                let x = leftMargin + CGFloat(progress) * graphWidth
                 
-                // Draw year label
-                let label = UILabel(frame: CGRect(x: x - 25, y: topMargin + graphHeight + 5, width: 50, height: 15))
-                label.text = dateFormatter.string(from: currentDate)
-                label.textAlignment = .center
-                label.font = UIFont.systemFont(ofSize: 10)
-                axesView.addSubview(label)
+                // Check for collision with existing labels
+                let wouldCollide = labelPositions.contains { abs($0 - x) < minimumLabelSpacing }
+                
+                // Only show if within bounds and no collision
+                if x >= leftMargin && x <= leftMargin + graphWidth && !wouldCollide {
+                    // Draw tick mark
+                    let tick = UIView(frame: CGRect(x: x, y: topMargin + graphHeight, width: 1, height: 5))
+                    tick.backgroundColor = .label
+                    axesView.addSubview(tick)
+                    
+                    // Format year label based on span length
+                    let yearText: String
+                    if useAbbreviated {
+                        // Use abbreviated format like '12, '15, '20
+                        yearText = "'\(String(currentYear).suffix(2))"
+                    } else {
+                        // Use full 4-digit year
+                        yearText = String(currentYear)
+                    }
+                    
+                    // Calculate label width based on text
+                    let labelWidth = useAbbreviated ? 20 : 30
+                    let label = UILabel(frame: CGRect(x: x - CGFloat(labelWidth/2), y: topMargin + graphHeight + 5, width: CGFloat(labelWidth), height: 15))
+                    label.text = yearText
+                    label.textAlignment = .center
+                    label.font = UIFont.systemFont(ofSize: 10)
+                    axesView.addSubview(label)
+                    
+                    // Track this label position
+                    labelPositions.append(x)
+                }
             }
             
             // Move to next year
             currentDate = calendar.date(byAdding: .year, value: 1, to: currentDate) ?? currentDate
+            yearCount += 1
+        }
+    }
+    
+    // Calculate optimal year interval and format for readable labels
+    private func calculateOptimalYearInterval(totalYears: Int, graphWidth: CGFloat) -> (interval: Int, useAbbreviated: Bool) {
+        // Estimate available space per year
+        let spacePerYear = graphWidth / CGFloat(totalYears)
+        
+        // Determine interval and format based on available space and total span
+        switch totalYears {
+        case 1...4:
+            // Short span - show all years if space allows
+            return (1, false)
+            
+        case 5...8:
+            // Medium span - show every other year, or every year if there's space
+            return spacePerYear > 40 ? (1, false) : (2, false)
+            
+        case 9...15:
+            // Longer span - show every 2-3 years
+            return spacePerYear > 25 ? (2, false) : (3, false)
+            
+        case 16...25:
+            // Long span - show every 3-5 years, consider abbreviation
+            if spacePerYear > 30 {
+                return (3, false)
+            } else if spacePerYear > 20 {
+                return (2, true) // Abbreviated format
+            } else {
+                return (5, true)
+            }
+            
+        default:
+            // Very long span (>25 years) - use abbreviated format with decade-based intervals
+            if spacePerYear > 25 {
+                return (5, true)
+            } else {
+                return (10, true) // Show decades only
+            }
         }
     }
     

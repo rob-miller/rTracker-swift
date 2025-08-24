@@ -38,6 +38,9 @@ Extension of TrackerChart that implements time series plotting functionality. Cr
   - Individual scaling for ungrouped sources
 - **Action Button Integration**: Uses action button as navigation tool to jump to first record in date range and close charts
 - **Date Marker Scaling**: Adaptive time axis labels (hourly, daily, monthly, yearly) based on date range
+  - **Intelligent Yearly Labels**: For multi-year spans, uses dynamic interval calculation and collision detection to prevent overlapping
+  - **Adaptive Year Format**: Switches between full 4-digit years and abbreviated format ('12, '15) based on available space
+  - **Smart Prioritization**: Always shows start/end years and decade boundaries, with calculated intervals for intermediate years
 - **Boolean Handling**: Special case rendering with count display instead of averages in legend
 - **Tap Interactions**: 
   - Data points show tooltips with value and date
@@ -45,6 +48,7 @@ Extension of TrackerChart that implements time series plotting functionality. Cr
   - Haptic feedback for user interactions
 
 ## Recent Development History
+- **Current**: Improved yearly axis labels with dynamic spacing and collision detection to handle long-term data spans (2012-2025) without overlapping
 - **aa80b0b**: Enhanced boolean time plot Y-axis labels and switched to counts instead of averages
 - **fb4f387**: Improved time chart scaling consistency and rotated tapped labels sideways
 - **5a7502e**: Updated time chart legend to show averages in trace colors instead of generic text
