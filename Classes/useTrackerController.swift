@@ -206,7 +206,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         
         // Execute after 0.05 seconds
         if let delayedWork = raiDelayedWork {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05, execute: delayedWork)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: delayedWork)
             DBGLog("scheduled RAI delayed work")
         }
     }
