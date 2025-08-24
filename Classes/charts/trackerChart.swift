@@ -25,6 +25,9 @@
 
 import UIKit
 
+// Associated object key for recent data cache
+internal var recentDataCacheKey: UInt8 = 0
+
 class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSource {
     
     // MARK: - Constants
@@ -645,6 +648,12 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             // Cycle through states: 0=off, 1=last, 2=minus1, 3=minus2, 4=minus3, 5=minus4, back to 0
             recentDataIndicatorState = (recentDataIndicatorState + 1) % 6
             
+            // Clear cache when indicator is turned off
+            if recentDataIndicatorState == 0 {
+                // Clear the recent data cache
+                objc_setAssociatedObject(self, &recentDataCacheKey, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+            }
+            
             // Update button appearance
             switch recentDataIndicatorState {
             case 0: // Off
@@ -678,6 +687,12 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             // Pie chart: recent data indicator functionality
             // Cycle through states: 0=off, 1=last, 2=minus1, 3=minus2, 4=minus3, 5=minus4, back to 0
             recentDataIndicatorState = (recentDataIndicatorState + 1) % 6
+            
+            // Clear cache when indicator is turned off
+            if recentDataIndicatorState == 0 {
+                // Clear the recent data cache
+                objc_setAssociatedObject(self, &recentDataCacheKey, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+            }
             
             // Update button appearance
             switch recentDataIndicatorState {
@@ -2054,6 +2069,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             actionButton.setTitle("○", for: .normal)
             actionButton.tintColor = .black
             recentDataIndicatorState = 0 // Reset state when switching chart types
+            objc_setAssociatedObject(self, &recentDataCacheKey, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) // Clear cache
             
         case CHART_TYPE_TIME:
             // Time plot: show as navigation button
@@ -2082,6 +2098,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
                 actionButton.setTitle("○", for: .normal)
                 actionButton.tintColor = .black
                 recentDataIndicatorState = 0 // Reset state when switching chart types
+            objc_setAssociatedObject(self, &recentDataCacheKey, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) // Clear cache
             }
             
         default:

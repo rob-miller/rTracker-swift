@@ -11,6 +11,118 @@ import UIKit
 // MARK: - distribution plot implementation
 extension TrackerChart {
     
+    // Cache for recent data legend with metadata
+    private var recentDataCache: (data: [(Date, Double)], startDate: Date, endDate: Date, backgroundID: Int)? {
+        get {
+            return objc_getAssociatedObject(self, &recentDataCacheKey) as? (data: [(Date, Double)], startDate: Date, endDate: Date, backgroundID: Int)
+        }
+        set {
+            objc_setAssociatedObject(self, &recentDataCacheKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
+    }
+    
+    // Specialized query method for recent data legend
+    private func fetchRecentDataForLegend(id: Int, startTimestamp: Int, endTimestamp: Int, excludeEmptyValues: Bool = false) -> [(Date, Double)] {
+        guard id != -1, let tracker = tracker else { return [] }
+        
+        var sql = """
+        SELECT v.date, v.val FROM voData v
+        LEFT JOIN ignoreRecords i ON v.date = i.date
+        WHERE v.id = \(id) AND v.date >= \(startTimestamp) AND v.date <= \(endTimestamp)
+        AND i.date IS NULL
+        """
+        
+        if excludeEmptyValues {
+            sql += " AND v.val != ''"
+        }
+        
+        sql += " ORDER BY v.date DESC LIMIT 5"
+        
+        return tracker.toQry2AryDate(sql: sql)
+    }
+    
+    // Helper method to determine optimal date/time format for recent data
+    private func formatRecentDataTimestamp(_ date: Date, allDates: [Date]) -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.locale = Locale.current
+        
+        // Check if all dates are on different days
+        let calendar = Calendar.current
+        let uniqueDays = Set(allDates.map { calendar.startOfDay(for: $0) })
+        
+        if uniqueDays.count == allDates.count {
+            // All different days - date only is sufficient
+            dateFormatter.dateFormat = "d MMM"
+            return dateFormatter.string(from: date)
+        } else {
+            // Same day entries exist - need time
+            let components = calendar.dateComponents([.day, .month, .hour, .minute], from: date)
+            let dayMonth = "\(components.day!) \(components.month!)"
+            let time = String(format: "%02d:%02d", components.hour!, components.minute!)
+            return "\(dayMonth) \(time)"
+        }
+    }
+    
+    // Add recent data legend beneath the background average
+    private func addRecentDataLegend(to container: UIView, rightXPos: CGFloat, yPos: CGFloat, lineHeight: CGFloat) {
+        // Get current background data for recent entries
+        guard let backgroundID = selectedValueObjIDs["background"],
+              backgroundID != -1,
+              let selectedStartDate = selectedStartDate,
+              let selectedEndDate = selectedEndDate else { return }
+        
+        // Check cache first, populate if needed or if parameters changed
+        let needsRefresh = recentDataCache == nil || 
+                          recentDataCache?.startDate != selectedStartDate ||
+                          recentDataCache?.endDate != selectedEndDate ||
+                          recentDataCache?.backgroundID != backgroundID
+        
+        if needsRefresh {
+            let startTimestamp = Int(selectedStartDate.timeIntervalSince1970)
+            let endTimestamp = Int(selectedEndDate.timeIntervalSince1970)
+            
+            let backgroundVO = tracker?.valObjTable.first { $0.vid == backgroundID }
+            let excludeEmptyForBackground = backgroundVO?.vtype == VOT_NUMBER || backgroundVO?.vtype == VOT_FUNC || backgroundVO?.vtype == VOT_CHOICE
+            
+            let freshData = fetchRecentDataForLegend(id: backgroundID, startTimestamp: startTimestamp, endTimestamp: endTimestamp, excludeEmptyValues: excludeEmptyForBackground)
+            recentDataCache = (data: freshData, startDate: selectedStartDate, endDate: selectedEndDate, backgroundID: backgroundID)
+        }
+        
+        guard let recentDataCacheValue = recentDataCache, !recentDataCacheValue.data.isEmpty else { return }
+        let recentData = recentDataCacheValue.data
+        
+        // Extract dates for formatting analysis
+        let allDates = recentData.map { $0.0 }
+        
+        // Display only the current recent entry (recentDataIndicatorState 1-5 maps to index 0-4)
+        let currentIndex = recentDataIndicatorState - 1
+        guard currentIndex >= 0 && currentIndex < recentData.count else { return }
+        
+        let (date, value) = recentData[currentIndex]
+        
+        // Create container for this legend entry
+        let entryContainer = UIView(frame: CGRect(x: rightXPos, y: yPos, width: 100, height: lineHeight))
+        
+        // Color indicator (small circle)
+        let colorSize: CGFloat = 8
+        let colorView = UIView(frame: CGRect(x: 0, y: (lineHeight - colorSize) / 2, width: colorSize, height: colorSize))
+        colorView.backgroundColor = rTracker_resource.colorSpectrum[currentIndex % rTracker_resource.colorSpectrum.count]
+        colorView.layer.cornerRadius = colorSize / 2
+        
+        entryContainer.addSubview(colorView)
+        
+        // Date/time and value label
+        let textLabel = UILabel(frame: CGRect(x: colorSize + 4, y: 0, width: 100 - colorSize - 4, height: lineHeight))
+        textLabel.font = UIFont.systemFont(ofSize: 10, weight: .medium)
+        textLabel.textColor = .label
+        
+        let dateString = formatRecentDataTimestamp(date, allDates: allDates)
+        textLabel.text = "\(dateString): \(String(format: "%.2f", value))"
+        
+        entryContainer.addSubview(textLabel)
+        container.addSubview(entryContainer)
+    }
+    
     // Update setupDistributionPlotConfig to indicate Selection is optional
     internal func setupDistributionPlotConfig() {
         // Remove existing subviews
@@ -114,6 +226,12 @@ extension TrackerChart {
             bgLbl.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(toggleStatDisplayMode)))
             
             container.addSubview(bgLbl)
+            
+            // Add recent data legend if indicator is active
+            if recentDataIndicatorState > 0 {
+                let recentYPos = 15 + lineHeight + 5 // Below background average with spacing
+                addRecentDataLegend(to: container, rightXPos: rightXPos, yPos: recentYPos, lineHeight: lineHeight)
+            }
         }
         
         // Follow legend order for segmentation classes
