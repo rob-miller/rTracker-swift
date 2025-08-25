@@ -629,7 +629,7 @@ class voNumber: voState, UITextFieldDelegate {
         let startTime = CFAbsoluteTimeGetCurrent()
         #endif
         
-        rthk.getHealthKitDates(for: srcName, lastDate: lastDate) { hkDates in
+        rthk.getHealthKitDates(for: srcName, fromDate: lastDate) { hkDates in
             #if DEBUGLOG
             let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
             DBGLog("HKPROFILE: getHealthKitDates for \(srcName) (vid: \(self.vo.vid)) took \(String(format: "%.3f", timeElapsed))s, found \(hkDates.count) dates")

@@ -263,7 +263,7 @@ class trackerObj: tObjBase {
                     let startTime = CFAbsoluteTimeGetCurrent()
                     #endif
                     
-                    rtHealthKit.shared.getHealthKitDataCount(for: srcName, lastDate: lastDate > 0 ? lastDate : nil) { dataCount in
+                    rtHealthKit.shared.getHealthKitDataCount(for: srcName, fromDate: lastDate > 0 ? lastDate : nil) { dataCount in
                         #if DEBUGLOG
                         let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
                         DBGLog("HKPROFILE: getHealthKitDataCount for \(srcName) (vid: \(vo.vid)) took \(String(format: "%.3f", timeElapsed))s, found \(dataCount) samples after date \(lastDate)")
@@ -316,7 +316,7 @@ class trackerObj: tObjBase {
                     let startTime = CFAbsoluteTimeGetCurrent()
                     #endif
                     
-                    rtHealthKit.shared.getHealthKitDataCount(for: srcName, lastDate: lastDate > 0 ? lastDate : nil) { dataCount in
+                    rtHealthKit.shared.getHealthKitDataCount(for: srcName, fromDate: lastDate > 0 ? lastDate : nil) { dataCount in
                         #if DEBUGLOG
                         let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
                         DBGLog("HKPROFILE: getHealthKitDataCount for \(srcName) (vid: \(vo.vid)) took \(String(format: "%.3f", timeElapsed))s, found \(dataCount) samples after date \(lastDate)")
@@ -469,7 +469,7 @@ class trackerObj: tObjBase {
                 let sampleStartTime = CFAbsoluteTimeGetCurrent()
                 #endif
                 
-                rtHealthKit.shared.getHealthKitDataCount(for: srcName, lastDate: lastDate > 0 ? lastDate : nil) { dataCount in
+                rtHealthKit.shared.getHealthKitDataCount(for: srcName, fromDate: lastDate > 0 ? lastDate : nil) { dataCount in
                     #if DEBUGLOG
                     let sampleTime = CFAbsoluteTimeGetCurrent() - sampleStartTime
                     let totalTime = CFAbsoluteTimeGetCurrent() - startTime
@@ -603,7 +603,7 @@ class trackerObj: tObjBase {
     }
     
     func loadHKdata(forDate date: Int? = nil, dispatchGroup: DispatchGroup?, completion: (() -> Void)? = nil) -> Bool {
-        // For full refresh operations, check if progress bar should be initialized
+        // check if progress bar should be initialized
         DBGLog("STATE: start loadHKdata")
         if dispatchGroup == nil && refreshDelegate != nil {
             // Use quick version with fast heuristics to decide on progress bar
