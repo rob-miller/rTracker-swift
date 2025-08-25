@@ -986,6 +986,33 @@ class trackerObj: tObjBase {
         }
     }
 
+    private func processFnDataForDate(progressState: ProcessingState) {
+        autoreleasepool {
+            DBGLog("Processing date \(progressState.currentDate) (\(Date(timeIntervalSince1970: TimeInterval(progressState.currentDate))))")
+            // Load data for this date and process functions
+            _ = self.loadData(progressState.currentDate)  // does nothing if date not in db, so leaves current gui settings
+            
+            for vo in self.valObjTable {
+                if vo.vtype == VOT_FUNC {
+                    DBGLog("Calling setFNrecalc() for vid=\(vo.vid) before processing date \(progressState.currentDate)")
+                    vo.vos?.setFNrecalc()  // do not use cached values
+                    vo.vos?.setFnVal(progressState.currentDate)
+                }
+            }
+            
+            // Update progress
+            progressState.datesProcessed += 1
+            if progressState.datesProcessed % 5 == 0 {
+                DispatchQueue.main.async {
+                    self.refreshDelegate?.updateFullRefreshProgress(step: 5, phase: nil, totalSteps: nil)
+                }
+                
+                // Small yield to give main thread breathing room
+                Thread.sleep(forTimeInterval: 0.01)
+            }
+        }
+    }
+
     private func processFnData(forDate date: Int? = nil, dispatchGroup: DispatchGroup? = nil, forceAll: Bool = false, completion: (() -> Void)? = nil) -> Bool {
         // Diagnostic step 1: Verify delegate is set
         DBGLog("[\(Date())] processFnData called - refreshDelegate is \(refreshDelegate != nil ? "SET" : "NOT SET!")")
@@ -1025,54 +1052,56 @@ class trackerObj: tObjBase {
         var missingHistoricalDates: [Int] = []
         var actualDatesToProcess = 0
         
-        if forceAll {
-            nextDate = firstDate() // Always start from beginning for setFnVals
+        //let sql = "select max(date) from voFNstatus where stat = \(fnStatus.fnData.rawValue)"
+        let sql = "select max(date) from voFNstatus" // allow .noData - must full refresh to recalculate or do individually
+        let maxProcessedDate = toQry2Int(sql: sql)
+
+        // forceAll does what it says, all from first date
+        // specified date does just the single date
+        // otherwise called from useTracker viewDidLoad, go from max date in voFNstatus through now.  also do any missing historical dates
+
+        if forceAll || maxProcessedDate == 0 || (optDict["dirtyFns"] as? String) == "1" {
+            nextDate = firstDate()
             actualDatesToProcess = getDateCount()
+            DBGLog("computing all functions \(actualDatesToProcess) dates  forceAll=\(forceAll), nextDate=\(nextDate) (\(Date(timeIntervalSince1970: TimeInterval(nextDate))))")
         } else if let specifiedDate = date {
             nextDate = specifiedDate
             actualDatesToProcess = 1
+            DBGLog("processFnData: specifiedDate=\(specifiedDate) (\(Date(timeIntervalSince1970: TimeInterval(specifiedDate)))), nextDate=\(nextDate)")
         } else {
-            //let sql = "select max(date) from voFNstatus where stat = \(fnStatus.fnData.rawValue)"
-            let sql = "select max(date) from voFNstatus" // allow .noData - must full refresh to recalculate
-            let maxProcessedDate = toQry2Int(sql: sql)
-            
-            if maxProcessedDate == 0 || (optDict["dirtyFns"] as? String) == "1" {
-                nextDate = firstDate()
-                actualDatesToProcess = getDateCount()
-            } else {
-                // Check for historical dates missing voFNstatus entries for any function valueObj
-                let historicalSQL = """
-                SELECT DISTINCT trkrData.date FROM trkrData 
-                WHERE trkrData.date <= \(maxProcessedDate)
-                AND EXISTS (
-                    SELECT 1 FROM voConfig 
-                    WHERE voConfig.type = \(VOT_FUNC)
-                    AND NOT EXISTS (
-                        SELECT 1 FROM voFNstatus 
-                        WHERE voFNstatus.date = trkrData.date 
-                        AND voFNstatus.id = voConfig.id
-                    )
+            // Check for historical dates missing voFNstatus entries for any function valueObj
+            let historicalSQL = """
+            SELECT DISTINCT trkrData.date FROM trkrData 
+            WHERE trkrData.date <= \(maxProcessedDate)
+            AND EXISTS (
+                SELECT 1 FROM voConfig 
+                WHERE voConfig.type = \(VOT_FUNC)
+                AND NOT EXISTS (
+                    SELECT 1 FROM voFNstatus 
+                    WHERE voFNstatus.date = trkrData.date 
+                    AND voFNstatus.id = voConfig.id
                 )
-                ORDER BY trkrData.date ASC
-                """
-                missingHistoricalDates = toQry2AryI(sql: historicalSQL)
-                
-                // Set nextDate to continue from after max processed date
-                trackerDate = Date(timeIntervalSince1970: TimeInterval(maxProcessedDate))
-                nextDate = postDate()
-                
-                // Count future dates to process
-                let futureDatesSQL = """
-                SELECT count(*) FROM trkrData 
-                WHERE date > \(maxProcessedDate)
-                AND minpriv <= \(privacyValue)
-                """
-                let futureDatesCount = toQry2Int(sql: futureDatesSQL)
-                
-                actualDatesToProcess = missingHistoricalDates.count + futureDatesCount
-                
-                DBGLog("Found \(missingHistoricalDates.count) historical dates missing function status, \(futureDatesCount) future dates to process")
-            }
+            )
+            ORDER BY trkrData.date ASC
+            """
+            missingHistoricalDates = toQry2AryI(sql: historicalSQL)
+            
+            // Set nextDate to continue from after max processed date
+            trackerDate = Date(timeIntervalSince1970: TimeInterval(maxProcessedDate))
+            nextDate = postDate()
+            
+            // Count future dates to process
+            let futureDatesSQL = """
+            SELECT count(*) FROM trkrData 
+            WHERE date > \(maxProcessedDate)
+            AND minpriv <= \(privacyValue)
+            """
+            let futureDatesCount = toQry2Int(sql: futureDatesSQL)
+            
+            actualDatesToProcess = missingHistoricalDates.count + futureDatesCount
+            
+            DBGLog("Found \(missingHistoricalDates.count) historical dates missing function status, \(futureDatesCount) future dates to process")
+            
         }
         
         if nextDate == 0 && missingHistoricalDates.isEmpty {
@@ -1083,7 +1112,7 @@ class trackerObj: tObjBase {
         
         dispatchGroup?.enter()
         
-        // Key change: Create a dedicated queue for function processing
+        // Create a dedicated queue for function processing
         let functionProcessingQueue = DispatchQueue(label: "com.rtracker.functionProcessing", qos: .userInitiated)
         
         // Create a state object to track progress with accurate count
@@ -1096,61 +1125,33 @@ class trackerObj: tObjBase {
                 completion?()
                 return
             }
-            
-            // Phase 1: Process historical dates missing function status
-            for historicalDate in missingHistoricalDates {
-                autoreleasepool {
-                    // Load data for this historical date and process functions
-                    _ = self.loadData(historicalDate)
-                    
-                    for vo in self.valObjTable {
-                        if vo.vtype == VOT_FUNC {
-                            vo.vos?.setFNrecalc()  // do not use cached values
-                            vo.vos?.setFnVal(historicalDate)
-                        }
-                    }
-                    
-                    // Update progress
-                    progressState.datesProcessed += 1
-                    if progressState.datesProcessed % 5 == 0 {
-                        DispatchQueue.main.async {
-                            self.refreshDelegate?.updateFullRefreshProgress(step: 5, phase: nil, totalSteps: nil)
-                        }
-                        
-                        // Small yield to give main thread breathing room
-                        Thread.sleep(forTimeInterval: 0.01)
-                    }
-                }
-            }
-            
-            // Phase 2: Process future dates (if any)
-            if progressState.currentDate != 0 {
-                repeat {
-                    autoreleasepool {
-                        // Load data for this date and process functions
-                        _ = self.loadData(progressState.currentDate)  // does nothing if date not in db, so leaves curent gui settings
-                        
-                        for vo in self.valObjTable {
-                            vo.vos?.setFNrecalc()  // do not use cached values
-                            vo.vos?.setFnVal(progressState.currentDate)  // Use synchronous version since we're already on a background thread
-                        }
-                        
-                        // Update progress (every 5 dates or so to avoid too many UI updates)
-                        progressState.datesProcessed += 1
-                        if progressState.datesProcessed % 5 == 0 {
-                            DispatchQueue.main.async {
-                                self.refreshDelegate?.updateFullRefreshProgress(step: 5, phase: nil, totalSteps: nil)
-                            }
+
+            if date != nil {
+                // Single date mode - only process the specified date
+                DBGLog(" Processing single specified date \(Date(timeIntervalSince1970: TimeInterval(progressState.currentDate)))")
+                self.processFnDataForDate(progressState: progressState)
+            } else {
                             
-                            // Small yield to give main thread breathing room
-                            Thread.sleep(forTimeInterval: 0.01)
-                        }
-                        
-                        // Move to next date
-                        progressState.currentDate = self.postDate()
+                if missingHistoricalDates.count > 0 {
+                    // Process historical dates missing function status if called with no specified date
+                    DBGLog("Processing \(missingHistoricalDates.count) historical dates")
+                    for historicalDate in missingHistoricalDates {
+                        progressState.currentDate = historicalDate
+                        self.processFnDataForDate(progressState: progressState)
                     }
-                } while (progressState.currentDate != 0) // iterate through dates
+                    // Restore currentDate to nextDate for Phase 2
+                    progressState.currentDate = nextDate
+                }
+
+                // Multi-date mode - process all dates from current point forward
+                DBGLog("Processing future dates from \(Date(timeIntervalSince1970: TimeInterval(progressState.currentDate)))")
+                while (progressState.currentDate != 0)  {
+                    self.processFnDataForDate(progressState: progressState)
+                    // Move to next date
+                    progressState.currentDate = self.postDate()
+                } 
             }
+            
             
             // Final cleanup on main thread
             DispatchQueue.main.async {
@@ -1184,10 +1185,6 @@ class trackerObj: tObjBase {
         return processFnData(forDate: date, dispatchGroup: dispatchGroup, forceAll: false, completion: completion)
     }
 
-    func setFnVals(completion: (() -> Void)? = nil) {
-        _ = processFnData(forceAll: true, completion: completion)
-    }
-    
     func sortVoTable(byArray arr: [AnyHashable]?) {
         guard let arr = arr as? [valueObj], !arr.isEmpty else { return }
         
@@ -2123,7 +2120,7 @@ class trackerObj: tObjBase {
                 vo.vos?.clearFNdata()  // wipe db values so vo.value read forced to update
             }
         }
-        setFnVals()
+        _ = processFnData(forceAll: true)
 
         if goRecalculate {
             goRecalculate = false
