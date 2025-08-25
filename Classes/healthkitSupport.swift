@@ -39,10 +39,17 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         loadHealthKitConfigurations()
     }
 
-    private func earliestSampleDate(
+    func earliestSampleDate(
         for sampleType: HKSampleType,
+        useDate: Date?,
         completion: @escaping (Date) -> Void
     ) {
+        // Return immediately with useDate if provided
+        if let useDate = useDate {
+            completion(useDate)
+            return
+        }
+        
         let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
         let query = HKSampleQuery(
             sampleType: sampleType,
@@ -1005,32 +1012,16 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
     
 
     func getHealthKitDates(
-        for displayName: String,
-        fromDate: Int?,
+        queryConfig: HealthDataQuery,
+        hkObjectType: HKSampleType,
+        startDate: Date,
+        endDate: Date,
         completion: @escaping ([TimeInterval]) -> Void
     ) {
-        // gets dates with HK data for displayName query over all time, or since fromDate if fromDate > 0
+        // gets dates with HK data for specified query configuration within date range
         
-        // Find the query configuration for the given displayName
-        guard let queryConfig = healthDataQueries.first(where: { $0.displayName == displayName }),
-              let hkObjectType = queryConfig.identifier.hasPrefix("HKQuantityTypeIdentifier") ?
-                HKObjectType.quantityType(forIdentifier: HKQuantityTypeIdentifier(rawValue: queryConfig.identifier)) :
-                HKObjectType.categoryType(forIdentifier: HKCategoryTypeIdentifier(rawValue: queryConfig.identifier)) else {
-            DBGLog("No HealthKit identifier found for display name: \(displayName)")
-            completion([])
-            return
-        }
-
-        // debug date
-        //let calendar = Calendar.current
-        //let specificDate = calendar.date(from: DateComponents(year: 2024, month: 9, day: 19, hour: 0, minute: 0, second: 0))
-        //let startDate = (fromDate ?? 0 > 0 ? Date(timeIntervalSince1970: Double(fromDate!)) : specificDate)
-        
-        // Predicate for all time
-        let startDate = (fromDate ?? 0 > 0 ? Date(timeIntervalSince1970: Double(fromDate!)) : Date.distantPast)
-        
-        // Time predicate remains the same
-        let timePredicate = HKQuery.predicateForSamples(withStart: startDate, end: Date(), options: [])
+        // Time predicate using provided date range
+        let timePredicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [])
         
         // Handle the predicate creation differently based on type
         var predicate: NSPredicate = timePredicate
@@ -1066,7 +1057,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                     return
                 }
                 let timestamps = samples.map { $0.startDate.timeIntervalSince1970 }
-                //self.dbgTimestamps(displayName, timestamps)
+                //self.dbgTimestamps(queryConfig.displayName, timestamps)
                 completion(timestamps)
             }
             healthStore.execute(query)
@@ -1100,7 +1091,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                     }
                     
                     let timestamps = statisticsCollection.statistics().map { $0.startDate.timeIntervalSince1970 }
-                    //self.dbgTimestamps(displayName, timestamps)
+                    //self.dbgTimestamps(queryConfig.displayName, timestamps)
                     completion(timestamps)
                 }
                 
@@ -1143,7 +1134,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                     }
 
                     let timestamps = groupedByAggregationTime.keys.map { $0.timeIntervalSince1970 }
-                    self.dbgTimestamps(displayName, timestamps)
+                    self.dbgTimestamps(queryConfig.displayName, timestamps)
                     completion(timestamps)
                 }
                 

@@ -607,6 +607,16 @@ class voNumber: voState, UITextFieldDelegate {
             return
         }
 
+        // Compute queryConfig and hkObjectType here instead of in getHealthKitDates
+        guard let queryConfig = healthDataQueries.first(where: { $0.displayName == srcName }),
+              let hkObjectType = queryConfig.identifier.hasPrefix("HKQuantityTypeIdentifier") ?
+                HKObjectType.quantityType(forIdentifier: HKQuantityTypeIdentifier(rawValue: queryConfig.identifier)) :
+                HKObjectType.categoryType(forIdentifier: HKCategoryTypeIdentifier(rawValue: queryConfig.identifier)) else {
+            DBGLog("No HealthKit identifier found for display name: \(srcName)")
+            dispatchGroup?.leave()
+            return
+        }
+
         dispatchGroup?.enter()  // wait for getHealthkitDates processing overall
         
         
@@ -625,11 +635,18 @@ class voNumber: voState, UITextFieldDelegate {
         }
         DBGLog("lastDate is \(Date(timeIntervalSince1970:TimeInterval(lastDate)))")
         
+        // Compute startDate using earliestSampleDate instead of Date.distantPast
+        let dateToUse = lastDate > 0 ? Date(timeIntervalSince1970: TimeInterval(lastDate)) : nil
+        
         #if DEBUGLOG
         let startTime = CFAbsoluteTimeGetCurrent()
         #endif
         
-        rthk.getHealthKitDates(for: srcName, fromDate: lastDate) { hkDates in
+        // Use earliestSampleDate to get more accurate start date, passing dateToUse to avoid query if not needed
+        rthk.earliestSampleDate(for: hkObjectType as HKSampleType, useDate: dateToUse) { [self] startDate in
+            let endDate = Date()
+            
+            rthk.getHealthKitDates(queryConfig: queryConfig, hkObjectType: hkObjectType as HKSampleType, startDate: startDate, endDate: endDate) { hkDates in
             #if DEBUGLOG
             let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
             DBGLog("HKPROFILE: getHealthKitDates for \(srcName) (vid: \(self.vo.vid)) took \(String(format: "%.3f", timeElapsed))s, found \(hkDates.count) dates")
@@ -659,6 +676,7 @@ class voNumber: voState, UITextFieldDelegate {
             DBGLog("Inserted \(newDates.count) new dates into trkrData.")
             
             hkDispatchGroup.leave() // Leave the group after insertion is complete
+            }
         }
 
         // 2nd log hk data entries for each date in voData and hkStatus
