@@ -39,6 +39,34 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         loadHealthKitConfigurations()
     }
 
+    private func earliestSampleDate(
+        for sampleType: HKSampleType,
+        completion: @escaping (Date) -> Void
+    ) {
+        let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
+        let query = HKSampleQuery(
+            sampleType: sampleType,
+            predicate: nil,
+            limit: 1,
+            sortDescriptors: [sortDescriptor]
+        ) { _, results, error in
+            if let error = error {
+                DBGErr("Error querying earliest sample date: \(error.localizedDescription)")
+                // Fall back to HealthKit introduction date (iOS 8, September 2014)
+                let fallbackDate = Calendar.current.date(from: DateComponents(year: 2014, month: 9, day: 1)) ?? Date(timeIntervalSince1970: 1409529600)
+                completion(fallbackDate)
+                return
+            }
+            
+            if let earliestDate = results?.first?.startDate {
+                completion(earliestDate)
+            } else {
+                // No samples found, return current date
+                completion(Date())
+            }
+        }
+        healthStore.execute(query)
+    }
 
     func updateAuthorisations(completion: @escaping () -> Void) {
             let dispatchGroup = DispatchGroup()
@@ -978,10 +1006,10 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
 
     func getHealthKitDates(
         for displayName: String,
-        lastDate: Int?,
+        fromDate: Int?,
         completion: @escaping ([TimeInterval]) -> Void
     ) {
-        // gets dates with HK data for displayName query over all time, or since lastDate if lastDate > 0
+        // gets dates with HK data for displayName query over all time, or since fromDate if fromDate > 0
         
         // Find the query configuration for the given displayName
         guard let queryConfig = healthDataQueries.first(where: { $0.displayName == displayName }),
@@ -996,10 +1024,10 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         // debug date
         //let calendar = Calendar.current
         //let specificDate = calendar.date(from: DateComponents(year: 2024, month: 9, day: 19, hour: 0, minute: 0, second: 0))
-        //let startDate = (lastDate ?? 0 > 0 ? Date(timeIntervalSince1970: Double(lastDate!)) : specificDate)
+        //let startDate = (fromDate ?? 0 > 0 ? Date(timeIntervalSince1970: Double(fromDate!)) : specificDate)
         
         // Predicate for all time
-        let startDate = (lastDate ?? 0 > 0 ? Date(timeIntervalSince1970: Double(lastDate!)) : Date.distantPast)
+        let startDate = (fromDate ?? 0 > 0 ? Date(timeIntervalSince1970: Double(fromDate!)) : Date.distantPast)
         
         // Time predicate remains the same
         let timePredicate = HKQuery.predicateForSamples(withStart: startDate, end: Date(), options: [])
@@ -1135,7 +1163,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
     
     func getHealthKitDataCount(
         for displayName: String,
-        lastDate: Int?,
+        fromDate: Int?,
         completion: @escaping (Int) -> Void
     ) {
         // Fast count method - gets count of HK data points without fetching all samples
@@ -1151,7 +1179,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         }
 
         // Use same predicate logic as getHealthKitDates
-        let startDate = (lastDate ?? 0 > 0 ? Date(timeIntervalSince1970: Double(lastDate!)) : Date.distantPast)
+        let startDate = (fromDate ?? 0 > 0 ? Date(timeIntervalSince1970: Double(fromDate!)) : Date.distantPast)
         let timePredicate = HKQuery.predicateForSamples(withStart: startDate, end: Date(), options: [])
         
         var predicate: NSPredicate = timePredicate
