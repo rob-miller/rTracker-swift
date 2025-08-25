@@ -35,9 +35,18 @@ Implements function value objects that can calculate derived values from other t
 - **Caching**: Uses `lastCalcValue` and `lastEpd0` for performance optimization
 - **Database Integration**: Stores calculated results in `voData` table with tracking in `voFNstatus`
 
+## Current Issues & TODOs
+✅ Fixed caching logic bug where setFNrecalc() didn't prevent cached value usage
+✅ Added fnDirty flag check to caching condition in update() method
+✅ Reset lastEpd0 in setFNrecalc() to ensure proper cache invalidation
+
 ## Recent Development History
+- 2025-08-25: Fixed caching logic in setFNrecalc() and update() methods to properly respect fnDirty flag
 - Recent commits focused on logical operations with nil handling (6575eb3, 746e7c6)
 - Added progress bar support for full refresh operations (834d4d3)
 - Implemented ignoreRecords functionality for data filtering (8ce0ce1)
 - Enhanced average calculations to require at least 2 entries (7f78cd2)
 - Performance improvements with pull-to-refresh mechanisms (b4966ac)
+
+## Last Updated
+2025-08-25 - Fixed function value caching logic to prevent stale cached values after setFNrecalc() calls
