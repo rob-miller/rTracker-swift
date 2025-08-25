@@ -1226,7 +1226,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             return instr ?? ""
         }
         
-        if ep0date == lastEpd0 && !lastCalcValue.isEmpty {
+        if ep0date == lastEpd0 && !lastCalcValue.isEmpty && !fnDirty {
             DBGLog("fn \(vo.valueName!) update using cached value \(lastCalcValue) ep0date \(Date(timeIntervalSince1970: TimeInterval(ep0date))) [fnDirty=\(fnDirty), lastCalcValue.isEmpty=\(lastCalcValue.isEmpty)]")
             return lastCalcValue
         } else {
@@ -1455,6 +1455,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         // force recaclulation, no cached value
         DBGLog("setFNrecalc() called for vid=\(vo.vid), clearing lastCalcValue='\(lastCalcValue)', setting fnDirty=true")
         lastCalcValue = ""
+        lastEpd0 = -1  // Also reset the cached endpoint date to force recalculation
         fnDirty = true
     }
     
