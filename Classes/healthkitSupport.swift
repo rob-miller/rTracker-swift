@@ -74,6 +74,71 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         }
         healthStore.execute(query)
     }
+    
+    func sampleDateRange(
+        for sampleType: HKSampleType,
+        useStartDate: Date?,
+        useEndDate: Date?,
+        completion: @escaping (Date?, Date?) -> Void
+    ) {
+        // Return immediately with provided dates if both are given
+        if let useStartDate = useStartDate, let useEndDate = useEndDate {
+            completion(useStartDate, useEndDate)
+            return
+        }
+        
+        let group = DispatchGroup()
+        var earliestDate: Date?
+        var latestDate: Date?
+        
+        // Use provided start date or query for earliest sample
+        if let useStartDate = useStartDate {
+            earliestDate = useStartDate
+        } else {
+            group.enter()
+            let earliestSortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
+            let earliestQuery = HKSampleQuery(
+                sampleType: sampleType,
+                predicate: nil,
+                limit: 1,
+                sortDescriptors: [earliestSortDescriptor]
+            ) { _, results, error in
+                if let error = error {
+                    DBGErr("Error querying earliest sample date: \(error.localizedDescription)")
+                } else if let sample = results?.first {
+                    earliestDate = sample.startDate
+                }
+                group.leave()
+            }
+            healthStore.execute(earliestQuery)
+        }
+        
+        // Use provided end date or query for latest sample
+        if let useEndDate = useEndDate {
+            latestDate = useEndDate
+        } else {
+            group.enter()
+            let latestSortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
+            let latestQuery = HKSampleQuery(
+                sampleType: sampleType,
+                predicate: nil,
+                limit: 1,
+                sortDescriptors: [latestSortDescriptor]
+            ) { _, results, error in
+                if let error = error {
+                    DBGErr("Error querying latest sample date: \(error.localizedDescription)")
+                } else if let sample = results?.first {
+                    latestDate = sample.startDate
+                }
+                group.leave()
+            }
+            healthStore.execute(latestQuery)
+        }
+        
+        group.notify(queue: .main) {
+            completion(earliestDate, latestDate)  // return nil if no data
+        }
+    }
 
     func updateAuthorisations(completion: @escaping () -> Void) {
             let dispatchGroup = DispatchGroup()
