@@ -25,7 +25,13 @@ import Foundation
 import UIKit
 
 protocol RefreshProgressDelegate: AnyObject {
-    func updateFullRefreshProgress(step: Int, phase: String?, totalSteps: Int?)
+    func updateFullRefreshProgress(step: Int, phase: String?, totalSteps: Int?, threshold: Int?)
+}
+
+extension RefreshProgressDelegate {
+    func updateFullRefreshProgress(step: Int = 1, phase: String? = nil, totalSteps: Int? = nil, threshold: Int? = nil) {
+        updateFullRefreshProgress(step: step, phase: phase, totalSteps: totalSteps, threshold: threshold)
+    }
 }
 
 // to config checkbutton default states
@@ -36,6 +42,12 @@ let SAVERTNDFLT = true
 
 // max days for graph, 0= no limit
 let GRAPHMAXDAYSDFLT = 0
+
+// HealthKit date window size for chunked loading
+let hkDateWindow = 32
+
+// HealthKit query date threshold for progress bar
+let hqDateWindow = 64
 
 class trackerObj: tObjBase {
 
@@ -74,6 +86,9 @@ class trackerObj: tObjBase {
     var reminders: [notifyReminder] = []
     var reminderNdx = 0
     let recalcFnLock = AtomicTestAndSet()  //(initialValue: false)
+    
+    // Cache for other tracker objects to avoid repeated instantiation
+    private var otTrackerCache: [String: trackerObj] = [:]
     
     private var _maxLabel = CGSize.zero
     var maxLabel: CGSize {
@@ -210,297 +225,7 @@ class trackerObj: tObjBase {
 
         return true
     }
-    
-    // Add this method to trackerObj for explicit progress reporting
-    func reportProgressPhase(_ phase: String) {
-        DBGLog("[\(Date())] Explicitly reporting progress phase: \(phase)")
-        
-        // Check if we're already on the main thread
-        if Thread.isMainThread {
-            // Execute directly
-            refreshDelegate?.updateFullRefreshProgress(step: 0, phase: phase, totalSteps: nil)
-            
-            // Force UI updates
-            if let controller = refreshDelegate as? UIViewController {
-                controller.view.setNeedsLayout()
-                controller.view.layoutIfNeeded()
-            }
-        } else {
-            // Force execution on main thread and wait for it to complete
-            DispatchQueue.main.async {
-                self.refreshDelegate?.updateFullRefreshProgress(step: 0, phase: phase, totalSteps: nil)
-                
-                // Force UI updates
-                if let controller = self.refreshDelegate as? UIViewController {
-                    controller.view.setNeedsLayout()
-                    controller.view.layoutIfNeeded()
-                }
-            }
-        }
-        
-        // Small delay to allow UI to refresh - only use a small sleep on background threads
-        if !Thread.isMainThread {
-            Thread.sleep(forTimeInterval: 0.05)
-        }
-        
-        DBGLog("Phase report complete for: \(phase)")
-    }
-    
-    // MARK: - Progress counting methods for phase-based progress bar
-    
-    func countHKsteps() -> Int {
-        var hkCount = 0
-        for vo in valObjTable {
-            if vo.optDict["ahksrc"] ?? "0" != "0" {
-                hkCount += 1
-                
-                // Call getHealthKitDataCount with the same date calculation as voNumber loadHKdata
-                if let srcName = vo.optDict["ahSource"] {
-                    let sql = "select max(date) from voHKstatus where id = \(vo.vid) and stat = \(hkStatus.hkData.rawValue)"
-                    let lastDate = toQry2Int(sql: sql)
-                    
-                    #if DEBUGLOG
-                    let startTime = CFAbsoluteTimeGetCurrent()
-                    #endif
-                    
-                    rtHealthKit.shared.getHealthKitDataCount(for: srcName, fromDate: lastDate > 0 ? lastDate : nil) { dataCount in
-                        #if DEBUGLOG
-                        let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
-                        DBGLog("HKPROFILE: getHealthKitDataCount for \(srcName) (vid: \(vo.vid)) took \(String(format: "%.3f", timeElapsed))s, found \(dataCount) samples after date \(lastDate)")
-                        #endif
-                    }
-                }
-            }
-        }
-        hkCount *= 2  // count dates query and data query
-        DBGLog("countHKsteps: Found \(hkCount) HealthKit valueObjs")
 
-        if hkCount > 0 {
-            // look for trkrData Dates with no hkStatus at all
-            let hkCheckSQL = """
-            SELECT count(*) FROM trkrData 
-            WHERE NOT EXISTS (
-                SELECT 1 FROM voHKstatus 
-                WHERE voHKstatus.date = trkrData.date 
-            )
-            """
-            let missingCount = self.toQry2Int(sql:hkCheckSQL)
-            if missingCount > 0 {
-                // Report missing HealthKit data
-                DBGLog("have \(hkCount/2) hk voNumbers and \(missingCount) missing HealthKit data entries")
-            } else {
-                DBGLog("have \(hkCount/2) hk voNumbers but no missing HealthKit data entries")
-                hkCount = 0
-            }
-        }
-
-        return hkCount
-    }
-    
-    func countHKstepsAsync(completion: @escaping (Int) -> Void) {
-        var hkCount = 0
-        let group = DispatchGroup()
-        
-        for vo in valObjTable {
-            if vo.optDict["ahksrc"] ?? "0" != "0" {
-                hkCount += 1
-                
-                // Call getHealthKitDataCount with the same date calculation as voNumber loadHKdata
-                if let srcName = vo.optDict["ahSource"] {
-                    let sql = "select max(date) from voHKstatus where id = \(vo.vid) and stat = \(hkStatus.hkData.rawValue)"
-                    let lastDate = toQry2Int(sql: sql)
-                    
-                    group.enter()
-                    
-                    #if DEBUGLOG
-                    let startTime = CFAbsoluteTimeGetCurrent()
-                    #endif
-                    
-                    rtHealthKit.shared.getHealthKitDataCount(for: srcName, fromDate: lastDate > 0 ? lastDate : nil) { dataCount in
-                        #if DEBUGLOG
-                        let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
-                        DBGLog("HKPROFILE: getHealthKitDataCount for \(srcName) (vid: \(vo.vid)) took \(String(format: "%.3f", timeElapsed))s, found \(dataCount) samples after date \(lastDate)")
-                        #endif
-                        group.leave()
-                    }
-                }
-            }
-        }
-        
-        group.notify(queue: .main) {
-            hkCount *= 2  // count dates query and data query
-            DBGLog("countHKstepsAsync: Found \(hkCount) HealthKit valueObjs")
-
-            if hkCount > 0 {
-                // look for trkrData Dates with no hkStatus at all
-                let hkCheckSQL = """
-                SELECT count(*) FROM trkrData 
-                WHERE NOT EXISTS (
-                    SELECT 1 FROM voHKstatus 
-                    WHERE voHKstatus.date = trkrData.date 
-                )
-                """
-                let missingCount = self.toQry2Int(sql:hkCheckSQL)
-                if missingCount > 0 {
-                    // Report missing HealthKit data
-                    DBGLog("have \(hkCount/2) hk voNumbers and \(missingCount) missing HealthKit data entries")
-                } else {
-                    DBGLog("have \(hkCount/2) hk voNumbers but no missing HealthKit data entries")
-                    hkCount = 0
-                }
-            }
-
-            completion(hkCount)
-        }
-    }
-    
-    func countHKstepsQuick(completion: @escaping (Int) -> Void) {
-        // Move all database operations to background queue to avoid blocking UI
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self else {
-                DispatchQueue.main.async { completion(0) }
-                return
-            }
-            
-            #if DEBUGLOG
-            let startTime = CFAbsoluteTimeGetCurrent()
-            #endif
-            
-            var hkCount = 0
-            var hasOldData = false
-            var hkValueObjIDs: [Int] = []
-            let weekAgo = Int(Date().addingTimeInterval(-7 * 24 * 60 * 60).timeIntervalSince1970)
-            
-            // Count HealthKit valueObjs and check for old lastDates (fast)
-            for vo in self.valObjTable {
-                if vo.optDict["ahksrc"] ?? "0" != "0" {
-                    hkCount += 1
-                    hkValueObjIDs.append(vo.vid)
-                    
-                    // Age-based heuristic: check if lastDate is older than 7 days
-                    let sql = "select max(date) from voHKstatus where id = \(vo.vid) and stat = \(hkStatus.hkData.rawValue)"
-                    let lastDate = self.toQry2Int(sql: sql)
-                    
-                    if lastDate < weekAgo {
-                        hasOldData = true
-                    }
-                }
-            }
-            
-            if hkCount == 0 {
-                #if DEBUGLOG
-                let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
-                DBGLog("HKPROFILE: countHKstepsQuick took \(String(format: "%.3f", timeElapsed))s, no HealthKit valueObjs")
-                #endif
-                DispatchQueue.main.async { completion(0) }
-                return
-            }
-            
-            // If we found old data, assume it will be slow
-            if hasOldData {
-                let finalCount = hkCount * 2  // dates query and data query
-                #if DEBUGLOG
-                let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
-                DBGLog("HKPROFILE: countHKstepsQuick took \(String(format: "%.3f", timeElapsed))s, found old data, returning \(finalCount)")
-                #endif
-                DispatchQueue.main.async { completion(finalCount) }
-                return
-            }
-            
-            // Database heuristic: check for HealthKit valueObjs with no data OR status entries
-            let hkVidsList = hkValueObjIDs.map { String($0) }.joined(separator: ",")
-            let hkCheckSQL = """
-            SELECT count(*) FROM trkrData 
-            WHERE NOT EXISTS (
-                SELECT 1 FROM voData 
-                WHERE voData.date = trkrData.date 
-                AND voData.id IN (\(hkVidsList))
-            )
-            AND NOT EXISTS (
-                SELECT 1 FROM voHKstatus 
-                WHERE voHKstatus.date = trkrData.date 
-                AND voHKstatus.id IN (\(hkVidsList))
-            )
-            """
-            let missingCount = self.toQry2Int(sql: hkCheckSQL)
-            
-            #if DEBUGLOG
-            // Debug: Show what dates are being counted as missing
-            if missingCount > 0 {
-                let sampleDatesSQL = """
-                SELECT date FROM trkrData 
-                WHERE NOT EXISTS (
-                    SELECT 1 FROM voData 
-                    WHERE voData.date = trkrData.date 
-                    AND voData.id IN (\(hkVidsList))
-                )
-                AND NOT EXISTS (
-                    SELECT 1 FROM voHKstatus 
-                    WHERE voHKstatus.date = trkrData.date 
-                    AND voHKstatus.id IN (\(hkVidsList))
-                )
-                ORDER BY date DESC LIMIT 10
-                """
-                let sampleDates = self.toQry2AryI(sql: sampleDatesSQL)
-                DBGLog("HKPROFILE: Found \(missingCount) missing HealthKit entries. Sample dates:")
-                self.debugPrintTrackerData(forDates: sampleDates, prefix: "HK_MISSING")
-            }
-            #endif
-            
-            if missingCount > 100 {
-                let finalCount = hkCount * 2
-                #if DEBUGLOG
-                let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
-                DBGLog("HKPROFILE: countHKstepsQuick took \(String(format: "%.3f", timeElapsed))s, found \(missingCount) missing entries, returning \(finalCount)")
-                #endif
-                DispatchQueue.main.async { completion(finalCount) }
-                return
-            }
-            
-            // If we get here, it's likely to be fast or we're uncertain
-            // For uncertain cases, do a circuit breaker sample of the first HealthKit source
-            if let firstHKVO = self.valObjTable.first(where: { $0.optDict["ahksrc"] ?? "0" != "0" }),
-               let srcName = firstHKVO.optDict["ahSource"] {
-                
-                let sql = "select max(date) from voHKstatus where id = \(firstHKVO.vid) and stat = \(hkStatus.hkData.rawValue)"
-                let lastDate = self.toQry2Int(sql: sql)
-                
-                #if DEBUGLOG
-                let sampleStartTime = CFAbsoluteTimeGetCurrent()
-                #endif
-                
-                rtHealthKit.shared.getHealthKitDataCount(for: srcName, fromDate: lastDate > 0 ? lastDate : nil) { dataCount in
-                    #if DEBUGLOG
-                    let sampleTime = CFAbsoluteTimeGetCurrent() - sampleStartTime
-                    let totalTime = CFAbsoluteTimeGetCurrent() - startTime
-                    #endif
-                    
-                    let finalCount: Int
-                    if dataCount > 100 {
-                        // Lots of data to process, assume slow
-                        finalCount = hkCount * 2
-                    } else {
-                        // Reasonable amount of data or no data, assume fast
-                        finalCount = 0
-                    }
-                    
-                    #if DEBUGLOG
-                    DBGLog("HKPROFILE: countHKstepsQuick took \(String(format: "%.3f", totalTime))s (sample: \(String(format: "%.3f", sampleTime))s), sample found \(dataCount) items, returning \(finalCount)")
-                    #endif
-                    
-                    DispatchQueue.main.async { completion(finalCount) }
-                }
-            } else {
-                // No HealthKit sources with ahSource, assume fast
-                #if DEBUGLOG
-                let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
-                DBGLog("HKPROFILE: countHKstepsQuick took \(String(format: "%.3f", timeElapsed))s, no ahSource found, returning 0")
-                #endif
-                DispatchQueue.main.async { completion(0) }
-            }
-        }
-    }
-    
     func countOTsteps(otSelf: Bool) -> Int {
         var otCount = 0
         var maxMissingCount = 0
@@ -603,32 +328,6 @@ class trackerObj: tObjBase {
     }
     
     func loadHKdata(forDate date: Int? = nil, dispatchGroup: DispatchGroup?, completion: (() -> Void)? = nil) -> Bool {
-        // check if progress bar should be initialized
-        DBGLog("STATE: start loadHKdata")
-        if dispatchGroup == nil && refreshDelegate != nil {
-            // Use quick version with fast heuristics to decide on progress bar
-            countHKstepsQuick { hkSteps in
-                let threshold = 1
-                
-                if hkSteps > threshold {
-                    // Initialize progress bar for this phase
-                    self.refreshDelegate?.updateFullRefreshProgress(step: 0, phase: "Loading HealthKit data", totalSteps: hkSteps)
-                } else {
-                    // Just report phase without initializing progress bar
-                    self.reportProgressPhase("Loading HealthKit data")
-                }
-                
-                // Now proceed with the actual HealthKit data loading
-                _ = self.continueLoadHKdata(forDate: date, dispatchGroup: dispatchGroup, completion: completion)
-            }
-            return true // Return early since we're handling async
-        } else {
-            // Non-refresh case, proceed directly
-            return continueLoadHKdata(forDate: date, dispatchGroup: dispatchGroup, completion: completion)
-        }
-    }
-    
-    private func continueLoadHKdata(forDate date: Int? = nil, dispatchGroup: DispatchGroup?, completion: (() -> Void)? = nil) -> Bool {
         DBGLog("STATE: start continueLoadHKdata")
         dispatchGroup?.enter()
         let localGroup = DispatchGroup()
@@ -690,11 +389,6 @@ class trackerObj: tObjBase {
                 self.toExecSql(sql: ensureStatusSQL)
                 //DBGLog("Added voHKstatus entries for all dates in trkrData for all HK valueObjs")
             }
-            
-            /*
-            // Update progress after all HealthKit processing is done
-            self.refreshDelegate?.updateFullRefreshProgress(step: hkValueObjIDs.count, phase: nil, totalSteps: nil)
-             */
             
             completion?()
             dispatchGroup?.leave()
@@ -829,7 +523,10 @@ class trackerObj: tObjBase {
                   let otTracker = vo.optDict["otTracker"],
                   let otValue = vo.optDict["otValue"] else { continue }
             
-            let xto = trackerObj(trackerList.shared.getTIDfromNameDb(otTracker)[0])
+            guard let xto = getCachedOTTracker(name: otTracker) else {
+                DBGErr("Failed to load other tracker: \(otTracker)")
+                continue
+            }
             
             let xvid: Int
             if otValue != OTANYNAME {
@@ -842,7 +539,9 @@ class trackerObj: tObjBase {
             } else {
                 xvid = -1
             }
-            let sql = "select max(date) from voOTstatus where id = \(Int(vo.vid)) and stat = \(otStatus.otData.rawValue)"
+            //let sql = "select max(date) from voOTstatus where id = \(Int(vo.vid)) and stat = \(otStatus.otData.rawValue)"
+            let sql = "select max(date) from voOTstatus where id = \(Int(vo.vid))" // like hk and fn, don't update noData entries except for single-date refresh
+            
             let lastDate = toQry2Int(sql: sql)
             
             if (otTracker != self.trackerName) {
@@ -880,23 +579,44 @@ class trackerObj: tObjBase {
         }
     }
     
+    // MARK: - OT Cache Management
+    
+    internal func getCachedOTTracker(name: String) -> trackerObj? {
+        // Check if already cached
+        if let cachedTracker = otTrackerCache[name] {
+            return cachedTracker
+        }
+        
+        // Get TID for the tracker name
+        let tidArray = trackerList.shared.getTIDfromNameDb(name)
+        guard !tidArray.isEmpty else {
+            DBGErr("No tracker found with name: \(name)")
+            return nil
+        }
+        
+        let tid = tidArray[0]
+        
+        // Create new tracker instance
+        let newTracker = trackerObj(tid)
+        
+        // Cache it for future use
+        otTrackerCache[name] = newTracker
+        
+        DBGLog("Cached new OT tracker: \(name) (TID: \(tid))")
+        return newTracker
+    }
+    
     func loadOTdata(forDate date: Int? = nil, otSelf: Bool = false, dispatchGroup: DispatchGroup?, completion: (() -> Void)? = nil) -> Bool {
         // For full refresh operations, check if progress bar should be initialized
-        if dispatchGroup == nil && refreshDelegate != nil {
+        if refreshDelegate != nil {
             
             let phaseText = otSelf ? "Loading self-referencing data" : "Loading data from other trackers"
 
             // Non-self OT data - check if progress bar should be initialized
             let otSteps = countOTsteps(otSelf:otSelf)
-            let threshold = 5  // Higher threshold since OT queries are fast
+            let threshold = 25  // OT queries fast and only update progressBar every 5 steps
             
-            if otSteps > threshold {
-                // Initialize progress bar for this phase
-                refreshDelegate?.updateFullRefreshProgress(step: 0, phase: phaseText, totalSteps: otSteps)
-            } else if otSteps > 0 {
-                // Just report phase without initializing progress bar if any steps to do but under threshold
-                reportProgressPhase(phaseText)
-            }
+            refreshDelegate?.updateFullRefreshProgress(step: 0, phase: phaseText, totalSteps: otSteps, threshold: threshold)
             
         }
         
@@ -949,14 +669,9 @@ class trackerObj: tObjBase {
                     
                     // Batch updates to avoid overwhelming the main thread
                     if processedCount % 5 == 0 || processedCount == otValueObjCount {
-                        DispatchQueue.main.async {
-                            self.refreshDelegate?.updateFullRefreshProgress(step: processedCount % 5 == 0 ? 5 : processedCount % 5, phase: nil, totalSteps: nil)
-                        }
-                        
+                        self.refreshDelegate?.updateFullRefreshProgress(step: processedCount)
                         // Small yield to give main thread breathing room
-                        if processedCount % 5 == 0 {
-                            Thread.sleep(forTimeInterval: 0.01)
-                        }
+                        Thread.sleep(forTimeInterval: 0.01)
                     }
                 }
             }
@@ -964,7 +679,7 @@ class trackerObj: tObjBase {
             // Final updates on main thread
             DispatchQueue.main.async {
                 // Update progress after all OtherTracker processing is done
-                self.refreshDelegate?.updateFullRefreshProgress(step: 1, phase: nil, totalSteps: nil)
+                self.refreshDelegate?.updateFullRefreshProgress(step: 1)
                 
                 // Call completion and leave dispatch group
                 completion?()
@@ -1003,10 +718,7 @@ class trackerObj: tObjBase {
             // Update progress
             progressState.datesProcessed += 1
             if progressState.datesProcessed % 5 == 0 {
-                DispatchQueue.main.async {
-                    self.refreshDelegate?.updateFullRefreshProgress(step: 5, phase: nil, totalSteps: nil)
-                }
-                
+                self.refreshDelegate?.updateFullRefreshProgress(step: 5, phase: nil, totalSteps: nil)
                 // Small yield to give main thread breathing room
                 Thread.sleep(forTimeInterval: 0.01)
             }
@@ -1017,18 +729,7 @@ class trackerObj: tObjBase {
         // Diagnostic step 1: Verify delegate is set
         DBGLog("[\(Date())] processFnData called - refreshDelegate is \(refreshDelegate != nil ? "SET" : "NOT SET!")")
         // For full refresh operations, check if progress bar should be initialized
-        if dispatchGroup == nil && refreshDelegate != nil {
-            let fnSteps = countFNsteps()
-            let threshold = 1
-            
-            if fnSteps > threshold {
-                // Initialize progress bar for this phase
-                refreshDelegate?.updateFullRefreshProgress(step: 0, phase: "Computing functions", totalSteps: fnSteps)
-            } else {
-                // Just report phase without initializing progress bar
-                reportProgressPhase("Computing functions")
-            }
-        }
+        refreshDelegate?.updateFullRefreshProgress(step: 0, phase: "Computing functions", totalSteps: countFNsteps(), threshold: 15)  // threshold 15 as only update every 5 steps
         
         //let localGroup = DispatchGroup()
         var rslt = false
@@ -1167,11 +868,6 @@ class trackerObj: tObjBase {
                 self.optDict.removeValue(forKey: "dirtyFns")
                 let sql = "delete from trkrInfo where field='dirtyFns';"
                 self.toExecSql(sql: sql)
-                
-                /*
-                // Update progress after function calculations
-                self.refreshDelegate?.updateFullRefreshProgress(step: progressState.datesProcessed, phase: nil, totalSteps: nil)
-                */
 
                 completion?()
                 dispatchGroup?.leave()

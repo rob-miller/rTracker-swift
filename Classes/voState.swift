@@ -92,7 +92,11 @@ class voState: NSObject, voProtocol {
             }
             xvid = xvo.vid
         } else {
-            xto = trackerObj(trackerList.shared.getTIDfromNameDb(xtName)[0])
+            guard let cachedOTTracker = to.getCachedOTTracker(name: xtName) else {
+                DBGErr("Failed to load other tracker: \(xtName)")
+                return
+            }
+            xto = cachedOTTracker
             if xvName == OTANYNAME {
                 xvid = OTANYVID
             } else {
@@ -356,7 +360,10 @@ class voState: NSObject, voProtocol {
                 let xvo = MyTracker.getValObjByName(xvName)
                 return xvo?.value ?? ""
             } else {
-                let xto = trackerObj(trackerList.shared.getTIDfromNameDb(xtName)[0])
+                guard let xto = MyTracker.getCachedOTTracker(name: xtName) else {
+                    DBGErr("Failed to load other tracker: \(xtName)")
+                    return ""
+                }
                 let xvid: Int
                 if xvName == OTANYNAME {
                     xvid = OTANYVID

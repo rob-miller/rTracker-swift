@@ -608,6 +608,7 @@ class voNumber: voState, UITextFieldDelegate {
         }
 
         // Compute queryConfig and hkObjectType here instead of in getHealthKitDates
+        let calendar = Calendar.current
         guard let queryConfig = healthDataQueries.first(where: { $0.displayName == srcName }),
               let hkObjectType = queryConfig.identifier.hasPrefix("HKQuantityTypeIdentifier") ?
                 HKObjectType.quantityType(forIdentifier: HKQuantityTypeIdentifier(rawValue: queryConfig.identifier)) :
@@ -626,56 +627,117 @@ class voNumber: voState, UITextFieldDelegate {
         let hkDispatchGroup = DispatchGroup()
 
         hkDispatchGroup.enter()
-        
-        let sql = "select max(date) from voHKstatus where id = \(Int(vo.vid)) and stat = \(hkStatus.hkData.rawValue)"
-        var lastDate = to.toQry2Int(sql: sql)
+
+        var specifiedStartDate: Date? = nil
+        var specifiedEndDate: Date? = nil
+
+        // if specified date, use it for start and end because single date refresh
+        // if database entries, use the last one as startDate and test if start is after hk data
+        // if no database entries, then wiped so full refresh
         if let specifiedDate = date {
-            lastDate = startOfDay(fromTimestamp:specifiedDate)
-            DBGLog("specifiedDate is \(specifiedDate)  \(Date(timeIntervalSince1970: TimeInterval(specifiedDate)))")
+            // For single date refresh, query from start of day to end of that specific date
+            let startDate = Date(timeIntervalSince1970: TimeInterval(specifiedDate))
+            specifiedStartDate = startDate
+            specifiedEndDate = calendar.dateInterval(of: .day, for: startDate)?.end ??
+                calendar.date(byAdding: .day, value: 1, to: startDate)
+            DBGLog("Single date refresh: querying from \(specifiedStartDate?.description ?? "nil") to \(specifiedEndDate?.description ?? "nil")")
+        } else {
+            let sql = "select max(date) from voHKstatus where id = \(Int(vo.vid)) and stat = \(hkStatus.hkData.rawValue)" 
+            let lastDbDate = to.toQry2Int(sql: sql)
+            if lastDbDate > 0 {
+                specifiedStartDate = Date(timeIntervalSince1970: TimeInterval(lastDbDate))
+            }
         }
-        DBGLog("lastDate is \(Date(timeIntervalSince1970:TimeInterval(lastDate)))")
-        
-        // Compute startDate using earliestSampleDate instead of Date.distantPast
-        let dateToUse = lastDate > 0 ? Date(timeIntervalSince1970: TimeInterval(lastDate)) : nil
-        
+        DBGLog("Using specified start date: \(specifiedStartDate?.description ?? "nil") and end date: \(specifiedEndDate?.description ?? "nil")")
         #if DEBUGLOG
         let startTime = CFAbsoluteTimeGetCurrent()
         #endif
         
-        // Use earliestSampleDate to get more accurate start date, passing dateToUse to avoid query if not needed
-        rthk.earliestSampleDate(for: hkObjectType as HKSampleType, useDate: dateToUse) { [self] startDate in
-            let endDate = Date()
-            
-            rthk.getHealthKitDates(queryConfig: queryConfig, hkObjectType: hkObjectType as HKSampleType, startDate: startDate, endDate: endDate) { hkDates in
-            #if DEBUGLOG
-            let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
-            DBGLog("HKPROFILE: getHealthKitDates for \(srcName) (vid: \(self.vo.vid)) took \(String(format: "%.3f", timeElapsed))s, found \(hkDates.count) dates")
-            #endif
+        // 
+        rthk.sampleDateRange(for: hkObjectType as HKSampleType, useStartDate: specifiedStartDate, useEndDate: specifiedEndDate) { [self] hkStartDate, hkEndDate in
+            // Calculate appropriate end date
 
-            var newDates: [TimeInterval]
-            let frequency = self.vo.optDict["ahFrequency"] ?? "daily"
+            DBGLog("querying from \(hkStartDate?.description ?? "nil") to \(hkEndDate?.description ?? "nil")")
             
-            if frequency == "daily" {
-                // Use original daily logic
-                newDates = to.mergeDates(inDates: hkDates)
-            } else {
-                // Generate time slots based on frequency
-                newDates = to.generateTimeSlots(from: hkDates, frequency: frequency)
+            guard let hkStartDate = hkStartDate, let hkEndDate = hkEndDate else {
+                DBGLog("no hk data: start or end date is nil")
+                hkDispatchGroup.leave()
+                return
             }
             
-            // Insert the new dates into trkrData
-            // trkrData is 'on conflict replace'
-            // only update an existing row if the new minpriv is lower
-            let priv = max(MINPRIV, self.vo.vpriv)  // priv needs to be at least minpriv if vpriv = 0
-            for newDate in newDates {
-                // fix minpriv issues at end below
-                let sql = "insert into trkrData (date, minpriv) values (\(Int(newDate)), \(priv))"
-                to.toExecSql(sql: sql)
+            // Check if start date is after end date - invalid range
+            if hkStartDate > hkEndDate {
+                DBGLog("no new hk data: start date \(hkStartDate) is after end date \(hkEndDate)")
+                hkDispatchGroup.leave()
+                return
             }
             
-            DBGLog("Inserted \(newDates.count) new dates into trkrData.")
+            // Calculate number of date windows needed for chunked processing
+            let daysBetween = calendar.dateComponents([.day], from: hkStartDate, to: hkEndDate).day ?? 0
+            let numberOfWindows = (daysBetween + hkDateWindow - 1) / hkDateWindow // Round up
             
-            hkDispatchGroup.leave() // Leave the group after insertion is complete
+            to.refreshDelegate?.updateFullRefreshProgress(step: 0, phase: "loading dates for \(self.vo.valueName ?? "unknown")", totalSteps: numberOfWindows, threshold: 2)
+
+            
+            var allHKDates: [TimeInterval] = []
+            let chunkDispatchGroup = DispatchGroup()
+            
+            // Process date ranges in chunks
+            for windowIndex in 0..<numberOfWindows {
+                chunkDispatchGroup.enter()
+                
+                let windowStartDate = calendar.date(byAdding: .day, value: windowIndex * hkDateWindow, to: hkStartDate) ?? hkStartDate
+                let windowEndDate: Date
+                if windowIndex == numberOfWindows - 1 {
+                    // Last window - use actual end date
+                    windowEndDate = hkEndDate
+                } else {
+                    // Use window size
+                    windowEndDate = calendar.date(byAdding: .day, value: (windowIndex + 1) * hkDateWindow, to: hkStartDate) ?? hkEndDate
+                }
+                
+                DBGLog("Processing HealthKit date window \(windowIndex + 1)/\(numberOfWindows): \(windowStartDate) to \(windowEndDate)")
+                
+                rthk.getHealthKitDates(queryConfig: queryConfig, hkObjectType: hkObjectType as HKSampleType, startDate: windowStartDate, endDate: windowEndDate) { hkDates in
+                    allHKDates.append(contentsOf: hkDates)
+                    to.refreshDelegate?.updateFullRefreshProgress(step: 1)
+                    // Small yield to give main thread breathing room
+                    Thread.sleep(forTimeInterval: 0.01)
+                    chunkDispatchGroup.leave()
+                }
+            }
+            
+            // Wait for all chunks to complete, then process combined results
+            chunkDispatchGroup.notify(queue: .main) { [self] in
+                #if DEBUGLOG
+                let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
+                DBGLog("HKPROFILE: chunked getHealthKitDates for \(srcName) (vid: \(self.vo.vid)) took \(String(format: "%.3f", timeElapsed))s, found \(allHKDates.count) dates")
+                #endif
+
+                var newDates: [TimeInterval]
+                let frequency = self.vo.optDict["ahFrequency"] ?? "daily"
+                
+                if frequency == "daily" {
+                    // Use original daily logic
+                    newDates = to.mergeDates(inDates: allHKDates)
+                } else {
+                    // Generate time slots based on frequency
+                    newDates = to.generateTimeSlots(from: allHKDates, frequency: frequency)
+                }
+                
+                // Insert the new dates into trkrData
+                // trkrData is 'on conflict replace'
+                // only update an existing row if the new minpriv is lower
+                let priv = max(MINPRIV, self.vo.vpriv)  // priv needs to be at least minpriv if vpriv = 0
+                for newDate in newDates {
+                    // fix minpriv issues at end below
+                    let sql = "insert into trkrData (date, minpriv) values (\(Int(newDate)), \(priv))"
+                    to.toExecSql(sql: sql)
+                }
+                
+                DBGLog("Inserted \(newDates.count) new dates into trkrData.")
+                
+                hkDispatchGroup.leave() // Leave the group after insertion is complete
             }
         }
 
@@ -684,55 +746,70 @@ class voNumber: voState, UITextFieldDelegate {
         // Wait for getHealthKitDates processing to complete before proceeding
         hkDispatchGroup.notify(queue: .main) { [self] in
             DBGLog("HealthKit dates for \(srcName) processed, continuing with loadHKdata.")
-            // clock 1 progress unit for chunk of healthKitDates queried
-            if let delegate = to.refreshDelegate {
-                DispatchQueue.main.async {
-                    delegate.updateFullRefreshProgress(step: 1, phase: nil, totalSteps: nil)
-                }
-            }
             // Fetch dates from trkrData for processing
             // will update where we don't have data sourced from healthkit already
             // since the last time valid data was loaded for this vid
             var sql = """
             SELECT trkrData.date
             FROM trkrData
-            WHERE (NOT EXISTS (
-                SELECT 1
-                FROM voData
-                WHERE voData.date = trkrData.date
-                  AND voData.id = \(Int(vo.vid))
+            WHERE NOT EXISTS (
+                SELECT 1 FROM voData 
+                WHERE voData.date = trkrData.date 
+                AND voData.id = \(Int(vo.vid))
             )
             AND NOT EXISTS (
-                SELECT 1
-                FROM voHKstatus
-                WHERE voHKstatus.date = trkrData.date
-                  AND voHKstatus.stat = \(hkStatus.hkData.rawValue)
-                  AND voHKstatus.id = \(Int(vo.vid))
-            )
-            AND trkrData.date >= (
-                SELECT COALESCE(MAX(date), 0)
-                FROM voHKstatus
-                WHERE id = \(Int(vo.vid))
-                  AND stat = \(hkStatus.hkData.rawValue)
-            )) OR (NOT EXISTS (
-                SELECT 1 FROM voHKstatus
-                WHERE voHKstatus.date = trkrData.date
-                  AND voHKstatus.id = \(Int(vo.vid))
-            ) AND NOT EXISTS (
-                SELECT 1 FROM voData
-                WHERE voData.date = trkrData.date
-                  AND voData.id = \(Int(vo.vid))
-            ));
+                SELECT 1 FROM voHKstatus 
+                WHERE voHKstatus.date = trkrData.date 
+                AND voHKstatus.id = \(Int(vo.vid))
+            );
             """
-            // get dates where
-            //   do not have voData and hkStatus not hkData and only looking at new data since last update
-            //   or have trkrData entry but no hkStatus entry at all AND no manually entered voData (refreshing current record or missing data)
+            // Process only dates that have not been attempted for HealthKit processing yet
+            // AND have no manually entered data for this specific valueObj
+            
+            // For single date refresh, add date filter to only process the specified date
+            if let specifiedDate = date {
+                let specifiedTimestamp = startOfDay(fromTimestamp: specifiedDate)
+                // Simply add the date filter as an AND condition - this will limit results effectively
+                sql += " AND trkrData.date = \(specifiedTimestamp)"
+                DBGLog("Added single date filter for timestamp: \(specifiedTimestamp) (\(Date(timeIntervalSince1970: TimeInterval(specifiedTimestamp))))")
+            }
             
             let dateSet = to.toQry2AryI(sql: sql)
             
-            DBGLog("dates to process for \(srcName) Query complete, count is \(dateSet.count)")
-            //debugHealthKitDateQuery(tracker: to, valueObjID: vo.vid)
-            
+            DBGLog("dates to process for \(srcName) (vid: \(vo.vid)) Query complete, count is \(dateSet.count)")
+            #if DEBUGLOG
+            if dateSet.count > 10 {
+                DBGLog("First 10 dates to process: \(Array(dateSet.prefix(10)).map { Date(timeIntervalSince1970: TimeInterval($0)) })")
+                
+                // Show max hkData date for this valueObj for debugging
+                let maxHKDataSQL = "select max(date) from voHKstatus where id = \(Int(vo.vid)) and stat = \(hkStatus.hkData.rawValue)"
+                let maxHKDataDate = to.toQry2Int(sql: maxHKDataSQL)
+                DBGLog("Max hkData date for vid \(vo.vid): \(Date(timeIntervalSince1970: TimeInterval(maxHKDataDate)))")
+                
+                // Additional debug info for single date refresh
+                if let specifiedDate = date {
+                    let specifiedTimestamp = startOfDay(fromTimestamp: specifiedDate)
+                    
+                    // Check if there's a trkrData entry for this specific date
+                    let trkrDataCheckSQL = "SELECT COUNT(*) FROM trkrData WHERE date = \(specifiedTimestamp)"
+                    let trkrDataCount = to.toQry2Int(sql: trkrDataCheckSQL)
+                    DBGLog("trkrData entries for specified date \(Date(timeIntervalSince1970: TimeInterval(specifiedTimestamp))): \(trkrDataCount)")
+                    
+                    // Check if there's existing voData for this valueObj and date
+                    let voDataCheckSQL = "SELECT COUNT(*) FROM voData WHERE id = \(Int(vo.vid)) AND date = \(specifiedTimestamp)"
+                    let voDataCount = to.toQry2Int(sql: voDataCheckSQL)
+                    DBGLog("voData entries for vid \(vo.vid) on specified date: \(voDataCount)")
+                    
+                    // Check if there's existing voHKstatus for this valueObj and date
+                    let hkStatusCheckSQL = "SELECT COUNT(*) FROM voHKstatus WHERE id = \(Int(vo.vid)) AND date = \(specifiedTimestamp)"
+                    let hkStatusCount = to.toQry2Int(sql: hkStatusCheckSQL)
+                    DBGLog("voHKstatus entries for vid \(vo.vid) on specified date: \(hkStatusCount)")
+                }
+            }
+            #endif
+
+            to.refreshDelegate?.updateFullRefreshProgress(step: 0, phase: "loading data for \(self.vo.valueName ?? "unknown")", totalSteps: dateSet.count, threshold: hqDateWindow)
+
             let calendar = Calendar.current
             let secondHKDispatchGroup = DispatchGroup()
             let frequency = self.vo.optDict["ahFrequency"] ?? "daily"
@@ -767,14 +844,8 @@ class voNumber: voState, UITextFieldDelegate {
                         to?.toExecSql(sql: sql)
                     }
                     
-                    /*
                     // Update progress for each health query processed
-                    if let delegate = to?.refreshDelegate {
-                        DispatchQueue.main.async {
-                            delegate.updateFullRefreshProgress(step: 1, phase: nil, totalSteps: nil)
-                        }
-                    }
-                     */
+                    to?.refreshDelegate?.updateFullRefreshProgress(step: 1)
                 }
             }
             
@@ -795,13 +866,6 @@ class voNumber: voState, UITextFieldDelegate {
                 """
                 to.toExecSql(sql: sql)
                 DBGLog("Done loadHKdata for \(srcName) with \(dateSet.count) records.")
-                
-                // clock 1 progress unit for chunk of healthKitDates processed
-                if let delegate = to.refreshDelegate {
-                    DispatchQueue.main.async {
-                        delegate.updateFullRefreshProgress(step: 1, phase: nil, totalSteps: nil)
-                    }
-                }
                 
                 dispatchGroup?.leave()  // done with enter before getHealthkitDates processing overall
             }
