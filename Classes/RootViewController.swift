@@ -1078,8 +1078,8 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     }
 
     func exceedsPrivacy(_ tid: Int) -> Bool {
-        DBGLog("curr priv \(privacyValue)  tid \(tid)  tid priv \(tlist.getPrivFromLoadedTID(tid))")
-        return privacyValue < (tlist.getPrivFromLoadedTID(tid))
+        let rslt = privacyValue < (tlist.getPrivFromLoadedTID(tid))
+        return rslt
     }
 
     func openTracker(_ tid: Int, rejectable: Bool) {
