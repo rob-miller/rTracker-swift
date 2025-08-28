@@ -306,6 +306,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             performDataLoadingSequence {
                 // Perform any UI updates after data loading
                 DBGLog("HealthKit and Othertracker data loaded.")
+                self.loadTrackerDate(self.frDate)
+                self.updateTrackerTableView()
 
                 if self.hkDataSource || self.otDataSource || self.fnDataSource {
                     let refreshControl = UIRefreshControl()
@@ -346,6 +348,11 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             
             rTracker_resource.addTimedLabel(text:"Pull again to refresh all", tag:self.refreshLabelId2, sv:self.view, ti:2.0)
 
+            DispatchQueue.main.async {
+                // should finish inside 2 second pull timeout anyway so why wait
+                self.handleRefresh(forDate:Int(self.tracker!.trackerDate!.timeIntervalSince1970))
+            }
+
         } else if pullCounter >= 2 {
             // Multiple pulls - stronger feedback and full refresh
             let feedbackGenerator = UIImpactFeedbackGenerator(style: .heavy)
@@ -366,7 +373,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 rTracker_resource.addTimedLabel(text:"Full refresh in progress...", tag:self.refreshLabelId, sv:self.view, ti:3.0)
                 // Start the full refresh
 
-                self.handleFullRefresh()
+                self.handleRefresh()
             }
         }
     }
@@ -374,27 +381,15 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     
     // Timer handler for single pull timeout
     @objc func handleSinglePullTimeout() {
-        guard let refreshControl = tableView?.refreshControl else {
-            return
-        }
-        
         DBGLog("Single pull timer expired, counter = \(pullCounter)")
-        
-        // If counter is still 1, it was a single pull
-        if pullCounter == 1 {
-            // Reset counter
-            pullCounter = 0
-            DispatchQueue.main.async {
-                // Refresh only the current record
-                self.refreshCurrentRecord(refreshControl)
-            }
-        }
+        pullCounter = 0
+        // already did single refresh
     }
     
     // refresh current record
     func refreshCurrentRecord(_ refreshControl: UIRefreshControl) {
         DBGLog("Short refresh initiated - updating current record only")
-        
+
         let dispatchGroup = DispatchGroup()
         let currentDate = Int(tracker!.trackerDate!.timeIntervalSince1970)
         self.isRefreshInProgress = true
@@ -430,37 +425,43 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         }
     }
     
-    // full data reload
-    @objc func handleFullRefresh() {
-        DBGLog("[\(Date())] Full Refresh initiated")
-        
-
-
-        // Delete all voData sourced from HealthKit and other trackers
-        for vo in self.tracker!.valObjTable {
-            vo.vos?.clearHKdata()
-            vo.vos?.clearOTdata()
-            vo.vos?.clearFNdata()
+    func handleRefresh(forDate: Int? = nil) {
+        if let forDate = forDate {
+            DBGLog("Partial Refresh initiated for date: \(Date(timeIntervalSince1970: TimeInterval(forDate)))")
+        } else {
+            DBGLog("Full Refresh initiated")
         }
-        
+
+        // this either clears all HK/FN/OT records, or just for the specified date
+        for vo in self.tracker!.valObjTableH {
+            vo.vos?.clearHKdata(forDate: forDate)
+            vo.vos?.clearOTdata(forDate: forDate)
+            vo.vos?.clearFNdata(forDate: forDate)
+        }
+
         // Delete trkrData entries which no longer have associated voData
         let sql = "delete from trkrdata where date not in (select date from voData where voData.date = trkrdata.date)"
         self.tracker?.toExecSql(sql: sql)
         
-        self.frDate = Int(tracker!.trackerDate!.timeIntervalSince1970)
+        self.frDate = forDate ?? Int(tracker!.trackerDate!.timeIntervalSince1970)
 
         performDataLoadingSequence {
-            DBGLog("Full refresh completed - All data loaded and SQL inserts completed.")
-
-            // Add a small success indicator message
-            rTracker_resource.addTimedLabel(text: "Refresh completed successfully", tag: self.refreshLabelId, sv: self.view, ti: 3.0)
+            if forDate == nil {
+                DBGLog("Full refresh completed - All data loaded and SQL inserts completed.")
+                self.loadTrackerDate(self.frDate)
+                rTracker_resource.addTimedLabel(text: "Refresh completed successfully", tag: self.refreshLabelId, sv: self.view, ti: 3.0)
+            } else {
+                DBGLog("Partial refresh for \(Date(timeIntervalSince1970: TimeInterval(forDate!))) completed")
+                _ = self.tracker!.loadData(self.frDate) // does nothing if currentDate not in db so leaves current ui settings
+            }
+            self.updateTrackerTableView()
         }
         
     }
     
     // MARK: - Data Loading Sequence
     
-    private func performDataLoadingSequence(completion: @escaping () -> Void) {
+    private func performDataLoadingSequence(forDate: Int? = nil, completion: @escaping () -> Void) {
         let dispatchGroup = DispatchGroup()
 
         self.loadingData = true
@@ -473,25 +474,28 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         self.tracker!.refreshDelegate = self
 
         dispatchGroup.enter()
-        self.hkDataSource = self.tracker!.loadHKdata(dispatchGroup: nil, completion: {
+        self.hkDataSource = self.tracker!.loadHKdata(forDate: forDate, dispatchGroup: nil, completion: {
             // have hk data, load OT data for really other trackers
-            self.otDataSource = self.tracker!.loadOTdata(otSelf:false, dispatchGroup: nil, completion:{
+            self.otDataSource = self.tracker!.loadOTdata(forDate: forDate, otSelf:false, dispatchGroup: nil, completion:{
                 // now can compute fn results
-                self.fnDataSource = self.tracker!.loadFNdata(dispatchGroup: nil, completion:{
+                self.fnDataSource = self.tracker!.loadFNdata(forDate: forDate, dispatchGroup: nil, completion:{
                     // now load ot data that look at self
-                    _ = self.tracker!.loadOTdata(otSelf:true, dispatchGroup: nil, completion: {
+                    _ = self.tracker!.loadOTdata(forDate: forDate, otSelf:true, dispatchGroup: nil, completion: {
                         DispatchQueue.main.async {
+                            self.tracker?.cleanDb()  // no orphaned data
                             // Clean up progress UI
                             self.cleanupFullRefreshProgressUI()
                             self.tracker!.refreshDelegate = nil
 
-                            // loadFNdata above left data loaded for last db date, so clear here and get to current date
-                            self.loadTrackerDate(self.frDate)
-                            self.tableView?.reloadData()
-                            self.tracker?.cleanDb()  // no orphaned data
                             self.loadingData = false
                             self.tracker!.loadingDbData = false
                             self.isRefreshInProgress = false
+
+                            // loadFNdata above left data loaded for last db date, so clear here and get to current date
+                            //self.loadTrackerDate(self.frDate)
+                            //self.tableView?.reloadData()
+                            self.updateTrackerTableView()
+
                             dispatchGroup.leave()
                         }
                     })
@@ -997,7 +1001,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                     self.fullRefreshProgressContainerView?.setNeedsLayout()
                     self.fullRefreshProgressContainerView?.layoutIfNeeded()
                 }
-            } else if totalSteps > 0 && !progressBarShown {
+            } else if totalSteps > 1 && (Double(totalSteps) / Double(currentProgressThreshold)) > 0.1 && !progressBarShown {
                 self.startRAI()
             }
             return
@@ -1013,7 +1017,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         
         // Calculate progress based on current maximum value
         let progressValue = min(Float(currentProgressStep) / currentProgressMaxValue, 1.0)
-        DBGLog("stepvalue \(step) for phase '\(currentRefreshPhase)' - progress \(currentProgressStep) of \(currentProgressMaxValue) (value: \(progressValue) ")
+        //DBGLog("stepvalue \(step) for phase '\(currentRefreshPhase)' - progress \(currentProgressStep) of \(currentProgressMaxValue) (value: \(progressValue) ")
         
         if currentTotalSteps > currentProgressThreshold {
             DispatchQueue.main.async { [weak self] in
