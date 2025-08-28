@@ -106,7 +106,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                 if let error = error {
                     DBGErr("Error querying earliest sample date: \(error.localizedDescription)")
                 } else if let sample = results?.first {
-                    earliestDate = sample.startDate
+                    earliestDate = sample.startDate.addingTimeInterval(-1)
                 }
                 group.leave()
             }
@@ -128,7 +128,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                 if let error = error {
                     DBGErr("Error querying latest sample date: \(error.localizedDescription)")
                 } else if let sample = results?.first {
-                    latestDate = sample.startDate
+                    latestDate = sample.startDate.addingTimeInterval(1)
                 }
                 group.leave()
             }
@@ -136,7 +136,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         }
         
         group.notify(queue: .main) {
-            completion(earliestDate, latestDate)  // return nil if no data
+            completion(earliestDate, latestDate)  // returns nil if no data
         }
     }
 
