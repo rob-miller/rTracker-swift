@@ -85,6 +85,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     private var pullCounter = 0
     private var refreshTimer: Timer?
     private var isRefreshInProgress = false
+    private var partialRefreshWorkItem: DispatchWorkItem? = nil
     private var refreshActivityIndicator: UIActivityIndicatorView?
     private var raiDelayedWork: DispatchWorkItem?
     
@@ -348,10 +349,18 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             
             rTracker_resource.addTimedLabel(text:"Pull again to refresh all", tag:self.refreshLabelId2, sv:self.view, ti:2.0)
 
-            DispatchQueue.main.async {
+            // Cancel any existing partial refresh
+            partialRefreshWorkItem?.cancel()
+            
+            // Create cancellable work item for partial refresh
+            partialRefreshWorkItem = DispatchWorkItem {
                 // should finish inside 2 second pull timeout anyway so why wait
                 self.handleRefresh(forDate:Int(self.tracker!.trackerDate!.timeIntervalSince1970))
             }
+            
+            DispatchQueue.main.async(execute: partialRefreshWorkItem!)
+
+            // just leave partialRefreshWorkItem not cleaned up if it finishes on its own
 
         } else if pullCounter >= 2 {
             // Multiple pulls - stronger feedback and full refresh
@@ -361,6 +370,10 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             // Cancel the timer for single pull
             refreshTimer?.invalidate()
             refreshTimer = nil
+            
+            // Cancel any pending partial refresh
+            partialRefreshWorkItem?.cancel()
+            partialRefreshWorkItem = nil
             
             // Reset counter
             pullCounter = 0
@@ -447,14 +460,25 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
         performDataLoadingSequence {
             if forDate == nil {
-                DBGLog("Full refresh completed - All data loaded and SQL inserts completed.")
+                DBGLog("Full refresh completed - All data loaded and SQL inserts completed. frDate= \(Date(timeIntervalSince1970: TimeInterval(self.frDate))) ")
+                self.needSave = false  // full refresh means wipe what you were doing, sorry.
                 self.loadTrackerDate(self.frDate)
                 rTracker_resource.addTimedLabel(text: "Refresh completed successfully", tag: self.refreshLabelId, sv: self.view, ti: 3.0)
             } else {
-                DBGLog("Partial refresh for \(Date(timeIntervalSince1970: TimeInterval(forDate!))) completed")
-                _ = self.tracker!.loadData(self.frDate) // does nothing if currentDate not in db so leaves current ui settings
+                DBGLog("Partial refresh for \(Date(timeIntervalSince1970: TimeInterval(forDate!))) completed. frDate= \(Date(timeIntervalSince1970: TimeInterval(self.frDate)))")
+                // did not move from current ui
+                if self.tracker!.loadData(self.frDate) {
+                    // date is in db
+                    self.needSave = false  // we just reloaded from db so loacal changes wiped
+                    self.showSaveBtn()
+                    self.updateToolBar()
+                } else {
+                    // date not in db, ui not changed just ensure date is right
+                    self.tracker!.trackerDate = Date(timeIntervalSince1970: TimeInterval(self.frDate))
+                }
             }
             self.updateTrackerTableView()
+            DBGLog("trackerDate is \(String(describing: self.tracker!.trackerDate))")
         }
         
     }
@@ -490,11 +514,6 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                             self.loadingData = false
                             self.tracker!.loadingDbData = false
                             self.isRefreshInProgress = false
-
-                            // loadFNdata above left data loaded for last db date, so clear here and get to current date
-                            //self.loadTrackerDate(self.frDate)
-                            //self.tableView?.reloadData()
-                            self.updateTrackerTableView()
 
                             dispatchGroup.leave()
                         }
