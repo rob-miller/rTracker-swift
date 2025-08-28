@@ -678,7 +678,6 @@ class voNumber: voState, UITextFieldDelegate {
             
             to.refreshDelegate?.updateFullRefreshProgress(step: 0, phase: "loading dates for \(self.vo.valueName ?? "unknown")", totalSteps: numberOfWindows, threshold: 2)
 
-            
             var allHKDates: [TimeInterval] = []
             let chunkDispatchGroup = DispatchGroup()
             
@@ -700,9 +699,11 @@ class voNumber: voState, UITextFieldDelegate {
                 
                 rthk.getHealthKitDates(queryConfig: queryConfig, hkObjectType: hkObjectType as HKSampleType, startDate: windowStartDate, endDate: windowEndDate) { hkDates in
                     allHKDates.append(contentsOf: hkDates)
+                    //DBGLog("Retrieved \(hkDates.count) HK dates: \(hkDates.map { Date(timeIntervalSince1970: $0) })")
                     to.refreshDelegate?.updateFullRefreshProgress(step: 1)
                     // Small yield to give main thread breathing room
                     Thread.sleep(forTimeInterval: 0.01)
+
                     chunkDispatchGroup.leave()
                 }
             }
@@ -729,11 +730,14 @@ class voNumber: voState, UITextFieldDelegate {
                 // trkrData is 'on conflict replace'
                 // only update an existing row if the new minpriv is lower
                 let priv = max(MINPRIV, self.vo.vpriv)  // priv needs to be at least minpriv if vpriv = 0
+                to.toExecSql(sql: "BEGIN TRANSACTION")
                 for newDate in newDates {
                     // fix minpriv issues at end below
                     let sql = "insert into trkrData (date, minpriv) values (\(Int(newDate)), \(priv))"
                     to.toExecSql(sql: sql)
+                    //DBGLog("Inserted new date into trkrData: \(Date(timeIntervalSince1970: newDate))")
                 }
+                to.toExecSql(sql: "COMMIT")
                 
                 DBGLog("Inserted \(newDates.count) new dates into trkrData.")
                 
@@ -809,6 +813,7 @@ class voNumber: voState, UITextFieldDelegate {
             #endif
 
             to.refreshDelegate?.updateFullRefreshProgress(step: 0, phase: "loading data for \(self.vo.valueName ?? "unknown")", totalSteps: dateSet.count, threshold: hqDateWindow)
+            Thread.sleep(forTimeInterval: 0.01)
 
             let calendar = Calendar.current
             let secondHKDispatchGroup = DispatchGroup()

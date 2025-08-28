@@ -137,6 +137,7 @@ class voState: NSObject, voProtocol {
             """)
         }
         
+        to.toExecSql(sql: "BEGIN TRANSACTION")
         for md in myDates {
             
             let selStr: String
@@ -166,15 +167,11 @@ class voState: NSObject, voProtocol {
             }
             
             // Update progress tracking
-             if let delegate = to.refreshDelegate, (date == nil || date == 0) {
-                 // Only update progress during a full refresh (indicated by delegate and no specific date)
-                 DispatchQueue.main.async {
-                     delegate.updateFullRefreshProgress(step: 1, phase: nil, totalSteps: nil)
-                 }
-             }
+            to.refreshDelegate?.updateFullRefreshProgress(step: 1, phase: nil, totalSteps: nil)
             
             prevDate = md
         }
+        to.toExecSql(sql: "COMMIT")
         
             
         // ensure trkrData has lowest priv if just added a lower privacy valuObj to a trkrData entry

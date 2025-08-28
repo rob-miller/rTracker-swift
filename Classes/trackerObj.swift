@@ -327,7 +327,7 @@ class trackerObj: tObjBase {
         return maxMissingCount  // Return maximum missing count across all function valueObjs
     }
     
-    func loadHKdata(forDate date: Int? = nil, dispatchGroup: DispatchGroup?, completion: (() -> Void)? = nil) -> Bool {
+    func loadHKdata(forDate date: Int? = nil, dispatchGroup: DispatchGroup? = nil, completion: (() -> Void)? = nil) -> Bool {
         DBGLog("STATE: start continueLoadHKdata")
         dispatchGroup?.enter()
         let localGroup = DispatchGroup()
@@ -569,10 +569,12 @@ class trackerObj: tObjBase {
                 // trkrData is 'on conflict replace'
                 // but should only be adding new dates
                 let priv = max(MINPRIV, vo.vpriv)  // priv needs to be at least minpriv if vpriv = 0
+                toExecSql(sql: "BEGIN TRANSACTION")
                 for newDate in newDates {
                     let sql = "insert into trkrData (date, minpriv) values (\(Int(newDate)), \(priv))"
                     toExecSql(sql: sql)
                 }
+                toExecSql(sql: "COMMIT")
                 
                 DBGLog("Inserted \(newDates.count) new dates into trkrData.")
             }
