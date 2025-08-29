@@ -22,55 +22,6 @@
 //
 
 import UIKit
-/*
-func intSort(_ num1: Any?, _ num2: Any?, _ context: UnsafeMutableRawPointer?) -> Int {
-    let v1 = (num1 as? NSNumber)?.intValue ?? 0
-    let v2 = (num2 as? NSNumber)?.intValue ?? 0
-    if v1 < v2 {
-        return ComparisonResult.orderedAscending.rawValue
-    } else if v1 > v2 {
-        return ComparisonResult.orderedDescending.rawValue
-    } else {
-        return ComparisonResult.orderedSame.rawValue
-    }
-}
-
-func choiceCompare(_ ndx0: Any?, _ ndx1: Any?, _ context: UnsafeMutableRawPointer?) -> Int {
-    let c0 = (ndx0 as? NSNumber)?.intValue ?? 0
-    let c1 = (ndx1 as? NSNumber)?.intValue ?? 0
-
-    let self = context as? gtYAxV
-
-    let cv0 = String("cv\(c0)")
-    let cv1 = String("cv\(c1)")
-
-    let v0s = vogd!.vo.optDict[cv0]
-    let v1s = vogd!.vo.optDict[cv1]
-
-    if (nil == v0s) || (nil == v1s) {
-        // push not-set choices to top of graph
-        if v1s != nil {
-            return ComparisonResult.orderedDescending.rawValue
-        } else if v0s != nil {
-            return ComparisonResult.orderedAscending.rawValue
-        } else {
-            return ComparisonResult.orderedSame.rawValue
-        }
-    }
-
-    let val0 = CGFloat(Float(v0s ?? "") ?? 0.0)
-    let val1 = CGFloat(Float(v1s ?? "") ?? 0.0)
-    DBGLog(String("c0 \(c0) c1 \(c1) v0s \(v0s) v1s \(v1s) val0 \(val0) val1 \(val1)"))
-    // need results descending, so reverse test outcome
-    if val0 < val1 {
-        return ComparisonResult.orderedAscending.rawValue
-    } else if val0 > val1 {
-        return ComparisonResult.orderedDescending.rawValue
-    } else {
-        return ComparisonResult.orderedSame.rawValue
-    }
-}
-*/
 
 class gtYAxV: UIView {
 
@@ -88,16 +39,17 @@ class gtYAxV: UIView {
 
     func vtChoiceSetColor(_ context: CGContext?, ndx: Int) {
         let cc = "cc\(ndx)"
-        let col = Int(vogd!.vo.optDict[cc] ?? "") ?? 0 // rtmx
+        let col = Int(vogd?.vo.optDict[cc] ?? "") ?? 0 // rtmx
         rTracker_resource.colorSet[col].set()
     }
 
     func drawYAxis(_ context: CGContext) {
+
         var i: Int
         let svHeight = graphSV!.contentSize.height
         let svOffsetY = svHeight - (graphSV!.frame.size.height + graphSV!.contentOffset.y)
-        let unitsPerSVY = d(vogd!.maxVal - vogd!.minVal) / svHeight
-        
+        let unitsPerSVY = d((vogd?.maxVal ?? 0.0) - (vogd?.minVal ?? 0.0)) / svHeight
+
         let vtype = vogd?.vo.vtype ?? 0
 
         
@@ -107,7 +59,7 @@ class gtYAxV: UIView {
         let unitStep = (finUnit - startUnit) / YTICKS
 
         DBGLog(
-            String("svcofy= \(graphSV?.contentOffset.y) svoffy= \(svOffsetY) svh= \(svHeight) min= \(vogd!.minVal) max= \(vogd?.maxVal) upsvy= \(unitsPerSVY) scaleh= \(scaleHeightY) start= \(startUnit) fin= \(finUnit)"))
+            String("svcofy= \(graphSV?.contentOffset.y) svoffy= \(svOffsetY) svh= \(svHeight) min= \(vogd?.minVal) max= \(vogd?.maxVal) upsvy= \(unitsPerSVY) scaleh= \(scaleHeightY) start= \(startUnit) fin= \(finUnit)"))
 
         //CGFloat len = self.bounds.size.height - (CGFloat) (2*BORDER);
         let step = scaleHeightY / YTICKS

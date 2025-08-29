@@ -27,18 +27,6 @@
 import Foundation
 
 class vogd: NSObject {
-    /*{
-        valueObj *vo;
-        NSArray *xdat;
-        NSArray *ydat;
-
-        double minVal;
-        double maxVal;
-
-        double vScale;
-
-        CGFloat yZero;
-    }*/
     var vo: valueObj
     var xdat: [AnyHashable]?
     var ydat: [AnyHashable]?

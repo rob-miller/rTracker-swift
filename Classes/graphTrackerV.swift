@@ -106,9 +106,9 @@ class graphTrackerV: UIScrollView {
         val /= vogd?.vScale ?? 0.0
         val += vogd?.minVal ?? 0.0
         //DBGLog("vtChoiceSetColor input val \(inval) transformed val \(val)");
-        let choice = vogd!.vo.getChoiceIndex(forValue: "\(val)")
+        let choice = vogd?.vo.getChoiceIndex(forValue: "\(val)") ?? 0
         let cc = "cc\(choice)"
-        let col = Int(vogd!.vo.optDict[cc] ?? "") ?? 0 // rtmx cc=cc8
+        let col = Int(vogd?.vo.optDict[cc] ?? "") ?? 0 // rtmx cc=cc8
         let colorSet = rTracker_resource.colorSet[col].cgColor
         context.setFillColor(colorSet)
         
@@ -525,9 +525,9 @@ class graphTrackerV: UIScrollView {
                 if ((currVogd?.minVal ?? 0.0) < 0.0) && ((currVogd?.maxVal ?? 0.0) > 0.0) {
                     // draw line at 0 if needed
                     context.setStrokeColor(UIColor(white: 0.75, alpha: 0.5).cgColor)
-                    MoveTo(context, 0.0, currVogd!.yZero)
+                    MoveTo(context, 0.0, Double(currVogd?.yZero ?? 0.0))
                     safeDispatchSync({ [self] in
-                        AddLineTo(context, frame.size.width, currVogd!.yZero)
+                        AddLineTo(context, frame.size.width, Double(currVogd?.yZero ?? 0.0))
                     })
                     context.strokePath()
                 }
@@ -579,6 +579,9 @@ class graphTrackerV: UIScrollView {
     }
 
     func drawGraph(_ context: CGContext) {
+        guard let gtvCurrVO = gtvCurrVO else {
+            return
+        }
         //DBGLog(@"drawGraph");
         var barCount = 0
         for vo in tracker?.valObjTableH ?? [] {
@@ -602,10 +605,10 @@ class graphTrackerV: UIScrollView {
             }
         }
         // plot selected last for best hightlight
-        if (gtvCurrVO?.optDict)?["graph"] != "0" {
+        if (gtvCurrVO.optDict)["graph"] != "0" {
             //DBGLog(@"drawGraph %@",vo.valueName);
-            plotVO(gtvCurrVO!, context: context, barCount: barCount)
-            if VOG_BAR == gtvCurrVO?.vGraphType {
+            plotVO(gtvCurrVO, context: context, barCount: barCount)
+            if VOG_BAR == gtvCurrVO.vGraphType {
                 barCount += 1
             }
         }
