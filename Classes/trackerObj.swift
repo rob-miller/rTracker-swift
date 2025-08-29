@@ -328,7 +328,7 @@ class trackerObj: tObjBase {
     }
     
     func loadHKdata(forDate date: Int? = nil, dispatchGroup: DispatchGroup? = nil, completion: (() -> Void)? = nil) -> Bool {
-        DBGLog("STATE: start continueLoadHKdata")
+        DBGLog("STATE: start LoadHKdata")
         dispatchGroup?.enter()
         let localGroup = DispatchGroup()
         var rslt = false
@@ -682,7 +682,8 @@ class trackerObj: tObjBase {
             DispatchQueue.main.async {
                 // Update progress after all OtherTracker processing is done
                 self.refreshDelegate?.updateFullRefreshProgress(step: 1)
-                
+                // Small yield to give main thread breathing room
+                Thread.sleep(forTimeInterval: 0.01)
                 // Call completion and leave dispatch group
                 completion?()
                 dispatchGroup?.leave()
@@ -838,10 +839,12 @@ class trackerObj: tObjBase {
                 if missingHistoricalDates.count > 0 {
                     // Process historical dates missing function status if called with no specified date
                     DBGLog("Processing \(missingHistoricalDates.count) historical dates")
+                    self.toExecSql(sql: "BEGIN TRANSACTION")
                     for historicalDate in missingHistoricalDates {
                         progressState.currentDate = historicalDate
                         self.processFnDataForDate(progressState: progressState)
                     }
+                    self.toExecSql(sql: "COMMIT")
                     // Restore currentDate to nextDate for Phase 2
                     progressState.currentDate = nextDate
                 }
