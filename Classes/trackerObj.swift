@@ -326,7 +326,10 @@ class trackerObj: tObjBase {
         DBGLog("STATE: start LoadHKdata")
         dispatchGroup?.enter()
         let localGroup = DispatchGroup()
-        self.toExecSql(sql: "BEGIN TRANSACTION")
+        
+        // Use toExecSqlIgnErr to avoid nested transaction errors
+        // If already in transaction, this will be ignored; if not, it will start one
+        self.toExecSqlIgnErr(sql: "BEGIN TRANSACTION")
         var rslt = false
         var hkValueObjIDs: [Int] = []
         for vo in valObjTable {
@@ -383,7 +386,7 @@ class trackerObj: tObjBase {
                             """
                 //DBGLog(ensureStatusSQL)
                 self.toExecSql(sql: ensureStatusSQL)
-                self.toExecSql(sql: "COMMIT")
+                self.toExecSqlIgnErr(sql: "COMMIT")
                 //DBGLog("Added voHKstatus entries for all dates in trkrData for all HK valueObjs")
             }
             

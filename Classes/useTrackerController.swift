@@ -329,7 +329,9 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         // Stop native spinner immediately for smoother transition to our custom spinner
         refreshControl.endRefreshing()
         // If we're already in a refresh operation, do nothing
-        if isRefreshInProgress || loadingData {
+        if isRefreshInProgress || loadingData || tracker?.loadingDbData == true {
+            DBGLog("Pull to refresh blocked - refresh already in progress (isRefreshInProgress: \(isRefreshInProgress), loadingData: \(loadingData), loadingDbData: \(tracker?.loadingDbData ?? false))")
+            rTracker_resource.addTimedLabel(text: "Refresh already in progress", tag: self.refreshLabelId, sv: self.view, ti: 2.0)
             return
         }
         
