@@ -167,7 +167,7 @@ class voState: NSObject, voProtocol {
             }
             
             // Update progress tracking
-            to.refreshDelegate?.updateFullRefreshProgress(step: 1, phase: nil, totalSteps: nil)
+            to.refreshDelegate?.updateFullRefreshProgress()
             
             prevDate = md
         }
