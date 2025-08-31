@@ -25,12 +25,12 @@ import Foundation
 import UIKit
 
 protocol RefreshProgressDelegate: AnyObject {
-    func updateFullRefreshProgress(step: Int, phase: String?, totalSteps: Int?, threshold: Int?)
+    func updateFullRefreshProgress(step: Int, phase: String?, totalSteps: Int?, addSteps: Int?, threshold: Int?, completed: Bool)
 }
 
 extension RefreshProgressDelegate {
-    func updateFullRefreshProgress(step: Int = 1, phase: String? = nil, totalSteps: Int? = nil, threshold: Int? = nil) {
-        updateFullRefreshProgress(step: step, phase: phase, totalSteps: totalSteps, threshold: threshold)
+    func updateFullRefreshProgress(step: Int = 1, phase: String? = nil, totalSteps: Int? = nil, addSteps: Int? = nil, threshold: Int? = nil, completed: Bool = false) {
+        updateFullRefreshProgress(step: step, phase: phase, totalSteps: totalSteps, addSteps: addSteps, threshold: threshold, completed: completed)
     }
 }
 
@@ -43,11 +43,6 @@ let SAVERTNDFLT = true
 // max days for graph, 0= no limit
 let GRAPHMAXDAYSDFLT = 0
 
-// HealthKit date window size for chunked loading
-let hkDateWindow = 32
-
-// HealthKit query date threshold for progress bar
-let hqDateWindow = 64
 
 class trackerObj: tObjBase {
 
@@ -331,6 +326,7 @@ class trackerObj: tObjBase {
         DBGLog("STATE: start LoadHKdata")
         dispatchGroup?.enter()
         let localGroup = DispatchGroup()
+        self.toExecSql(sql: "BEGIN TRANSACTION")
         var rslt = false
         var hkValueObjIDs: [Int] = []
         for vo in valObjTable {
@@ -387,6 +383,7 @@ class trackerObj: tObjBase {
                             """
                 //DBGLog(ensureStatusSQL)
                 self.toExecSql(sql: ensureStatusSQL)
+                self.toExecSql(sql: "COMMIT")
                 //DBGLog("Added voHKstatus entries for all dates in trkrData for all HK valueObjs")
             }
             
@@ -681,7 +678,7 @@ class trackerObj: tObjBase {
             // Final updates on main thread
             DispatchQueue.main.async {
                 // Update progress after all OtherTracker processing is done
-                self.refreshDelegate?.updateFullRefreshProgress(step: 1)
+                self.refreshDelegate?.updateFullRefreshProgress()
                 // Small yield to give main thread breathing room
                 Thread.sleep(forTimeInterval: 0.01)
                 // Call completion and leave dispatch group
@@ -851,11 +848,13 @@ class trackerObj: tObjBase {
 
                 // Multi-date mode - process all dates from current point forward
                 DBGLog("Processing future dates from \(Date(timeIntervalSince1970: TimeInterval(progressState.currentDate)))")
+                self.toExecSql(sql: "BEGIN TRANSACTION")
                 while (progressState.currentDate != 0)  {
                     self.processFnDataForDate(progressState: progressState)
                     // Move to next date
                     progressState.currentDate = self.postDate()
-                } 
+                }
+                self.toExecSql(sql: "COMMIT") 
             }
             
             

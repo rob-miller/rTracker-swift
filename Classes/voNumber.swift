@@ -649,6 +649,10 @@ class voNumber: voState, UITextFieldDelegate {
             }
         }
         DBGLog("Using specified start date: \(specifiedStartDate?.description ?? "nil") and end date: \(specifiedEndDate?.description ?? "nil")")
+        
+        // Calculate effective window size from query config or use default
+        let effectiveWindow = queryConfig.dateWindow ?? hkDateWindow
+        
         #if DEBUGLOG
         let startTime = CFAbsoluteTimeGetCurrent()
         #endif
@@ -674,9 +678,9 @@ class voNumber: voState, UITextFieldDelegate {
             
             // Calculate number of date windows needed for chunked processing
             let daysBetween = calendar.dateComponents([.day], from: hkStartDate, to: hkEndDate).day ?? 0
-            let numberOfWindows = (daysBetween + hkDateWindow - 1) / hkDateWindow // Round up
+            let numberOfWindows = (daysBetween + effectiveWindow - 1) / effectiveWindow // Round up
             
-            to.refreshDelegate?.updateFullRefreshProgress(step: 0, phase: "loading dates for \(self.vo.valueName ?? "unknown")", totalSteps: numberOfWindows, threshold: 2)
+            to.refreshDelegate?.updateFullRefreshProgress(step: 0, phase: "Loading HealthKit dates", addSteps: numberOfWindows, threshold: 2)
 
             var allHKDates: [TimeInterval] = []
             let chunkDispatchGroup = DispatchGroup()
@@ -685,14 +689,14 @@ class voNumber: voState, UITextFieldDelegate {
             for windowIndex in 0..<numberOfWindows {
                 chunkDispatchGroup.enter()
                 
-                let windowStartDate = calendar.date(byAdding: .day, value: windowIndex * hkDateWindow, to: hkStartDate) ?? hkStartDate
+                let windowStartDate = calendar.date(byAdding: .day, value: windowIndex * effectiveWindow, to: hkStartDate) ?? hkStartDate
                 let windowEndDate: Date
                 if windowIndex == numberOfWindows - 1 {
                     // Last window - use actual end date
                     windowEndDate = hkEndDate
                 } else {
                     // Use window size
-                    windowEndDate = calendar.date(byAdding: .day, value: (windowIndex + 1) * hkDateWindow, to: hkStartDate) ?? hkEndDate
+                    windowEndDate = calendar.date(byAdding: .day, value: (windowIndex + 1) * effectiveWindow, to: hkStartDate) ?? hkEndDate
                 }
                 
                 DBGLog("Processing HealthKit date window \(windowIndex + 1)/\(numberOfWindows): \(windowStartDate) to \(windowEndDate)")
@@ -700,7 +704,7 @@ class voNumber: voState, UITextFieldDelegate {
                 rthk.getHealthKitDates(queryConfig: queryConfig, hkObjectType: hkObjectType as HKSampleType, startDate: windowStartDate, endDate: windowEndDate) { hkDates in
                     allHKDates.append(contentsOf: hkDates)
                     //DBGLog("Retrieved \(hkDates.count) HK dates: \(hkDates.map { Date(timeIntervalSince1970: $0) })")
-                    to.refreshDelegate?.updateFullRefreshProgress(step: 1)
+                    to.refreshDelegate?.updateFullRefreshProgress()
                     // Small yield to give main thread breathing room
                     Thread.sleep(forTimeInterval: 0.01)
 
@@ -710,6 +714,7 @@ class voNumber: voState, UITextFieldDelegate {
             
             // Wait for all chunks to complete, then process combined results
             chunkDispatchGroup.notify(queue: .main) { [self] in
+                to.refreshDelegate?.updateFullRefreshProgress(completed: true)  
                 #if DEBUGLOG
                 let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
                 DBGLog("HKPROFILE: chunked getHealthKitDates for \(srcName) (vid: \(self.vo.vid)) took \(String(format: "%.3f", timeElapsed))s, found \(allHKDates.count) dates")
@@ -730,14 +735,13 @@ class voNumber: voState, UITextFieldDelegate {
                 // trkrData is 'on conflict replace'
                 // only update an existing row if the new minpriv is lower
                 let priv = max(MINPRIV, self.vo.vpriv)  // priv needs to be at least minpriv if vpriv = 0
-                to.toExecSql(sql: "BEGIN TRANSACTION")
+
                 for newDate in newDates {
                     // fix minpriv issues at end below
                     let sql = "insert into trkrData (date, minpriv) values (\(Int(newDate)), \(priv))"
                     to.toExecSql(sql: sql)
                     //DBGLog("Inserted new date into trkrData: \(Date(timeIntervalSince1970: newDate))")
                 }
-                to.toExecSql(sql: "COMMIT")
                 
                 DBGLog("Inserted \(newDates.count) new dates into trkrData.")
                 
@@ -812,7 +816,9 @@ class voNumber: voState, UITextFieldDelegate {
             }
             #endif
 
-            to.refreshDelegate?.updateFullRefreshProgress(step: 0, phase: "loading data for \(self.vo.valueName ?? "unknown")", totalSteps: dateSet.count, threshold: hqDateWindow)
+            // Progress bar threshold is 2x the effective window size to match the original 2:1 ratio
+            let progressThreshold = effectiveWindow * 2
+            to.refreshDelegate?.updateFullRefreshProgress(step: 0, phase: "Loading HealthKit data", addSteps: dateSet.count, threshold: progressThreshold)
             Thread.sleep(forTimeInterval: 0.01)
 
             let calendar = Calendar.current
@@ -850,12 +856,14 @@ class voNumber: voState, UITextFieldDelegate {
                     }
                     
                     // Update progress for each health query processed
-                    to?.refreshDelegate?.updateFullRefreshProgress(step: 1)
+                    to?.refreshDelegate?.updateFullRefreshProgress()
+                    Thread.sleep(forTimeInterval: 0.01) // Small yield to give main thread breathing room
                 }
             }
             
             // wait on all processHealthQuery's to complete
             secondHKDispatchGroup.notify(queue: .main) {[self] in
+
                 // ensure trkrData has lowest priv if just added a lower privacy valuObj to a trkrData entry
                 let priv = max(MINPRIV, self.vo.vpriv)  // priv needs to be at least minpriv if vpriv = 0
                 sql = """
@@ -871,7 +879,7 @@ class voNumber: voState, UITextFieldDelegate {
                 """
                 to.toExecSql(sql: sql)
                 DBGLog("Done loadHKdata for \(srcName) with \(dateSet.count) records.")
-                
+                to.refreshDelegate?.updateFullRefreshProgress(completed: true)  
                 dispatchGroup?.leave()  // done with enter before getHealthkitDates processing overall
             }
         }

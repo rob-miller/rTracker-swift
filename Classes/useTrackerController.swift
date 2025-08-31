@@ -97,6 +97,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     private var currentProgressMaxValue: Float = 1.0  // Track current phase max value
     private var currentProgressThreshold: Int = 1    // Track current phase threshold
     private var currentTotalSteps: Int = 0      // Track current total value
+    private var currentTasks: Int = 0   // for tracking multiple HK addSteps
     private var progressBarShown: Bool = false
     private var fullRefreshProgressContainerView: UIView?
     private var frDate: Int = 0  // Date?  // trackerDate shown when full refresh started
@@ -904,6 +905,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         fullRefreshProgressBar?.layer.cornerRadius = 4
         fullRefreshProgressBar?.clipsToBounds = true
         
+        currentTotalSteps = 0
+
         // Add the UI elements to the container
         if let container = fullRefreshProgressContainerView, let label = fullRefreshProgressLabel, let progressBar = fullRefreshProgressBar {
             view.addSubview(container)
@@ -965,7 +968,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     }
 
     // Update progress bar and label - implements RefreshProgressDelegate protocol
-    func updateFullRefreshProgress(step: Int = 1, phase: String? = nil, totalSteps: Int? = nil, threshold: Int? = nil) {
+    func updateFullRefreshProgress(step: Int, phase: String?, totalSteps: Int?, addSteps: Int?, threshold: Int?, completed: Bool) {
         if let threshold = threshold {
             currentProgressThreshold = threshold
             DBGLog("Progress threshold set to: \(threshold)")
@@ -975,18 +978,40 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             DBGLog("Progress phase set to: \(phase)")
         }
         // If totalSteps provided, initialize/reset the progress bar for this phase
+        var doInit = false
+        var addedSteps = false
         if let totalSteps = totalSteps {
             currentTotalSteps = totalSteps
+            doInit = true
+            currentTasks = 0
             DBGLog("Progress total steps set to: \(totalSteps) threshold is \(currentProgressThreshold) progressBarShown is \(progressBarShown)")
-            if totalSteps > currentProgressThreshold {
-                DBGLog("[\(Date())] Initializing progress bar for phase '\(phase ?? "unknown")' with \(totalSteps) total steps")
+        }
+
+        if let addSteps = addSteps {
+            if currentTotalSteps == 0 {
+                doInit = true  // only works because only HK uses addSteps, and HK is first
+                currentTasks = 1
+            } else {
+                currentTasks += 1
+            }
+
+            addedSteps = true
+            currentTotalSteps += addSteps
+            DBGLog("Progress total steps increased by: \(addSteps) currentTotalSteps is \(currentTotalSteps)")
+        }
+        if completed {
+            currentTasks -= 1
+        }
+        if doInit {
+            if currentTotalSteps > currentProgressThreshold {
+                DBGLog("Initializing progress bar for phase '\(phase ?? "unknown")' with \(currentTotalSteps) total steps threshold is \(currentProgressThreshold) progressBarShown is \(progressBarShown)")
                 currentProgressStep = 0
 
                 DispatchQueue.main.async { [weak self] in
                     guard let self = self else { return }
                     
                     // Set maximum value and reset progress to 0
-                    self.currentProgressMaxValue = Float(totalSteps)
+                    self.currentProgressMaxValue = Float(currentTotalSteps)
                     self.fullRefreshProgressBar?.progress = 0.0
 
                     // Check if container was hidden before showing it
@@ -1003,7 +1028,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                         DBGLog("endRAI called from progress init for phase \(self.currentRefreshPhase)")
                     }
                     
-                    if totalSteps > currentProgressThreshold {
+                    if currentTotalSteps > currentProgressThreshold {
                         // Set initial phase text
                         self.fullRefreshProgressLabel?.text = "\(self.currentRefreshPhase) - 0%"
                     }
@@ -1020,7 +1045,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                     self.fullRefreshProgressContainerView?.setNeedsLayout()
                     self.fullRefreshProgressContainerView?.layoutIfNeeded()
                 }
-            } else if totalSteps > 1 && (Double(totalSteps) / Double(currentProgressThreshold)) > 0.1 && !progressBarShown {
+            } else if currentTotalSteps > 1 && (Double(currentTotalSteps) / Double(currentProgressThreshold)) > 0.1 && !progressBarShown {
                 self.startRAI()
             }
             return
@@ -1030,13 +1055,17 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         if !progressBarShown {
             // Progress bar not initialized, ignore step updates (spinner continues)
             return
+        } else if addedSteps {
+            self.currentProgressMaxValue = Float(currentTotalSteps)
         }
-        
+
+
         currentProgressStep += step
+
         
         // Calculate progress based on current maximum value
         let progressValue = min(Float(currentProgressStep) / currentProgressMaxValue, 1.0)
-        //DBGLog("stepvalue \(step) for phase '\(currentRefreshPhase)' - progress \(currentProgressStep) of \(currentProgressMaxValue) (value: \(progressValue) ")
+        DBGLog("stepvalue \(step) for phase '\(currentRefreshPhase)' - progress \(currentProgressStep) of \(currentProgressMaxValue) (value: \(progressValue) ")
         
         if currentTotalSteps > currentProgressThreshold {
             DispatchQueue.main.async { [weak self] in
@@ -1046,21 +1075,11 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 self.fullRefreshProgressBar?.progress = progressValue
                 
                 // Format the text with phase and percentage
-                if !self.currentRefreshPhase.isEmpty {
-                    self.fullRefreshProgressLabel?.text = "\(self.currentRefreshPhase) - \(Int(progressValue * 100))%"
-                } else {
-                    self.fullRefreshProgressLabel?.text = "Processing data - \(Int(progressValue * 100))%"
-                }
+                let cPhase = self.currentRefreshPhase.isEmpty ? "Processing data" : self.currentRefreshPhase
+                let taskState = (currentTasks > 1) ? " (\(currentTasks) tasks)" : ""
+                self.fullRefreshProgressLabel?.text = "\(cPhase) - \(Int(progressValue * 100))%\(taskState)"
                 
-                // Force immediate layout update with animation transaction for better rendering
-                // rtm?
-                CATransaction.begin()
-                CATransaction.setDisableActions(false)
-                CATransaction.setCompletionBlock {
-                    // Log when the UI update completes
-                    //DBGLog("[\(Date())] CATransaction completed for phase: \(self.currentRefreshPhase)")
-                }
-                
+                // Force immediate layout update for toolbar progress indicator
                 self.fullRefreshProgressLabel?.setNeedsDisplay()
                 self.fullRefreshProgressBar?.setNeedsDisplay()
                 self.fullRefreshProgressContainerView?.setNeedsLayout()
@@ -1068,55 +1087,9 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 
                 // Force window update if possible
                 self.view.window?.layoutIfNeeded()
-                
-                CATransaction.commit()
             }
         }
     }
-
-    // Calculate the total number of steps for progress tracking
-    // rtm not used after shift to 100% per phase
-    private func calculateTotalProgressSteps() -> Int {
-        let to = self.tracker!
-        var totalSteps = 0
-        
-        // Count HK, OT, and FN valueObjs
-        var hkCount = 0
-        var otCount = 0
-        var fnCount = 0
-        
-        for vo in to.valObjTable {
-            if vo.optDict["ahksrc"] ?? "0" != "0" {
-                hkCount += 1
-            }
-            if vo.optDict["otsrc"] ?? "0" != "0" {
-                otCount += 1
-            }
-            if vo.vtype == VOT_FUNC {
-                fnCount += 1
-            }
-        }
-
-        // add otsrc dates, probably hk dates takes too long
-        to.loadOTdates()
-        // Count total dates to process
-        let dateCountSql = "SELECT COUNT(date) FROM trkrData"
-        let dateCount = to.toQry2Int(sql: dateCountSql)
-        
-        // HK operations: each HK valueObj processes all dates
-        totalSteps += hkCount * dateCount
-        
-        // OT operations: each OT valueObj processes all dates
-        totalSteps += otCount * dateCount
-        
-        // FN operations: process each date once
-        totalSteps += dateCount
-        
-        DBGLog("Progress calculation: \(hkCount) HK valueObjs, \(otCount) OT valueObjs, \(fnCount) FN valueObjs over \(dateCount) dates. Total steps: \(totalSteps)")
-        
-        return max(totalSteps, 1) // Avoid division by zero
-    }
-
 
     // MARK: -
     // MARK: keyboard notifications

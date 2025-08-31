@@ -8,6 +8,11 @@
 
 import HealthKit
 
+// Default HealthKit date window size for chunked loading to avoid memory issues
+// High-frequency data (HRV, Heart Rate) should use smaller windows (1 day)
+// Low-frequency data can use larger windows (32 days) for efficiency
+let hkDateWindow = 32
+
 struct HealthDataQuery {
     let identifier: String                     // Unique HK identifier
     let displayName: String                    // User-friendly name for UI
@@ -18,6 +23,7 @@ struct HealthDataQuery {
     let customProcessor: ((HKSample) -> Double)? // custom processing logic (sleep aggregation)
     let aggregationType: AggregationType?       // custom grouping logic (night sleep)
     let aggregationTime: DateComponents?       // Optional time for aggregation (e.g., start/end of day). if specified, aggregate over previous day at this time to current day at this time.  if not specified, aggregate over supplied targDate +/- 10 hours
+    let dateWindow: Int?                       // Override default hkDateWindow for this data type (days)
     let info: String?
     
     enum AggregationType {
@@ -37,6 +43,7 @@ let healthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: nil,
         aggregationTime: nil,
+        dateWindow: nil,
         info: nil
 
     ),
@@ -50,6 +57,7 @@ let healthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: nil,
         aggregationTime: nil,
+        dateWindow: nil,
         info: nil
     ),
     HealthDataQuery(
@@ -62,6 +70,7 @@ let healthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: nil,
         aggregationTime: nil,
+        dateWindow: nil,
         info: nil
 
     ),
@@ -75,6 +84,7 @@ let healthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: nil,
         aggregationTime: nil,
+        dateWindow: nil,
         info: nil
 
     ),
@@ -88,6 +98,7 @@ let healthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: nil,
         aggregationTime: nil,
+        dateWindow: nil,
         info: nil
 
     ),
@@ -101,6 +112,7 @@ let healthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: nil,
         aggregationTime: nil,
+        dateWindow: nil,
         info: nil
 
     ),
@@ -120,6 +132,7 @@ let healthDataQueries: [HealthDataQuery] = [
         },
         aggregationType: .groupedByNight,
         aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
+        dateWindow: nil,
         info: nil
     ),
     HealthDataQuery(
@@ -138,6 +151,7 @@ let healthDataQueries: [HealthDataQuery] = [
         },
         aggregationType: .groupedByNight,
         aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
+        dateWindow: nil,
         info: "The user is in light or intermediate sleep."
     ),
     HealthDataQuery(
@@ -156,6 +170,7 @@ let healthDataQueries: [HealthDataQuery] = [
         },
         aggregationType: .groupedByNight,
         aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
+        dateWindow: nil,
         info: nil
     ),
     HealthDataQuery(
@@ -174,6 +189,7 @@ let healthDataQueries: [HealthDataQuery] = [
         },
         aggregationType: .groupedByNight,
         aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
+        dateWindow: nil,
         info: nil
     ),
     HealthDataQuery(
@@ -192,7 +208,8 @@ let healthDataQueries: [HealthDataQuery] = [
         },
         aggregationType: .groupedByNight,
         aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
-        info: "The user is asleep, but the specific stage isn’t specified.  Includes Core, REM and Deep sleep, plus data from other apps."
+        dateWindow: nil,
+        info: "The user is asleep, but the specific stage isn't specified.  Includes Core, REM and Deep sleep, plus data from other apps."
     ),
     HealthDataQuery(
         identifier: "HKCategoryTypeIdentifierSleepAnalysis",
@@ -218,6 +235,7 @@ let healthDataQueries: [HealthDataQuery] = [
         },
         aggregationType: .groupedByNight,
         aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
+        dateWindow: nil,
         info: "Defined as core sleep plus REM sleep plus deep sleep."
     ),
     HealthDataQuery(
@@ -236,6 +254,7 @@ let healthDataQueries: [HealthDataQuery] = [
         },
         aggregationType: .groupedByNight,
         aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
+        dateWindow: nil,
         info: nil
     ),
     // For counting Deep sleep segments
@@ -256,6 +275,7 @@ let healthDataQueries: [HealthDataQuery] = [
         },
         aggregationType: .groupedByNight,
         aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
+        dateWindow: nil,
         info: "Counts the number of Deep sleep segments during the night. Short gaps (up to \(MAXSLEEPSEGMENTGAP) minutes) of Core sleep within a Deep sleep period are still counted as a single segment."
     ),
 
@@ -277,6 +297,7 @@ let healthDataQueries: [HealthDataQuery] = [
         },
         aggregationType: .groupedByNight,
         aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
+        dateWindow: nil,
         info: "Counts the number of REM sleep segments during the night. Short gaps (up to \(MAXSLEEPSEGMENTGAP) minutes) of Core sleep within a REM sleep period are still counted as a single segment."
     ),
 
@@ -294,6 +315,7 @@ let healthDataQueries: [HealthDataQuery] = [
         },
         aggregationType: .groupedByNight,
         aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
+        dateWindow: nil,
         info: "Counts complete sleep cycles, defined as a Deep sleep segment minutes) followed by a REM segment (both at least \(MINSLEEPSEGMENTDURATION) minutes)."
     ),
 
@@ -311,6 +333,7 @@ let healthDataQueries: [HealthDataQuery] = [
         },
         aggregationType: .groupedByNight,
         aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
+        dateWindow: nil,
         info: "Counts the number of transitions between different sleep stages (Core/Deep/REM/Awake) from sleep onset to waking up."
     ),
     
@@ -324,6 +347,7 @@ let healthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: .highFrequency,
         aggregationTime: nil,
+        dateWindow: 1,
         info: nil
     ),
     HealthDataQuery(
@@ -336,6 +360,7 @@ let healthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: .highFrequency,
         aggregationTime: nil,
+        dateWindow: 1,
         info: nil
     ),
     HealthDataQuery(
@@ -348,6 +373,7 @@ let healthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: nil,
         aggregationTime: nil,
+        dateWindow: nil,
         info: nil
     ),
     HealthDataQuery(
@@ -360,6 +386,7 @@ let healthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: nil,
         aggregationTime: nil,
+        dateWindow: nil,
         info: nil
     ),
     HealthDataQuery(
@@ -372,6 +399,7 @@ let healthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: nil,
         aggregationTime: nil,
+        dateWindow: nil,
         info: nil
     ),
     HealthDataQuery(
@@ -384,6 +412,7 @@ let healthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: nil,
         aggregationTime: nil,
+        dateWindow: nil,
         info: nil
     ),
     HealthDataQuery(
@@ -396,6 +425,7 @@ let healthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: nil,
         aggregationTime: nil,
+        dateWindow: nil,
         info: nil
     ),
     HealthDataQuery(
@@ -408,6 +438,7 @@ let healthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: nil,
         aggregationTime: nil,
+        dateWindow: nil,
         info: nil
     ),
     HealthDataQuery(
@@ -420,6 +451,7 @@ let healthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: nil,
         aggregationTime: nil,
+        dateWindow: nil,
         info: nil
     ),
     HealthDataQuery(
@@ -432,6 +464,7 @@ let healthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: nil,
         aggregationTime: nil,
+        dateWindow: nil,
         info: nil
     ),
     HealthDataQuery(
@@ -444,6 +477,7 @@ let healthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: nil,
         aggregationTime: nil,
+        dateWindow: nil,
         info: nil
     ),
     HealthDataQuery(
@@ -456,6 +490,7 @@ let healthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: nil,
         aggregationTime: nil,
+        dateWindow: nil,
         info: nil
     ),
     HealthDataQuery(
@@ -468,6 +503,7 @@ let healthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: nil,
         aggregationTime: nil,
+        dateWindow: nil,
         info: nil
     ),
     HealthDataQuery(
@@ -480,6 +516,7 @@ let healthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: nil,
         aggregationTime: nil,
+        dateWindow: nil,
         info: nil
     ),
     HealthDataQuery(
@@ -491,7 +528,8 @@ let healthDataQueries: [HealthDataQuery] = [
         aggregationStyle: .cumulative,
         customProcessor: nil,
         aggregationType: nil,
-        aggregationTime: nil, 
+        aggregationTime: nil,
+        dateWindow: nil,
         info: nil
     ),
     HealthDataQuery(
@@ -504,6 +542,7 @@ let healthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: nil,
         aggregationTime: DateComponents(hour: 23, minute: 59), // midnight end of day
+        dateWindow: nil,
         info: nil
     ),
     HealthDataQuery(
@@ -516,6 +555,7 @@ let healthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: nil,
         aggregationTime: DateComponents(hour: 23, minute: 59), // midnight end of day
+        dateWindow: nil,
         info: nil
     ),
     HealthDataQuery(
@@ -528,6 +568,7 @@ let healthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: nil,
         aggregationTime: nil,
+        dateWindow: nil,
         info: nil
     ),
     HealthDataQuery(
@@ -540,6 +581,7 @@ let healthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: nil,
         aggregationTime: nil,
+        dateWindow: nil,
         info: nil
     ),
     HealthDataQuery(
@@ -552,6 +594,7 @@ let healthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: nil,
         aggregationTime: nil,
+        dateWindow: nil,
         info: nil
     ),
     HealthDataQuery(
@@ -564,6 +607,7 @@ let healthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: nil,
         aggregationTime: nil,
+        dateWindow: nil,
         info: nil
     ),
     HealthDataQuery(
@@ -576,6 +620,7 @@ let healthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: nil,
         aggregationTime: nil,
+        dateWindow: nil,
         info: nil
     ),
     HealthDataQuery(
@@ -588,6 +633,7 @@ let healthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: nil,
         aggregationTime: nil,
+        dateWindow: nil,
         info: nil
     ),
     HealthDataQuery(
@@ -600,6 +646,7 @@ let healthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: nil,
         aggregationTime: nil,
+        dateWindow: nil,
         info: nil
     ),
     HealthDataQuery(
@@ -612,6 +659,7 @@ let healthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: .highFrequency,
         aggregationTime: nil,
+        dateWindow: nil,
         info: nil
     ),
 ]

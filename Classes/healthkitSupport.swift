@@ -75,6 +75,16 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         healthStore.execute(query)
     }
     
+    /// Determines the date range for HealthKit sample queries by using provided dates or querying HealthKit for the earliest/latest samples.
+    /// This function provides flexible date range resolution - if both start and end dates are provided, it returns them immediately.
+    /// If either date is missing, it queries HealthKit to find the actual earliest/latest sample dates for the specified sample type.
+    /// The earliest date is adjusted by subtracting 1 second, and the latest date by adding 1 second to ensure complete data coverage.
+    ///
+    /// - Parameters:
+    ///   - sampleType: The HealthKit sample type to query for date range determination
+    ///   - useStartDate: Optional start date - if nil, queries for earliest sample date
+    ///   - useEndDate: Optional end date - if nil, queries for latest sample date
+    ///   - completion: Completion handler that receives the resolved start and end dates (both may be nil if no samples exist)
     func sampleDateRange(
         for sampleType: HKSampleType,
         useStartDate: Date?,
@@ -424,6 +434,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                         customProcessor: query.customProcessor,
                         aggregationType: query.aggregationType,
                         aggregationTime: query.aggregationTime,
+                        dateWindow: query.dateWindow,
                         info: query.info
                     ))
                 }
