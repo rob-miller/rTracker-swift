@@ -650,9 +650,8 @@ class voNumber: voState, UITextFieldDelegate {
         }
         DBGLog("Using specified start date: \(specifiedStartDate?.description ?? "nil") and end date: \(specifiedEndDate?.description ?? "nil")")
         
-        // Calculate effective window size from query config or use default
-        let effectiveWindow = queryConfig.dateWindow ?? hkDateWindow
-        DBGLog("[\(srcName)] Using effective window size: \(effectiveWindow) days (query config: \(queryConfig.dateWindow?.description ?? "nil"), default: \(hkDateWindow))")
+        // Use standard HealthKit date window
+        DBGLog("[\(srcName)] Using effective window size: \(hkDateWindow) days")
         
         #if DEBUGLOG
         let startTime = CFAbsoluteTimeGetCurrent()
@@ -679,7 +678,7 @@ class voNumber: voState, UITextFieldDelegate {
             
             // Calculate number of date windows needed for chunked processing
             let daysBetween = calendar.dateComponents([.day], from: hkStartDate, to: hkEndDate).day ?? 0
-            let numberOfWindows = (daysBetween + effectiveWindow - 1) / effectiveWindow // Round up
+            let numberOfWindows = (daysBetween + hkDateWindow - 1) / hkDateWindow // Round up
             
             to.refreshDelegate?.updateFullRefreshProgress(step: 0, phase: "Loading HealthKit dates", addSteps: numberOfWindows, threshold: 2)
 
@@ -690,14 +689,14 @@ class voNumber: voState, UITextFieldDelegate {
             for windowIndex in 0..<numberOfWindows {
                 chunkDispatchGroup.enter()
                 
-                let windowStartDate = calendar.date(byAdding: .day, value: windowIndex * effectiveWindow, to: hkStartDate) ?? hkStartDate
+                let windowStartDate = calendar.date(byAdding: .day, value: windowIndex * hkDateWindow, to: hkStartDate) ?? hkStartDate
                 let windowEndDate: Date
                 if windowIndex == numberOfWindows - 1 {
                     // Last window - use actual end date
                     windowEndDate = hkEndDate
                 } else {
                     // Use window size
-                    windowEndDate = calendar.date(byAdding: .day, value: (windowIndex + 1) * effectiveWindow, to: hkStartDate) ?? hkEndDate
+                    windowEndDate = calendar.date(byAdding: .day, value: (windowIndex + 1) * hkDateWindow, to: hkStartDate) ?? hkEndDate
                 }
                 
                 DBGLog("[\(srcName)] Processing HealthKit date window \(windowIndex + 1)/\(numberOfWindows): \(windowStartDate) to \(windowEndDate)")
@@ -820,7 +819,7 @@ class voNumber: voState, UITextFieldDelegate {
             #endif
 
             // Progress bar threshold is 2x the effective window size to match the original 2:1 ratio
-            let progressThreshold = effectiveWindow * 2
+            let progressThreshold = hkDateWindow * 2
             to.refreshDelegate?.updateFullRefreshProgress(step: 0, phase: "Loading HealthKit data", addSteps: dateSet.count, threshold: progressThreshold)
             Thread.sleep(forTimeInterval: 0.01)
 
@@ -915,6 +914,7 @@ class voNumber: voState, UITextFieldDelegate {
                 to.refreshDelegate?.updateFullRefreshProgress(completed: true)  
                 dispatchGroup?.leave()  // done with enter before getHealthkitDates processing overall
             }
+            
         }
     }
 

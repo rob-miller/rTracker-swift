@@ -434,7 +434,6 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                         customProcessor: query.customProcessor,
                         aggregationType: query.aggregationType,
                         aggregationTime: query.aggregationTime,
-                        dateWindow: query.dateWindow,
                         info: query.info
                     ))
                 }

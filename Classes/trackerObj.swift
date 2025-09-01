@@ -341,7 +341,7 @@ class trackerObj: tObjBase {
         }
         // Waiting for all voNumber hk operations to complete, then mark any missing hkStatus as noData
         localGroup.notify(queue: .main) {
-            
+            DBGLog("All \(hkValueObjIDs.count) voNumber HK operations completed")
             // processing multiple
             if hkValueObjIDs.count > 1 {
                 // Convert Int array to comma-separated string for SQL
