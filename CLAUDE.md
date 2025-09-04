@@ -241,19 +241,18 @@ ls -la .claude/
 - ✅ **Verify imports and dependencies** - Make sure all required modules are imported
 - ✅ **Logic review** - Check for potential runtime issues and edge cases
 
-## ✅ Swift Syntax Checking (APPROVED EXCEPTION)
-**When making significant Swift code changes, you MAY use syntax checking:**
+## 🚫 Swift Syntax Checking - USER PERMISSION REQUIRED
+**NEVER run swiftc syntax checking unless explicitly requested by user:**
 ```bash
 cd "/Users/rob/Library/Mobile Documents/com~apple~CloudDocs/sync/proj/rTracker-swift"
 swiftc -parse "Classes/[filename].swift" 2>&1 | head -20
 ```
 
-**Usage Guidelines:**
-- ✅ **ONLY for syntax validation** - Not for full compilation
-- ✅ **Use after significant edits** - Especially when refactoring or adding new methods
-- ✅ **Limit output** - Always pipe to `head -20` to prevent excessive token usage
-- ✅ **Fix syntax errors immediately** - Address brace mismatches, type errors, scope issues
-- ❌ **Never use for full builds** - Only for parsing/syntax validation
+**STRICT USAGE POLICY:**
+- 🚫 **DO NOT run automatically** - Only when user explicitly requests syntax checking
+- 🚫 **No proactive validation** - Do not run after edits unless user asks
+- ✅ **User must request** - Wait for explicit "run syntax check" or similar command
+- ✅ **Ask permission first** - "Would you like me to run a syntax check?" if uncertain
 
 ## Testing Guidelines
 - **NEVER assume test frameworks** - Always check README or search codebase for testing approach
