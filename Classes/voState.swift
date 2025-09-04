@@ -161,7 +161,7 @@ class voState: NSObject, voProtocol {
                 to.toExecSql(sql: sql)
             } else {
                 // No data found - create noData status (processed but no data available)
-                DBGLog("no data for \(sql)")
+                // DBGLog("no data for \(sql)")
                 sql = "insert into voOTstatus (id, date, stat) values (\(self.vo.vid), \(md), \(otStatus.noData.rawValue))"
                 to.toExecSql(sql: sql)
             }

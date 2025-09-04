@@ -722,13 +722,17 @@ class trackerObj: tObjBase {
 
     private func processFnDataForDate(progressState: ProcessingState) {
         autoreleasepool {
+            #if FUNCTIONDBG
             DBGLog("Processing date \(progressState.currentDate) (\(Date(timeIntervalSince1970: TimeInterval(progressState.currentDate))))")
+            #endif
             // Load data for this date and process functions
             _ = self.loadData(progressState.currentDate)  // does nothing if date not in db, so leaves current gui settings
             
             for vo in self.valObjTable {
                 if vo.vtype == VOT_FUNC {
+                    #if FUNCTIONDBG
                     DBGLog("Calling setFNrecalc() for vid=\(vo.vid) before processing date \(progressState.currentDate)")
+                    #endif
                     vo.vos?.setFNrecalc()  // do not use cached values
                     vo.vos?.setFnVal(progressState.currentDate)
                 }

@@ -1225,14 +1225,16 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         if instr?.isEmpty == false && !fnDirty {
             return instr ?? ""
         }
-        
+
+        #if FUNCTIONDBG
         if ep0date == lastEpd0 && !lastCalcValue.isEmpty && !fnDirty {
             DBGLog("fn \(vo.valueName!) update using cached value \(lastCalcValue) ep0date \(Date(timeIntervalSince1970: TimeInterval(ep0date))) [fnDirty=\(fnDirty), lastCalcValue.isEmpty=\(lastCalcValue.isEmpty)]")
             return lastCalcValue
         } else {
             DBGLog("fn \(vo.valueName!) update RECALCULATING [ep0date=\(ep0date) vs lastEpd0=\(lastEpd0), fnDirty=\(fnDirty), lastCalcValue.isEmpty=\(lastCalcValue.isEmpty)]")
         }
-        
+        #endif
+
         currFnNdx = 0
 
         let val = calcFunctionValue(withCurrent: ep0date)
@@ -1270,7 +1272,9 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         CrashlyticsKit.setObjectValue(voFnDefnStr(true), forKey: "fnDefn")
         CrashlyticsKit.setObjectValue(voRangeStr(true), forKey: "fnRange")
         #endif
+        #if FUNCTIONDBG
         DBGLog("display fn voDisplay: \(vo.valueName ?? "nil")")
+        #endif
         var valstr = vo.value // evaluated on read so make copy
         if FnErr {
             valstr = "❌ " + (valstr)
@@ -1290,7 +1294,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         }
 
         //return [rlab autorelease];
-        DBGLog(String("fn voDisplay: \(rlab?.text ?? "")"))
+        DBGLog(String("fn voDisplay: \(vo.valueName ?? "nil") \(rlab?.text ?? "")"))
         //self.rlab.tag = kViewTag;
 
         return rlab!
@@ -1453,7 +1457,9 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
     
     override func setFNrecalc() {
         // force recaclulation, no cached value
+        #if FUNCTIONDBG
         DBGLog("setFNrecalc() called for vid=\(vo.vid), clearing lastCalcValue='\(lastCalcValue)', setting fnDirty=true")
+        #endif
         lastCalcValue = ""
         lastEpd0 = -1  // Also reset the cached endpoint date to force recalculation
         fnDirty = true

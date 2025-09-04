@@ -690,7 +690,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                     DBGErr("aggregation Style \(queryConfig.aggregationStyle) not handled")
                 }
             }
-            DBGLog("have Sleep Analysis Query Results for \(queryConfig.displayName) : \(results)")
+            // DBGLog("have Sleep Analysis Query Results for \(queryConfig.displayName) : \(results)")
             
 
             completion(results)
