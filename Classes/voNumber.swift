@@ -597,7 +597,7 @@ class voNumber: voState, UITextFieldDelegate {
         
         DBGLog("End debugging HealthKit date query")
     }
-    
+     
     override func loadHKdata(forDate date: Int?, dispatchGroup: DispatchGroup?) {
         // loads into database, not for current tracker record
         let to = vo.parentTracker
@@ -618,7 +618,7 @@ class voNumber: voState, UITextFieldDelegate {
             return
         }
 
-        dispatchGroup?.enter()  // wait for getHealthkitDates processing overall
+        // enter done at to before calling here -- dispatchGroup?.enter()  // wait for getHealthkitDates processing overall
         
         
         // 1st determine if hk has date entries this tracker does not, if so identify and add them
@@ -685,30 +685,34 @@ class voNumber: voState, UITextFieldDelegate {
             var allHKDates: [TimeInterval] = []
             let chunkDispatchGroup = DispatchGroup()
             
-            // Process date ranges in chunks
+            // Process date ranges in chunks with rate limiting on background queue
             for windowIndex in 0..<numberOfWindows {
                 chunkDispatchGroup.enter()
                 
-                let windowStartDate = calendar.date(byAdding: .day, value: windowIndex * hkDateWindow, to: hkStartDate) ?? hkStartDate
-                let windowEndDate: Date
-                if windowIndex == numberOfWindows - 1 {
-                    // Last window - use actual end date
-                    windowEndDate = hkEndDate
-                } else {
-                    // Use window size
-                    windowEndDate = calendar.date(byAdding: .day, value: (windowIndex + 1) * hkDateWindow, to: hkStartDate) ?? hkEndDate
-                }
+                DispatchQueue.global(qos: .userInitiated).async {
+                    // Add delay between chunks to prevent HealthKit overload
+                    if windowIndex > 0 {
+                        Thread.sleep(forTimeInterval: 0.1) // 10ms between chunks
+                    }
                 
-                DBGLog("[\(srcName)] Processing HealthKit date window \(windowIndex + 1)/\(numberOfWindows): \(windowStartDate) to \(windowEndDate)")
-                
-                rthk.getHealthKitDates(queryConfig: queryConfig, hkObjectType: hkObjectType as HKSampleType, startDate: windowStartDate, endDate: windowEndDate) { hkDates in
-                    allHKDates.append(contentsOf: hkDates)
-                    //DBGLog("Retrieved \(hkDates.count) HK dates: \(hkDates.map { Date(timeIntervalSince1970: $0) })")
-                    to.refreshDelegate?.updateFullRefreshProgress()
-                    // Small yield to give main thread breathing room
-                    Thread.sleep(forTimeInterval: 0.01)
-
-                    chunkDispatchGroup.leave()
+                    let windowStartDate = calendar.date(byAdding: .day, value: windowIndex * hkDateWindow, to: hkStartDate) ?? hkStartDate
+                    let windowEndDate: Date
+                    if windowIndex == numberOfWindows - 1 {
+                        // Last window - use actual end date
+                        windowEndDate = hkEndDate
+                    } else {
+                        // Use window size
+                        windowEndDate = calendar.date(byAdding: .day, value: (windowIndex + 1) * hkDateWindow, to: hkStartDate) ?? hkEndDate
+                    }
+                    
+                    DBGLog("[\(srcName)] Processing HealthKit date window \(windowIndex + 1)/\(numberOfWindows): \(windowStartDate) to \(windowEndDate)")
+                    
+                    self.rthk.getHealthKitDates(queryConfig: queryConfig, hkObjectType: hkObjectType as HKSampleType, startDate: windowStartDate, endDate: windowEndDate) { hkDates in
+                        allHKDates.append(contentsOf: hkDates)
+                        //DBGLog("Retrieved \(hkDates.count) HK dates: \(hkDates.map { Date(timeIntervalSince1970: $0) })")
+                        to.refreshDelegate?.updateFullRefreshProgress()
+                        chunkDispatchGroup.leave()
+                    }
                 }
             }
             
@@ -821,7 +825,6 @@ class voNumber: voState, UITextFieldDelegate {
             // Progress bar threshold is 2x the effective window size to match the original 2:1 ratio
             let progressThreshold = hkDateWindow * 2
             to.refreshDelegate?.updateFullRefreshProgress(step: 0, phase: "Loading HealthKit data", addSteps: dateSet.count, threshold: progressThreshold)
-            Thread.sleep(forTimeInterval: 0.01)
 
             let calendar = Calendar.current
             let secondHKDispatchGroup = DispatchGroup()
@@ -834,59 +837,71 @@ class voNumber: voState, UITextFieldDelegate {
             DBGLog("[\(srcName)] Starting data processing phase: \(totalCount) records to process")
             #endif
             
-            // Process all dates asynchronously to prevent UI blocking
-            // Start all queries concurrently rather than sequentially  
-            for dat in dateSet.sorted() {  // .sorted() is just to help debugging
-                // Look up the query configuration to determine aggregationType
-                guard healthDataQueries.first(where: { $0.displayName == srcName }) != nil else {
-                    DBGErr("No query configuration found for displayName: \(srcName)")
-                    continue
-                }
-                
-                // Use unified processHealthQuery for all cases
+            for dat in dateSet {
                 secondHKDispatchGroup.enter() // Enter the group for each query
-                self.processHealthQuery(
-                    timestamp: dat,
-                    srcName: srcName,
-                    frequency: frequency,
-                    calendar: calendar,
-                    dispatchGroup: secondHKDispatchGroup
-                ) { [weak self] (result: String?) in
-                    // Dispatch database operations and UI updates to main thread
-                    DispatchQueue.main.async {
-                        let to = self?.vo.parentTracker
-                        
-                        if let result = result {
-                            // Data found - insert into database
-                            let sql = "insert into voData (id, date, val) values (\(self?.vo.vid ?? 0), \(dat), '\(result)')"
-                            to?.toExecSql(sql: sql)
-                            let statusSql = "insert into voHKstatus (id, date, stat) values (\(self?.vo.vid ?? 0), \(dat), \(hkStatus.hkData.rawValue))"
-                            to?.toExecSql(sql: statusSql)
-                        } else {
-                            // No data found - record no data status
-                            let sql = "insert into voHKstatus (id, date, stat) values (\(self?.vo.vid ?? 0), \(dat), \(hkStatus.noData.rawValue))"
-                            to?.toExecSql(sql: sql)
-                        }
-                        
-                        #if DEBUGLOG
-                        processedCount += 1
-                        // Log progress every 1000 records or on significant milestones for large datasets
-                        let shouldLog = (processedCount % 1000 == 0) || 
-                                       (totalCount < 1000 && processedCount % 100 == 0) ||
-                                       (processedCount == totalCount)
-                        if shouldLog {
-                            let elapsed = CFAbsoluteTimeGetCurrent() - dataProcessingStartTime
-                            let rate = elapsed > 0 ? Double(processedCount) / elapsed : 0
-                            let percentage = totalCount > 0 ? (Double(processedCount) / Double(totalCount)) * 100 : 0
-                            DBGLog("[\(srcName)] Processing progress: \(processedCount)/\(totalCount) (\(String(format: "%.1f", percentage))%) - \(String(format: "%.1f", rate)) records/sec")
-                        }
-                        #endif
-                        
-                        // Update progress for each health query processed
-                        to?.refreshDelegate?.updateFullRefreshProgress()
+            }
+            // Process all dates asynchronously on background queue to prevent UI blocking
+            DispatchQueue.global(qos: .userInitiated).async {
+                // Process queries with rate limiting to prevent overwhelming HealthKit APIs
+                for (index, dat) in dateSet.sorted().enumerated() {  // .sorted() is just to help debugging
+                    // Look up the query configuration to determine aggregationType
+                    guard let queryConfig = healthDataQueries.first(where: { $0.displayName == srcName }) else {
+                        DBGErr("No query configuration found for displayName: \(srcName)")
+                        continue
                     }
-                }
-            } // End for loop
+                    
+                    // Add delay every 5 operations to prevent HealthKit overload
+                    if index > 0 && index % 5 == 0 {
+                        Thread.sleep(forTimeInterval: 0.1) // 20ms pause every 5 operations
+                    }
+
+                
+                    // Use unified processHealthQuery for all cases
+
+                    self.processHealthQuery(
+                        timestamp: dat,
+                        srcName: srcName,
+                        frequency: frequency,
+                        calendar: calendar,
+                        dispatchGroup: nil
+                    ) { [weak self] (result: String?) in
+                        // Dispatch database operations and UI updates to main thread
+                        DispatchQueue.main.async {
+                            let to = self?.vo.parentTracker
+                            
+                            if let result = result {
+                                // Data found - insert into database
+                                let sql = "insert into voData (id, date, val) values (\(self?.vo.vid ?? 0), \(dat), '\(result)')"
+                                to?.toExecSql(sql: sql)
+                                let statusSql = "insert into voHKstatus (id, date, stat) values (\(self?.vo.vid ?? 0), \(dat), \(hkStatus.hkData.rawValue))"
+                                to?.toExecSql(sql: statusSql)
+                            } else {
+                                // No data found - record no data status
+                                let sql = "insert into voHKstatus (id, date, stat) values (\(self?.vo.vid ?? 0), \(dat), \(hkStatus.noData.rawValue))"
+                                to?.toExecSql(sql: sql)
+                            }
+                            
+                            #if DEBUGLOG
+                            processedCount += 1
+                            // Log progress every 1000 records or on significant milestones for large datasets
+                            let shouldLog = (processedCount % 1000 == 0) || 
+                                        (totalCount < 1000 && processedCount % 100 == 0) ||
+                                        (processedCount == totalCount)
+                            if shouldLog {
+                                let elapsed = CFAbsoluteTimeGetCurrent() - dataProcessingStartTime
+                                let rate = elapsed > 0 ? Double(processedCount) / elapsed : 0
+                                let percentage = totalCount > 0 ? (Double(processedCount) / Double(totalCount)) * 100 : 0
+                                DBGLog("[\(srcName)] Processing progress: \(processedCount)/\(totalCount) (\(String(format: "%.1f", percentage))%) - \(String(format: "%.1f", rate)) records/sec")
+                            }
+                            #endif
+                            
+                            // Update progress for each health query processed
+                            to?.refreshDelegate?.updateFullRefreshProgress()
+                            secondHKDispatchGroup.leave() // Leave the group when done
+                        }
+                    }
+                } // End for loop and background dispatch
+            } // End background dispatch block
             
             // wait on all processHealthQuery's to complete
             secondHKDispatchGroup.notify(queue: .main) {[self] in
