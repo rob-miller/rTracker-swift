@@ -326,17 +326,37 @@ class trackerObj: tObjBase {
         DBGLog("STATE: start LoadHKdata")
         dispatchGroup?.enter()
         let localGroup = DispatchGroup()
-        
-        // Use toExecSqlIgnErr to avoid nested transaction errors
-        // If already in transaction, this will be ignored; if not, it will start one
-        self.toExecSqlIgnErr(sql: "BEGIN TRANSACTION")
         var rslt = false
         var hkValueObjIDs: [Int] = []
+
         for vo in valObjTable {
             if vo.optDict["ahksrc"] ?? "0" != "0" {
-                hkValueObjIDs.append(vo.vid)
-                vo.vos?.loadHKdata(forDate: date, dispatchGroup: localGroup)
                 rslt = true
+                localGroup.enter()  // leave when voNumber.loadHKdata completes
+            }
+        }
+
+        // Use toExecSqlIgnErr to avoid nested transaction errors
+        // If already in transaction, this will be ignored; if not, it will start one
+        if rslt {
+            self.toExecSqlIgnErr(sql: "BEGIN TRANSACTION")
+        }
+
+        
+        // Move processing loop to background queue to avoid blocking main thread
+        DispatchQueue.global().async { [weak self] in
+            guard let self = self else { return }
+            
+            for (index, vo) in self.valObjTable.enumerated() {
+                if vo.optDict["ahksrc"] ?? "0" != "0" {
+                    hkValueObjIDs.append(vo.vid)
+                    
+                    // Use DispatchQueue.asyncAfter for non-blocking delay
+                    let delay = 0.05 * Double(index) // Stagger the calls
+                    DispatchQueue.global().asyncAfter(deadline: .now() + delay) {
+                        vo.vos?.loadHKdata(forDate: date, dispatchGroup: localGroup)
+                    }
+                }
             }
         }
         // Waiting for all voNumber hk operations to complete, then mark any missing hkStatus as noData
@@ -412,8 +432,6 @@ class trackerObj: tObjBase {
          !existingDates.contains { abs(hkDate - Double($0)) <= fourHours }
          }
          */
-        
-        
         // find dates that are not on the same calendar day as any existing dates
         // because prefer to use existing times if possible, not 12:00
         // also remove today if present because today's data shown on current tracker not saved yet
@@ -682,8 +700,6 @@ class trackerObj: tObjBase {
             DispatchQueue.main.async {
                 // Update progress after all OtherTracker processing is done
                 self.refreshDelegate?.updateFullRefreshProgress()
-                // Small yield to give main thread breathing room
-                Thread.sleep(forTimeInterval: 0.01)
                 // Call completion and leave dispatch group
                 completion?()
                 dispatchGroup?.leave()
@@ -721,7 +737,7 @@ class trackerObj: tObjBase {
             // Update progress
             progressState.datesProcessed += 1
             if progressState.datesProcessed % 5 == 0 {
-                self.refreshDelegate?.updateFullRefreshProgress(step: 5, phase: nil, totalSteps: nil)
+                self.refreshDelegate?.updateFullRefreshProgress(step: 5)
                 // Small yield to give main thread breathing room
                 Thread.sleep(forTimeInterval: 0.01)
             }
@@ -1441,7 +1457,7 @@ class trackerObj: tObjBase {
             optDict["rt_build"] = Bundle.main.infoDictionary?["CFBundleVersion"] as? String
             saveToOptDict()
 
-            DBGLog("tracker init version info")
+            DBGLog("tracker init version info set to \(String(describing: optDict["rt_version"])), build \(String(describing: optDict["rt_build"]))")
         }
     }
 
