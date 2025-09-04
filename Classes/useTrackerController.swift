@@ -329,7 +329,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         // Stop native spinner immediately for smoother transition to our custom spinner
         refreshControl.endRefreshing()
         // If we're already in a refresh operation, do nothing
-        if isRefreshInProgress || loadingData || tracker?.loadingDbData == true {
+        if (isRefreshInProgress || loadingData || tracker?.loadingDbData == true) && (pullCounter >= 2) {
             DBGLog("Pull to refresh blocked - refresh already in progress (isRefreshInProgress: \(isRefreshInProgress), loadingData: \(loadingData), loadingDbData: \(tracker?.loadingDbData ?? false))")
             rTracker_resource.addTimedLabel(text: "Refresh already in progress", tag: self.refreshLabelId, sv: self.view, ti: 2.0)
             return
@@ -356,12 +356,14 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             partialRefreshWorkItem?.cancel()
             
             // Create cancellable work item for partial refresh
+            
             partialRefreshWorkItem = DispatchWorkItem {
                 // should finish inside 2 second pull timeout anyway so why wait
                 self.handleRefresh(forDate:Int(self.tracker!.trackerDate!.timeIntervalSince1970))
             }
-            
+
             DispatchQueue.main.async(execute: partialRefreshWorkItem!)
+            
 
             // just leave partialRefreshWorkItem not cleaned up if it finishes on its own
 
@@ -399,6 +401,13 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     @objc func handleSinglePullTimeout() {
         DBGLog("Single pull timer expired, counter = \(pullCounter)")
         pullCounter = 0
+        /*
+        DispatchQueue.main.async {
+            rTracker_resource.addTimedLabel(text:"Full refresh in progress...", tag:self.refreshLabelId, sv:self.view, ti:3.0)
+            // Start the full refresh
+            self.handleRefresh(forDate:Int(self.tracker!.trackerDate!.timeIntervalSince1970))
+        }
+         */
         // already did single refresh
     }
     
