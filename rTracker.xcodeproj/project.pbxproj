@@ -873,7 +873,7 @@
 				"$(SRCROOT)/Info.plist",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
+			shellPath = /bin/bash;
 			shellScript = "#!/bin/bash    \nbuildNumber=$(/usr/libexec/PlistBuddy -c \"Print CFBundleVersion\" \"$INFOPLIST_FILE\")\nbuildNumber=$(($buildNumber + 1))\n/usr/libexec/PlistBuddy -c \"Set :CFBundleVersion $buildNumber\" \"$INFOPLIST_FILE\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
@@ -990,6 +990,7 @@
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 8149;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_DEBUG_DYLIB = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -1051,6 +1052,7 @@
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = YES;
+				CURRENT_PROJECT_VERSION = 8149;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_DEBUG_DYLIB = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -1142,6 +1144,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "-D__IPHONE_OS_VERSION_MIN_REQUIRED=040100";
 				SDKROOT = iphoneos;
+				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Debug;
 		};
@@ -1190,6 +1193,7 @@
 				OTHER_CODE_SIGN_FLAGS = "-D__IPHONE_OS_VERSION_MIN_REQUIRED=040100";
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
+				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
 		};
@@ -1237,6 +1241,7 @@
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CODE_SIGN_FLAGS = "-D__IPHONE_OS_VERSION_MIN_REQUIRED=040100";
 				SDKROOT = iphoneos;
+				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = AppStore;
 		};
@@ -1252,6 +1257,7 @@
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = YES;
+				CURRENT_PROJECT_VERSION = 8149;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_DEBUG_DYLIB = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -1706,6 +1712,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "-D__IPHONE_OS_VERSION_MIN_REQUIRED=040100";
 				SDKROOT = iphoneos;
+				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = "Debug SQL";
 		};
@@ -1721,6 +1728,7 @@
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 8149;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_DEBUG_DYLIB = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -1815,6 +1823,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "-D__IPHONE_OS_VERSION_MIN_REQUIRED=040100";
 				SDKROOT = iphoneos;
+				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = "Debug graph";
 		};
@@ -1830,6 +1839,7 @@
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 8149;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_DEBUG_DYLIB = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -1924,6 +1934,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "-D__IPHONE_OS_VERSION_MIN_REQUIRED=040100";
 				SDKROOT = iphoneos;
+				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = "Debug function";
 		};
@@ -1939,6 +1950,7 @@
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 8149;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_DEBUG_DYLIB = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -2033,6 +2045,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "-D__IPHONE_OS_VERSION_MIN_REQUIRED=040100";
 				SDKROOT = iphoneos;
+				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = "Debug reminder";
 		};
@@ -2048,6 +2061,7 @@
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 8149;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_DEBUG_DYLIB = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -2142,6 +2156,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "-D__IPHONE_OS_VERSION_MIN_REQUIRED=040100";
 				SDKROOT = iphoneos;
+				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = "Debug all";
 		};
@@ -2157,6 +2172,7 @@
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 8149;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_DEBUG_DYLIB = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -2251,6 +2267,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "-D__IPHONE_OS_VERSION_MIN_REQUIRED=040100";
 				SDKROOT = iphoneos;
+				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = "Debug no-log";
 		};
@@ -2266,6 +2283,7 @@
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 8149;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_DEBUG_DYLIB = YES;
 				FRAMEWORK_SEARCH_PATHS = (
