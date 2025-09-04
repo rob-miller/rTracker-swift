@@ -87,6 +87,7 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
         
         #if !RELEASE
         DBGWarn(String("docs dir= \(rTracker_resource.ioFilePath(nil, access: true))"))
+        UIApplication.shared.isIdleTimerDisabled = true  // prevent sleep when running from vscode (xcode does its own way)
         #endif
         let sud = UserDefaults.standard
         sud.synchronize()
