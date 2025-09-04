@@ -75,6 +75,26 @@ func SYSTEM_VERSION_LESS_THAN_OR_EQUAL_TO(_ v: String) -> Bool {
 
 
 
+// Color enum for debug message backgrounds
+enum DBGColor {
+    case RED, BLUE, GREEN, YELLOW
+    
+    var ansiCode: String {
+        switch self {
+        case .RED:
+            return "\u{001B}[41m"
+        case .BLUE:
+            return "\u{001B}[44m"
+        case .GREEN:
+            return "\u{001B}[42m"
+        case .YELLOW:
+            return "\u{001B}[43m"
+        }
+    }
+    
+    static let reset = "\u{001B}[0m"
+}
+
 // implementation for debug messages:
      
 func SQLDbg(_ message: String) {
@@ -86,12 +106,20 @@ func SQLDbg(_ message: String) {
 #endif
 }
 
-func DBGLog(_ message: String, file: String = #file, function: String = #function, line: Int = #line) {
+func DBGLog(_ message: String, color: DBGColor? = nil, file: String = #file, function: String = #function, line: Int = #line) {
 #if DEBUGLOG
     //#define DBGLog(args...) NSLog(@"%s%d: %@",__PRETTY_FUNCTION__,__LINE__,[NSString stringWithFormat: args])
     let fileName = file.components(separatedBy: "/").last ?? ""
     let tim = CFAbsoluteTimeGetCurrent()
-    print("\(tim):[\(fileName):\(line)] \(function): \(message)")
+    
+    let formattedMessage: String
+    if let color = color {
+        formattedMessage = "\(color.ansiCode)\(message)\(DBGColor.reset)"
+    } else {
+        formattedMessage = message
+    }
+    
+    print("\(tim):[\(fileName):\(line)] \(function): \(formattedMessage)")
 #endif
 }
 
@@ -100,7 +128,8 @@ func DBGWarn(_ message: String, file: String = #file, function: String = #functi
     //print("dbgwarn enabled")
     let fileName = file.components(separatedBy: "/").last ?? ""
     let tim = CFAbsoluteTimeGetCurrent()
-    print("\(tim):**warning** [\(fileName):\(line)] \(function): \(message)")
+    let formattedLine = "\(DBGColor.YELLOW.ansiCode)\(tim):**warning** [\(fileName):\(line)] \(function): \(message)\(DBGColor.reset)"
+    print(formattedLine)
     //#define DBGWarn(args...) NSLog(@"%@",[NSString stringWithFormat: args])
     //#define DBGWarn(args...) NSLog(@"%s%d: **WARNING** %@",__PRETTY_FUNCTION__,__LINE__,[NSString stringWithFormat: args])
 #endif
@@ -110,7 +139,8 @@ func DBGErr(_ message: String, file: String = #file, function: String = #functio
 #if DEBUGERR
     let fileName = file.components(separatedBy: "/").last ?? ""
     let tim = CFAbsoluteTimeGetCurrent()
-    print("\(tim):**error** [\(fileName):\(line)] \(function): \(message)")
+    let formattedLine = "\(DBGColor.RED.ansiCode)\(tim):**error** [\(fileName):\(line)] \(function): \(message)\(DBGColor.reset)"
+    print(formattedLine)
     //#define DBGErr(args...) NSLog(@"%s%d: **ERROR** %@",__PRETTY_FUNCTION__,__LINE__,[NSString stringWithFormat: args])
 #endif
 }
