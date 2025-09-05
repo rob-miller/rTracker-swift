@@ -336,13 +336,10 @@ class trackerObj: tObjBase {
             }
         }
 
-        // Use toExecSqlIgnErr to avoid nested transaction errors
-        // If already in transaction, this will be ignored; if not, it will start one
         if rslt {
-            self.toExecSqlIgnErr(sql: "BEGIN TRANSACTION")
+            toExecSql(sql: "BEGIN TRANSACTION")  // trackerObj loadHKdata
         }
 
-        
         // Move processing loop to background queue to avoid blocking main thread
         DispatchQueue.global().async { [weak self] in
             guard let self = self else { return }
@@ -406,7 +403,7 @@ class trackerObj: tObjBase {
                             """
                 //DBGLog(ensureStatusSQL)
                 self.toExecSql(sql: ensureStatusSQL)
-                self.toExecSqlIgnErr(sql: "COMMIT")
+                self.toExecSql(sql: "COMMIT")  // trackerObj loadHKdata
                 //DBGLog("Added voHKstatus entries for all dates in trkrData for all HK valueObjs")
             }
             
@@ -587,12 +584,11 @@ class trackerObj: tObjBase {
                 // trkrData is 'on conflict replace'
                 // but should only be adding new dates
                 let priv = max(MINPRIV, vo.vpriv)  // priv needs to be at least minpriv if vpriv = 0
-                toExecSql(sql: "BEGIN TRANSACTION")
+
                 for newDate in newDates {
                     let sql = "insert into trkrData (date, minpriv) values (\(Int(newDate)), \(priv))"
                     toExecSql(sql: sql)
                 }
-                toExecSql(sql: "COMMIT")
                 
                 DBGLog("Inserted \(newDates.count) new dates into trkrData.")
             }
@@ -668,7 +664,7 @@ class trackerObj: tObjBase {
                 completion?()
                 return
             }
-            
+            self.toExecSql(sql:"BEGIN TRANSACTION")  // trackerObj load OT dates and data
             loadOTdates(forDate: date)
                     
             // Track processed values for progress updates
@@ -695,7 +691,8 @@ class trackerObj: tObjBase {
                     }
                 }
             }
-            
+            self.toExecSql(sql:"COMMIT")  // trackerObj loadOTdata
+
             // Final updates on main thread
             DispatchQueue.main.async {
                 // Update progress after all OtherTracker processing is done
@@ -859,25 +856,25 @@ class trackerObj: tObjBase {
                 if missingHistoricalDates.count > 0 {
                     // Process historical dates missing function status if called with no specified date
                     DBGLog("Processing \(missingHistoricalDates.count) historical dates")
-                    self.toExecSql(sql: "BEGIN TRANSACTION")
+                    self.toExecSql(sql: "BEGIN TRANSACTION")  // trackerObj processing historical fns
                     for historicalDate in missingHistoricalDates {
                         progressState.currentDate = historicalDate
                         self.processFnDataForDate(progressState: progressState)
                     }
-                    self.toExecSql(sql: "COMMIT")
+                    self.toExecSql(sql: "COMMIT")  // trackerObj processing historical fns
                     // Restore currentDate to nextDate for Phase 2
                     progressState.currentDate = nextDate
                 }
 
                 // Multi-date mode - process all dates from current point forward
                 DBGLog("Processing future dates from \(Date(timeIntervalSince1970: TimeInterval(progressState.currentDate)))")
-                self.toExecSql(sql: "BEGIN TRANSACTION")
+                self.toExecSql(sql: "BEGIN TRANSACTION")  // trackerObj processing future date fns
                 while (progressState.currentDate != 0)  {
                     self.processFnDataForDate(progressState: progressState)
                     // Move to next date
                     progressState.currentDate = self.postDate()
                 }
-                self.toExecSql(sql: "COMMIT") 
+                self.toExecSql(sql: "COMMIT")  // trackerObj processing future date fns
             }
             
             
