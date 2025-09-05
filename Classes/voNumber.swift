@@ -772,49 +772,44 @@ class voNumber: voState, UITextFieldDelegate {
           )
         #endif
 
-        var newDates: [TimeInterval]
-        let frequency = self.vo.optDict["ahFrequency"] ?? "daily"
+        // Move heavy processing to background thread to avoid UI freeze
+        DispatchQueue.global(qos: .userInitiated).async { [self] in
+          var newDates: [TimeInterval]
+          let frequency = self.vo.optDict["ahFrequency"] ?? "daily"
 
-        if frequency == "daily" {
-          // Use original daily logic
-          newDates = to.mergeDates(inDates: allHKDates)
-        } else {
-          // Generate time slots based on frequency
-          newDates = to.generateTimeSlots(from: allHKDates, frequency: frequency)
+          if frequency == "daily" {
+            // Use original daily logic
+            newDates = to.mergeDates(inDates: allHKDates)
+          } else {
+            // Generate time slots based on frequency
+            newDates = to.generateTimeSlots(from: allHKDates, frequency: frequency)
+          }
+
+          // Insert the new dates into trkrData
+          // trkrData is 'on conflict replace'
+          // only update an existing row if the new minpriv is lower
+          let priv = max(MINPRIV, self.vo.vpriv)  // priv needs to be at least minpriv if vpriv = 0
+
+          // Start transaction for all database operations in this function
+          to.toExecSql(sql: "BEGIN TRANSACTION")  // voNumber loadHKdata
+          
+          if newDates.count > 0 {
+              // Build single INSERT statement on background thread
+              var valuesList: [String] = []
+              for newDate in newDates {
+                  valuesList.append("(\(Int(newDate)), \(priv))")
+              }
+          
+              let batchSQL = "INSERT INTO trkrData (date, minpriv) VALUES " + valuesList.joined(separator: ", ")
+              to.toExecSql(sql: batchSQL)
+          }
+
+          DBGLog(
+            "Inserted \(newDates.count) new dates into trkrData. for \(srcName) (vid: \(self.vo.vid)).", color:.YELLOW
+          )
+
+          hkDispatchGroup.leave()  // Thread-safe, can be called from background thread
         }
-
-        // Insert the new dates into trkrData
-        // trkrData is 'on conflict replace'
-        // only update an existing row if the new minpriv is lower
-        let priv = max(MINPRIV, self.vo.vpriv)  // priv needs to be at least minpriv if vpriv = 0
-
-        // Start transaction for all database operations in this function
-        to.toExecSql(sql: "BEGIN TRANSACTION")  // voNumber loadHKdata
-        
-        if newDates.count > 0 {
-            // Build single INSERT statement
-            var valuesList: [String] = []
-            for newDate in newDates {
-                valuesList.append("(\(Int(newDate)), \(priv))")
-            }
-        
-            let batchSQL = "INSERT INTO trkrData (date, minpriv) VALUES " + valuesList.joined(separator: ", ")
-            to.toExecSql(sql: batchSQL)
-        }
-        /*
-        for newDate in newDates {
-          // fix minpriv issues at end below
-          let sql = "insert into trkrData (date, minpriv) values (\(Int(newDate)), \(priv))"
-          to.toExecSql(sql: sql)
-          //DBGLog("Inserted new date into trkrData: \(Date(timeIntervalSince1970: newDate))")
-        }
-        */
-
-        DBGLog(
-          "Inserted \(newDates.count) new dates into trkrData. for \(srcName) (vid: \(self.vo.vid)).", color:.YELLOW
-        )
-
-        hkDispatchGroup.leave()  // Leave the group after insertion is complete
       }
     }
 
