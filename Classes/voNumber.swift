@@ -946,33 +946,37 @@ class voNumber: voState, UITextFieldDelegate {
 
       // wait on all processHealthQuery's to complete
       secondHKDispatchGroup.notify(queue: .main) { [self] in
-
-        // ensure trkrData has lowest priv if just added a lower privacy valuObj to a trkrData entry
-        let priv = max(MINPRIV, self.vo.vpriv)  // priv needs to be at least minpriv if vpriv = 0
-        sql = """
-          UPDATE trkrData
-          SET minpriv = \(priv)
-          WHERE minpriv > \(priv)
-            AND EXISTS (
-              SELECT 1
-              FROM voData
-              WHERE voData.date = trkrData.date
-                AND voData.id = \(Int(vo.vid))
-            );
-          """
-        to.toExecSql(sql: sql)
-        to.toExecSql(sql: "COMMIT")  // voNumber loadHKdata
-        #if DEBUGLOG
-          let totalElapsed = CFAbsoluteTimeGetCurrent() - dataProcessingStartTime
-          let avgRate = totalElapsed > 0 ? Double(dateSet.count) / totalElapsed : 0
-          DBGLog(
-            "[\(srcName)] HKPROFILE: Data processing completed - \(dateSet.count) records in \(String(format: "%.3f", totalElapsed))s (avg \(String(format: "%.1f", avgRate)) records/sec)",
-            color: .YELLOW
-          )
-        #endif
-        DBGLog("Done loadHKdata for \(srcName) with \(dateSet.count) records.")
-        to.refreshDelegate?.updateFullRefreshProgress(completed: true)
-        dispatchGroup?.leave()  // done with enter before getHealthkitDates processing overall
+        // Move heavy database operations to background thread to avoid UI freeze
+        DispatchQueue.global(qos: .userInitiated).async { [self] in
+          // ensure trkrData has lowest priv if just added a lower privacy valuObj to a trkrData entry
+          let priv = max(MINPRIV, self.vo.vpriv)  // priv needs to be at least minpriv if vpriv = 0
+          sql = """
+            UPDATE trkrData
+            SET minpriv = \(priv)
+            WHERE minpriv > \(priv)
+              AND EXISTS (
+                SELECT 1
+                FROM voData
+                WHERE voData.date = trkrData.date
+                  AND voData.id = \(Int(vo.vid))
+              );
+            """
+          to.toExecSql(sql: sql)
+          to.toExecSql(sql: "COMMIT")  // voNumber loadHKdata
+          #if DEBUGLOG
+            let totalElapsed = CFAbsoluteTimeGetCurrent() - dataProcessingStartTime
+            let avgRate = totalElapsed > 0 ? Double(dateSet.count) / totalElapsed : 0
+            DBGLog(
+              "[\(srcName)] HKPROFILE: Data processing completed - \(dateSet.count) records in \(String(format: "%.3f", totalElapsed))s (avg \(String(format: "%.1f", avgRate)) records/sec)",
+              color: .YELLOW
+            )
+          #endif
+          DBGLog("Done loadHKdata for \(srcName) with \(dateSet.count) records.")
+          
+          // UI updates and completion callbacks - handles its own main thread dispatch
+          to.refreshDelegate?.updateFullRefreshProgress(completed: true)
+          dispatchGroup?.leave()  // Thread-safe, can be called from background thread
+        }
       }
 
     }
