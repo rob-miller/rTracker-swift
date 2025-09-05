@@ -337,7 +337,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         // Stop native spinner immediately for smoother transition to our custom spinner
         refreshControl.endRefreshing()
         // If we're already in a refresh operation, do nothing
-        if (isRefreshInProgress || loadingData || tracker?.loadingDbData == true) && (pullCounter >= 2)
+        if (isRefreshInProgress || loadingData || tracker?.loadingDbData == true) && (pullCounter != 1)
         {
             DBGLog(
                 "Pull to refresh blocked - refresh already in progress (isRefreshInProgress: \(isRefreshInProgress), loadingData: \(loadingData), loadingDbData: \(tracker?.loadingDbData ?? false))"
@@ -1115,10 +1115,13 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                     self.fullRefreshProgressContainerView?.setNeedsLayout()
                     self.fullRefreshProgressContainerView?.layoutIfNeeded()
                 }
-            } else if currentTotalSteps > 1
+            } else {
+                DBGLog("Current total steps: \(currentTotalSteps), Progress threshold: \(currentProgressThreshold), frac: \((Double(currentTotalSteps) / Double(currentProgressThreshold))), progBarShown: \(progressBarShown)", color:.BLUE)
+                if currentTotalSteps > 1
                         && (Double(currentTotalSteps) / Double(currentProgressThreshold)) > 0.1 && !progressBarShown
             {
                 self.startRAI()
+            }
             }
             return
         }
