@@ -722,7 +722,7 @@ class voNumber: voState, UITextFieldDelegate {
         DispatchQueue.global(qos: .userInitiated).async {
           // Add delay between chunks to prevent HealthKit overload
           if windowIndex > 0 {
-            Thread.sleep(forTimeInterval: 0.1)  // 10ms between chunks
+            Thread.sleep(forTimeInterval: 0.3)  // 10ms between chunks
           }
 
           let windowStartDate =
@@ -750,7 +750,9 @@ class voNumber: voState, UITextFieldDelegate {
           ) { hkDates in
             allHKDates.append(contentsOf: hkDates)
             //DBGLog("Retrieved \(hkDates.count) HK dates: \(hkDates.map { Date(timeIntervalSince1970: $0) })")
-            to.refreshDelegate?.updateFullRefreshProgress()
+            DispatchQueue.main.async {
+                to.refreshDelegate?.updateFullRefreshProgress()
+            }
             chunkDispatchGroup.leave()
           }
         }
@@ -786,15 +788,27 @@ class voNumber: voState, UITextFieldDelegate {
         // only update an existing row if the new minpriv is lower
         let priv = max(MINPRIV, self.vo.vpriv)  // priv needs to be at least minpriv if vpriv = 0
 
+        if newDates.count > 0 {
+            // Build single INSERT statement
+            var valuesList: [String] = []
+            for newDate in newDates {
+                valuesList.append("(\(Int(newDate)), \(priv))")
+            }
+        
+            let batchSQL = "INSERT INTO trkrData (date, minpriv) VALUES " + valuesList.joined(separator: ", ")
+            to.toExecSql(sql: batchSQL)
+        }
+        /*
         for newDate in newDates {
           // fix minpriv issues at end below
           let sql = "insert into trkrData (date, minpriv) values (\(Int(newDate)), \(priv))"
           to.toExecSql(sql: sql)
           //DBGLog("Inserted new date into trkrData: \(Date(timeIntervalSince1970: newDate))")
         }
+        */
 
         DBGLog(
-          "Inserted \(newDates.count) new dates into trkrData. for \(srcName) (vid: \(self.vo.vid))."
+          "Inserted \(newDates.count) new dates into trkrData. for \(srcName) (vid: \(self.vo.vid)).", color:.YELLOW
         )
 
         hkDispatchGroup.leave()  // Leave the group after insertion is complete
@@ -805,7 +819,7 @@ class voNumber: voState, UITextFieldDelegate {
 
     // Wait for getHealthKitDates processing to complete before proceeding
     hkDispatchGroup.notify(queue: .main) { [self] in
-      DBGLog("HealthKit dates for \(srcName) processed, continuing with loadHKdata.")
+      DBGLog("HealthKit dates for \(srcName) processed, continuing with loadHKdata.", color:.GREEN)
       // Fetch dates from trkrData for processing
       // will update where we don't have data sourced from healthkit already
       // since the last time valid data was loaded for this vid
@@ -841,46 +855,6 @@ class voNumber: voState, UITextFieldDelegate {
       DBGLog(
         "dates to process for \(srcName) (vid: \(vo.vid)) Query complete, count is \(dateSet.count)"
       )
-      #if DEBUGLOG
-        if dateSet.count > 10 {
-          DBGLog(
-            "First 10 dates to process: \(Array(dateSet.prefix(10)).map { Date(timeIntervalSince1970: TimeInterval($0)) })"
-          )
-
-          // Show max hkData date for this valueObj for debugging
-          let maxHKDataSQL =
-            "select max(date) from voHKstatus where id = \(Int(vo.vid)) and stat = \(hkStatus.hkData.rawValue)"
-          let maxHKDataDate = to.toQry2Int(sql: maxHKDataSQL)
-          DBGLog(
-            "Max hkData date for vid \(vo.vid): \(Date(timeIntervalSince1970: TimeInterval(maxHKDataDate)))"
-          )
-
-          // Additional debug info for single date refresh
-          if let specifiedDate = date {
-            let specifiedTimestamp = startOfDay(fromTimestamp: specifiedDate)
-
-            // Check if there's a trkrData entry for this specific date
-            let trkrDataCheckSQL =
-              "SELECT COUNT(*) FROM trkrData WHERE date = \(specifiedTimestamp)"
-            let trkrDataCount = to.toQry2Int(sql: trkrDataCheckSQL)
-            DBGLog(
-              "trkrData entries for specified date \(Date(timeIntervalSince1970: TimeInterval(specifiedTimestamp))): \(trkrDataCount)"
-            )
-
-            // Check if there's existing voData for this valueObj and date
-            let voDataCheckSQL =
-              "SELECT COUNT(*) FROM voData WHERE id = \(Int(vo.vid)) AND date = \(specifiedTimestamp)"
-            let voDataCount = to.toQry2Int(sql: voDataCheckSQL)
-            DBGLog("voData entries for vid \(vo.vid) on specified date: \(voDataCount)")
-
-            // Check if there's existing voHKstatus for this valueObj and date
-            let hkStatusCheckSQL =
-              "SELECT COUNT(*) FROM voHKstatus WHERE id = \(Int(vo.vid)) AND date = \(specifiedTimestamp)"
-            let hkStatusCount = to.toQry2Int(sql: hkStatusCheckSQL)
-            DBGLog("voHKstatus entries for vid \(vo.vid) on specified date: \(hkStatusCount)")
-          }
-        }
-      #endif
 
       // Progress bar threshold is 2x the effective window size to match the original 2:1 ratio
       let progressThreshold = hkDateWindow * 2
@@ -896,7 +870,7 @@ class voNumber: voState, UITextFieldDelegate {
         let dataProcessingStartTime = CFAbsoluteTimeGetCurrent()
         var processedCount = 0
         let totalCount = dateSet.count
-        DBGLog("[\(srcName)] Starting data processing phase: \(totalCount) records to process")
+        DBGLog("[\(srcName)] Starting data processing phase: \(totalCount) records to process", color: .GREEN)
       #endif
 
       for _ in dateSet {
@@ -914,7 +888,8 @@ class voNumber: voState, UITextFieldDelegate {
           }
 
           // Add delay every 5 operations to prevent HealthKit overload
-          if index > 0 && index % 5 == 0 {
+          //if index > 0 && index % 5 == 0 {
+          if index % 5 == 0 {
             Thread.sleep(forTimeInterval: 0.1)  // 20ms pause every 5 operations
           }
 
@@ -1013,8 +988,8 @@ class voNumber: voState, UITextFieldDelegate {
     let to = vo.parentTracker
     var sql = ""
     if let specificDate = date {
-      DBGLog(
-        "clearing date \(specificDate) \(Date(timeIntervalSince1970: TimeInterval(specificDate)))")
+      //DBGLog(
+      //  "clearing date \(specificDate) \(Date(timeIntervalSince1970: TimeInterval(specificDate)))")
       to.toExecSql(sql: "delete from voData where id = \(vo.vid) and date = \(specificDate)")
       to.toExecSql(sql: "delete from voHKstatus where id = \(vo.vid) and date = \(specificDate)")
 
@@ -1036,7 +1011,7 @@ class voNumber: voState, UITextFieldDelegate {
             let prevDateTimestamp = Int(prevDate.timeIntervalSince1970)
             let prevCacheKey = "\(ahSource)-\(prevDateTimestamp)-\(unitStr)"
             Self.healthKitCache.removeValue(forKey: prevCacheKey)
-            DBGLog("Cleared prevD cache key: \(prevCacheKey)")
+            //DBGLog("Cleared prevD cache key: \(prevCacheKey)")
           }
         }
       }
@@ -1053,7 +1028,7 @@ class voNumber: voState, UITextFieldDelegate {
         for key in keysToRemove {
           Self.healthKitCache.removeValue(forKey: key)
         }
-        DBGLog("Cleared \(keysToRemove.count) cache entries for ahSource: \(ahSource)")
+        //DBGLog("Cleared \(keysToRemove.count) cache entries for ahSource: \(ahSource)")
       }
     }
   }
