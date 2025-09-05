@@ -137,7 +137,6 @@ class voState: NSObject, voProtocol {
             """)
         }
         
-        to.toExecSql(sql: "BEGIN TRANSACTION")
         for md in myDates {
             
             let selStr: String
@@ -171,7 +170,6 @@ class voState: NSObject, voProtocol {
             
             prevDate = md
         }
-        to.toExecSql(sql: "COMMIT")
         
             
         // ensure trkrData has lowest priv if just added a lower privacy valuObj to a trkrData entry
