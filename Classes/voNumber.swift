@@ -710,7 +710,7 @@ class voNumber: voState, UITextFieldDelegate {
       let numberOfWindows = (daysBetween + hkDateWindow - 1) / hkDateWindow  // Round up
 
       to.refreshDelegate?.updateFullRefreshProgress(
-        step: 0, phase: "Loading HealthKit dates", addSteps: numberOfWindows, threshold: 2)
+        step: 0, phase: "loading dates for \(self.vo.valueName ?? "unknown")", totalSteps: numberOfWindows, threshold: 2)
 
       var allHKDates: [TimeInterval] = []
       let chunkDispatchGroup = DispatchGroup()
@@ -722,7 +722,7 @@ class voNumber: voState, UITextFieldDelegate {
         DispatchQueue.global(qos: .userInitiated).async {
           // Add delay between chunks to prevent HealthKit overload
           if windowIndex > 0 {
-            Thread.sleep(forTimeInterval: 0.3)  // 10ms between chunks
+            Thread.sleep(forTimeInterval: 0.01)  // 10ms between chunks
           }
 
           let windowStartDate =
@@ -788,6 +788,9 @@ class voNumber: voState, UITextFieldDelegate {
         // only update an existing row if the new minpriv is lower
         let priv = max(MINPRIV, self.vo.vpriv)  // priv needs to be at least minpriv if vpriv = 0
 
+        // Start transaction for all database operations in this function
+        to.toExecSql(sql: "BEGIN TRANSACTION")  // voNumber loadHKdata
+        
         if newDates.count > 0 {
             // Build single INSERT statement
             var valuesList: [String] = []
@@ -859,7 +862,7 @@ class voNumber: voState, UITextFieldDelegate {
       // Progress bar threshold is 2x the effective window size to match the original 2:1 ratio
       let progressThreshold = hkDateWindow * 2
       to.refreshDelegate?.updateFullRefreshProgress(
-        step: 0, phase: "Loading HealthKit data", addSteps: dateSet.count,
+        step: 0, phase: "loading data for \(self.vo.valueName ?? "unknown")", totalSteps: dateSet.count,
         threshold: progressThreshold)
 
       let calendar = Calendar.current
@@ -888,9 +891,9 @@ class voNumber: voState, UITextFieldDelegate {
           }
 
           // Add delay every 5 operations to prevent HealthKit overload
-          //if index > 0 && index % 5 == 0 {
-          if index % 5 == 0 {
-            Thread.sleep(forTimeInterval: 0.1)  // 20ms pause every 5 operations
+          if index > 0 && index % 5 == 0 {
+          //if index % 5 == 0 {
+            Thread.sleep(forTimeInterval: 0.02)  // 20ms pause every 5 operations
           }
 
           // Use unified processHealthQuery for all cases
@@ -963,6 +966,7 @@ class voNumber: voState, UITextFieldDelegate {
             );
           """
         to.toExecSql(sql: sql)
+        to.toExecSql(sql: "COMMIT")  // voNumber loadHKdata
         #if DEBUGLOG
           let totalElapsed = CFAbsoluteTimeGetCurrent() - dataProcessingStartTime
           let avgRate = totalElapsed > 0 ? Double(dateSet.count) / totalElapsed : 0
