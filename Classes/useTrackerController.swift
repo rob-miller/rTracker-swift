@@ -101,6 +101,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     private var currentTotalSteps: Int = 0  // Track current total value
     private var currentTasks: Int = 0  // for tracking multiple HK addSteps
     private var progressBarShown: Bool = false
+    private var lastUIProgressValue: Float = -1.0  // Track last progress value sent to UI
     private var fullRefreshProgressContainerView: UIView?
     private var frDate: Int = 0  // Date?  // trackerDate shown when full refresh started
     private var raiShown: Bool = false
@@ -1024,6 +1025,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 self.currentProgressStep = 0
                 self.currentRefreshPhase = ""
                 self.currentProgressMaxValue = 1.0
+                self.lastUIProgressValue = -1.0
             })
     }
     
@@ -1073,6 +1075,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                     "Initializing progress bar for phase '\(phase ?? "unknown")' with \(currentTotalSteps) total steps threshold is \(currentProgressThreshold) progressBarShown is \(progressBarShown)"
                 )
                 currentProgressStep = 0
+                lastUIProgressValue = -1.0  // Reset UI tracking for new phase
 #if DEBUGLOG
                 lastLoggedTenPercent = -1  // Reset logging tracker for new phase
 #endif
@@ -1139,13 +1142,24 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         // Calculate progress based on current maximum value
         let progressValue = min(Float(currentProgressStep) / currentProgressMaxValue, 1.0)
         
+        // Early return optimization: Skip UI updates if progress change is too small to be visible
+        // Progress bar has ~4 visual increments per percentage point, so 0.002 threshold
+        let progressDelta = abs(progressValue - lastUIProgressValue)
+        let bigStep = step >= max(5, Int(currentProgressMaxValue * 0.05))  // Always update for big steps (5+ or 5% of total)
+        
+        if lastUIProgressValue >= 0 && progressDelta < 0.002 && !completed && !bigStep {
+            // Skip this update - too small to see, unless it's completion or a significant step
+            return
+        }
+        
 #if DEBUGLOG
-        // Log only when we cross into a new 10% bracket
+        // Log only when we cross into a new 10% bracket or when we're updating UI
         let currentTenPercent = Int(progressValue * 10)
         if currentTenPercent > lastLoggedTenPercent {
             lastLoggedTenPercent = currentTenPercent
+            let updateReason = completed ? " [COMPLETION]" : bigStep ? " [BIG_STEP]" : progressDelta >= 0.002 ? " [VISIBLE_DELTA]" : ""
             DBGLog(
-                "stepvalue \(step) for phase '\(currentRefreshPhase)' - progress \(currentProgressStep) of \(currentProgressMaxValue) (value: \(progressValue) "
+                "🔄 UI UPDATE\(updateReason) - step \(step), phase '\(currentRefreshPhase)', progress \(currentProgressStep)/\(Int(currentProgressMaxValue)) (\(String(format: "%.3f", progressValue)), Δ\(String(format: "%.4f", progressDelta)))", color: .GREEN
             )
         }
 #endif
@@ -1161,6 +1175,9 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 let cPhase = self.currentRefreshPhase.isEmpty ? "Processing data" : self.currentRefreshPhase
                 let taskState = (currentTasks > 1) ? " (\(currentTasks) tasks)" : ""
                 self.fullRefreshProgressLabel?.text = "\(cPhase) - \(Int(progressValue * 100))%\(taskState)"
+                
+                // Record this as the last UI update value
+                self.lastUIProgressValue = progressValue
                 
                 // Force immediate layout update for toolbar progress indicator
                 self.fullRefreshProgressLabel?.setNeedsDisplay()
