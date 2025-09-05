@@ -329,32 +329,47 @@ class trackerObj: tObjBase {
         var rslt = false
         var hkValueObjIDs: [Int] = []
 
+        // Extract HealthKit valueObjs first
+        var hkValueObjs: [valueObj] = []
         for vo in valObjTable {
             if vo.optDict["ahksrc"] ?? "0" != "0" {
                 rslt = true
+                hkValueObjs.append(vo)
+                hkValueObjIDs.append(vo.vid)
                 localGroup.enter()  // leave when voNumber.loadHKdata completes
             }
         }
 
-        if rslt {
-            toExecSql(sql: "BEGIN TRANSACTION")  // trackerObj loadHKdata
+        // Sequential processing helper function
+        func processHKValueObjSequentially(valueObjs: [valueObj], index: Int) {
+            guard index < valueObjs.count else {
+                // All done - the localGroup.notify will handle final processing
+                return
+            }
+            
+            let vo = valueObjs[index]
+            
+            // Create a custom completion handler to chain the next call
+            let originalDispatchGroup = localGroup
+            let customGroup = DispatchGroup()
+            customGroup.enter()
+            
+            // Process current valueObj
+            vo.vos?.loadHKdata(forDate: date, dispatchGroup: customGroup)
+            
+            // When current completes, process next one
+            customGroup.notify(queue: .global()) {
+                originalDispatchGroup.leave()  // Signal completion to main group
+                processHKValueObjSequentially(valueObjs: valueObjs, index: index + 1)
+            }
         }
 
-        // Move processing loop to background queue to avoid blocking main thread
+        // Move processing to background queue to avoid blocking main thread
         DispatchQueue.global().async { [weak self] in
             guard let self = self else { return }
             
-            for (index, vo) in self.valObjTable.enumerated() {
-                if vo.optDict["ahksrc"] ?? "0" != "0" {
-                    hkValueObjIDs.append(vo.vid)
-                    
-                    // Use DispatchQueue.asyncAfter for non-blocking delay
-                    let delay = 0.05 * Double(index) // Stagger the calls
-                    DispatchQueue.global().asyncAfter(deadline: .now() + delay) {
-                        vo.vos?.loadHKdata(forDate: date, dispatchGroup: localGroup)
-                    }
-                }
-            }
+            // Start sequential processing
+            processHKValueObjSequentially(valueObjs: hkValueObjs, index: 0)
         }
         // Waiting for all voNumber hk operations to complete, then mark any missing hkStatus as noData
         localGroup.notify(queue: .main) {
@@ -403,7 +418,6 @@ class trackerObj: tObjBase {
                             """
                 //DBGLog(ensureStatusSQL)
                 self.toExecSql(sql: ensureStatusSQL)
-                self.toExecSql(sql: "COMMIT")  // trackerObj loadHKdata
                 //DBGLog("Added voHKstatus entries for all dates in trkrData for all HK valueObjs")
             }
             
