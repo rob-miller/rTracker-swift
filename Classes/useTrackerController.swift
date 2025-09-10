@@ -493,7 +493,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         self.tracker?.toExecSql(sql: sql)
         
         self.frDate = forDate ?? Int(tracker!.trackerDate!.timeIntervalSince1970)
-        
+        DBGLog("frDate set to \(Date(timeIntervalSince1970: TimeInterval(self.frDate)))")
+
         performDataLoadingSequence {
             if forDate == nil {
                 DBGLog(
@@ -1035,11 +1036,11 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     ) {
         if let threshold = threshold {
             currentProgressThreshold = threshold
-            DBGLog("Progress threshold set to: \(threshold)")
+            //DBGLog("Progress threshold set to: \(threshold)")
         }
         if let phase = phase {
             currentRefreshPhase = phase
-            DBGLog("Progress phase set to: \(phase)")
+            //DBGLog("Progress phase set to: \(phase)")
         }
         // If totalSteps provided, initialize/reset the progress bar for this phase
         var doInit = false
@@ -1048,9 +1049,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             currentTotalSteps = totalSteps
             doInit = true
             currentTasks = 0
-            DBGLog(
-                "Progress total steps set to: \(totalSteps) threshold is \(currentProgressThreshold) progressBarShown is \(progressBarShown)"
-            )
+            //DBGLog("Progress total steps set to: \(totalSteps) threshold is \(currentProgressThreshold) progressBarShown is \(progressBarShown)")
         }
         
         if let addSteps = addSteps {
@@ -1119,7 +1118,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                     self.fullRefreshProgressContainerView?.layoutIfNeeded()
                 }
             } else {
-                DBGLog("Current total steps: \(currentTotalSteps), Progress threshold: \(currentProgressThreshold), frac: \((Double(currentTotalSteps) / Double(currentProgressThreshold))), progBarShown: \(progressBarShown)", color:.BLUE)
+                DBGLog("phase \(self.currentRefreshPhase) Current total steps: \(currentTotalSteps), Progress threshold: \(currentProgressThreshold), frac: \((Double(currentTotalSteps) / Double(currentProgressThreshold))), progBarShown: \(progressBarShown)")
                 if currentTotalSteps > 1
                         && (Double(currentTotalSteps) / Double(currentProgressThreshold)) > 0.1 && !progressBarShown
             {
