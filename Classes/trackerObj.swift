@@ -445,13 +445,23 @@ class trackerObj: tObjBase {
         // Separate inDates into two categories:
         // 1. newDates: dates that are not on the same calendar day as any existing dates
         // 2. matchedDates: existing trkrData dates that match inDates on the same calendar day
-        // Skip only the most recent inDate if it matches today (because today's data shown on current tracker not saved yet)
+        // Skip only the most recent inDate if it matches today AND no saved record exists (because today's data shown live via processHealthQuery)
         let mostRecentInDate = inDates.max()
         
         for inDate in inDates {
-            // Skip only the most recent inDate if it matches today's date
+            // Skip only the most recent inDate if it matches today's date AND we have no saved record for today
             if inDate == mostRecentInDate && calendar.isDateInToday(Date(timeIntervalSince1970: inDate)) {
-                continue
+                // Check if we already have any saved record for today's calendar date
+                let todayStart = calendar.startOfDay(for: Date())
+                let todayEnd = calendar.date(byAdding: .day, value: 1, to: todayStart)!
+                let checkSql = "SELECT COUNT(*) FROM trkrData WHERE date >= \(Int(todayStart.timeIntervalSince1970)) AND date < \(Int(todayEnd.timeIntervalSince1970))"
+                let hasRecordForToday = toQry2Int(sql: checkSql) > 0
+                
+                if !hasRecordForToday {
+                    // No saved record for today yet - skip to avoid creating empty entry
+                    continue
+                }
+                // Has saved record for today - proceed to refresh HealthKit data for it
             }
             
             // Check if this inDate matches any existing date
@@ -546,10 +556,21 @@ class trackerObj: tObjBase {
         
         // Generate time slots for each day
         for dayStart in uniqueDays {
-            // Skip only if this day corresponds to the most recent hkDate and it's today
+            // Skip only if this day corresponds to the most recent hkDate and it's today AND we have no saved record for today
             let shouldSkipToday = mostRecentHKDate.map { mostRecent in
                 let mostRecentDate = Date(timeIntervalSince1970: mostRecent)
-                return calendar.isDate(dayStart, inSameDayAs: mostRecentDate) && calendar.isDateInToday(dayStart)
+                let isTodayData = calendar.isDate(dayStart, inSameDayAs: mostRecentDate) && calendar.isDateInToday(dayStart)
+                
+                if isTodayData {
+                    // Check if we already have any saved record for today's calendar date
+                    let todayStart = calendar.startOfDay(for: Date())
+                    let todayEnd = calendar.date(byAdding: .day, value: 1, to: todayStart)!
+                    let checkSql = "SELECT COUNT(*) FROM trkrData WHERE date >= \(Int(todayStart.timeIntervalSince1970)) AND date < \(Int(todayEnd.timeIntervalSince1970))"
+                    let hasRecordForToday = toQry2Int(sql: checkSql) > 0
+                    
+                    return !hasRecordForToday  // Skip only if no saved record exists
+                }
+                return false  // Not today's data, don't skip
             } ?? false
             
             if shouldSkipToday {
