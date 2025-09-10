@@ -681,6 +681,21 @@ class voNumber: voState, UITextFieldDelegate {
       "Using specified start date: \(specifiedStartDate?.description ?? "nil") and end date: \(specifiedEndDate?.description ?? "nil")"
     )
 
+    // Adjust start date for data types with aggregation boundaries (like sleep at 12:00 PM)
+    if let queryConfig = healthDataQueries.first(where: { $0.displayName == srcName }),
+       let aggregationTime = queryConfig.aggregationTime,
+       let currentStartDate = specifiedStartDate {
+        let calendar = Calendar.current
+        // Calculate the aggregation boundary time for the current start date
+        let boundaryDate = calendar.date(bySettingHour: aggregationTime.hour ?? 12,
+                                       minute: aggregationTime.minute ?? 0,
+                                       second: 0,
+                                       of: currentStartDate) ?? currentStartDate
+        // Go back one day from boundary to ensure we capture data that gets aggregated to this boundary
+        specifiedStartDate = calendar.date(byAdding: .day, value: -1, to: boundaryDate)
+        DBGLog("[\(srcName)] Adjusted start date for aggregation boundary to: \(specifiedStartDate?.description ?? "nil")")
+    }
+
     // Use standard HealthKit date window
     DBGLog("[\(srcName)] Using effective window size: \(hkDateWindow) days")
 
