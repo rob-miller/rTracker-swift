@@ -10,7 +10,7 @@
 import Foundation
 import HealthKit
 
-let MINSLEEPSEGMENTDURATION = 3
+let MINSLEEPSEGMENTDURATION = 2
 let MAXSLEEPSEGMENTGAP = 12
 
 class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
