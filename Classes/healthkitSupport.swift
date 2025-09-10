@@ -1209,7 +1209,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                     }
 
                     let timestamps = groupedByAggregationTime.keys.map { $0.timeIntervalSince1970 }
-                    self.dbgTimestamps(queryConfig.displayName, timestamps)
+                    //self.dbgTimestamps(queryConfig.displayName, timestamps)
                     completion(timestamps)
                 }
                 
