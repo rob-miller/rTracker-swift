@@ -207,6 +207,7 @@ class voNumber: voState, UITextFieldDelegate {
 
         if let cachedValue = Self.healthKitCache[cacheKey] {
           dtf.text = cachedValue
+          DBGLog("\(vo.valueName!) -- cache hit for \(vo.optDict["ahSource"]!) returned: \(cachedValue)", color:.BLUE)
           return dtf
         }
         let calendar = Calendar.current
@@ -239,6 +240,8 @@ class voNumber: voState, UITextFieldDelegate {
         // Apply the result synchronously on main thread
         dtf.text = healthKitResult
         self.vo.vos?.addExternalSourceOverlay(to: self.dtf)
+        DBGLog("\(vo.valueName!) -- HK query for \(vo.optDict["ahSource"]!) returned: \(healthKitResult ?? "nil")", color:.BLUE)
+
       } else if vo.optDict["otsrc"] == "1" {
         self.vo.vos?.addExternalSourceOverlay(to: self.dtf)  // no taps
         if let xrslt = vo.vos?.getOTrslt() {
@@ -267,6 +270,7 @@ class voNumber: voState, UITextFieldDelegate {
       if vo.optDict["ahksrc"] == "1" || vo.optDict["otsrc"] == "1" {
         self.vo.vos?.addExternalSourceOverlay(to: self.dtf)  // no taps
       }
+      DBGLog("\(vo.valueName!) -- HK query for \(vo.optDict["ahSource"]!) load vo.value: \(dtf.text ?? "nil")", color:.BLUE)
     }
 
     return dtf
@@ -830,7 +834,7 @@ class voNumber: voState, UITextFieldDelegate {
       // Combine newDates and matchedDates for processing through processHealthQuery
       // newDates: new dates that need to be processed and added to database
       // matchedDates: existing dates that match HealthKit data and should be reprocessed
-      var datesToProcess = newDates + matchedDates
+      let datesToProcess = newDates + matchedDates
       /* rtm datesToProcess should be only the specified date in this case.
       if let specifiedDate = date {
         let specifiedTimestamp = TimeInterval(startOfDay(fromTimestamp: specifiedDate))
@@ -869,7 +873,7 @@ class voNumber: voState, UITextFieldDelegate {
         // Process queries with rate limiting to prevent overwhelming HealthKit APIs
         for (index, dat) in datesToProcess.sorted().enumerated() {  // .sorted() is just to help debugging
           // Look up the query configuration to determine aggregationType
-          guard let queryConfig = healthDataQueries.first(where: { $0.displayName == srcName })
+          guard healthDataQueries.first(where: { $0.displayName == srcName }) != nil
           else {
             DBGErr("No query configuration found for displayName: \(srcName)")
             continue
