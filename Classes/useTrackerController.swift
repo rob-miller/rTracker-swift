@@ -1159,7 +1159,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             lastLoggedTenPercent = currentTenPercent
             let updateReason = completed ? " [COMPLETION]" : bigStep ? " [BIG_STEP]" : progressDelta >= 0.002 ? " [VISIBLE_DELTA]" : ""
             DBGLog(
-                "🔄 UI UPDATE\(updateReason) - step \(step), phase '\(currentRefreshPhase)', progress \(currentProgressStep)/\(Int(currentProgressMaxValue)) (\(String(format: "%.3f", progressValue)), Δ\(String(format: "%.4f", progressDelta)))", color: .GREEN
+                "🔄 UI UPDATE\(updateReason) - step \(step), phase '\(currentRefreshPhase)', progress \(currentProgressStep)/\(Int(currentProgressMaxValue)) (\(String(format: "%.3f", progressValue)), Δ\(String(format: "%.4f", progressDelta)))"
             )
         }
 #endif

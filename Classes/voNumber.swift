@@ -642,6 +642,10 @@ class voNumber: voState, UITextFieldDelegate {
 
     // Create a separate DispatchGroup for getHealthKitDates processing
     let hkDispatchGroup = DispatchGroup()
+    
+    // Declare newDates and matchedDates at method level so they're accessible throughout the method
+    var newDates: [TimeInterval] = []
+    var matchedDates: [TimeInterval] = []
 
     hkDispatchGroup.enter()
 
@@ -774,15 +778,18 @@ class voNumber: voState, UITextFieldDelegate {
 
         // Move heavy processing to background thread to avoid UI freeze
         DispatchQueue.global(qos: .userInitiated).async { [self] in
-          var newDates: [TimeInterval]
           let frequency = self.vo.optDict["ahFrequency"] ?? "daily"
 
           if frequency == "daily" {
             // Use original daily logic
-            newDates = to.mergeDates(inDates: allHKDates)
+            let mergeResult = to.mergeDates(inDates: allHKDates)
+            newDates = mergeResult.newDates
+            matchedDates = mergeResult.matchedDates
           } else {
             // Generate time slots based on frequency
-            newDates = to.generateTimeSlots(from: allHKDates, frequency: frequency)
+            let timeSlotResult = to.generateTimeSlots(from: allHKDates, frequency: frequency)
+            newDates = timeSlotResult.newDates
+            matchedDates = timeSlotResult.matchedDates
           }
 
           // Insert the new dates into trkrData
@@ -802,11 +809,12 @@ class voNumber: voState, UITextFieldDelegate {
           
               let batchSQL = "INSERT INTO trkrData (date, minpriv) VALUES " + valuesList.joined(separator: ", ")
               to.toExecSql(sql: batchSQL)
-          }
 
           DBGLog(
             "Inserted \(newDates.count) new dates into trkrData. for \(srcName) (vid: \(self.vo.vid)).", color:.YELLOW
           )
+          }
+
 
           hkDispatchGroup.leave()  // Thread-safe, can be called from background thread
         }
@@ -818,46 +826,28 @@ class voNumber: voState, UITextFieldDelegate {
     // Wait for getHealthKitDates processing to complete before proceeding
     hkDispatchGroup.notify(queue: .main) { [self] in
       DBGLog("HealthKit dates for \(srcName) processed, continuing with loadHKdata.", color:.GREEN)
-      // Fetch dates from trkrData for processing
-      // will update where we don't have data sourced from healthkit already
-      // since the last time valid data was loaded for this vid
-      var sql = """
-        SELECT trkrData.date
-        FROM trkrData
-        WHERE NOT EXISTS (
-            SELECT 1 FROM voData 
-            WHERE voData.date = trkrData.date 
-            AND voData.id = \(Int(vo.vid))
-        )
-        AND NOT EXISTS (
-            SELECT 1 FROM voHKstatus 
-            WHERE voHKstatus.date = trkrData.date 
-            AND voHKstatus.id = \(Int(vo.vid))
-        );
-        """
-      // Process only dates that have not been attempted for HealthKit processing yet
-      // AND have no manually entered data for this specific valueObj
-
-      // For single date refresh, add date filter to only process the specified date
+      
+      // Combine newDates and matchedDates for processing through processHealthQuery
+      // newDates: new dates that need to be processed and added to database
+      // matchedDates: existing dates that match HealthKit data and should be reprocessed
+      var datesToProcess = newDates + matchedDates
+      /* rtm datesToProcess should be only the specified date in this case.
       if let specifiedDate = date {
-        let specifiedTimestamp = startOfDay(fromTimestamp: specifiedDate)
-        // Simply add the date filter as an AND condition - this will limit results effectively
-        sql += " AND trkrData.date = \(specifiedTimestamp)"
+        let specifiedTimestamp = TimeInterval(startOfDay(fromTimestamp: specifiedDate))
+        datesToProcess = newDates.filter { $0 == specifiedTimestamp }
         DBGLog(
-          "Added single date filter for timestamp: \(specifiedTimestamp) (\(Date(timeIntervalSince1970: TimeInterval(specifiedTimestamp))))"
+          "Filtered to single date: \(specifiedTimestamp) (\(Date(timeIntervalSince1970: specifiedTimestamp)))"
         )
       }
-
-      let dateSet = to.toQry2AryI(sql: sql)
-
+      */
       DBGLog(
-        "dates to process for \(srcName) (vid: \(vo.vid)) Query complete, count is \(dateSet.count)"
+        "dates to process for \(srcName) (vid: \(vo.vid)): \(newDates.count) new + \(matchedDates.count) matched = \(datesToProcess.count) total"
       )
 
       // Progress bar threshold is 2x the effective window size to match the original 2:1 ratio
       let progressThreshold = hkDateWindow * 2
       to.refreshDelegate?.updateFullRefreshProgress(
-        step: 0, phase: "loading data for \(self.vo.valueName ?? "unknown")", totalSteps: dateSet.count,
+        step: 0, phase: "loading data for \(self.vo.valueName ?? "unknown")", totalSteps: datesToProcess.count,
         threshold: progressThreshold)
 
       let calendar = Calendar.current
@@ -867,17 +857,17 @@ class voNumber: voState, UITextFieldDelegate {
       #if DEBUGLOG
         let dataProcessingStartTime = CFAbsoluteTimeGetCurrent()
         var processedCount = 0
-        let totalCount = dateSet.count
+        let totalCount = datesToProcess.count
         DBGLog("[\(srcName)] Starting data processing phase: \(totalCount) records to process", color: .GREEN)
       #endif
 
-      for _ in dateSet {
+      for _ in datesToProcess {
         secondHKDispatchGroup.enter()  // Enter the group for each query
       }
       // Process all dates asynchronously on background queue to prevent UI blocking
       DispatchQueue.global(qos: .userInitiated).async {
         // Process queries with rate limiting to prevent overwhelming HealthKit APIs
-        for (index, dat) in dateSet.sorted().enumerated() {  // .sorted() is just to help debugging
+        for (index, dat) in datesToProcess.sorted().enumerated() {  // .sorted() is just to help debugging
           // Look up the query configuration to determine aggregationType
           guard let queryConfig = healthDataQueries.first(where: { $0.displayName == srcName })
           else {
@@ -894,7 +884,7 @@ class voNumber: voState, UITextFieldDelegate {
           // Use unified processHealthQuery for all cases
 
           self.processHealthQuery(
-            timestamp: dat,
+            timestamp: Int(dat),
             srcName: srcName,
             frequency: frequency,
             calendar: calendar,
@@ -907,15 +897,15 @@ class voNumber: voState, UITextFieldDelegate {
               if let result = result {
                 // Data found - insert into database
                 let sql =
-                  "insert into voData (id, date, val) values (\(self?.vo.vid ?? 0), \(dat), '\(result)')"
+                  "insert into voData (id, date, val) values (\(self?.vo.vid ?? 0), \(Int(dat)), '\(result)')"
                 to?.toExecSql(sql: sql)
                 let statusSql =
-                  "insert into voHKstatus (id, date, stat) values (\(self?.vo.vid ?? 0), \(dat), \(hkStatus.hkData.rawValue))"
+                  "insert into voHKstatus (id, date, stat) values (\(self?.vo.vid ?? 0), \(Int(dat)), \(hkStatus.hkData.rawValue))"
                 to?.toExecSql(sql: statusSql)
               } else {
                 // No data found - record no data status
                 let sql =
-                  "insert into voHKstatus (id, date, stat) values (\(self?.vo.vid ?? 0), \(dat), \(hkStatus.noData.rawValue))"
+                  "insert into voHKstatus (id, date, stat) values (\(self?.vo.vid ?? 0), \(Int(dat)), \(hkStatus.noData.rawValue))"
                 to?.toExecSql(sql: sql)
               }
 
@@ -950,7 +940,7 @@ class voNumber: voState, UITextFieldDelegate {
         DispatchQueue.global(qos: .userInitiated).async { [self] in
           // ensure trkrData has lowest priv if just added a lower privacy valuObj to a trkrData entry
           let priv = max(MINPRIV, self.vo.vpriv)  // priv needs to be at least minpriv if vpriv = 0
-          sql = """
+          let sql = """
             UPDATE trkrData
             SET minpriv = \(priv)
             WHERE minpriv > \(priv)
@@ -962,16 +952,30 @@ class voNumber: voState, UITextFieldDelegate {
               );
             """
           to.toExecSql(sql: sql)
+          
+          // Insert noData entries for all trkrData dates that still don't have voHKstatus entries for this vid
+          let noDataSql = """
+            INSERT INTO voHKstatus (id, date, stat)
+            SELECT \(Int(vo.vid)), trkrData.date, \(hkStatus.noData.rawValue)
+            FROM trkrData
+            WHERE NOT EXISTS (
+              SELECT 1 FROM voHKstatus 
+              WHERE voHKstatus.date = trkrData.date 
+              AND voHKstatus.id = \(Int(vo.vid))
+            );
+            """
+          to.toExecSql(sql: noDataSql)
+          
           to.toExecSql(sql: "COMMIT")  // voNumber loadHKdata
           #if DEBUGLOG
             let totalElapsed = CFAbsoluteTimeGetCurrent() - dataProcessingStartTime
-            let avgRate = totalElapsed > 0 ? Double(dateSet.count) / totalElapsed : 0
+            let avgRate = totalElapsed > 0 ? Double(datesToProcess.count) / totalElapsed : 0
             DBGLog(
-              "[\(srcName)] HKPROFILE: Data processing completed - \(dateSet.count) records in \(String(format: "%.3f", totalElapsed))s (avg \(String(format: "%.1f", avgRate)) records/sec)",
+              "[\(srcName)] HKPROFILE: Data processing completed - \(datesToProcess.count) records in \(String(format: "%.3f", totalElapsed))s (avg \(String(format: "%.1f", avgRate)) records/sec)",
               color: .YELLOW
             )
           #endif
-          DBGLog("Done loadHKdata for \(srcName) with \(dateSet.count) records.")
+          DBGLog("Done loadHKdata for \(srcName) with \(datesToProcess.count) records.")
           
           // UI updates and completion callbacks - handles its own main thread dispatch
           to.refreshDelegate?.updateFullRefreshProgress(completed: true)

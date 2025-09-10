@@ -365,9 +365,7 @@ class trackerObj: tObjBase {
         }
 
         // Move processing to background queue to avoid blocking main thread
-        DispatchQueue.global().async { [weak self] in
-            guard let self = self else { return }
-            
+        DispatchQueue.global().async {
             // Start sequential processing
             processHKValueObjSequentially(valueObjs: hkValueObjs, index: 0)
         }
@@ -427,14 +425,15 @@ class trackerObj: tObjBase {
         return rslt
     }
 
-    func mergeDates(inDates:[TimeInterval], set12: Bool = true) -> [TimeInterval] {
+    func mergeDates(inDates:[TimeInterval], set12: Bool = true) -> (newDates: [TimeInterval], matchedDates: [TimeInterval]) {
         let existingDatesQuery = "SELECT date FROM trkrData order by date DESC"
         
         let existingDatesArr = toQry2AryI(sql: existingDatesQuery)  // for debug to look at
         let existingDates = Set(existingDatesArr)
         
         let calendar = Calendar.current
-        var newDates: [TimeInterval]
+        var newDates: [TimeInterval] = []
+        var matchedDates: [TimeInterval] = []
         
         /*
          // Filter dates that don't match within ±4 hours of existing dates
@@ -443,15 +442,35 @@ class trackerObj: tObjBase {
          !existingDates.contains { abs(hkDate - Double($0)) <= fourHours }
          }
          */
-        // find dates that are not on the same calendar day as any existing dates
-        // because prefer to use existing times if possible, not 12:00
-        // also remove today if present because today's data shown on current tracker not saved yet
-        newDates = inDates.filter { inDate in
-            // First check if it's not today
-            !calendar.isDateInToday(Date(timeIntervalSince1970: inDate)) &&
-            // Then check if it's not already in existing dates
-            !existingDates.contains { existingDate in
-                calendar.isDate(Date(timeIntervalSince1970: inDate), inSameDayAs: Date(timeIntervalSince1970: Double(existingDate)))
+        // Separate inDates into two categories:
+        // 1. newDates: dates that are not on the same calendar day as any existing dates
+        // 2. matchedDates: existing trkrData dates that match inDates on the same calendar day
+        // Skip only the most recent inDate if it matches today (because today's data shown on current tracker not saved yet)
+        let mostRecentInDate = inDates.max()
+        
+        for inDate in inDates {
+            // Skip only the most recent inDate if it matches today's date
+            if inDate == mostRecentInDate && calendar.isDateInToday(Date(timeIntervalSince1970: inDate)) {
+                continue
+            }
+            
+            // Check if this inDate matches any existing date
+            var foundMatch = false
+            for existingDate in existingDates {
+                if calendar.isDate(Date(timeIntervalSince1970: inDate), inSameDayAs: Date(timeIntervalSince1970: Double(existingDate))) {
+                    // Found a match - add the existing date (with its original timestamp) to matchedDates
+                    let existingTimestamp = TimeInterval(existingDate)
+                    if !matchedDates.contains(existingTimestamp) {
+                        matchedDates.append(existingTimestamp)
+                    }
+                    foundMatch = true
+                    break
+                }
+            }
+            
+            // If no match found, this is a new date
+            if !foundMatch {
+                newDates.append(inDate)
             }
         }
         
@@ -477,16 +496,17 @@ class trackerObj: tObjBase {
                 return timeInterval
             }
         }
-        return newDates
+        return (newDates: newDates, matchedDates: matchedDates)
     }
     
-    func generateTimeSlots(from hkDates: [TimeInterval], frequency: String) -> [TimeInterval] {
+    func generateTimeSlots(from hkDates: [TimeInterval], frequency: String) -> (newDates: [TimeInterval], matchedDates: [TimeInterval]) {
         let existingDatesQuery = "SELECT date FROM trkrData order by date DESC"
         let existingDatesArr = toQry2AryI(sql: existingDatesQuery)
         let existingDates = Set(existingDatesArr.map { TimeInterval($0) })
         
         let calendar = Calendar.current
         var timeSlots: [TimeInterval] = []
+        var matchedDates: [TimeInterval] = []
         
         // Determine interval based on frequency
         let intervalHours: Int
@@ -521,10 +541,18 @@ class trackerObj: tObjBase {
             return calendar.startOfDay(for: date)
         })
         
+        // Similar to mergeDates, find the most recent hkDate and skip only that if it's today
+        let mostRecentHKDate = hkDates.max()
+        
         // Generate time slots for each day
         for dayStart in uniqueDays {
-            // Skip today - current tracker handles it
-            if calendar.isDateInToday(dayStart) {
+            // Skip only if this day corresponds to the most recent hkDate and it's today
+            let shouldSkipToday = mostRecentHKDate.map { mostRecent in
+                let mostRecentDate = Date(timeIntervalSince1970: mostRecent)
+                return calendar.isDate(dayStart, inSameDayAs: mostRecentDate) && calendar.isDateInToday(dayStart)
+            } ?? false
+            
+            if shouldSkipToday {
                 continue
             }
             
@@ -533,16 +561,22 @@ class trackerObj: tObjBase {
                 let slotTime = calendar.date(byAdding: .hour, value: slot * intervalHours, to: dayStart)!
                 let slotTimeInterval = slotTime.timeIntervalSince1970
                 
-                // Only add if not already exists
-                if !existingDates.contains(slotTimeInterval) {
+                if existingDates.contains(slotTimeInterval) {
+                    // This time slot already exists - add to matched dates
+                    matchedDates.append(slotTimeInterval)
+                } else {
+                    // This time slot doesn't exist - add to new time slots
                     timeSlots.append(slotTimeInterval)
                 }
             }
         }
         
-        // Filter out future dates
+        // Filter out future dates from both arrays
         let now = Date()
-        return timeSlots.filter { Date(timeIntervalSince1970: $0) <= now }
+        let filteredTimeSlots = timeSlots.filter { Date(timeIntervalSince1970: $0) <= now }
+        let filteredMatchedDates = matchedDates.filter { Date(timeIntervalSince1970: $0) <= now }
+        
+        return (newDates: filteredTimeSlots, matchedDates: filteredMatchedDates)
     }
     
     func loadOTdates(forDate date: Int? = nil) {
@@ -592,7 +626,7 @@ class trackerObj: tObjBase {
                     myDates = xto.toQry2AryI(sql: "select date from \(selStr) date > \(lastDate) order by date asc")
                 }
                 
-                let newDates = self.mergeDates(inDates: myDates.map { TimeInterval($0) }, set12:false)
+                let newDates = self.mergeDates(inDates: myDates.map { TimeInterval($0) }, set12:false).newDates
                 
                 // Insert the new dates into trkrData
                 // trkrData is 'on conflict replace'
