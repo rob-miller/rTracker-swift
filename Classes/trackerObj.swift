@@ -509,6 +509,13 @@ class trackerObj: tObjBase {
         return (newDates: newDates, matchedDates: matchedDates)
     }
     
+    private func getCurrentTimeSlot(for date: Date, intervalHours: Int, calendar: Calendar) -> Int {
+        let dayStart = calendar.startOfDay(for: date)
+        let timeInterval = date.timeIntervalSince(dayStart)
+        let currentHour = Int(timeInterval / 3600) // Convert seconds to hours
+        return currentHour / intervalHours // Which slot (0-based)
+    }
+    
     func generateTimeSlots(from hkDates: [TimeInterval], frequency: String) -> (newDates: [TimeInterval], matchedDates: [TimeInterval]) {
         let existingDatesQuery = "SELECT date FROM trkrData order by date DESC"
         let existingDatesArr = toQry2AryI(sql: existingDatesQuery)
@@ -551,36 +558,28 @@ class trackerObj: tObjBase {
             return calendar.startOfDay(for: date)
         })
         
-        // Similar to mergeDates, find the most recent hkDate and skip only that if it's today
-        let mostRecentHKDate = hkDates.max()
-        
-        // Generate time slots for each day
+        // Generate time slots for each day with granular current-slot handling
         for dayStart in uniqueDays {
-            // Skip only if this day corresponds to the most recent hkDate and it's today AND we have no saved record for today
-            let shouldSkipToday = mostRecentHKDate.map { mostRecent in
-                let mostRecentDate = Date(timeIntervalSince1970: mostRecent)
-                let isTodayData = calendar.isDate(dayStart, inSameDayAs: mostRecentDate) && calendar.isDateInToday(dayStart)
-                
-                if isTodayData {
-                    // Check if we already have any saved record for today's calendar date
-                    let todayStart = calendar.startOfDay(for: Date())
-                    let todayEnd = calendar.date(byAdding: .day, value: 1, to: todayStart)!
-                    let checkSql = "SELECT COUNT(*) FROM trkrData WHERE date >= \(Int(todayStart.timeIntervalSince1970)) AND date < \(Int(todayEnd.timeIntervalSince1970))"
-                    let hasRecordForToday = toQry2Int(sql: checkSql) > 0
-                    
-                    return !hasRecordForToday  // Skip only if no saved record exists
-                }
-                return false  // Not today's data, don't skip
-            } ?? false
-            
-            if shouldSkipToday {
-                continue
-            }
+            let isToday = calendar.isDateInToday(dayStart)
+            let currentSlot = isToday ? getCurrentTimeSlot(for: Date(), intervalHours: intervalHours, calendar: calendar) : -1
             
             // Generate slots for this day
             for slot in 0..<slotsPerDay {
                 let slotTime = calendar.date(byAdding: .hour, value: slot * intervalHours, to: dayStart)!
                 let slotTimeInterval = slotTime.timeIntervalSince1970
+                
+                // Skip only the current time slot for today if no existing record for today (allows historical slots to be generated)
+                if isToday && slot == currentSlot {
+                    // Check if we already have any saved record for today's calendar date
+                    let todayStart = calendar.startOfDay(for: Date())
+                    let todayEnd = calendar.date(byAdding: .day, value: 1, to: todayStart)!
+                    let checkSql = "SELECT COUNT(*) FROM trkrData WHERE date >= \(Int(todayStart.timeIntervalSince1970)) AND date < \(Int(todayEnd.timeIntervalSince1970))"
+                    let hasAnyRecordForToday = toQry2Int(sql: checkSql) > 0
+                    
+                    if !hasAnyRecordForToday {
+                        continue // Skip only this current slot
+                    }
+                }
                 
                 if existingDates.contains(slotTimeInterval) {
                     // This time slot already exists - add to matched dates
