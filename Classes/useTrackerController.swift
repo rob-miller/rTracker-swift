@@ -427,7 +427,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     }
     
     // refresh current record
-    func refreshCurrentRecord(_ refreshControl: UIRefreshControl) {
+    func xrefreshCurrentRecord(_ refreshControl: UIRefreshControl) {
         DBGLog("Short refresh initiated - updating current record only")
         
         let dispatchGroup = DispatchGroup()
@@ -495,7 +495,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         self.frDate = forDate ?? Int(tracker!.trackerDate!.timeIntervalSince1970)
         DBGLog("frDate set to \(Date(timeIntervalSince1970: TimeInterval(self.frDate)))")
 
-        performDataLoadingSequence {
+        performDataLoadingSequence(forDate: forDate) {
             if forDate == nil {
                 DBGLog(
                     "Full refresh completed - All data loaded and SQL inserts completed. frDate= \(Date(timeIntervalSince1970: TimeInterval(self.frDate))) "
