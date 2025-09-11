@@ -269,8 +269,9 @@ class voNumber: voState, UITextFieldDelegate {
       }
       if vo.optDict["ahksrc"] == "1" || vo.optDict["otsrc"] == "1" {
         self.vo.vos?.addExternalSourceOverlay(to: self.dtf)  // no taps
+        DBGLog("\(vo.valueName!) -- HK query for \(vo.optDict["ahSource"]!) load vo.value: \(dtf.text ?? "nil")", color:.BLUE)
       }
-      DBGLog("\(vo.valueName!) -- HK query for \(vo.optDict["ahSource"]!) load vo.value: \(dtf.text ?? "nil")", color:.BLUE)
+      
     }
 
     return dtf
