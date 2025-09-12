@@ -433,6 +433,14 @@ class valueObj: NSObject, UITextFieldDelegate {
         // do self.useVO in vos resetData
         //DBGLog(@"vo resetData %@",self.valueName);
     }
+    
+    func isDerived() -> Bool {
+        let isHealthKit = optDict["ahksrc"] == "1"
+        let isOtherTracker = optDict["otsrc"] == "1"
+        let isFunction = vtype == VOT_FUNC
+        
+        return isHealthKit || isOtherTracker || isFunction
+    }
 
     // MARK: -
     // MARK: display fn dispatch

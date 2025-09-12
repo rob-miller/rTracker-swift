@@ -509,9 +509,10 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                     "Partial refresh for \(Date(timeIntervalSince1970: TimeInterval(forDate!))) completed. frDate= \(Date(timeIntervalSince1970: TimeInterval(self.frDate)))"
                 )
                 // did not move from current ui
-                if self.tracker!.loadData(self.frDate) {
+                if self.tracker!.loadData(self.frDate, derivedOnly: true) {
+
                     // date is in db
-                    self.needSave = false  // we just reloaded from db so loacal changes wiped
+                    //self.needSave = false  // did not wipe local changes
                     self.showSaveBtn()
                     self.updateToolBar()
                 } else {

@@ -228,11 +228,15 @@ extension trackerObj {
    
     // MARK: modify tracker object <-> db
 
-    func resetData() {
+    func resetData(derivedOnly: Bool = false) {
         trackerDate = nil
         trackerDate = Date()
 
         for vo in valObjTable {
+            // Skip if derivedOnly is true and this vo is not a derived data source
+            if derivedOnly && !vo.isDerived() {
+                continue
+            }
             vo.resetData()
             //[vo.value setString:@""];
         }

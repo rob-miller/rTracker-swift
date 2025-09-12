@@ -1762,7 +1762,7 @@ class trackerObj: tObjBase {
         return rvo
     }
     
-    func loadData(_ iDate: Int) -> Bool {
+    func loadData(_ iDate: Int, derivedOnly: Bool = false) -> Bool {
 
         let qDate = Date(timeIntervalSince1970: TimeInterval(iDate))
         // DBGLog(@"trackerObj loadData for date %@",qDate);
@@ -1771,7 +1771,7 @@ class trackerObj: tObjBase {
         var sql = String(format: "select count(*) from trkrData where date = %ld and minpriv <= %d;", iDate, privacyValue)
         let c = toQry2Int(sql:sql)
         if c != 0 {
-            resetData()
+            resetData(derivedOnly: derivedOnly)
             trackerDate = qDate
             sql = String(format: "select id, val from voData where date = %ld;", iDate)
             let isa = toQry2AryIS(sql: sql)
@@ -1780,6 +1780,11 @@ class trackerObj: tObjBase {
                 let vo = getValObj(vid)
 
                 if let vo {
+                    // Skip if derivedOnly is true and this vo is not a derived data source
+                    if derivedOnly && !vo.isDerived() {
+                        continue
+                    }
+                    
                     // no vo if privacy restricted
                     //DBGLog(@"vo id %ld newValue: %@",(long)vid,newVal);
 
