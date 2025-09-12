@@ -30,7 +30,12 @@ rTracker is an iOS app for creating local databases ("trackers") to log timestam
 - Constants use UPPERCASE (e.g., SAVERTNDFLT)
 - Prefix private properties with underscore (_trackerName)
 - Error handling uses custom debug logging functions: DBGLog, DBGWarn, DBGErr
-- Use #if DEBUGLOG, #if DEBUGWARN, #if DEBUGERR for conditional debug code
+  - **IMPORTANT**: DBGLog, DBGWarn, DBGErr automatically include timestamps, filename, line number, function name, and conditional compilation control
+  - **Never use** `#if DEBUGLOG` wrappers around single DBGLog calls - they handle conditional compilation internally
+  - **DO use** `#if DEBUGLOG` for multiline debug code blocks containing variables, calculations, or logic beyond just logging
+  - **Never use** `CFAbsoluteTimeGetCurrent()` for timing analysis - DBGLog timestamps provide timing information
+  - **Never include** function names in debug messages - they're automatically logged
+  - **Focus messages** on meaningful data, state, and progress information only
 - Include copyright and license in file headers
 - Use MARK: comments for code organization
 - The codebase was converted from Objective-C using Swiftify
@@ -258,3 +263,4 @@ swiftc -parse "Classes/[filename].swift" 2>&1 | head -20
 - **NEVER assume test frameworks** - Always check README or search codebase for testing approach
 - **No automatic test runs** - Ask user for specific test commands if needed
 - **Manual verification preferred** - Use code review instead of compilation to catch errors
+
