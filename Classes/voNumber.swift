@@ -269,7 +269,14 @@ class voNumber: voState, UITextFieldDelegate {
       }
       if vo.optDict["ahksrc"] == "1" || vo.optDict["otsrc"] == "1" {
         self.vo.vos?.addExternalSourceOverlay(to: self.dtf)  // no taps
-        DBGLog("\(vo.valueName!) -- HK query for \(vo.optDict["ahSource"]!) load vo.value: \(dtf.text ?? "nil")", color:.BLUE)
+        #if DEBUGLOG
+          if vo.optDict["ahksrc"] == "1" {
+            DBGLog("\(vo.valueName!) -- HK query for \(vo.optDict["ahSource"]!) load vo.value: \(dtf.text ?? "nil")", color:.BLUE)
+          } else {
+            DBGLog("\(vo.valueName!) -- OT query for \(vo.optDict["otTracker"]!) \(vo.optDict["otValue"]!) load vo.value: \(dtf.text ?? "nil")", color:.BLUE)
+          }
+        #endif
+
       }
       
     }
@@ -802,12 +809,12 @@ class voNumber: voState, UITextFieldDelegate {
 
           if frequency == "daily" {
             // Use original daily logic
-            let mergeResult = to.mergeDates(inDates: allHKDates)
+            let mergeResult = to.mergeDates(inDates: allHKDates, aggregationTime: queryConfig.aggregationTime)
             newDates = mergeResult.newDates
             matchedDates = mergeResult.matchedDates
           } else {
             // Generate time slots based on frequency
-            let timeSlotResult = to.generateTimeSlots(from: allHKDates, frequency: frequency)
+            let timeSlotResult = to.generateTimeSlots(from: allHKDates, frequency: frequency, aggregationTime: queryConfig.aggregationTime)
             newDates = timeSlotResult.newDates
             matchedDates = timeSlotResult.matchedDates
           }
@@ -1276,11 +1283,13 @@ class voNumber: voState, UITextFieldDelegate {
         results: filteredResults, aggregation: self.vo.optDict["ahAggregation"] ?? "avg")
 
       if let result = aggregatedResult {
+        /*
         DBGLog("aggregated result for \(srcName) at \(startDate) is \(result.value) \(result.unit) (timeFilter: \(self.vo.optDict["ahTimeFilter"] ?? "all_day"))")
         DBGLog("input set:")
         for result in filteredResults.sorted(by: { $0.date < $1.date }) {
           DBGLog("  \(result.date) \(result.value)")
         }
+        */
         let formattedValue = self.formatHealthKitValue(result.value)
         completion(formattedValue)
       } else {
@@ -1317,7 +1326,7 @@ class voNumber: voState, UITextFieldDelegate {
     return results.filter { result in
       // Extract local hour directly from UTC date (Calendar handles timezone conversion)
       let localHour = Calendar.current.component(.hour, from: result.date)
-      DBGLog("Filtering: \(result.date) -> local hour \(localHour) for filter '\(timeFilter)'")
+      //DBGLog("Filtering: \(result.date) -> local hour \(localHour) for filter '\(timeFilter)'")
 
       switch timeFilter {
       case "morning": return localHour >= 6 && localHour < 10

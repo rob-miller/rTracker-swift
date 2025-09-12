@@ -425,7 +425,7 @@ class trackerObj: tObjBase {
         return rslt
     }
 
-    func mergeDates(inDates:[TimeInterval], set12: Bool = true) -> (newDates: [TimeInterval], matchedDates: [TimeInterval]) {
+    func mergeDates(inDates:[TimeInterval], set12: Bool = true, aggregationTime: DateComponents? = nil) -> (newDates: [TimeInterval], matchedDates: [TimeInterval]) {
         let existingDatesQuery = "SELECT date FROM trkrData order by date DESC"
         
         let existingDatesArr = toQry2AryI(sql: existingDatesQuery)  // for debug to look at
@@ -434,7 +434,7 @@ class trackerObj: tObjBase {
         let calendar = Calendar.current
         var newDates: [TimeInterval] = []
         var matchedDates: [TimeInterval] = []
-        
+
         /*
          // Filter dates that don't match within ±4 hours of existing dates
          let fourHours: TimeInterval = 4 * 60 * 60
@@ -445,23 +445,50 @@ class trackerObj: tObjBase {
         // Separate inDates into two categories:
         // 1. newDates: dates that are not on the same calendar day as any existing dates
         // 2. matchedDates: existing trkrData dates that match inDates on the same calendar day
-        // Skip only the most recent inDate if it matches today AND no saved record exists (because today's data shown live via processHealthQuery)
+        // Skip only the most recent inDate if it matches today (because today's data shown live via processHealthQuery)
+        // but do show if after aggregation time or if we already have a saved record for today
+
+        // this doesn't skip last date for loadOTdata because HK 
         let mostRecentInDate = inDates.max()
         
         for inDate in inDates {
             // Skip only the most recent inDate if it matches today's date AND we have no saved record for today
             if inDate == mostRecentInDate && calendar.isDateInToday(Date(timeIntervalSince1970: inDate)) {
-                // Check if we already have any saved record for today's calendar date
-                let todayStart = calendar.startOfDay(for: Date())
-                let todayEnd = calendar.date(byAdding: .day, value: 1, to: todayStart)!
-                let checkSql = "SELECT COUNT(*) FROM trkrData WHERE date >= \(Int(todayStart.timeIntervalSince1970)) AND date < \(Int(todayEnd.timeIntervalSince1970))"
-                let hasRecordForToday = toQry2Int(sql: checkSql) > 0
+                let now = Date()
+                let inDateObj = Date(timeIntervalSince1970: inDate)
                 
-                if !hasRecordForToday {
-                    // No saved record for today yet - skip to avoid creating empty entry
-                    continue
+                // Check if current time is after the aggregation time
+                let isAfterAggregationTime: Bool
+                if let aggregationTime = aggregationTime,
+                   let aggregationHour = aggregationTime.hour,
+                   let aggregationMinute = aggregationTime.minute {
+                    let aggregationSecond = aggregationTime.second ?? 0  // seconds generally not provided
+                    if let aggregationTimeToday = calendar.date(bySettingHour: aggregationHour, minute: aggregationMinute, second: aggregationSecond, of: inDateObj) {
+                        isAfterAggregationTime = now >= aggregationTimeToday
+                        //DBGLog("Current time \(now) vs aggregation time today \(aggregationTimeToday): isAfterAggregationTime = \(isAfterAggregationTime)")
+                    } else {
+                        isAfterAggregationTime = false
+                    }
+                } else {
+                    isAfterAggregationTime = false
                 }
-                // Has saved record for today - proceed to refresh HealthKit data for it
+                
+                if isAfterAggregationTime {
+                    // After aggregation time - system would have auto-created records, so don't skip
+                    // (This handles sleep data at 12:00 PM when current time is 2:00 PM)
+                } else {
+                    // Before aggregation time - check if we already have any saved record for today's calendar date
+                    let todayStart = calendar.startOfDay(for: Date())
+                    let todayEnd = calendar.date(byAdding: .day, value: 1, to: todayStart)!
+                    let checkSql = "SELECT COUNT(*) FROM trkrData WHERE date >= \(Int(todayStart.timeIntervalSince1970)) AND date < \(Int(todayEnd.timeIntervalSince1970))"
+                    let hasRecordForToday = toQry2Int(sql: checkSql) > 0
+                    
+                    if !hasRecordForToday {
+                        // No saved record for today yet - skip to avoid creating empty entry
+                        continue
+                    }
+                }
+                // Has saved record for today or we're after aggregation time - proceed to refresh HealthKit data for it
             }
             
             // Check if this inDate matches any existing date
@@ -516,7 +543,7 @@ class trackerObj: tObjBase {
         return currentHour / intervalHours // Which slot (0-based)
     }
     
-    func generateTimeSlots(from hkDates: [TimeInterval], frequency: String) -> (newDates: [TimeInterval], matchedDates: [TimeInterval]) {
+    func generateTimeSlots(from hkDates: [TimeInterval], frequency: String, aggregationTime: DateComponents? = nil) -> (newDates: [TimeInterval], matchedDates: [TimeInterval]) {
         let existingDatesQuery = "SELECT date FROM trkrData order by date DESC"
         let existingDatesArr = toQry2AryI(sql: existingDatesQuery)
         let existingDates = Set(existingDatesArr.map { TimeInterval($0) })
@@ -549,7 +576,7 @@ class trackerObj: tObjBase {
             intervalHours = 12
             slotsPerDay = 2
         default:
-            return mergeDates(inDates: hkDates) // fallback to daily
+            return mergeDates(inDates: hkDates, aggregationTime: aggregationTime) // fallback to daily
         }
         
         // Get unique days from HealthKit data
