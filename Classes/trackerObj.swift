@@ -434,6 +434,14 @@ class trackerObj: tObjBase {
         let calendar = Calendar.current
         var newDates: [TimeInterval] = []
         var matchedDates: [TimeInterval] = []
+        
+        // Pre-compute existing dates by day components for O(1) lookups instead of O(n) nested loops
+        var existingDatesByDay: [DateComponents: [TimeInterval]] = [:]
+        for timestamp in existingDatesArr {
+            let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
+            let dayComponents = calendar.dateComponents([.year, .month, .day], from: date)
+            existingDatesByDay[dayComponents, default: []].append(TimeInterval(timestamp))
+        }
 
         /*
          // Filter dates that don't match within ±4 hours of existing dates
@@ -450,6 +458,12 @@ class trackerObj: tObjBase {
 
         // this doesn't skip last date for loadOTdata because HK 
         let mostRecentInDate = inDates.max()
+        
+        // Pre-calculate today's record check once to avoid repeated database queries
+        let todayStart = calendar.startOfDay(for: Date())
+        let todayEnd = calendar.date(byAdding: .day, value: 1, to: todayStart)!
+        let checkSql = "SELECT COUNT(*) FROM trkrData WHERE date >= \(Int(todayStart.timeIntervalSince1970)) AND date < \(Int(todayEnd.timeIntervalSince1970))"
+        let hasRecordForToday = toQry2Int(sql: checkSql) > 0
         
         for inDate in inDates {
             // Skip only the most recent inDate if it matches today's date AND we have no saved record for today
@@ -477,12 +491,7 @@ class trackerObj: tObjBase {
                     // After aggregation time - system would have auto-created records, so don't skip
                     // (This handles sleep data at 12:00 PM when current time is 2:00 PM)
                 } else {
-                    // Before aggregation time - check if we already have any saved record for today's calendar date
-                    let todayStart = calendar.startOfDay(for: Date())
-                    let todayEnd = calendar.date(byAdding: .day, value: 1, to: todayStart)!
-                    let checkSql = "SELECT COUNT(*) FROM trkrData WHERE date >= \(Int(todayStart.timeIntervalSince1970)) AND date < \(Int(todayEnd.timeIntervalSince1970))"
-                    let hasRecordForToday = toQry2Int(sql: checkSql) > 0
-                    
+                    // Before aggregation time - use pre-calculated record check for today
                     if !hasRecordForToday {
                         // No saved record for today yet - skip to avoid creating empty entry
                         continue
@@ -491,22 +500,19 @@ class trackerObj: tObjBase {
                 // Has saved record for today or we're after aggregation time - proceed to refresh HealthKit data for it
             }
             
-            // Check if this inDate matches any existing date
-            var foundMatch = false
-            for existingDate in existingDates {
-                if calendar.isDate(Date(timeIntervalSince1970: inDate), inSameDayAs: Date(timeIntervalSince1970: Double(existingDate))) {
-                    // Found a match - add the existing date (with its original timestamp) to matchedDates
-                    let existingTimestamp = TimeInterval(existingDate)
+            // Check if this inDate matches any existing date using O(1) lookup
+            let inDateObj = Date(timeIntervalSince1970: inDate)
+            let inDateDayComponents = calendar.dateComponents([.year, .month, .day], from: inDateObj)
+            
+            if let matchingTimestamps = existingDatesByDay[inDateDayComponents] {
+                // Found match(es) - add all existing timestamps for this day to matchedDates
+                for existingTimestamp in matchingTimestamps {
                     if !matchedDates.contains(existingTimestamp) {
                         matchedDates.append(existingTimestamp)
                     }
-                    foundMatch = true
-                    break
                 }
-            }
-            
-            // If no match found, this is a new date
-            if !foundMatch {
+            } else {
+                // No match found, this is a new date
                 newDates.append(inDate)
             }
         }
@@ -533,6 +539,7 @@ class trackerObj: tObjBase {
                 return timeInterval
             }
         }
+        
         return (newDates: newDates, matchedDates: matchedDates)
     }
     
@@ -585,6 +592,12 @@ class trackerObj: tObjBase {
             return calendar.startOfDay(for: date)
         })
         
+        // Pre-calculate today's record check once to avoid repeated database queries
+        let todayStart = calendar.startOfDay(for: Date())
+        let todayEnd = calendar.date(byAdding: .day, value: 1, to: todayStart)!
+        let checkSql = "SELECT COUNT(*) FROM trkrData WHERE date >= \(Int(todayStart.timeIntervalSince1970)) AND date < \(Int(todayEnd.timeIntervalSince1970))"
+        let hasAnyRecordForToday = toQry2Int(sql: checkSql) > 0
+        
         // Generate time slots for each day with granular current-slot handling
         for dayStart in uniqueDays {
             let isToday = calendar.isDateInToday(dayStart)
@@ -597,12 +610,6 @@ class trackerObj: tObjBase {
                 
                 // Skip only the current time slot for today if no existing record for today (allows historical slots to be generated)
                 if isToday && slot == currentSlot {
-                    // Check if we already have any saved record for today's calendar date
-                    let todayStart = calendar.startOfDay(for: Date())
-                    let todayEnd = calendar.date(byAdding: .day, value: 1, to: todayStart)!
-                    let checkSql = "SELECT COUNT(*) FROM trkrData WHERE date >= \(Int(todayStart.timeIntervalSince1970)) AND date < \(Int(todayEnd.timeIntervalSince1970))"
-                    let hasAnyRecordForToday = toQry2Int(sql: checkSql) > 0
-                    
                     if !hasAnyRecordForToday {
                         continue // Skip only this current slot
                     }
