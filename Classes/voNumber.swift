@@ -641,7 +641,7 @@ class voNumber: voState, UITextFieldDelegate {
       return
     }
 
-    // enter done at to before calling here -- dispatchGroup?.enter()  // wait for getHealthkitDates processing overall
+    // enter done at trackerObj before calling here -- dispatchGroup?.enter()  // wait for getHealthkitDates processing overall
 
     // 1st determine if hk has date entries this tracker does not, if so identify and add them
 
@@ -662,11 +662,9 @@ class voNumber: voState, UITextFieldDelegate {
     // if no database entries, then wiped so full refresh
     if let specifiedDate = date {
       // For single date refresh, query from start of day to end of that specific date
-      let startDate = Date(timeIntervalSince1970: TimeInterval(specifiedDate))
-      specifiedStartDate = startDate
-      specifiedEndDate =
-        calendar.dateInterval(of: .day, for: startDate)?.end
-        ?? calendar.date(byAdding: .day, value: 1, to: startDate)
+      specifiedStartDate = calendar.startOfDay(for:Date(timeIntervalSince1970: TimeInterval(specifiedDate)))
+      specifiedEndDate = calendar.date(byAdding: .day, value: 1, to: specifiedStartDate!)
+
       DBGLog(
         "Single date refresh: querying from \(specifiedStartDate?.description ?? "nil") to \(specifiedEndDate?.description ?? "nil")"
       )
@@ -694,7 +692,9 @@ class voNumber: voState, UITextFieldDelegate {
                                        of: currentStartDate) ?? currentStartDate
         // Go back one day from boundary to ensure we capture data that gets aggregated to this boundary
         specifiedStartDate = calendar.date(byAdding: .day, value: -1, to: boundaryDate)
-        DBGLog("[\(srcName)] Adjusted start date for aggregation boundary to: \(specifiedStartDate?.description ?? "nil")")
+        specifiedEndDate = calendar.date(byAdding: .day, value: 1, to: specifiedStartDate!)
+        // start is yesterday's aggregation boundary, end is one day later
+        DBGLog("[\(srcName)] Adjusted dates for aggregation boundary to  start: \(specifiedStartDate?.description ?? "nil") and end: \(specifiedEndDate?.description ?? "nil")")
     }
 
     // Use standard HealthKit date window
@@ -1276,6 +1276,11 @@ class voNumber: voState, UITextFieldDelegate {
         results: filteredResults, aggregation: self.vo.optDict["ahAggregation"] ?? "avg")
 
       if let result = aggregatedResult {
+        DBGLog("aggregated result for \(srcName) at \(startDate) is \(result.value) \(result.unit) (timeFilter: \(self.vo.optDict["ahTimeFilter"] ?? "all_day"))")
+        DBGLog("input set:")
+        for result in filteredResults.sorted(by: { $0.date < $1.date }) {
+          DBGLog("  \(result.date) \(result.value)")
+        }
         let formattedValue = self.formatHealthKitValue(result.value)
         completion(formattedValue)
       } else {
@@ -1310,9 +1315,9 @@ class voNumber: voState, UITextFieldDelegate {
     -> [rtHealthKit.HealthQueryResult]
   {
     return results.filter { result in
-      // Convert HealthKit UTC date to local time before filtering
-      let localDate = result.date.toLocalTime()
-      let localHour = Calendar.current.component(.hour, from: localDate)
+      // Extract local hour directly from UTC date (Calendar handles timezone conversion)
+      let localHour = Calendar.current.component(.hour, from: result.date)
+      DBGLog("Filtering: \(result.date) -> local hour \(localHour) for filter '\(timeFilter)'")
 
       switch timeFilter {
       case "morning": return localHour >= 6 && localHour < 10
@@ -1370,11 +1375,3 @@ class voNumber: voState, UITextFieldDelegate {
   }
 }
 
-// MARK: - Date Extension for Timezone Handling
-extension Date {
-  func toLocalTime() -> Date {
-    let timezone = TimeZone.current
-    let seconds = TimeInterval(timezone.secondsFromGMT(for: self))
-    return Date(timeInterval: seconds, since: self)
-  }
-}
