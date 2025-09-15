@@ -293,11 +293,11 @@ struct ahViewController: View {
             
             Picker("Time Filter", selection: $ahTimeFilter) {
                 Text("All day").tag("all_day")
-                Text("Morning").tag("morning")
-                Text("Daytime").tag("daytime")
-                Text("Evening").tag("evening")
-                Text("Sleep hours").tag("sleep_hours")
-                Text("Wake hours").tag("wake_hours")
+                Text("Morning 6-10").tag("morning")
+                Text("Daytime 10-18").tag("daytime")
+                Text("Evening 18-23").tag("evening")
+                Text("Sleep hours 23-6").tag("sleep_hours")
+                Text("Wake hours 6-23").tag("wake_hours")
             }
             .pickerStyle(MenuPickerStyle())
         }
