@@ -187,12 +187,29 @@ extension TrackerChart {
                     let values = data.map { $0.1 }
                     let minValue = values.min() ?? 0
                     let maxValue = values.max() ?? 0
-                    
+
+                    // Check if all values are integers
+                    let allValuesAreIntegers = values.allSatisfy { value in
+                        value.truncatingRemainder(dividingBy: 1) == 0
+                    }
+
                     // Calculate range to determine decimal precision
                     let range = maxValue - minValue
-                    let formatString = range > 99 ? "%.0f" : "%.2f"
-                    let rangeFormatString = range > 99 ? "%.0f - %.0f" : "%.2f - %.2f"
-                    
+
+                    DBGLog("Numeric pie chart data analysis: allValuesAreIntegers=\(allValuesAreIntegers), range=\(range), values=\(values.prefix(5))\(values.count > 5 ? "..." : "")")
+                    let formatString: String
+                    let rangeFormatString: String
+
+                    if allValuesAreIntegers {
+                        // Use integer formatting when all values are whole numbers
+                        formatString = "%.0f"
+                        rangeFormatString = "%.0f - %.0f"
+                    } else {
+                        // Use existing decimal formatting logic
+                        formatString = range > 99 ? "%.0f" : "%.2f"
+                        rangeFormatString = range > 99 ? "%.0f - %.0f" : "%.2f - %.2f"
+                    }
+
                     // If all values are the same, create a single category
                     if minValue == maxValue {
                         let valueStr = String(format: formatString, minValue)
@@ -200,29 +217,57 @@ extension TrackerChart {
                     } else {
                         // Determine optimal number of bins (between 2 and CHOICES)
                         let binCount = min(CHOICES, max(2, min(values.count / 2, 6)))
-                        let binWidth = range / Double(binCount)
-                        
+                        var binWidth = range / Double(binCount)
+
+                        // For integer data, ensure bin width results in clean integer boundaries
+                        if allValuesAreIntegers && binWidth > 1.0 {
+                            binWidth = ceil(binWidth)
+                        }
+
                         // Initialize bins
                         var binCounts: [Int] = Array(repeating: 0, count: binCount)
                         var binLabels: [String] = []
-                        
-                        // Create bin labels
+
+                        // Create bin labels with integer-aligned boundaries for integer data
                         for i in 0..<binCount {
-                            let binMin = minValue + Double(i) * binWidth
-                            let binMax = minValue + Double(i + 1) * binWidth
-                            binLabels.append(String(format: rangeFormatString, binMin, binMax))
+                            let binMin: Double
+                            let binMax: Double
+
+                            if allValuesAreIntegers {
+                                // Align bin boundaries to integers
+                                binMin = minValue + Double(i) * binWidth
+                                binMax = minValue + Double(i + 1) * binWidth
+                                // For integer data, ensure the last bin includes maxValue exactly
+                                if i == binCount - 1 {
+                                    binLabels.append(String(format: rangeFormatString, binMin, maxValue))
+                                } else {
+                                    binLabels.append(String(format: rangeFormatString, binMin, binMax - 1))
+                                }
+                            } else {
+                                // Use original floating-point boundaries
+                                binMin = minValue + Double(i) * binWidth
+                                binMax = minValue + Double(i + 1) * binWidth
+                                binLabels.append(String(format: rangeFormatString, binMin, binMax))
+                            }
                         }
-                        
+
                         // Assign values to bins
                         for value in values {
-                            var binIndex = Int((value - minValue) / binWidth)
-                            // Handle the edge case where value equals maxValue
-                            if binIndex >= binCount {
-                                binIndex = binCount - 1
+                            var binIndex: Int
+                            if allValuesAreIntegers {
+                                // For integer data, use integer-based bin assignment
+                                binIndex = min(Int((value - minValue) / binWidth), binCount - 1)
+                            } else {
+                                // Use original floating-point bin assignment
+                                binIndex = Int((value - minValue) / binWidth)
+                                // Handle the edge case where value equals maxValue
+                                if binIndex >= binCount {
+                                    binIndex = binCount - 1
+                                }
                             }
                             binCounts[binIndex] += 1
                         }
-                        
+
                         // Store results
                         for i in 0..<binCount {
                             if binCounts[i] > 0 {  // Only include non-empty bins
