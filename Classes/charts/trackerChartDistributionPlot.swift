@@ -185,8 +185,8 @@ extension TrackerChart {
         let rightXPos: CGFloat = chartView.bounds.width - rightMargin - 100 // Adjust width as needed
         let lineHeight: CGFloat = 16
         
-        // Use the current display mode (average or count)
-        let showCounts = showStatCounts
+        // Use the current display mode (average, median, or count)
+        let currentMode = statDisplayMode
         
         // Get selection valueObj name
         let selectionVO = tracker?.valObjTable.first { $0.vid == selectedValueObjIDs["selection"] }
@@ -206,19 +206,23 @@ extension TrackerChart {
             yPos += lineHeight
         }
         
-        // Background average (moved to right side)
+        // Background statistics (moved to right side)
         if !backgroundValues.isEmpty {
             let avg = backgroundValues.reduce(0.0, +) / Double(backgroundValues.count)
+            let median = calculateMedian(backgroundValues)
             let count = backgroundValues.count
-            
+
             let bgLbl = UILabel(frame: CGRect(x: rightXPos, y: 15, width: 100, height: lineHeight))
             bgLbl.font = UIFont.systemFont(ofSize: 12)
             bgLbl.textColor = .label
-            
-            if showCounts {
-                bgLbl.text = String(format: "Count: %d", count)
-            } else {
+
+            switch currentMode {
+            case .average:
                 bgLbl.text = String(format: "Avg: %.2f", avg)
+            case .median:
+                bgLbl.text = String(format: "Med: %.2f", median)
+            case .count:
+                bgLbl.text = String(format: "Count: %d", count)
             }
             
             // Make label tappable
@@ -237,20 +241,24 @@ extension TrackerChart {
         // Follow legend order for segmentation classes
         for category in orderedCategories {
             guard let values = selectionData[category], !values.isEmpty else { continue }
-            
+
             let avg = values.reduce(0.0, +) / Double(values.count)
+            let median = calculateMedian(values)
             let count = values.count
-            
+
             let lbl = UILabel(frame: CGRect(x: leftXPos, y: yPos, width: 220, height: lineHeight))
             lbl.font = UIFont.systemFont(ofSize: 12)
             let visible = legendItemVisibility[category] ?? true
             let baseColor = categoryColors[category] ?? UIColor.label
             lbl.textColor = visible ? baseColor : baseColor.withAlphaComponent(0.3)
-            
-            if showCounts {
-                lbl.text = String(format: "%@: %d", category, count)
-            } else {
+
+            switch currentMode {
+            case .average:
                 lbl.text = String(format: "%@: %.2f", category, avg)
+            case .median:
+                lbl.text = String(format: "%@: %.2f", category, median)
+            case .count:
+                lbl.text = String(format: "%@: %d", category, count)
             }
             
             // Make label tappable
@@ -262,14 +270,21 @@ extension TrackerChart {
         }
     }
 
-    // Toggle between showing averages and counts
+    // Cycle between showing averages, medians, and counts
     @objc internal func toggleStatDisplayMode(_ sender: UITapGestureRecognizer) {
         // Add haptic feedback for better user experience
         let generator = UIImpactFeedbackGenerator(style: .light)
         generator.impactOccurred()
-        
-        // Toggle the display mode
-        showStatCounts.toggle()
+
+        // Cycle through the display modes: average -> median -> count -> average
+        switch statDisplayMode {
+        case .average:
+            statDisplayMode = .median
+        case .median:
+            statDisplayMode = .count
+        case .count:
+            statDisplayMode = .average
+        }
         
         // Refresh the view with the new display mode
         if segmentedControl.selectedSegmentIndex == CHART_TYPE_DISTRIBUTION {

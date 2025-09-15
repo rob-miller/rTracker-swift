@@ -37,6 +37,13 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     internal let CHART_TYPE_TIME = 1
     internal let CHART_TYPE_SCATTER = 2
     internal let CHART_TYPE_PIE = 3
+
+    // Statistics display modes for distribution chart
+    internal enum StatDisplayMode: Int, CaseIterable {
+        case average = 0
+        case median = 1
+        case count = 2
+    }
     
     // Chart layout constants
     internal let leftMargin: CGFloat = 60     // Space for y-axis labels
@@ -78,8 +85,8 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     // track legend item visibility
     internal var legendItemVisibility: [String: Bool] = [:]
     internal var saveLegendItemVisibility = false
-    // For toggling between average and count display in distribution charts
-    internal var showStatCounts: Bool = false
+    // For cycling between average, median, and count display in distribution charts
+    internal var statDisplayMode: StatDisplayMode = .average
     
     // Pie chart configuration
     internal var pieSource1Button: UIButton!
@@ -1471,6 +1478,24 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             return "1 day ago"
         }
         return "\(days) days ago"
+    }
+
+    internal func calculateMedian(_ values: [Double]) -> Double {
+        guard !values.isEmpty else { return 0.0 }
+
+        let sortedValues = values.sorted()
+        let count = sortedValues.count
+
+        if count % 2 == 0 {
+            // Even number of values - return average of middle two
+            let midIndex1 = count / 2 - 1
+            let midIndex2 = count / 2
+            return (sortedValues[midIndex1] + sortedValues[midIndex2]) / 2.0
+        } else {
+            // Odd number of values - return middle value
+            let midIndex = count / 2
+            return sortedValues[midIndex]
+        }
     }
     
     // MARK: - UI Actions
