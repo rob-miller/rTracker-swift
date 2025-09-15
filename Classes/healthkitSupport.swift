@@ -1027,9 +1027,19 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         let finalEndDate: Date
         
         if let providedEndDate = endDate {
-            // Range query - use provided dates
-            finalStartDate = startDate
-            finalEndDate = providedEndDate
+            // Range query - check if we have a backwards time range from calculateEndDate
+            if providedEndDate < startDate {
+                // BACKWARDS TIME RANGE: calculateEndDate returned a "backwards" endDate to indicate
+                // we want the interval BEFORE the slot timestamp. Swap the dates for the HealthKit query
+                // so a 3pm slot (startDate=3pm, endDate=2pm) queries HealthKit for 2pm-3pm data
+                finalStartDate = providedEndDate  // Use the earlier time as start
+                finalEndDate = startDate          // Use the later time as end
+                //DBGLog("High-frequency backwards range detected: querying HealthKit from \(providedEndDate) to \(startDate)")
+            } else {
+                // Normal forward range query
+                finalStartDate = startDate
+                finalEndDate = providedEndDate
+            }
         } else {
             // Single point query - calculate appropriate range
             if let aggregationTime = queryConfig.aggregationTime {

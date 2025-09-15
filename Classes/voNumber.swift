@@ -923,6 +923,8 @@ class voNumber: voState, UITextFieldDelegate {
 
               if let result = result {
                 // Data found - insert into database
+                // NOTE: For high-frequency data, 'dat' is the slot timestamp (e.g., 3pm) but 'result'
+                // contains HealthKit data from the PREVIOUS interval (e.g., 2pm-3pm data).
                 let sql =
                   "insert into voData (id, date, val) values (\(self?.vo.vid ?? 0), \(Int(dat)), '\(result)')"
                 to?.toExecSql(sql: sql)
@@ -1261,6 +1263,10 @@ class voNumber: voState, UITextFieldDelegate {
     }
 
     // Calculate endDate for high-frequency processing
+    // IMPORTANT: For high-frequency data, calculateEndDate returns a "backwards" endDate
+    // (earlier than startDate) to indicate we want the interval BEFORE the slot timestamp.
+    // This makes a 3pm slot represent 2pm-3pm data instead of 3pm-4pm data.
+    // performHealthQuery will detect endDate < startDate and swap them for the HealthKit query.
     let endDate = calculateEndDate(from: startDate, frequency: frequency, queryConfig: queryConfig)
 
     // Prepare unit
@@ -1317,7 +1323,10 @@ class voNumber: voState, UITextFieldDelegate {
     default: return nil  // daily
     }
 
-    return Calendar.current.date(byAdding: .hour, value: intervalHours, to: startDate)
+    // IMPORTANT: For high-frequency data, we want the interval BEFORE the slot timestamp
+    // This makes a 3pm slot represent 2pm-3pm data instead of 3pm-4pm data
+    // We return startDate - intervalHours, which will be detected and handled in performHealthQuery
+    return Calendar.current.date(byAdding: .hour, value: -intervalHours, to: startDate)
   }
 
   private func applyTimeFilter(results: [rtHealthKit.HealthQueryResult], timeFilter: String)
@@ -1330,8 +1339,8 @@ class voNumber: voState, UITextFieldDelegate {
 
       switch timeFilter {
       case "morning": return localHour >= 6 && localHour < 10
-      case "daytime": return localHour >= 10 && localHour < 20
-      case "evening": return localHour >= 20 && localHour < 23
+      case "daytime": return localHour >= 10 && localHour < 18
+      case "evening": return localHour >= 18 && localHour < 23
       case "sleep_hours": return localHour >= 23 || localHour < 6
       case "wake_hours": return localHour >= 6 && localHour < 23
       default: return true  // "all_day"
