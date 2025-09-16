@@ -464,8 +464,8 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
                 }
             )
         )
-        hostingController.modalTransitionStyle = .flipHorizontal
-        hostingController.modalPresentationStyle = .automatic
+        hostingController.modalPresentationStyle = .fullScreen
+        hostingController.modalTransitionStyle = .coverVertical
         
         // Present the hosting controller
         present(hostingController, animated: true)
@@ -931,7 +931,8 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         DBGLog("notify reminder view!")
         let nrvc = notifyReminderViewController(nibName: "notifyReminderViewController", bundle: nil)
         nrvc.tracker = to
-        nrvc.modalTransitionStyle = .flipHorizontal
+        nrvc.modalPresentationStyle = .fullScreen
+        nrvc.modalTransitionStyle = .coverVertical
         deregisterForKeyboard()
         present(nrvc, animated: true) {
             nrvc.dismissalHandler = { [weak self] in

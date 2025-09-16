@@ -1107,8 +1107,8 @@ class voNumber: voState, UITextFieldDelegate {
         }
       )
     )
-    hostingController.modalTransitionStyle = .flipHorizontal
-    hostingController.modalPresentationStyle = .automatic
+    hostingController.modalPresentationStyle = .fullScreen
+    hostingController.modalTransitionStyle = .coverVertical
 
     // Present the hosting controller
     ctvovcp?.present(hostingController, animated: true)

@@ -371,8 +371,8 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
             voOptDictStash = tempValObj?.optDict // copyItems: true
         }
         //[tempValObj retain];
-        ctvovc.modalTransitionStyle = .flipHorizontal
-        //[self presentModalViewController:ctvovc animated:YES];
+        ctvovc.modalPresentationStyle = .fullScreen
+        ctvovc.modalTransitionStyle = .coverVertical
         present(ctvovc, animated: true)
     }
 

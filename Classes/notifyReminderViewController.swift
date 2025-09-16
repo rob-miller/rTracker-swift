@@ -948,7 +948,8 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         let nrvc2 = notifyReminderVC2(nibName: "notifyReminderVC2", bundle: nil)
         //nrvc.view.hidden = NO;
         nrvc2.parentNRVC = self
-        nrvc2.modalTransitionStyle = .flipHorizontal
+        nrvc2.modalPresentationStyle = .fullScreen
+        nrvc2.modalTransitionStyle = .coverVertical
         //if ( SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"6.0") ) {
         present(nrvc2, animated: true)
         //} else {

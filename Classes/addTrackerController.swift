@@ -240,41 +240,14 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     }
 
-    /*
-    - (UIBarButtonItem *) itemCopyBtn {
-        if (nil == _itemCopyBtn) {
-
-            UIButton *cBtn = [UIButton buttonWithType:UIButtonTypeRoundedRect];
-            NSString *title = @"Copy";
-            cBtn.frame = CGRectMake(0, 0,
-                                    ceilf( [title sizeWithAttributes:@{NSFontAttributeName:cBtn.titleLabel.font}].width ) +3,
-                                    ceilf( [title sizeWithAttributes:@{NSFontAttributeName:cBtn.titleLabel.font}].height) +2);
-
-            [cBtn setTitle:@"Copy" forState:UIControlStateNormal];
-            [cBtn addTarget:self action:@selector(btnCopy) forControlEvents:UIControlEventTouchUpInside];
-            _itemCopyBtn = [[UIBarButtonItem alloc] initWithCustomView:cBtn];
-        }
-
-        return _itemCopyBtn;
-    }
-    */
-
-    /*
-     frame.size.width = [label sizeWithFont:button.titleLabel.font].width + 4*SPACE;
-    if (frame.origin.x == -1.0f) {
-        frame.origin.x = self.view.frame.size.width - (frame.size.width + MARGIN); // right justify
-    }
-    button.frame = frame;
-    */
 
     @IBAction func btnSetup(_ sender: Any) {
         let ctvovc = configTVObjVC()
         ctvovc.to = tempTrackerObj
         ctvovc.vo = nil
-        ctvovc.modalTransitionStyle = .flipHorizontal
-        //io6 [self presentModalViewController:ctvovc animated:YES];
+        ctvovc.modalPresentationStyle = .fullScreen
+        ctvovc.modalTransitionStyle = .coverVertical
         present(ctvovc, animated: true)
-        // rtm 05 feb 2012 
     }
 
     func configureToolbarItems() {
