@@ -359,17 +359,24 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
         
         modeSegment.accessibilityIdentifier = "configTlistMode"
         
-        modeSegment.subviews[2].accessibilityIdentifier = "tlistModify"
-        modeSegment.subviews[2].accessibilityLabel = "Modify"
-        modeSegment.subviews[2].accessibilityHint = "select tracker to modify"
+        // Set accessibility properties for each segment by accessing the individual segments
+        if let editSegment = modeSegment.subviews.indices.contains(SegmentEdit) ? modeSegment.subviews[SegmentEdit] : nil {
+            editSegment.accessibilityIdentifier = "tlistModify"
+            editSegment.accessibilityLabel = "Modify"
+            editSegment.accessibilityHint = "select tracker to modify"
+        }
 
-        modeSegment.subviews[0].accessibilityIdentifier = "tlistCopy"
-        modeSegment.subviews[0].accessibilityLabel = "Copy"
-        modeSegment.subviews[0].accessibilityHint = "selected tracker will be duplicated at bottom of list"
+        if let copySegment = modeSegment.subviews.indices.contains(SegmentCopy) ? modeSegment.subviews[SegmentCopy] : nil {
+            copySegment.accessibilityIdentifier = "tlistCopy"
+            copySegment.accessibilityLabel = "Copy"
+            copySegment.accessibilityHint = "selected tracker will be duplicated at bottom of list"
+        }
 
-        modeSegment.subviews[1].accessibilityIdentifier = "tlistMoveDel"
-        modeSegment.subviews[1].accessibilityLabel = "Move or Delete"
-        modeSegment.subviews[1].accessibilityHint = "re-order or delete trackers"
+        if let moveDeleteSegment = modeSegment.subviews.indices.contains(SegmentMoveDelete) ? modeSegment.subviews[SegmentMoveDelete] : nil {
+            moveDeleteSegment.accessibilityIdentifier = "tlistMoveDel"
+            moveDeleteSegment.accessibilityLabel = "Move or Delete"
+            moveDeleteSegment.accessibilityHint = "re-order or delete trackers"
+        }
 
         super.viewDidLoad()
     }

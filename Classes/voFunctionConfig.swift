@@ -722,9 +722,16 @@ extension voFunction {
             //segmentedControl.segmentedControlStyle = UISegmentedControlStyleBar;
             segmentedControl.selectedSegmentIndex = fnSegNdx //= 0;
             
-            segmentedControl.subviews[0].accessibilityIdentifier = "fnRange"
-            segmentedControl.subviews[1].accessibilityIdentifier = "fnDefinition"
-            segmentedControl.subviews[2].accessibilityIdentifier = "fnOverview"
+            // Set accessibility properties for each segment with safe array access
+            if segmentedControl.subviews.indices.contains(0) {
+                segmentedControl.subviews[0].accessibilityIdentifier = "fnRange"
+            }
+            if segmentedControl.subviews.indices.contains(1) {
+                segmentedControl.subviews[1].accessibilityIdentifier = "fnDefinition"
+            }
+            if segmentedControl.subviews.indices.contains(2) {
+                segmentedControl.subviews[2].accessibilityIdentifier = "fnOverview"
+            }
 
             segmentedControl.accessibilityIdentifier = "fnConfigSeg"
             

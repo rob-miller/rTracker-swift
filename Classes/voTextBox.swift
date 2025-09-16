@@ -91,43 +91,60 @@ class CustomAccessoryView: UIView {
         ], for: .normal)
         
         segControl.accessibilityIdentifier = "tbox-seg-control"
-        segControl.subviews[0].accessibilityLabel = "Contacts"
-        segControl.subviews[0].accessibilityHint = "select to choose from Contacts"
-        segControl.subviews[0].accessibilityIdentifier = "tbox-seg-contacts"
-        
-        segControl.subviews[1].accessibilityLabel = "History"
-        segControl.subviews[1].accessibilityHint = "select to choose lines from previous entries"
-        segControl.subviews[1].accessibilityIdentifier = "tbox-seg-history"
-        
-        segControl.subviews[2].accessibilityLabel = "Keyboard"
-        segControl.subviews[2].accessibilityHint = "select to use keyboard"
-        segControl.subviews[2].accessibilityIdentifier = "tbox-seg-keyboard"
+        // Set accessibility properties for each segment with safe array access
+        if segControl.subviews.indices.contains(0) {
+            segControl.subviews[0].accessibilityLabel = "Contacts"
+            segControl.subviews[0].accessibilityHint = "select to choose from Contacts"
+            segControl.subviews[0].accessibilityIdentifier = "tbox-seg-contacts"
+        }
+
+        if segControl.subviews.indices.contains(1) {
+            segControl.subviews[1].accessibilityLabel = "History"
+            segControl.subviews[1].accessibilityHint = "select to choose lines from previous entries"
+            segControl.subviews[1].accessibilityIdentifier = "tbox-seg-history"
+        }
+
+        if segControl.subviews.indices.contains(2) {
+            segControl.subviews[2].accessibilityLabel = "Keyboard"
+            segControl.subviews[2].accessibilityHint = "select to use keyboard"
+            segControl.subviews[2].accessibilityIdentifier = "tbox-seg-keyboard"
+        }
         
         searchSeg.setTitleTextAttributes([
             .font: UIFont.systemFont(ofSize: fsize)
         ], for: .normal)
         
         searchSeg.accessibilityIdentifier = "tbox-seg-search"
-        searchSeg.subviews[1].accessibilityLabel = "Use"
-        searchSeg.subviews[1].accessibilityHint = "select to use text for this entry"
-        searchSeg.subviews[1].accessibilityIdentifier = "tbox-mode-use"
+        // Set accessibility properties for search segment with safe array access
+        if searchSeg.subviews.indices.contains(1) {
+            searchSeg.subviews[1].accessibilityLabel = "Use"
+            searchSeg.subviews[1].accessibilityHint = "select to use text for this entry"
+            searchSeg.subviews[1].accessibilityIdentifier = "tbox-mode-use"
+        }
 
-        searchSeg.subviews[0].accessibilityLabel = "Search"
-        searchSeg.subviews[0].accessibilityHint = "select to use text for searching previous entries"
-        searchSeg.subviews[0].accessibilityIdentifier = "tbox-mode-srch"
+        if searchSeg.subviews.indices.contains(0) {
+            searchSeg.subviews[0].accessibilityLabel = "Search"
+            searchSeg.subviews[0].accessibilityHint = "select to use text for searching previous entries"
+            searchSeg.subviews[0].accessibilityIdentifier = "tbox-mode-srch"
+        }
         
         orAndSeg.setTitleTextAttributes([
             .font: UIFont.systemFont(ofSize: fsize)
         ], for: .normal)
         
         orAndSeg.accessibilityIdentifier = "tbox-seg-search-mode"
-        orAndSeg.subviews[0].accessibilityLabel = "And"
-        orAndSeg.subviews[0].accessibilityHint = "search for entries with all lines"
-        orAndSeg.subviews[0].accessibilityIdentifier = "tbox-srch-and"
+        // Set accessibility properties for or/and segment with safe array access
+        if orAndSeg.subviews.indices.contains(0) {
+            orAndSeg.subviews[0].accessibilityLabel = "And"
+            orAndSeg.subviews[0].accessibilityHint = "search for entries with all lines"
+            orAndSeg.subviews[0].accessibilityIdentifier = "tbox-srch-and"
+        }
 
-        orAndSeg.subviews[1].accessibilityLabel = "Or"
-        orAndSeg.subviews[1].accessibilityHint = "search for entries with any of lines"
-        orAndSeg.subviews[1].accessibilityIdentifier = "tbox-srch-or"
+        if orAndSeg.subviews.indices.contains(1) {
+            orAndSeg.subviews[1].accessibilityLabel = "Or"
+            orAndSeg.subviews[1].accessibilityHint = "search for entries with any of lines"
+            orAndSeg.subviews[1].accessibilityIdentifier = "tbox-srch-or"
+        }
 
     }
     
