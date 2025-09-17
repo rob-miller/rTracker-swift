@@ -247,8 +247,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             action: #selector(addTrackerController.btnCancel))
         navigationItem.leftBarButtonItem = backButton
         
-        // toolbar setup
-        updateToolBar()
+        // toolbar setup - defer to viewWillAppear to avoid constraint conflicts
+        // updateToolBar() - moved to viewWillAppear
         
         // title setup
         title = tracker!.trackerName
@@ -716,7 +716,18 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             navigationController?.setToolbarHidden(false, animated: false)
             
             navigationController?.toolbar.accessibilityIdentifier = "useT_toolbar"
-            updateToolBar()
+
+            #if DEBUGLOG
+            // Add layout debugging to catch constraint conflicts
+            if let toolbar = navigationController?.toolbar {
+                DBGLog("Updating toolbar with frame: \(toolbar.frame)")
+            }
+            #endif
+
+            // Defer toolbar update to next run loop to ensure proper view hierarchy
+            DispatchQueue.main.async { [weak self] in
+                self?.updateToolBar()
+            }
             
         }
         
@@ -1305,8 +1316,22 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         })
     }
     
+    // MARK: - Constraint Helper Method (No longer needed - kept for reference)
+    // The constraint conflicts were resolved by using emoji buttons instead of system buttons on iOS 18
+
     func updateToolBar() {
-        
+
+        #if DEBUGLOG
+        // Defensive check to prevent layout conflicts during view transitions
+        if view.window == nil {
+            DBGLog("Deferring toolbar update until view is in window hierarchy")
+            DispatchQueue.main.async { [weak self] in
+                self?.updateToolBar()
+            }
+            return
+        }
+        #endif
+
         var tbi: [AnyHashable] = []
         
         let prevD = tracker!.prevDate()
@@ -1357,7 +1382,19 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             tbi.append(fixed1SpaceButtonItem)
         }
         
-        setToolbarItems(tbi as? [UIBarButtonItem], animated: true)
+        // Ensure all toolbar items are valid UIBarButtonItems before setting
+        let validToolbarItems = tbi.compactMap { $0 as? UIBarButtonItem }
+
+        #if DEBUGLOG
+        if validToolbarItems.count != tbi.count {
+            DBGWarn("Some toolbar items were not UIBarButtonItem instances: expected \(tbi.count), got \(validToolbarItems.count)")
+        }
+        #endif
+
+        // Set toolbar items - simplified since constraint conflicts are resolved
+        if !validToolbarItems.isEmpty {
+            setToolbarItems(validToolbarItems, animated: false)
+        }
     }
     
     func dispatchHandleModifiedTracker(_ choice: Int) {
@@ -1856,10 +1893,20 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     var _delBtn: UIBarButtonItem?
     var delBtn: UIBarButtonItem {
         if _delBtn == nil {
-            _delBtn = UIBarButtonItem(
-                barButtonSystemItem: .trash,
-                target: self,
-                action: #selector(btnDel))
+            if #available(iOS 18.0, *) {
+                // iOS 18: Use text-based button to avoid system button constraint issues
+                _delBtn = UIBarButtonItem(
+                    title: "🗑️",
+                    style: .plain,
+                    target: self,
+                    action: #selector(btnDel))
+            } else {
+                // Pre-iOS 18: Use system button as before
+                _delBtn = UIBarButtonItem(
+                    barButtonSystemItem: .trash,
+                    target: self,
+                    action: #selector(btnDel))
+            }
             _delBtn!.tintColor = .red
             //[_delBtn setTitleTextAttributes:@{
             //                                 NSFontAttributeName: [UIFont systemFontOfSize:28.0]
@@ -1873,15 +1920,25 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     var _skip2EndBtn: UIBarButtonItem?
     var skip2EndBtn: UIBarButtonItem {
         if _skip2EndBtn == nil {
-            _skip2EndBtn = UIBarButtonItem(
-                barButtonSystemItem: .fastForward,
-                target: self,
-                action: #selector(btnSkip2End))
-            
+            if #available(iOS 18.0, *) {
+                // iOS 18: Use text-based button to avoid system button constraint issues
+                _skip2EndBtn = UIBarButtonItem(
+                    title: "⏩",
+                    style: .plain,
+                    target: self,
+                    action: #selector(btnSkip2End))
+            } else {
+                // Pre-iOS 18: Use system button as before
+                _skip2EndBtn = UIBarButtonItem(
+                    barButtonSystemItem: .fastForward,
+                    target: self,
+                    action: #selector(btnSkip2End))
+            }
+
             _skip2EndBtn!.accessibilityLabel = "Skip"
             _skip2EndBtn!.accessibilityHint = "tap to skip to new entry"
             _skip2EndBtn!.accessibilityIdentifier = "trkrSkip"
-            
+
         }
         
         return _skip2EndBtn!
@@ -1921,16 +1978,27 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     var _createChartBtn: UIBarButtonItem?
     var createChartBtn: UIBarButtonItem {
         if _createChartBtn == nil {
-            // Use chart.bar.xaxis as the system image which represents a bar chart
-            _createChartBtn = UIBarButtonItem(
-                image: UIImage(systemName: "chart.bar.xaxis"),
-                style: .plain,
-                target: self,
-                action: #selector(btnCreateChart))
-            
+            if #available(iOS 18.0, *) {
+                // iOS 18: Use text-based button to avoid SF Symbol constraint issues
+                _createChartBtn = UIBarButtonItem(
+                    title: "📊",
+                    style: .plain,
+                    target: self,
+                    action: #selector(btnCreateChart))
+            } else {
+                // Pre-iOS 18: Use SF Symbol as before
+                _createChartBtn = UIBarButtonItem(
+                    image: UIImage(systemName: "chart.bar.xaxis"),
+                    style: .plain,
+                    target: self,
+                    action: #selector(btnCreateChart))
+            }
+
             _createChartBtn!.accessibilityLabel = "Chart"
             _createChartBtn!.accessibilityHint = "tap to view data charts"
             _createChartBtn!.accessibilityIdentifier = "trkrChart"
+
+            // Constraint configuration no longer needed since we use emoji buttons on iOS 18
         }
         return _createChartBtn!
     }
