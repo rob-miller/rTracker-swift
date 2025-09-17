@@ -86,26 +86,39 @@ class voNumber: voState, UITextFieldDelegate {
     return textField
   }
 
-  private func createInputAccessoryView() -> UIToolbar {
-    let appWidth = Float(UIScreen.main.bounds.width)
-    let accessoryView = UIToolbar(
-      frame: CGRect(x: 0, y: 0, width: CGFloat(appWidth), height: CGFloat(0.1 * appWidth)))
-    let space = UIBarButtonItem(
-      barButtonSystemItem: .flexibleSpace,
-      target: nil,
-      action: nil)
-    let done = UIBarButtonItem(
-      barButtonSystemItem: .done,
-      target: self,
-      action: #selector(selectDoneButton))
-    let minus = UIBarButtonItem(
-      title: "-",
-      style: .plain,
-      target: self,
-      action: #selector(selectMinusButton))
+  private func createInputAccessoryView() -> UIView {
+    // Create simple view container to avoid UIToolbar constraint conflicts
+    let containerView = UIView(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 44))
+    containerView.backgroundColor = UIColor.systemBackground
+    containerView.translatesAutoresizingMaskIntoConstraints = true
+    containerView.autoresizingMask = [.flexibleWidth]
 
-    accessoryView.items = [space, done, space, minus, space]
-    return accessoryView
+    // Add top border line to match toolbar appearance
+    let borderLine = UIView(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 0.5))
+    borderLine.backgroundColor = UIColor.separator
+    borderLine.autoresizingMask = [.flexibleWidth]
+    containerView.addSubview(borderLine)
+
+    // Create Done button
+    let doneButton = UIButton(type: .system)
+    doneButton.setTitle("Done", for: .normal)
+    doneButton.titleLabel?.font = UIFont.systemFont(ofSize: 17)
+    doneButton.addTarget(self, action: #selector(selectDoneButton), for: .touchUpInside)
+    doneButton.frame = CGRect(x: UIScreen.main.bounds.width - 70, y: 7, width: 60, height: 30)
+    doneButton.autoresizingMask = [.flexibleLeftMargin]
+    containerView.addSubview(doneButton)
+
+    // Create Minus button
+    let minusButton = UIButton(type: .system)
+    minusButton.setTitle("−", for: .normal)  // Using proper minus sign (U+2212)
+    minusButton.titleLabel?.font = UIFont.boldSystemFont(ofSize: 24)  // Larger and bold
+    minusButton.setTitleColor(.label, for: .normal)  // Ensure visibility
+    minusButton.addTarget(self, action: #selector(selectMinusButton), for: .touchUpInside)
+    minusButton.frame = CGRect(x: UIScreen.main.bounds.width - 140, y: 7, width: 60, height: 30)
+    minusButton.autoresizingMask = [.flexibleLeftMargin]
+    containerView.addSubview(minusButton)
+
+    return containerView
   }
 
   var startStr: String?
