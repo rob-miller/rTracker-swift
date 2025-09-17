@@ -313,7 +313,7 @@ class rTracker_resource: NSObject {
 
     }
     
-    class func addTimedLabel(text: String, tag: Int, sv: UIView, ti: TimeInterval? = nil) {
+    class func addTimedLabel(text: String, tag: Int, sv: UIView, ti: TimeInterval? = nil, viewController: UIViewController? = nil) {
         // Sizing ------------------------------------------------------
         let font                = UIFont.preferredFont(forTextStyle: .body)
         let hPad: CGFloat       = 16        // horizontal padding
@@ -337,7 +337,19 @@ class rTracker_resource: NSObject {
         // Label set-up -----------------------------------------------
         let label = UILabel(frame: CGRect(origin: .zero, size: labelSize))
 
-        label.center = CGPoint(x: sv.center.x, y: 100)
+        // Calculate dynamic Y position based on navigation bar height
+        let yPosition: CGFloat = {
+            if let vc = viewController,
+               let navController = vc.navigationController {
+                let navFrame = navController.navigationBar.frame
+                let navBottom = navFrame.origin.y + navFrame.height
+                return navBottom + 20  // 20 points margin below navigation bar
+            } else {
+                return 100  // Fallback to original hardcoded position
+            }
+        }()
+
+        label.center = CGPoint(x: sv.center.x, y: yPosition)
         label.textAlignment = .center
         label.text = text
         label.backgroundColor = UIColor.systemGray.withAlphaComponent(0.7)

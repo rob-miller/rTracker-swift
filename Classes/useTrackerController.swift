@@ -344,7 +344,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 "Pull to refresh blocked - refresh already in progress (isRefreshInProgress: \(isRefreshInProgress), loadingData: \(loadingData), loadingDbData: \(tracker?.loadingDbData ?? false))"
             )
             rTracker_resource.addTimedLabel(
-                text: "Refresh already in progress", tag: self.refreshLabelId, sv: self.view, ti: 2.0)
+                text: "Refresh already in progress", tag: self.refreshLabelId, sv: self.view, ti: 2.0, viewController: self)
             return
         }
         
@@ -366,7 +366,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 userInfo: nil, repeats: false)
             
             rTracker_resource.addTimedLabel(
-                text: "Pull again to refresh all", tag: self.refreshLabelId2, sv: self.view, ti: 2.0)
+                text: "Pull again to refresh all", tag: self.refreshLabelId2, sv: self.view, ti: 2.0, viewController: self)
             
             // Cancel any existing partial refresh
             partialRefreshWorkItem?.cancel()
@@ -404,7 +404,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             // Show visual indicator for full refresh
             DispatchQueue.main.async {
                 rTracker_resource.addTimedLabel(
-                    text: "Full refresh in progress...", tag: self.refreshLabelId, sv: self.view, ti: 3.0)
+                    text: "Full refresh in progress...", tag: self.refreshLabelId, sv: self.view, ti: 3.0, viewController: self)
                 // Start the full refresh
                 
                 self.handleRefresh()
@@ -503,7 +503,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 self.needSave = false  // full refresh means wipe what you were doing, sorry.
                 self.loadTrackerDate(self.frDate)
                 rTracker_resource.addTimedLabel(
-                    text: "Refresh completed successfully", tag: self.refreshLabelId, sv: self.view, ti: 3.0)
+                    text: "Refresh completed successfully", tag: self.refreshLabelId, sv: self.view, ti: 3.0, viewController: self)
             } else {
                 DBGLog(
                     "Partial refresh for \(Date(timeIntervalSince1970: TimeInterval(forDate!))) completed. frDate= \(Date(timeIntervalSince1970: TimeInterval(self.frDate)))"
