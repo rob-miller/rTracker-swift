@@ -43,6 +43,14 @@ class CustomAccessoryView: UIView {
     class func instanceFromNib(_ invotb: voTextBox) -> CustomAccessoryView {
         let cav =  UINib(nibName: "voTBacc2", bundle: nil).instantiate(withOwner: nil, options: nil)[0] as! CustomAccessoryView
         cav.votb = invotb
+
+        // Lower constraint priorities to avoid conflicts with picker layout
+        for constraint in cav.constraints {
+            if constraint.priority == UILayoutPriority.required {
+                constraint.priority = UILayoutPriority(999)
+            }
+        }
+
         return cav
     }
     
@@ -200,6 +208,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
     
     var textView: UITextView?
     var cav: CustomAccessoryView!
+    var shouldBecomeFirstResponder = false
     
     private var _pv: UIPickerView?
     var pv: UIPickerView? {
@@ -442,6 +451,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         textView?.text = vo.value
         textView?.returnKeyType = .default
         textView?.keyboardType = .default // use the default type input method (entire keyboard)
+        textView?.keyboardAppearance = .default // follow system appearance
         textView?.isScrollEnabled = true
         textView?.isUserInteractionEnabled = self.vo.optDict["otsrc"] ?? "0" != "1"
 
@@ -463,9 +473,8 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
 
         keyboardIsShown = false
 
-        if vo.value == "" {
-            textView?.becomeFirstResponder()
-        }
+        // Store whether we should become first responder, but wait for viewDidAppear
+        shouldBecomeFirstResponder = (vo.value == "")
         
         devc?.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "<", style: .plain, target: self, action: #selector(backButtonTapped))
 
@@ -504,8 +513,11 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
                                                      selector:@selector(keyboardWillHide:)
                                                          name:UIKeyboardWillHideNotification
                                                        //object:self.textView];    //.devc.view.window];	
-                                                       object:self.devc.view.window];	
+                                                       object:self.devc.view.window];
              */
+
+        // Delay keyboard presentation to avoid appearance flicker - defer to viewDidAppear
+        // We'll handle this in the view controller's viewDidAppear for better timing
     }
 
     override func dataEditVWDisappear(_ vc: UIViewController?) {
@@ -609,8 +621,8 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         //DBGLog(@"segment changed: %ld",(long)ndx);
 
         if textView?.inputView != nil {
-            // if was showing pickerview
-            pv?.removeFromSuperview() // remove leftover constraints if showed before
+            // if was showing pickerview, clear it properly
+            textView?.inputView = nil
             _pv = nil // force regenerate
         }
 
