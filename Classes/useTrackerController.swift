@@ -2166,8 +2166,9 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             }
             alert.addAction(action)
         }
-        
-        
+
+        alert.addAction(UIAlertAction(title: MenuOption.cancel.rawValue, style: .cancel, handler: nil))
+
         present(alert, animated: true)
     }
     
