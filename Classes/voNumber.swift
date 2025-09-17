@@ -982,14 +982,16 @@ class voNumber: voState, UITextFieldDelegate {
             """
           to.toExecSql(sql: sql)
           
-          // Insert noData entries for all trkrData dates that still don't have voHKstatus entries for this vid
+          // Insert noData entries only for dates that were processed in this HealthKit session
+          // This prevents historical manual data from being marked in voHKstatus
           let noDataSql = """
             INSERT INTO voHKstatus (id, date, stat)
             SELECT \(Int(vo.vid)), trkrData.date, \(hkStatus.noData.rawValue)
             FROM trkrData
-            WHERE NOT EXISTS (
-              SELECT 1 FROM voHKstatus 
-              WHERE voHKstatus.date = trkrData.date 
+            WHERE trkrData.date IN (\(datesToProcess.map { Int($0) }.map(String.init).joined(separator: ",")))
+            AND NOT EXISTS (
+              SELECT 1 FROM voHKstatus
+              WHERE voHKstatus.date = trkrData.date
               AND voHKstatus.id = \(Int(vo.vid))
             );
             """
@@ -1026,8 +1028,16 @@ class voNumber: voState, UITextFieldDelegate {
     if let specificDate = date {
       //DBGLog(
       //  "clearing date \(specificDate) \(Date(timeIntervalSince1970: TimeInterval(specificDate)))")
-      to.toExecSql(sql: "delete from voData where id = \(vo.vid) and date = \(specificDate)")
-      to.toExecSql(sql: "delete from voHKstatus where id = \(vo.vid) and date = \(specificDate)")
+
+      // Check if there's actually a voHKstatus entry for this date and id before modifying database
+      let checkSql = "select count(*) from voHKstatus where id = \(vo.vid) and date = \(specificDate)"
+      if to.toQry2Int(sql: checkSql) > 0 {
+        to.toExecSql(sql: "delete from voData where id = \(vo.vid) and date = \(specificDate)")
+        to.toExecSql(sql: "delete from voHKstatus where id = \(vo.vid) and date = \(specificDate)")
+      } else {
+        // No voHKstatus entry found, skip database operations
+        // return  // clear the cache anyway
+      }
 
       // Clear cache entries for this specific date
       if let ahSource = vo.optDict["ahSource"] {
