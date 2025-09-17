@@ -555,7 +555,7 @@ let healthDataQueries: [HealthDataQuery] = [
         needUnit: false,
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
-        aggregationType: nil,
+        aggregationType: .highFrequency,
         aggregationTime: nil,
         info: nil
     ),
@@ -567,7 +567,7 @@ let healthDataQueries: [HealthDataQuery] = [
         needUnit: false,
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
-        aggregationType: nil,
+        aggregationType: .highFrequency,
         aggregationTime: nil,
         info: nil
     ),
@@ -591,7 +591,7 @@ let healthDataQueries: [HealthDataQuery] = [
         needUnit: false,
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
-        aggregationType: nil,
+        aggregationType: .highFrequency,
         aggregationTime: nil,
         info: nil
     ),
@@ -603,7 +603,7 @@ let healthDataQueries: [HealthDataQuery] = [
         needUnit: false,
         aggregationStyle: .discreteArithmetic,
         customProcessor: nil,
-        aggregationType: nil,
+        aggregationType: .highFrequency,
         aggregationTime: nil,
         info: nil
     ),
