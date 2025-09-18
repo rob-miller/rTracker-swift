@@ -217,6 +217,9 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
             style: .plain,
             target: self,
             action: #selector(btnDone(_:)))
+        if #available(iOS 26.0, *) {
+            doneBtn.hidesSharedBackground = true  // Remove white container background
+        }
 
         doneBtn.accessibilityLabel = "Done"
         doneBtn.accessibilityIdentifier = "configtvo_done"
@@ -242,6 +245,9 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
                 fnHelpButtonItem = UIBarButtonItem(title: "Help", style: .plain, target: self, action: #selector(btnChoiceHelp))
             } else {
                 fnHelpButtonItem = UIBarButtonItem(title: "Help", style: .plain, target: self, action: #selector(btnInfoHelp))
+            }
+            if #available(iOS 26.0, *) {
+                fnHelpButtonItem?.hidesSharedBackground = true  // Remove white container background
             }
 
             var items: [UIBarButtonItem] = [doneBtn, flexibleSpaceButtonItem]

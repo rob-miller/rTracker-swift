@@ -687,6 +687,9 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                 style: .plain,
                 target: self,
                 action: #selector(btnHelp))
+            if #available(iOS 26.0, *) {
+                _helpBtn!.hidesSharedBackground = true  // Remove white container background
+            }
             
             _helpBtn!.accessibilityLabel = "Help"
             _helpBtn!.accessibilityHint = "tap visit rTracker help web pages"
@@ -702,6 +705,9 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                 barButtonSystemItem: .add,
                 target: self,
                 action: #selector(btnAddTracker))
+            if #available(iOS 26.0, *) {
+                _addBtn!.hidesSharedBackground = true  // Remove white container background
+            }
 
             _addBtn!.style = UIBarButtonItem.Style.done
             
@@ -719,6 +725,9 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                 barButtonSystemItem: .edit,
                 target: self,
                 action: #selector(btnEdit))
+            if #available(iOS 26.0, *) {
+                _editBtn!.hidesSharedBackground = true  // Remove white container background
+            }
 
             _editBtn!.style = UIBarButtonItem.Style.plain
             
@@ -749,7 +758,10 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                 title: "out2in",
                 style: .plain,
                 target: self,
-                action: nil )//#selector(btnOut2in))  // rtm change back!!!!
+                action: nil) //#selector(btnOut2in))  // rtm change back!!!!
+            if #available(iOS 26.0, *) {
+                _out2inBtn!.hidesSharedBackground = true  // Remove white container background
+            }
             
             _out2inBtn!.accessibilityLabel = "out2in"
             //_out2inBtn!.accessibilityIdentifier = "out2in"
@@ -766,6 +778,9 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                 style: .plain,
                 target: self,
                 action: #selector(btnXpriv))
+            if #available(iOS 26.0, *) {
+                _xprivBtn!.hidesSharedBackground = true  // Remove white container background
+            }
             
             _xprivBtn!.accessibilityLabel = "xpriv"
             //_xprivBtn!.accessibilityIdentifier = "xpriv"
@@ -781,6 +796,9 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                 style: .plain,
                 target: self,
                 action: #selector(btnTst))
+            if #available(iOS 26.0, *) {
+                _tstBtn!.hidesSharedBackground = true  // Remove white container background
+            }
             
             _tstBtn!.accessibilityLabel = "tst"
             //_tstBtn!.accessibilityIdentifier = "tst"

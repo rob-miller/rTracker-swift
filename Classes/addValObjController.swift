@@ -97,6 +97,9 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
             barButtonSystemItem: .cancel,
             target: self,
             action: #selector(addTrackerController.btnCancel))
+        if #available(iOS 26.0, *) {
+            cancelBtn.hidesSharedBackground = true  // Remove white container background
+        }
         cancelBtn.accessibilityIdentifier = "avoCancel"
         navigationItem.leftBarButtonItem = cancelBtn
 
@@ -104,6 +107,9 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
             barButtonSystemItem: .save,
             target: self,
             action: #selector(addTrackerController.btnSave))
+        if #available(iOS 26.0, *) {
+            saveBtn.hidesSharedBackground = true  // Remove white container background
+        }
         saveBtn.accessibilityIdentifier = "avoSave"
         navigationItem.rightBarButtonItem = saveBtn
 

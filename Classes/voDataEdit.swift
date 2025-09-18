@@ -254,6 +254,9 @@ class voDataEdit: UIViewController, UITextViewDelegate {
             barButtonSystemItem: .save,
             target: self,
             action: #selector(saveAction(_:)))
+        if #available(iOS 26.0, *) {
+            saveItem.hidesSharedBackground = true  // Remove white container background
+        }
         navigationItem.rightBarButtonItem = saveItem
     }
 

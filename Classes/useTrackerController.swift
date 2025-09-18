@@ -241,21 +241,13 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         
         // navigationbar setup
         let backButton: UIBarButtonItem
+        backButton = UIBarButtonItem(
+            title: String("< \(rvcTitle!)") /*@"< rTracker"  // rTracker ... tracks ? */,
+            style: .plain,
+            target: self,
+            action: #selector(addTrackerController.btnCancel))
         if #available(iOS 26.0, *) {
-            // iOS 26: Use standard button with hidesSharedBackground for navigation bar
-            backButton = UIBarButtonItem(
-                title: String("< \(rvcTitle!)") /*@"< rTracker"  // rTracker ... tracks ? */,
-                style: .plain,
-                target: self,
-                action: #selector(addTrackerController.btnCancel))
             backButton.hidesSharedBackground = true  // Remove white container background
-        } else {
-            // Pre-iOS 26: Use text button as before
-            backButton = UIBarButtonItem(
-                title: String("< \(rvcTitle!)") /*@"< rTracker"  // rTracker ... tracks ? */,
-                style: .plain,
-                target: self,
-                action: #selector(addTrackerController.btnCancel))
         }
         navigationItem.leftBarButtonItem = backButton
         
@@ -1245,19 +1237,12 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     var _saveBtn: UIBarButtonItem?
     var saveBtn: UIBarButtonItem {
         if _saveBtn == nil {
+            _saveBtn = UIBarButtonItem(
+                barButtonSystemItem: .save,
+                target: self,
+                action: #selector(addTrackerController.btnSave))
             if #available(iOS 26.0, *) {
-                // iOS 26: Use standard button with hidesSharedBackground for navigation bar
-                _saveBtn = UIBarButtonItem(
-                    barButtonSystemItem: .save,
-                    target: self,
-                    action: #selector(addTrackerController.btnSave))
                 _saveBtn!.hidesSharedBackground = true  // Remove white container background
-            } else {
-                // Pre-iOS 26: Use system button as before
-                _saveBtn = UIBarButtonItem(
-                    barButtonSystemItem: .save,
-                    target: self,
-                    action: #selector(addTrackerController.btnSave))
             }
 
             _saveBtn!.accessibilityLabel = "Save"
@@ -1271,21 +1256,13 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     var menuBtn: UIBarButtonItem {
         if _menuBtn == nil {
             if rejectable {
+                _menuBtn = UIBarButtonItem(
+                    title: "Accept",
+                    style: .plain,
+                    target: self,
+                    action: #selector(btnAccept))
                 if #available(iOS 26.0, *) {
-                    // iOS 26: Use standard button with hidesSharedBackground for navigation bar
-                    _menuBtn = UIBarButtonItem(
-                        title: "Accept",
-                        style: .plain,
-                        target: self,
-                        action: #selector(btnAccept))
                     _menuBtn!.hidesSharedBackground = true  // Remove white container background
-                } else {
-                    // Pre-iOS 26: Use text button as before
-                    _menuBtn = UIBarButtonItem(
-                        title: "Accept",
-                        style: .plain,
-                        target: self,
-                        action: #selector(btnAccept))
                 }
                 _menuBtn!.tintColor = .green
 
@@ -1293,20 +1270,13 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 _menuBtn!.accessibilityHint = "tap to accept importing this tracker"
                 _menuBtn!.accessibilityIdentifier = "trkrAccept"
             } else {
+                _menuBtn = UIBarButtonItem(
+                    image: UIImage(systemName: "square.and.arrow.up"),
+                    style: .plain,
+                    target: self,
+                    action: #selector(btnMenu))
                 if #available(iOS 26.0, *) {
-                    // iOS 26: Use standard button with hidesSharedBackground for navigation bar
-                    _menuBtn = UIBarButtonItem(
-                        image: UIImage(systemName: "square.and.arrow.up"),
-                        style: .plain,
-                        target: self,
-                        action: #selector(btnMenu))
                     _menuBtn!.hidesSharedBackground = true  // Remove white container background
-                } else {
-                    // Pre-iOS 26: Use system button as before
-                    _menuBtn = UIBarButtonItem(
-                        barButtonSystemItem: .action,
-                        target: self,
-                        action: #selector(btnMenu))
                 }
 
                 _menuBtn!.accessibilityLabel = "Share Menu"

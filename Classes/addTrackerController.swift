@@ -102,6 +102,9 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             barButtonSystemItem: .cancel,
             target: self,
             action: #selector(btnCancel))
+        if #available(iOS 26.0, *) {
+            cancelBtn.hidesSharedBackground = true  // Remove white container background
+        }
         navigationItem.leftBarButtonItem = cancelBtn
         navigationItem.leftBarButtonItem?.accessibilityIdentifier = "addTrkrCancel"
 
@@ -109,6 +112,9 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             barButtonSystemItem: .save,
             target: self,
             action: #selector(btnSave))
+        if #available(iOS 26.0, *) {
+            saveBtn.hidesSharedBackground = true  // Remove white container background
+        }
         navigationItem.rightBarButtonItem = saveBtn
         navigationItem.rightBarButtonItem?.accessibilityIdentifier = "addTrkrSave"
 

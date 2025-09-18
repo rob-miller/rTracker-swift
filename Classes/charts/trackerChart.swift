@@ -195,11 +195,14 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         title = "Charts"
         
         // Add a back button
-        navigationItem.leftBarButtonItem = UIBarButtonItem(
+        let backButton = UIBarButtonItem(
             barButtonSystemItem: .close,
             target: self,
-            action: #selector(dismissView)
-        )
+            action: #selector(dismissView))
+        if #available(iOS 26.0, *) {
+            backButton.hidesSharedBackground = true  // Remove white container background
+        }
+        navigationItem.leftBarButtonItem = backButton
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -397,6 +400,11 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         actionButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .medium)
         actionButton.tintColor = .systemBlue
         actionButton.addTarget(self, action: #selector(actionButtonTapped), for: .touchUpInside)
+
+        // Apply iOS 26 glass configuration
+        if #available(iOS 26.0, *) {
+            actionButton.configuration = UIButton.Configuration.glass()
+        }
         
         // Create zoom icon
         dateRangeZoomIcon = UIImageView(image: UIImage(systemName: "magnifyingglass"))
@@ -822,6 +830,11 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         button.layer.cornerRadius = 8
         button.addTarget(self, action: action, for: .touchUpInside)
         button.heightAnchor.constraint(equalToConstant: 44).isActive = true
+
+        // Apply iOS 26 glass configuration
+        if #available(iOS 26.0, *) {
+            button.configuration = UIButton.Configuration.glass()
+        }
         return button
     }
     
@@ -848,6 +861,12 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         doneButton.setTitle("Done", for: .normal)
         doneButton.titleLabel?.font = UIFont.boldSystemFont(ofSize: 16)
         doneButton.addTarget(self, action: #selector(dismissPicker), for: .touchUpInside)
+
+        // Apply iOS 26 glass configuration
+        if #available(iOS 26.0, *) {
+            doneButton.configuration = UIButton.Configuration.glass()
+        }
+
         pickerContainer.addSubview(doneButton)
         
         let cancelButton = UIButton(type: .system)
@@ -855,6 +874,12 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         cancelButton.setTitle("Cancel", for: .normal)
         cancelButton.titleLabel?.font = UIFont.systemFont(ofSize: 16)
         cancelButton.addTarget(self, action: #selector(cancelPicker), for: .touchUpInside)
+
+        // Apply iOS 26 glass configuration
+        if #available(iOS 26.0, *) {
+            cancelButton.configuration = UIButton.Configuration.glass()
+        }
+
         pickerContainer.addSubview(cancelButton)
         
         NSLayoutConstraint.activate([

@@ -476,7 +476,11 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         // Store whether we should become first responder, but wait for viewDidAppear
         shouldBecomeFirstResponder = (vo.value == "")
         
-        devc?.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "<", style: .plain, target: self, action: #selector(backButtonTapped))
+        let backButton = UIBarButtonItem(title: "<", style: .plain, target: self, action: #selector(backButtonTapped))
+        if #available(iOS 26.0, *) {
+            backButton.hidesSharedBackground = true  // Remove white container background
+        }
+        devc?.navigationItem.leftBarButtonItem = backButton
 
     }
 
@@ -720,6 +724,9 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
             barButtonSystemItem: .save,
             target: self,
             action: #selector(voDataEdit.saveAction(_:)))
+        if #available(iOS 26.0, *) {
+            saveItem.hidesSharedBackground = true  // Remove white container background
+        }
         
         saveItem.accessibilityLabel = "Save"
         saveItem.accessibilityHint = "tap to save text to entry"

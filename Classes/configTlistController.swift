@@ -264,6 +264,9 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
             style: .plain,
             target: self,
             action: #selector(btnExport))
+        if #available(iOS 26.0, *) {
+            exportBtn?.hidesSharedBackground = true  // Remove white container background
+        }
         
         exportBtn!.accessibilityIdentifier = "exportAll"
         exportBtn!.accessibilityLabel = "Export All"
@@ -323,6 +326,9 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
                 barButtonSystemItem: .action,
                 target: self,
                 action: #selector(btnMenu))
+            if #available(iOS 26.0, *) {
+                _menuBtn!.hidesSharedBackground = true  // Remove white container background
+            }
             
             _menuBtn!.accessibilityLabel = "Share Menu"
             _menuBtn!.accessibilityHint = "tap to show sharing options"
