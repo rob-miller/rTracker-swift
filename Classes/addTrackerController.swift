@@ -1,18 +1,3 @@
-//  Converted to Swift 5.7.2 by Swiftify v5.7.25331 - https://swiftify.com/
-///************
-/// addTrackerController.swift
-/// Copyright 2010-2021 Robert T. Miller
-/// Licensed under the Apache License, Version 2.0 (the "License");
-/// you may not use this file except in compliance with the License.
-/// You may obtain a copy of the License at
-/// http://www.apache.org/licenses/LICENSE-2.0
-/// Unless required by applicable law or agreed to in writing, software
-/// distributed under the License is distributed on an "AS IS" BASIS,
-/// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-/// See the License for the specific language governing permissions and
-/// limitations under the License.
-///***************
-
 //
 //  addTrackerController.swift
 //  rTracker
@@ -20,29 +5,7 @@
 //  from this screen the user creates or edits a tracker, by naming it and adding values.
 //
 //  Created by Robert Miller on 15/04/2010.
-//  Copyright 2010 Robert T. Miller. All rights reserved.
-//
-
-///************
-/// addTrackerController.swift
-/// Copyright 2010-2021 Robert T. Miller
-/// Licensed under the Apache License, Version 2.0 (the "License");
-/// you may not use this file except in compliance with the License.
-/// You may obtain a copy of the License at
-/// http://www.apache.org/licenses/LICENSE-2.0
-/// Unless required by applicable law or agreed to in writing, software
-/// distributed under the License is distributed on an "AS IS" BASIS,
-/// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-/// See the License for the specific language governing permissions and
-/// limitations under the License.
-///***************
-
-//
-//  addTrackerController.swift
-//  rTracker
-//
-//  Created by Robert Miller on 15/04/2010.
-//  Copyright 2010 Robert T. Miller. All rights reserved.
+//  Copyright 2010-2021 Robert T. Miller. All rights reserved.
 //
 
 import UIKit
@@ -50,22 +13,29 @@ import UIKit
 var editMode = 0
 
 class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDataSource, UITextFieldDelegate {
+
     var tlist: trackerList?
     var tempTrackerObj: trackerObj?
     var saving = false
-    // UI element properties 
-    @IBOutlet var tableView: UITableView!
-    @IBOutlet var infoBtn: UIButton!
-    @IBOutlet var nameField: UITextField!
-    @IBOutlet var itemCopyBtn: UIButton!
-    @IBOutlet weak var toolbar: UIToolbar!
-    @IBOutlet weak var segcEditTrackerEditItems: UISegmentedControl!
+
+    // MARK: - UI Elements (now created in code)
+    var tableView: UITableView!
+    var toolbar: UIToolbar!
+    var setupButton: UIBarButtonItem!
+    var copyButton: UIBarButtonItem!
+    var segcEditTrackerEditItems: UISegmentedControl!
+    var segmentedControlItem: UIBarButtonItem!
+
+    var nameField: UITextField! // created in cellForRow for section 0
+    var infoBtn: UIButton! // appears unused, preserved for possible future info button
+    var itemCopyBtn: UIBarButtonItem! // mapped to copyButton
+
     var deleteIndexPath: IndexPath? // remember row to delete if user confirms in checkTrackerDelete alert
     var deleteVOs: [AnyHashable]? // VOs to be deleted on save
     var ttoRank: Int? = nil
 
     var modifying: Bool = false
-    
+
     // MARK: -
     // MARK: core object methods and support
 
@@ -75,8 +45,6 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     // MARK: -
     // MARK: view support
-
-    //#define TEMPFILE @"tempTrackerObj_plist"
 
     func setViewMode() {
         rTracker_resource.setViewMode(self)
@@ -118,55 +86,92 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         navigationItem.rightBarButtonItem = saveBtn
         navigationItem.rightBarButtonItem?.accessibilityIdentifier = "addTrkrSave"
 
+        // MARK: - UI Setup: Table View
+        tableView = UITableView(frame: .zero, style: .plain)
+        tableView.translatesAutoresizingMaskIntoConstraints = false
+        tableView.delegate = self
+        tableView.dataSource = self
+        tableView.setEditing(true, animated: false)
+        tableView.allowsSelection = false
+        tableView.separatorStyle = .none
+        view.addSubview(tableView)
 
-        // list manage / configure segmented control on bottom toolbar
-        configureToolbarItems()
-        navigationController?.isToolbarHidden = true
+        // MARK: - UI Setup: Toolbar & Items
 
+        toolbar = UIToolbar()
+        toolbar.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(toolbar)
+
+        // Setup button
+        setupButton = UIBarButtonItem(title: "Setup", style: .plain, target: self, action: #selector(btnSetup(_:)))
+        setupButton.accessibilityIdentifier = "addTrkrSetup"
+        setupButton.accessibilityLabel = "Setup"
+        setupButton.accessibilityHint = "Configure tracker settings"
+
+        // Segmented control
+        segcEditTrackerEditItems = UISegmentedControl(items: ["Edit Tracker", "Edit Items"])
+        segcEditTrackerEditItems.selectedSegmentIndex = 0
+        segcEditTrackerEditItems.addTarget(self, action: #selector(toggleEdit(_:)), for: .valueChanged)
+        segcEditTrackerEditItems.accessibilityIdentifier = "addTrkrSegmented"
+        segmentedControlItem = UIBarButtonItem(customView: segcEditTrackerEditItems)
+
+        // Copy button
+        copyButton = UIBarButtonItem(title: "Copy", style: .plain, target: self, action: #selector(btnCopy(_:)))
+        copyButton.accessibilityIdentifier = "addTrkrCopy"
+        copyButton.accessibilityLabel = "Copy"
+        copyButton.accessibilityHint = "Duplicate last item"
+
+        // Fill space
+        let flexibleSpace = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
+
+        toolbar.items = [setupButton, flexibleSpace, segmentedControlItem, flexibleSpace, copyButton]
+
+        // MARK: - Constraints
+
+        NSLayoutConstraint.activate([
+            // TableView: pin to top, left, right, and above toolbar
+            tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            tableView.leftAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leftAnchor),
+            tableView.rightAnchor.constraint(equalTo: view.safeAreaLayoutGuide.rightAnchor),
+            tableView.bottomAnchor.constraint(equalTo: toolbar.topAnchor),
+
+            // Toolbar: pin to left, right, bottom
+            toolbar.leftAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leftAnchor),
+            toolbar.rightAnchor.constraint(equalTo: view.safeAreaLayoutGuide.rightAnchor),
+            toolbar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+        ])
+
+        // For info button, if needed in future:
+        infoBtn = UIButton(type: .infoLight)
+        infoBtn.isHidden = true // currently not displayed
+
+        // Logic for tracker object setup
         if tempTrackerObj == nil {
-            // the temporary tracker obj we work with
             let tto = trackerObj()
             tempTrackerObj = tto
-            //tempTrackerObj.trackerName = @"";
-            //[self.tempTrackerObj init];
             tempTrackerObj?.toid = tlist!.getUnique()
             title = "Add tracker"
             toolbar.isHidden = true
             modifying = false
         } else {
-            //title = "Modify tracker"
             toolbar.isHidden = false
             let titleLabel = UILabel()
             titleLabel.text = "Modify tracker"
             titleLabel.accessibilityHint = "left widget to enable delete button, center to modify value, right widget to change order"
             navigationItem.titleView = titleLabel
-
             modifying = true
-            
-            //toolbar.leftBarButtonItem?.accessibilityHint = "leave without saving"
-            //toolbar.leftBarButtonItem?
         }
-
-        tableView.setEditing(true, animated: true)
-        tableView.allowsSelection = false
-        tableView.separatorStyle = .none
-
-        // set graph paper background - not seen if darkMode, but still there
-
-        let bg = UIImageView(image: rTracker_resource.get_background_image(self))
-        bg.tag = BGTAG
-        view.addSubview(bg)
-        view.sendSubviewToBack(bg)
 
         setViewMode()
 
         saving = false
 
+        // Swipe right gesture for saving
         let swipe = UISwipeGestureRecognizer(target: self, action: #selector(handleViewSwipeRight(_:)))
         swipe.direction = .right
         view.addGestureRecognizer(swipe)
 
-        super.viewDidLoad()
+        super.viewDidLoad() // NOTE: super should go at end due to UIKit expectations
     }
 
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
@@ -176,78 +181,42 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     }
 
     override func viewWillAppear(_ animated: Bool) {
-
         DBGLog(String("atc: viewWillAppear, valObjTable count= \(tempTrackerObj?.valObjTable.count)"))
-
         tableView.reloadData()
-        toggleEdit(segcEditTrackerEditItems!)
-
+        toggleEdit(segcEditTrackerEditItems)
         super.viewWillAppear(animated)
-
     }
 
     override func didReceiveMemoryWarning() {
         // Releases the view if it doesn't have a superview.
         super.didReceiveMemoryWarning()
-
         // Release any cached data, images, etc that aren't in use.
-
-        //tempTrackerObj.colorSet = nil;
-        //self.tempTrackerObj.votArray = nil;
-
-
     }
 
     override func viewWillDisappear(_ animated: Bool) {
         DBGLog(String("atc: viewWillDisappear, tracker name = \(tempTrackerObj?.trackerName)"))
-
         safeDispatchSync({ [self] in
             if (nameField.text?.count ?? 0) > 0 {
                 tempTrackerObj?.trackerName = nameField.text
                 DBGLog(String("adding val, save tf: \(tempTrackerObj?.trackerName) = \(nameField.text)"))
             }
         })
-
         super.viewWillDisappear(animated)
-
     }
 
-    /*
-    - (void) viewDidUnload {
-    	DBGLog(@"atc: viewdidunload");
-    	self.nameField = nil;
-    	self.tlist = nil;
-    	self.tempTrackerObj = nil;
-    	self.table = nil;
-
-    	self.title = nil;
-
-    	self.navigationItem.rightBarButtonItem = nil;
-    	self.navigationItem.leftBarButtonItem = nil;
-    	[self setToolbarItems:nil
-    				 animated:NO];
-
-        self.deleteVOs=nil;
-
-    	[super viewDidUnload];
-    }
-    */
     // MARK: -
     // MARK: toolbar support
 
-    @IBAction func btnCopy(_ sender: Any) {
+    @objc func btnCopy(_ sender: Any) {
         DBGLog("copy!")
-
-        let lastVO = tempTrackerObj?.valObjTable.last as? valueObj
-        let newVO = valueObj(dict: tempTrackerObj!, dict: lastVO?.dictFromVO())
+        guard let lastVO = tempTrackerObj?.valObjTable.last as? valueObj else { return }
+        let newVO = valueObj(dict: tempTrackerObj!, dict: lastVO.dictFromVO())
         newVO.vid = (tempTrackerObj?.getUnique())!
         tempTrackerObj?.addValObj(newVO)
         tableView.reloadData()
-
     }
 
-
-    @IBAction func btnSetup(_ sender: Any) {
+    @objc func btnSetup(_ sender: Any) {
         let ctvovc = configTVObjVC()
         ctvovc.to = tempTrackerObj
         ctvovc.vo = nil
@@ -256,28 +225,18 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         present(ctvovc, animated: true)
     }
 
-    func configureToolbarItems() {
+    // MARK: -
+    // MARK: Segmented control toggle
 
-        infoBtn.titleLabel?.font = .systemFont(ofSize: 28.0)
-
-
-    }
-
-    //@property (nonatomic,retain) UIActivityIndicatorView *spinner;
-    // UISegmentedControl hidden because modify valueObjs accessible from move/del view
-    // so this is not called
-    @IBAction func toggleEdit(_ sender: UISegmentedControl) {
+    @objc func toggleEdit(_ sender: UISegmentedControl) {
         editMode = sender.selectedSegmentIndex
-        //[table reloadData];
         if editMode == 0 {
             tableView.setEditing(true, animated: true)
-            itemCopyBtn.isEnabled = true
+            copyButton.isEnabled = true
         } else {
             tableView.setEditing(false, animated: true)
-            itemCopyBtn.isEnabled = false
+            copyButton.isEnabled = false
         }
-
-        //[table reloadRowsAtIndexPaths:[table indexPathsForVisibleRows] withRowAnimation:UITableViewRowAnimationFade];
         DispatchQueue.main.async(execute: { [self] in
             tableView.reloadSections(NSIndexSet(index: 1) as IndexSet, with: .fade)
         })
@@ -285,18 +244,10 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     // MARK: -
     // MARK: button press handlers
-    /*
-    - (IBAction)btnAddValue {
-    DBGLog(@"btnAddValue was pressed!");
-    }
-    */
-    @IBAction func btnCancel() {
+
+    @objc func btnCancel() {
         deleteVOs = nil
-
         navigationController?.popViewController(animated: true)
-        //[rTracker_resource myNavPopTransition:self.navigationController animOpt:UIViewAnimationOptionTransitionCurlDown];
-
-
     }
 
     func delVOdb(_ vid: Int) {
@@ -305,9 +256,6 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     @objc func btnSaveSlowPart() {
         autoreleasepool {
-            //[self.spinner performSelectorOnMainThread:@selector(startAnimating) withObject:nil waitUntilDone:NO];
-
-            // figure out if have changed HK data source here and clearHKdata() for the relevant vo
             if modifying {
                 let oldTracker = trackerObj(tempTrackerObj!.toid)
                 var ahUpdated = false
@@ -323,47 +271,35 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                                     ovo.vos?.clearHKdata()
                                     ahUpdated = true
                                 }
-                                break  // break out of finding valObj in newTracker, still checking oldTracker
+                                break
                             }
                         }
                     }
                 }
                 if ahUpdated {
-                    // delete trkrData entries which no longer have associated voData
                     let sql = "delete from trkrdata where date not in (select date from voData where voData.date = trkrdata.date)"
                     oldTracker.toExecSql(sql: sql)
                 }
             }
             tempTrackerObj?.saveConfig()
-
             tlist?.add(toTopLayoutTable: tempTrackerObj!, nrank: ttoRank)
             tlist?.loadTopLayoutTable()
-
             DispatchQueue.main.async(execute: { [self] in
                 rTracker_resource.finishActivityIndicator(view, navItem: navigationItem, disable: true)
                 navigationController?.popViewController(animated: true)
             })
-            //[rTracker_resource myNavPopTransition:self.navigationController animOpt:UIViewAnimationOptionTransitionCurlDown];
-
             saving = false
         }
-
     }
 
-    @IBAction func btnSave() {
+    @objc func btnSave() {
         DBGLog(String("btnSave was pressed! tempTrackerObj name= \(tempTrackerObj?.trackerName) toid= \(tempTrackerObj?.toid) tlist= \(tlist)"))
-
-        if saving {
-            return
-        }
-
+        if saving { return }
         saving = true
 
         if deleteVOs != nil {
             for vo in deleteVOs ?? [] {
-                guard let vo = vo as? valueObj else {
-                    continue
-                }
+                guard let vo = vo as? valueObj else { continue }
                 delVOdb(vo.vid)
             }
             deleteVOs = nil
@@ -373,14 +309,12 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
         if (nameField.text?.count ?? 0) > 0 {
             tempTrackerObj?.trackerName = nameField.text
-
             if tempTrackerObj?.toid == nil {
                 tempTrackerObj?.toid = tlist?.getUnique() ?? 0
             }
             if 8 < (tempTrackerObj?.valObjTable.count ?? 0) {
                 rTracker_resource.startActivityIndicator(view, navItem: navigationItem, disable: true, str: "Saving...")
             }
-
             Thread.detachNewThreadSelector(#selector(btnSaveSlowPart), toTarget: self, with: nil)
         } else {
             saving = false
@@ -392,12 +326,10 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         btnSave()
     }
 
-    //- (void)configureToolbarItems;
-
     // MARK: -
-    // MARK: nameField, privField support Methods
+    // MARK: nameField support Methods
 
-    @IBAction func nameFieldDone(_ sender: UIResponder) {
+    @objc func nameFieldDone(_ sender: UIResponder) {
         sender.resignFirstResponder()
         if let nftxt = nameField.text {
             tempTrackerObj?.trackerName = rTracker_resource.sanitizeFileNameString(nftxt)
@@ -424,38 +356,30 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     }
 
     func handleCheckValObjDelete(_ choice: Int) {
-        //DBGLog(@"checkValObjDelete buttonIndex= %d",buttonIndex);
-
         if choice == 1 {
-            // yes delete
             let row = deleteIndexPath?.row ?? 0
             let vo = (tempTrackerObj?.valObjTable)?[row] as? valueObj
             DBGLog(String("checkValObjDelete: will delete row \(row) name \(vo?.valueName) id \(vo?.vid)"))
-            //[self delVOdb:vo.vid];
             addDelVO(vo)
             delVOlocal(row)
         } else {
-            //DBGLog(@"check valobjdelete cancelled");
             tableView.reloadRows(at: [deleteIndexPath].compactMap { $0 }, with: .right)
         }
         deleteIndexPath = nil
-
     }
 
     func reloadVOcell(_ valueObj: valueObj) {
         if let index = tempTrackerObj?.valObjTable.firstIndex(where: { $0.vid == valueObj.vid }) {
-            // Create an IndexPath for this cell
             let indexPath = IndexPath(row: index, section: 1)
-            // Reload just this cell
             tableView.reloadRows(at: [indexPath], with: .automatic)
         }
     }
-    
+
     func hideValueObj(_ valueObj: valueObj) {
         valueObj.optDict["hidden"] = "1"
         reloadVOcell(valueObj)
     }
-    
+
     func unhideValueObj(_ valueObj: valueObj) {
         valueObj.optDict["hidden"] = "0"
         reloadVOcell(valueObj)
@@ -466,7 +390,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         if section == 0 {
-            return Int(1)
+            return 1
         } else {
             var rval = tempTrackerObj?.valObjTable.count ?? 0
             if editMode == 0 {
@@ -474,73 +398,53 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             }
             return rval
         }
-
     }
 
-    //- (NSInteger)tableView:(UITableView *)tableView numberOfSections: (UITableView *) tableView {
     func numberOfSections(in tableView: UITableView) -> Int {
-        return Int(2)
+        return 2
     }
 
     func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
         return 6.0
-        /*
-            if (section == 0)
-                return 6.0;
-            else return UITableViewAutomaticDimension;
-             */
     }
 
     func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
         let section = indexPath.section
         let row = indexPath.row
-        
+
         if section == 0 || row == (tempTrackerObj?.valObjTable.count ?? 0) {
             return nil // No swipe actions for name field or add row
         }
-            
-        // Create delete action
+
         let deleteAction = UIContextualAction(style: .destructive, title: "Delete") { [weak self] (action, view, completion) in
             self?.tableView(tableView, commit: .delete, forRowAt: indexPath)
             completion(true)
         }
-        
-        // Get the value object for this row
+
         guard let vo = (tempTrackerObj?.valObjTable)?[row] as? valueObj else {
             return UISwipeActionsConfiguration(actions: [deleteAction])
         }
-        
-        // Check if the valueObj is already hidden
         let isHidden = vo.optDict["hidden"] == "1"
-        
-        // Create hide/reveal action based on current state
+
         let hideOrRevealAction = UIContextualAction(style: .normal, title: isHidden ? "Reveal" : "Hide") { [weak self] (action, view, completion) in
             guard let self = self else { return completion(false) }
-            
             if isHidden {
-                // If it's hidden, call unhide
                 self.unhideValueObj(vo)
             } else {
-                // If it's visible, call hide
                 self.hideValueObj(vo)
             }
             completion(true)
         }
-        
-        // Set appropriate background color and icon
         hideOrRevealAction.backgroundColor = isHidden ? .systemGreen : .systemBlue
         hideOrRevealAction.image = UIImage(systemName: isHidden ? "eye" : "eye.slash")
-        
-        // Return both actions
         let configuration = UISwipeActionsConfiguration(actions: [deleteAction, hideOrRevealAction])
         return configuration
     }
-    
+
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         let row = indexPath.row
         let section = indexPath.section
         if 0 == section {
-            //CGSize tns = [self.tempTrackerObj.trackerName sizeWithAttributes:@{NSFontAttributeName:PrefBodyFont}];
             let tns = "Name this Tracker".size(withAttributes: [
                 NSAttributedString.Key.font: PrefBodyFont
             ])
@@ -561,14 +465,13 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         }
     }
 
-        static let tableViewNameCellID = "nameCellID"
-        static let tableViewValCellID = "valCellID"
+    static let tableViewNameCellID = "nameCellID"
+    static let tableViewValCellID = "valCellID"
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         var cell: UITableViewCell?
         let section = indexPath.section
         if section == 0 {
-            // Name field section
             cell = tableView.dequeueReusableCell(withIdentifier: addTrackerController.tableViewNameCellID)
             if cell == nil {
                 cell = UITableViewCell(
@@ -576,26 +479,22 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                     reuseIdentifier: addTrackerController.tableViewNameCellID)
                 cell?.backgroundColor = nil
             } else {
-                // the cell is being recycled, remove old embedded controls
                 while let viewToRemove = cell?.contentView.viewWithTag(kViewTag) {
                     viewToRemove.removeFromSuperview()
                 }
             }
-            
+
             var rect = cell?.contentView.frame
-            rect?.size.width = rTracker_resource.getKeyWindowWidth() // because ios 7.1 gets different width for cell
-            
+            rect?.size.width = rTracker_resource.getKeyWindowWidth()
+
             nameField = UITextField(frame: CGRect(x: 10, y: 5, width: (rect?.size.width ?? 0.0) - 20, height: (rect?.size.height ?? 0.0) - 10))
             nameField.clearsOnBeginEditing = false
             nameField.delegate = self
             nameField.returnKeyType = .done
-            nameField.addTarget(
-                self,
-                action: #selector(nameFieldDone(_:)),
-                for: .editingDidEndOnExit)
+            nameField.addTarget(self, action: #selector(nameFieldDone(_:)), for: .editingDidEndOnExit)
             nameField.tag = kViewTag
             nameField.accessibilityIdentifier = "addTrkrName"
-            
+
             cell?.contentView.addSubview(nameField)
             cell?.selectionStyle = .none
             nameField.font = PrefBodyFont
@@ -605,9 +504,8 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 .foregroundColor: UIColor.label
             ])
             nameField.backgroundColor = .secondarySystemBackground
-            
+
             view.bringSubviewToFront(nameField)
-     
         } else {
             cell = tableView.dequeueReusableCell(withIdentifier: addTrackerController.tableViewValCellID)
             if cell == nil {
@@ -615,14 +513,13 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                     style: .subtitle,
                     reuseIdentifier: addTrackerController.tableViewValCellID)
             }
-            
-            // Remove any existing icon to prevent duplication
+
             cell?.contentView.viewWithTag(kViewTag + 1)?.removeFromSuperview()
-            
+
             cell?.backgroundColor = .clear
             cell?.textLabel?.textColor = .label
             cell?.detailTextLabel?.textColor = .label
-            
+
             let row = indexPath.row
             if row == (tempTrackerObj?.valObjTable.count ?? 0) {
                 if 0 == row {
@@ -634,46 +531,31 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 cell?.textLabel?.text = ""
             } else {
                 let vo = (tempTrackerObj?.valObjTable)?[row] as? valueObj
-                
-                // Check for external source
                 let isOtSource = vo?.optDict["otsrc"] == "1"
                 let isAhkSource = vo?.optDict["ahksrc"] == "1"
                 let isFn = vo?.vtype == VOT_FUNC
                 let isIconTagged = isOtSource || isAhkSource || isFn
-                
-                // Use standard text labeling
                 cell?.textLabel?.text = vo?.valueName
-                
-                // For external sources, add a small icon to the left of the text
                 if isIconTagged {
-                    // Create a small icon to the left of the text
                     let iconName = isOtSource ? "link" : isAhkSource ? "heart.text.square" : "function"
                     let sourceIndicator = UIImageView(image: UIImage(systemName: iconName))
                     sourceIndicator.tag = kViewTag + 1
                     sourceIndicator.tintColor = .systemBlue
                     sourceIndicator.contentMode = .scaleAspectFit
-                    
-                    // Make the icon smaller (12x12) and position it better
                     sourceIndicator.frame = CGRect(x: 0, y: 0, width: 12, height: 12)
-                    
-                    // Position the icon in the left margin of the cell
-                    let cellIndentation: CGFloat = 15  // Standard cell indentation
-                    sourceIndicator.frame.origin.x = cellIndentation - 14  // Position before text
-                    sourceIndicator.center.y = (cell?.contentView.bounds.height ?? 0) * 0.35  // Align with main text, slightly above center
-                    
+                    let cellIndentation: CGFloat = 15
+                    sourceIndicator.frame.origin.x = cellIndentation - 14
+                    sourceIndicator.center.y = (cell?.contentView.bounds.height ?? 0) * 0.35
                     cell?.contentView.addSubview(sourceIndicator)
-                    
-                    // Indent the main text slightly to avoid overlapping with the icon
                     cell?.textLabel?.frame.origin.x += 2
                 }
-                
+
                 cell?.accessibilityIdentifier = "\(vo?.parentTracker.trackerName ?? "tNull")_\(vo?.valueName ?? "vNull")"
                 cell?.accessoryType = .detailDisclosureButton
-                
+
                 if "0" == vo!.optDict["graph"] || vo!.vGraphType == VOG_NONE {
                     let vtypeNames = ValueObjectType.typeNames[vo!.vtype]
                     cell?.detailTextLabel?.text = "\(vtypeNames) - no graph"
-                    
                 } else if VOT_CHOICE == vo!.vtype {
                     let vtypeNames = ValueObjectType.typeNames[vo!.vtype]
                     let voGraphSet = (vo?.vos?.voGraphSet())?[vo!.vGraphType]
@@ -687,17 +569,15 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                     let colorNames = rTracker_resource.colorNames[vo!.vcolor]
                     cell?.detailTextLabel?.text = "\(vtypeNames) - \(voGraphSet!) - \(colorNames)"
                 }
-                
+
                 if vo?.optDict["hidden"] == "1" {
                     cell?.backgroundColor = hiddenColor
                 }
             }
-
-            
         }
         return cell!
     }
-    
+
     func tableView(_ tableview: UITableView, canMoveRowAt indexPath: IndexPath) -> Bool {
         let section = indexPath.section
         if section == 0 {
@@ -707,7 +587,6 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         if row >= (tempTrackerObj?.valObjTable.count ?? 0) {
             return false
         }
-
         return true
     }
 
@@ -718,13 +597,6 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     ) {
         let fromRow = fromIndexPath.row
         var toRow = toIndexPath.row
-
-        #if DEBUGLOG
-        let fromSection = fromIndexPath.section
-        let toSection = toIndexPath.section
-        DBGLog(String("atc: move row from \(UInt(fromSection)):\(UInt(fromRow)) to \(UInt(toSection)):\(UInt(toRow))"))
-        #endif
-
         let vo = (tempTrackerObj?.valObjTable)?[fromRow] as? valueObj
         tempTrackerObj?.valObjTable.remove(at: fromRow)
         if toRow > (tempTrackerObj?.valObjTable.count ?? 0) {
@@ -733,13 +605,10 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         if let vo {
             tempTrackerObj?.valObjTable.insert(vo, at: toRow)
         }
-
-        // fail
         self.tableView.reloadData()
     }
 
     func tableView(_ tableview: UITableView, editingStyleForRowAt indexPath: IndexPath) -> UITableViewCell.EditingStyle {
-        // this controls the - delete or + add symbol on left side, plus enables delete edit button
         let section = indexPath.section
         if section == 0 {
             return .none
@@ -759,7 +628,6 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         forRowAt indexPath: IndexPath
     ) {
         let row = indexPath.row
-        // NSUInteger section = [indexPath section];  // in theory this only called on vals section
         if editingStyle == .delete {
             DBGLog(String("atc: delete row \(row) "))
             deleteIndexPath = indexPath
@@ -768,7 +636,6 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             if (tempTrackerObj?.tDb == nil) || (tempTrackerObj?.toid == nil) {
                 delVOlocal(row)
             } else if !(tempTrackerObj?.voHasData(vo?.vid ?? 0) ?? false) {
-                // no actual values stored in db for this valObj
                 addDelVO(vo)
                 delVOlocal(row)
             } else {
@@ -797,19 +664,15 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         } else if editingStyle == .insert {
             DBGLog(String("atc: insert row \(row) "))
             addValObj(nil)
-            // else ??
         }
     }
 
     func addValObj(_ vo: valueObj?) {
-
         var avc: addValObjController?
         avc = addValObjController(nibName: "addValObjController7", bundle: nil)
-
         avc?.parentTrackerObj = tempTrackerObj
         avc?.tempValObj = vo
         avc?.stashVals()
-
         if let avc {
             navigationController?.pushViewController(avc, animated: true)
         }
@@ -824,9 +687,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         }
     }
 
-    ///*
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-
         let row = indexPath.row
         let section = indexPath.section
         DBGLog(String("selected section \(section) row \(row) "))
@@ -835,27 +696,17 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         } else {
             addValObjR(row)
         }
-
     }
 
     func tableView(_ tableView: UITableView, accessoryButtonTappedForRowWith indexPath: IndexPath) {
-
-
         let row = indexPath.row
-        //NSUInteger section = [indexPath section];
-
-        //DBGLog(@"accessory button tapped for section %d row %d ", section, row);
-
         addValObjR(row)
-
     }
 
     func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
         if indexPath.section == 0 {
             return false
         }
-
-        // Return NO if you do not want the specified item to be editable.
         if editMode == 0 {
             return true
         } else {

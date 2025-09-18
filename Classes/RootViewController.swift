@@ -682,13 +682,21 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     var _helpBtn: UIBarButtonItem?
     var helpBtn: UIBarButtonItem {
         if _helpBtn == nil {
-            _helpBtn = UIBarButtonItem(
-                title: "Help",
-                style: .plain,
-                target: self,
-                action: #selector(btnHelp))
             if #available(iOS 26.0, *) {
+                // iOS 26: Use glass effect button
+                let button = UIButton(type: .system)
+                button.setTitle("Help", for: .normal)
+                button.configuration = UIButton.Configuration.glass()
+                button.addTarget(self, action: #selector(btnHelp), for: .touchUpInside)
+                _helpBtn = UIBarButtonItem(customView: button)
                 _helpBtn!.hidesSharedBackground = true  // Remove white container background
+            } else {
+                // Pre-iOS 26: Use text button as before
+                _helpBtn = UIBarButtonItem(
+                    title: "Help",
+                    style: .plain,
+                    target: self,
+                    action: #selector(btnHelp))
             }
             
             _helpBtn!.accessibilityLabel = "Help"
@@ -701,15 +709,22 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     var _addBtn: UIBarButtonItem?
     var addBtn: UIBarButtonItem {
         if _addBtn == nil {
-            _addBtn = UIBarButtonItem(
-                barButtonSystemItem: .add,
-                target: self,
-                action: #selector(btnAddTracker))
             if #available(iOS 26.0, *) {
+                // iOS 26: Use glass effect button
+                let button = UIButton(type: .system)
+                button.setTitle("Add", for: .normal)
+                button.configuration = UIButton.Configuration.glass()
+                button.addTarget(self, action: #selector(btnAddTracker), for: .touchUpInside)
+                _addBtn = UIBarButtonItem(customView: button)
                 _addBtn!.hidesSharedBackground = true  // Remove white container background
+            } else {
+                // Pre-iOS 26: Use system button as before
+                _addBtn = UIBarButtonItem(
+                    barButtonSystemItem: .add,
+                    target: self,
+                    action: #selector(btnAddTracker))
+                _addBtn!.style = UIBarButtonItem.Style.done
             }
-
-            _addBtn!.style = UIBarButtonItem.Style.done
             
             _addBtn!.accessibilityLabel = "Add"
             _addBtn!.accessibilityHint = "tap create a new tracker"
@@ -721,15 +736,22 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     var _editBtn: UIBarButtonItem?
     var editBtn: UIBarButtonItem {
         if _editBtn == nil {
-            _editBtn = UIBarButtonItem(
-                barButtonSystemItem: .edit,
-                target: self,
-                action: #selector(btnEdit))
             if #available(iOS 26.0, *) {
+                // iOS 26: Use glass effect button
+                let button = UIButton(type: .system)
+                button.setTitle("Edit", for: .normal)
+                button.configuration = UIButton.Configuration.glass()
+                button.addTarget(self, action: #selector(btnEdit), for: .touchUpInside)
+                _editBtn = UIBarButtonItem(customView: button)
                 _editBtn!.hidesSharedBackground = true  // Remove white container background
+            } else {
+                // Pre-iOS 26: Use system button as before
+                _editBtn = UIBarButtonItem(
+                    barButtonSystemItem: .edit,
+                    target: self,
+                    action: #selector(btnEdit))
+                _editBtn!.style = UIBarButtonItem.Style.plain
             }
-
-            _editBtn!.style = UIBarButtonItem.Style.plain
             
             _editBtn!.accessibilityLabel = "Edit"
             _editBtn!.accessibilityHint = "tap modify existing trackers"
@@ -758,7 +780,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                 title: "out2in",
                 style: .plain,
                 target: self,
-                action: nil) //#selector(btnOut2in))  // rtm change back!!!!
+                action: #selector(btnOut2inx)) //#selector(btnOut2in))  // rtm change back!!!!
             if #available(iOS 26.0, *) {
                 _out2inBtn!.hidesSharedBackground = true  // Remove white container background
             }
@@ -854,7 +876,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
             return
         }
 
-        let atc = addTrackerController(nibName: "addTrackerController", bundle: nil)
+        let atc = addTrackerController()
         atc.tlist = tlist
         navigationController?.pushViewController(atc, animated: true)
         //[rTracker_resource myNavPushTransition:self.navigationController vc:atc animOpt:UIViewAnimationOptionTransitionCurlUp];
@@ -900,6 +922,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     }
 
     #if TESTING
+    @objc func btnOut2inx() {}
     @objc func btnOut2in() {
         DBGLog("out2in pressed")
         

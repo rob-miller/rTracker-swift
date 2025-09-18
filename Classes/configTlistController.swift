@@ -676,7 +676,7 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
             let toid = tlist?.getTIDfromIndex(row) ?? 0
             DBGLog(String("will config toid \(toid)"))
 
-            let atc = addTrackerController(nibName: "addTrackerController", bundle: nil)
+            let atc = addTrackerController()
             atc.tlist = tlist
             let tto = trackerObj(toid)
             atc.tempTrackerObj = tto
