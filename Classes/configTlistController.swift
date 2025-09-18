@@ -359,12 +359,19 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
 
         // iOS 26 compatibility for segmented control
         if #available(iOS 26.0, *) {
-            // Apply glass effect styling to prevent ghosting
+            // Apply comprehensive glass effect styling to prevent ghosting
+            modeSegment.backgroundColor = UIColor.clear
+            modeSegment.layer.backgroundColor = UIColor.clear.cgColor
+
+            // Apply to all subviews to prevent white background artifacts
             for subview in modeSegment.subviews {
-                if let segmentView = subview as? UIView {
-                    segmentView.layer.backgroundColor = UIColor.clear.cgColor
-                }
+                subview.layer.backgroundColor = UIColor.clear.cgColor
+                subview.backgroundColor = UIColor.clear
             }
+
+            // Ensure no visual effects are applied that could cause ghosting
+            modeSegment.layer.masksToBounds = true
+            modeSegment.clipsToBounds = true
         }
 
         view.addSubview(modeSegment)
@@ -393,10 +400,20 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
             tableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -10)
         ])
 
+        // Set up background and view mode early for proper rendering
         let bg = UIImageView(image: rTracker_resource.get_background_image(self))
         bg.tag = BGTAG
-        view.addSubview(bg)
-        view.sendSubviewToBack(bg)
+        bg.translatesAutoresizingMaskIntoConstraints = false
+        view.insertSubview(bg, at: 0) // Insert at index 0 to ensure it's behind everything
+
+        // Constrain background to fill entire view
+        NSLayoutConstraint.activate([
+            bg.topAnchor.constraint(equalTo: view.topAnchor),
+            bg.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            bg.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            bg.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
+
         rTracker_resource.setViewMode(self)
 
         let swipe = UISwipeGestureRecognizer(target: self, action: #selector(addTrackerController.handleViewSwipeRight(_:)))
@@ -489,6 +506,7 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
 
         super.viewWillDisappear(animated)
     }
+
 
     //- (IBAction) btnExport;
 
@@ -728,7 +746,31 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
             atc.ttoRank = tlist!.toQry2Int(sql:"select rank from toplevel where id = '\(toid)'") // save to put temp tracker at this rank
             tto.removeTempTrackerData() // ttd array no longer valid if make any changes, can't be sure from here so wipe it
 
-            navigationController?.pushViewController(atc, animated: true)
+            // iOS 26 fix: Handle navigation animation translucency issue
+            if #available(iOS 26.0, *) {
+                // iOS 26: Use cross-fade transition to avoid translucency bug
+                UIView.animate(withDuration: 0.25, delay: 0, options: [.curveEaseInOut], animations: { [weak self] in
+                    // Fade out current view
+                    self?.view.alpha = 0.3
+                }) { [weak self] _ in
+                    // Push new controller without animation
+                    self?.navigationController?.pushViewController(atc, animated: false)
+
+                    // Start with new view slightly faded and fade it in fully
+                    atc.view.alpha = 0.6
+
+                    // Restore current view alpha in case we return
+                    self?.view.alpha = 1.0
+
+                    // Fade in new view
+                    UIView.animate(withDuration: 0.5, delay: 0, options: [.curveEaseInOut]) {
+                        atc.view.alpha = 1.0
+                    }
+                }
+            } else {
+                // Pre-iOS 26: Use standard animation that works correctly
+                navigationController?.pushViewController(atc, animated: true)
+            }
             //[atc.tempTrackerObj release]; // rtm 05 feb 2012 +1 alloc/init, +1 atc.temptto retain
         } else if selSegNdx == SegmentCopy {
             let toid = tlist?.getTIDfromIndex(row) ?? 0
