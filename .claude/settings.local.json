@@ -5,7 +5,8 @@
       "Bash(ls:*)",
       "Bash(find:*)",
       "Bash(grep:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(plutil:*)"
     ],
     "deny": []
   }

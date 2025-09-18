@@ -894,7 +894,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         }
         
         var ctlc: configTlistController?
-        ctlc = configTlistController(nibName: "configTlistController", bundle: nil)
+        ctlc = configTlistController()
         ctlc?.tlist = tlist
         if let ctlc {
             navigationController?.pushViewController(ctlc, animated: true)

@@ -42,7 +42,6 @@
 		D43EE368133CBF8D00737E76 /* CSVParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = D43EE367133CBF8D00737E76 /* CSVParser.swift */; };
 		D44386D213A2397F00268248 /* bkgnd-cell1-320-56.png in Resources */ = {isa = PBXBuildFile; fileRef = D44386D113A2397F00268248 /* bkgnd-cell1-320-56.png */; };
 		D44695C417D6894A00BB5A38 /* addValObjController7.xib in Resources */ = {isa = PBXBuildFile; fileRef = D44695C217D6894A00BB5A38 /* addValObjController7.xib */; };
-		D44695C517D6894A00BB5A38 /* configTlistController.xib in Resources */ = {isa = PBXBuildFile; fileRef = D44695C317D6894A00BB5A38 /* configTlistController.xib */; };
 		D44C0DA914AE4FE100C3DEB0 /* closedview-button-blue.png in Resources */ = {isa = PBXBuildFile; fileRef = D44C0DA814AE4FE100C3DEB0 /* closedview-button-blue.png */; };
 		D44C0DAB14AE4FE900C3DEB0 /* fullview-button-blue.png in Resources */ = {isa = PBXBuildFile; fileRef = D44C0DAA14AE4FE900C3DEB0 /* fullview-button-blue.png */; };
 		D44C0DAD14AE4FF800C3DEB0 /* shadeview-button-blue.png in Resources */ = {isa = PBXBuildFile; fileRef = D44C0DAC14AE4FF800C3DEB0 /* shadeview-button-blue.png */; };
@@ -213,7 +212,6 @@
 		D44386D113A2397F00268248 /* bkgnd-cell1-320-56.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "bkgnd-cell1-320-56.png"; path = "Resources/png/bkgnd-cell1-320-56.png"; sourceTree = "<group>"; };
 		D444F4182D32E218008780FE /* rTracker.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = rTracker.entitlements; path = rTracker/rTracker.entitlements; sourceTree = "<group>"; };
 		D44695C217D6894A00BB5A38 /* addValObjController7.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; name = addValObjController7.xib; path = ../Resources/xib/addValObjController7.xib; sourceTree = "<group>"; };
-		D44695C317D6894A00BB5A38 /* configTlistController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; name = configTlistController.xib; path = ../Resources/xib/configTlistController.xib; sourceTree = "<group>"; };
 		D44C0DA814AE4FE100C3DEB0 /* closedview-button-blue.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "closedview-button-blue.png"; path = "Resources/png/closedview-button-blue.png"; sourceTree = "<group>"; };
 		D44C0DAA14AE4FE900C3DEB0 /* fullview-button-blue.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "fullview-button-blue.png"; path = "Resources/png/fullview-button-blue.png"; sourceTree = "<group>"; };
 		D44C0DAC14AE4FF800C3DEB0 /* shadeview-button-blue.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "shadeview-button-blue.png"; path = "Resources/png/shadeview-button-blue.png"; sourceTree = "<group>"; };
@@ -644,7 +642,6 @@
 				D487D7721260A77800298C1D /* configTVObjVC.swift */,
 				D487D7731260A77800298C1D /* configTVObjVC.xib */,
 				D4A317B21192B7C800F062AC /* configTlistController.swift */,
-				D44695C317D6894A00BB5A38 /* configTlistController.xib */,
 				D47B564419411739002B0CCA /* trackerCalViewController.swift */,
 				D4CA92BA2D2B115400554F55 /* ahViewController.swift */,
 				D424D0692D81E8370027C9E6 /* otViewController.swift */,
@@ -803,7 +800,6 @@
 				D47D168E19028F2C006563B9 /* notifyReminderVC2.xib in Resources */,
 				D473ED3E19571F8A00B4702C /* CalendarPreviousMonth.png in Resources */,
 				D464C8B81A5100450009E20B /* icon120.png in Resources */,
-				D44695C517D6894A00BB5A38 /* configTlistController.xib in Resources */,
 				D4C5210A123F9DF700554627 /* blueButton.png in Resources */,
 				D40607E517D7CB5A00C05A38 /* shadeview-button-7.png in Resources */,
 				D4D7DCEB125B25E00049EB93 /* checked.png in Resources */,

@@ -66,8 +66,9 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
     }
     */
     var tlist: trackerList?
-    // UI element properties 
-    @IBOutlet var tableView: UITableView!
+    // UI element properties (now created programmatically)
+    var tableView: UITableView!
+    var modeSegment: UISegmentedControl!
     var deleteIndexPath: IndexPath? // remember row to delete if user confirms in checkTrackerDelete alert
 
     deinit {
@@ -339,7 +340,7 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
     }
     
     
-    // Implement viewDidLoad to do additional setup after loading the view, typically from a nib.
+    // Implement viewDidLoad to do additional setup after loading the view, now fully programmatic.
     override func viewDidLoad() {
 
         title = "Edit trackers"
@@ -348,40 +349,81 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
         navigationItem.setRightBarButton(menuBtn, animated: false)
 
         // doesn't work? navigationItem.backBarButtonItem!.accessibilityIdentifier = "configTlistReturn"
-        
+
+        // MARK: - UI Setup: Segmented Control
+        modeSegment = UISegmentedControl(items: ["modify", "copy", "move/del"])
+        modeSegment.translatesAutoresizingMaskIntoConstraints = false
+        modeSegment.selectedSegmentIndex = 0
+        modeSegment.addTarget(self, action: #selector(modeChoice(_:)), for: .valueChanged)
+        modeSegment.accessibilityIdentifier = "configTlistMode"
+
+        // iOS 26 compatibility for segmented control
+        if #available(iOS 26.0, *) {
+            // Apply glass effect styling to prevent ghosting
+            for subview in modeSegment.subviews {
+                if let segmentView = subview as? UIView {
+                    segmentView.layer.backgroundColor = UIColor.clear.cgColor
+                }
+            }
+        }
+
+        view.addSubview(modeSegment)
+
+        // MARK: - UI Setup: Table View
+        tableView = UITableView(frame: .zero, style: .plain)
+        tableView.translatesAutoresizingMaskIntoConstraints = false
+        tableView.delegate = self
+        tableView.dataSource = self
+        tableView.separatorStyle = .none
+        tableView.separatorColor = .clear
+        tableView.backgroundColor = .clear
+        view.addSubview(tableView)
+
+        // MARK: - Constraints
+        NSLayoutConstraint.activate([
+            // Segmented control: 10pt margins, 28pt from top safe area (matching XIB)
+            modeSegment.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 28),
+            modeSegment.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 10),
+            modeSegment.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -10),
+
+            // Table view: 10pt margins, 16pt below segmented control, 10pt from bottom (matching XIB)
+            tableView.topAnchor.constraint(equalTo: modeSegment.bottomAnchor, constant: 16),
+            tableView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 10),
+            tableView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -10),
+            tableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -10)
+        ])
+
         let bg = UIImageView(image: rTracker_resource.get_background_image(self))
         bg.tag = BGTAG
         view.addSubview(bg)
         view.sendSubviewToBack(bg)
         rTracker_resource.setViewMode(self)
 
-        tableView.separatorStyle = .none
-        tableView.separatorColor = .clear
-        tableView.backgroundColor = .clear
-
         let swipe = UISwipeGestureRecognizer(target: self, action: #selector(addTrackerController.handleViewSwipeRight(_:)))
         swipe.direction = .right
         view.addGestureRecognizer(swipe)
-        
-        modeSegment.accessibilityIdentifier = "configTlistMode"
-        
+
         // Set accessibility properties for each segment by accessing the individual segments
-        if let editSegment = modeSegment.subviews.indices.contains(SegmentEdit) ? modeSegment.subviews[SegmentEdit] : nil {
-            editSegment.accessibilityIdentifier = "tlistModify"
-            editSegment.accessibilityLabel = "Modify"
-            editSegment.accessibilityHint = "select tracker to modify"
-        }
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
 
-        if let copySegment = modeSegment.subviews.indices.contains(SegmentCopy) ? modeSegment.subviews[SegmentCopy] : nil {
-            copySegment.accessibilityIdentifier = "tlistCopy"
-            copySegment.accessibilityLabel = "Copy"
-            copySegment.accessibilityHint = "selected tracker will be duplicated at bottom of list"
-        }
+            if let editSegment = self.modeSegment.subviews.indices.contains(SegmentEdit) ? self.modeSegment.subviews[SegmentEdit] : nil {
+                editSegment.accessibilityIdentifier = "tlistModify"
+                editSegment.accessibilityLabel = "Modify"
+                editSegment.accessibilityHint = "select tracker to modify"
+            }
 
-        if let moveDeleteSegment = modeSegment.subviews.indices.contains(SegmentMoveDelete) ? modeSegment.subviews[SegmentMoveDelete] : nil {
-            moveDeleteSegment.accessibilityIdentifier = "tlistMoveDel"
-            moveDeleteSegment.accessibilityLabel = "Move or Delete"
-            moveDeleteSegment.accessibilityHint = "re-order or delete trackers"
+            if let copySegment = self.modeSegment.subviews.indices.contains(SegmentCopy) ? self.modeSegment.subviews[SegmentCopy] : nil {
+                copySegment.accessibilityIdentifier = "tlistCopy"
+                copySegment.accessibilityLabel = "Copy"
+                copySegment.accessibilityHint = "selected tracker will be duplicated at bottom of list"
+            }
+
+            if let moveDeleteSegment = self.modeSegment.subviews.indices.contains(SegmentMoveDelete) ? self.modeSegment.subviews[SegmentMoveDelete] : nil {
+                moveDeleteSegment.accessibilityIdentifier = "tlistMoveDel"
+                moveDeleteSegment.accessibilityLabel = "Move or Delete"
+                moveDeleteSegment.accessibilityHint = "re-order or delete trackers"
+            }
         }
 
         super.viewDidLoad()
@@ -436,6 +478,11 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
     override func viewWillDisappear(_ animated: Bool) {
         DBGLog("ctlc: viewWillDisappear")
 
+        // iOS 26 fix: Clear any pending animations on segmented control to prevent ghosting
+        if #available(iOS 26.0, *) {
+            modeSegment.layer.removeAllAnimations()
+        }
+
         tlist?.updateShortcutItems()
 
         //self.tlist = nil;
@@ -448,9 +495,7 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
     // MARK: -
     // MARK: button press action methods
 
-    @IBOutlet weak var modeSegment: UISegmentedControl!
-    
-    @IBAction func modeChoice(_ sender: UISegmentedControl) {
+    @objc func modeChoice(_ sender: UISegmentedControl) {
         selSegNdx = sender.selectedSegmentIndex
         switch selSegNdx {
         case SegmentEdit:
