@@ -70,7 +70,6 @@ var privacyValue: Int {
     }
     set {
         _privacyValue = newValue
-        //DBGLog(String("updatePrivacy:\(_privacyValue)"))
     }
 }
 
@@ -80,13 +79,11 @@ var lastShow: TimeInterval = 0
 func jumpMaxPriv() {
     if nil == stashedPriv {
         stashedPriv = NSNumber(value: privacyValue)
-        //DBGLog(String("stashed priv \(stashedPriv!)"))
     }
 
     //[self.privacyObj setPrivacyValue:MAXPRIV];  // temporary max privacy level so see all
     privacyValue = MAXPRIV
     _jmpriv = true
-    DBGLog("priv jump from \(stashedPriv!) to \(privacyValue)")
 }
 
 func restorePriv() {
@@ -94,7 +91,6 @@ func restorePriv() {
         return
     }
 
-    DBGLog(String("restore priv to \(stashedPriv!)"))
 
     privacyValue = stashedPriv?.intValue ?? 0
     stashedPriv = nil
@@ -105,7 +101,6 @@ func restorePriv() {
 class privacyV: UIView {
     
     func lockDown() -> Int {
-        //DBGLog("privObj: lockdown")
         let currP = privacyValue
 
         ttv?.showKey(0)
@@ -131,7 +126,7 @@ class privacyV: UIView {
     }*/
     var parentView: UIView?
     var parent: RootViewController?
-    var tbh: CGFloat = 0.0
+    var bottomBarHeight: CGFloat = 0.0  // Height of bottom bar (tab bar or toolbar)
     
     private var _ttv: tictacV?
     var ttv: tictacV? {
@@ -157,9 +152,13 @@ class privacyV: UIView {
             _ppwv!.tob = tob
             _ppwv!.parent = self
             _ppwv!.parentAction = #selector(ppwvResponse)
-            tbh = parent!.navigationController!.toolbar.frame.height
-            _ppwv?.topy = frame.origin.y - (frame.size.height + tbh) // parentView!.frame.size.height - (frame.size.height /*+ tbh + CGFloat(49)*/)
-            //DBGLog(String("pv.y = \(parentView!.frame.size.height)  s.h = \(frame.size.height)  ty= \(_ppwv!.topy)"))
+            // Update bottom bar height when creating ppwv
+            if let tabBarHeight = parent?.tabBarController?.tabBar.frame.height {
+                bottomBarHeight = tabBarHeight
+            } else {
+                bottomBarHeight = parent?.view.safeAreaInsets.bottom ?? 0
+            }
+            _ppwv?.topy = frame.origin.y - (frame.size.height + bottomBarHeight) // parentView!.frame.size.height - (frame.size.height /*+ bottomBarHeight + CGFloat(49)*/)
         }
         return _ppwv
     }
@@ -171,7 +170,6 @@ class privacyV: UIView {
             _showing
         }
         set(newState) {
-            //DBGLog(String("priv: setShowing \(_showing) -> \(newState)  curr priv= \(privacyValue)"))
             if (PVNOSHOW == _showing) && (PVNOSHOW == newState) {
                 return // this happens when closing down.
             }
@@ -247,7 +245,11 @@ class privacyV: UIView {
                 } else {
                     //[UIView beginAnimations:nil context:NULL];
                     //[UIView setAnimationDuration:kAnimationDuration];
-
+                    // Check if view is properly attached before animating
+                    if superview == nil {
+                        parentView?.addSubview(self)
+                        parentView?.bringSubviewToFront(self)
+                    }
                     UIView.animate(withDuration: 0.2, animations: { [self] in
                         if PVCONFIG == self.showing {
                             ppwv?.hidePPWV(animated: false)
@@ -272,7 +274,6 @@ class privacyV: UIView {
                 UIView.animate(withDuration: 0.2, animations: { [self] in
                     if PVNEEDPASS == self.showing {
                         // if set pass is up, cancelled out of create
-                        DBGLog("cancelled out of create pass")
                         ppwv?.hidePPWV(animated: false)
                         parentView?.setNeedsDisplay() //  privateBtn.title = @"private";
                     } else {
@@ -492,11 +493,27 @@ class privacyV: UIView {
     let PVH = 0.46
 
     init(parentView pv: RootViewController!) {
-        //DBGLog(String("privV enter parent= x=\(pv?.view.frame.origin.x ?? 0) y=\(pv?.view.frame.origin.y ?? 0) w=\(pv?.view.frame.size.width ?? 0) h=\(pv?.view.frame.size.height ?? 0)"))
-        
-        tbh = pv.navigationController!.toolbar.frame.height
-        let frame = CGRect(x: 0.0, y: pv.view.frame.size.height, width: 320.0, height: 171.0)  // rtmx location issues placing priv view and ppw view here
-        //DBGLog(String("privacyV: x=\(frame.origin.x) y=\(frame.origin.y) w=\(frame.size.width) h=\(frame.size.height)"))
+
+        // Calculate bottom bar height from safe area insets
+        bottomBarHeight = pv.view.safeAreaInsets.bottom
+
+        // Check for tab bar
+        if let tabBarHeight = pv.tabBarController?.tabBar.frame.height {
+            // Tab bar height includes safe area, so use it if available
+            bottomBarHeight = tabBarHeight
+        }
+
+        // Check for toolbar
+        if let toolbar = pv.navigationController?.toolbar, !toolbar.isHidden {
+            let toolbarHeight = toolbar.frame.height
+            if toolbarHeight > 0 && toolbarHeight < 200 {  // Sanity check
+                bottomBarHeight = max(bottomBarHeight, toolbarHeight)
+            }
+        }
+
+        // iOS 26 fix: Use parent view width instead of hardcoded 320, position below visible area
+        let parentWidth = pv.view.frame.size.width > 0 ? pv.view.frame.size.width : 320.0
+        let frame = CGRect(x: 0.0, y: pv.view.frame.size.height, width: parentWidth, height: 171.0)  // Start below visible area
         super.init(frame: frame)
         
         parent = pv
@@ -597,9 +614,7 @@ class privacyV: UIView {
         } else {
             sql = "select key, lvl from priv1 where lvl<\(lvl) order by lvl desc limit 1;"
         }
-        DBGLog(String("getAdjacentVal: next=(nxt) in lvl=(lvl)"))
         (rkey, lvlrslt) = tob!.toQry2IntInt(sql: sql!)!
-        DBGLog(String("getAdjacentVal: rtn lvl=(lvl) key=(rkey)"))
         return (rkey, lvlrslt)
     }
 
@@ -632,36 +647,50 @@ class privacyV: UIView {
     }
 
     @objc func ppwvResponse() {
-        DBGLog(String("ppwvResponse: transition to (ppwv?.next)"))
 
         showing = ppwv!.nextState
     }
 
     func showPVQ(_ state: Bool) {
-        DBGLog(String("parent v h= (parentView?.frame.size.height ?? 0.0) pvh= (PVH) prod= ((parentView?.frame.size.height ?? 0.0) * PVH)"))
-        DBGLog(String(format: "x= %f y= %f w= %f h= %f", frame.origin.x, frame.origin.y, frame.size.width, frame.size.height))
-        //tbh = parent!.navigationController!.toolbar.frame.height
+
+        // iOS 26 fix: Ensure view is still attached to parent
+        if superview == nil {
+            parentView?.addSubview(self)
+            parentView?.bringSubviewToFront(self)
+        }
+
         if state {
-            // show
+            // show - slide up so bottom of privacy view touches top of bottom bar
             lastShow = Date().timeIntervalSinceReferenceDate
             configBtn?.setTitle(CFGBTNCONFIG, for: .normal)
-            //self.transform = CGAffineTransformMakeTranslation(0, -(self.parentView.frame.size.height * PVH));
-            //self.transform = CGAffineTransformMakeTranslation(0, -(self.parentView.frame.size.height * PVH));
-            transform = CGAffineTransform(translationX: 0, y: -(frame.size.height + 2*tbh))
+
+            // Calculate position: want bottom of our view to touch top of bottom bar
+            // Our view starts at y = parentView.height (below screen)
+            // We need to move up by (our height + bottom safe area) to position correctly
+            let parentHeight = parentView?.frame.size.height ?? 0
+            let safeBottom = parentView?.safeAreaInsets.bottom ?? 0
+
+            // The translation needed to position the view properly
+            // Move up by our height plus the bottom safe area
+            let translationY = -(frame.size.height + safeBottom)
+
+
+            // Apply transform from identity
+            transform = .identity
+            transform = CGAffineTransform(translationX: 0, y: translationY)
+
             //self.parentView.userInteractionEnabled=NO;  // sadly kills interaction for child view as well
         } else {
-            // hide
+            // hide - move back below screen
             let thisHide = Date().timeIntervalSinceReferenceDate
-            DBGLog(String("lastShow= (lastShow) thisHide= (thisHide) delta= (thisHide - lastShow)"))
             if (thisHide - lastShow) <= 0.6 {
                 ttv?.showKey(0)
                 privacyValue = PRIVDFLT
             }
             ppwv?.hide()
 
-            //self.transform = CGAffineTransformMakeTranslation(0, (self.parentView.frame.size.height * PVH));
-            //self.transform = CGAffineTransformMakeTranslation(0, (self.parentView.frame.size.height * PVH));
-            transform = CGAffineTransform(translationX: 0, y: (frame.size.height + 2*tbh))
+            // Reset to identity transform (original position below screen)
+            transform = .identity
             //self.parentView.userInteractionEnabled=YES;
         }
     }
@@ -735,7 +764,6 @@ class privacyV: UIView {
             dir = false
         }
 
-        DBGLog(String("adjustTTv: slider lvl= (lvl) dir=(dir)"))
 
         (k, lvl) = dbGetAdjacentKey(lvl, nxt: dir)
 
