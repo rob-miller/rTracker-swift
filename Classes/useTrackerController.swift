@@ -241,13 +241,21 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         
         // navigationbar setup
         let backButton: UIBarButtonItem
-        backButton = UIBarButtonItem(
-            title: String("< \(rvcTitle!)") /*@"< rTracker"  // rTracker ... tracks ? */,
-            style: .plain,
-            target: self,
-            action: #selector(addTrackerController.btnCancel))
         if #available(iOS 26.0, *) {
+            // iOS 26: Use glass effect button
+            let button = UIButton(type: .system)
+            button.setTitle(String("< \(rvcTitle!)"), for: .normal)
+            button.configuration = UIButton.Configuration.glass()
+            button.addTarget(self, action: #selector(addTrackerController.btnCancel), for: .touchUpInside)
+            backButton = UIBarButtonItem(customView: button)
             backButton.hidesSharedBackground = true  // Remove white container background
+        } else {
+            // Pre-iOS 26: Use text button as before
+            backButton = UIBarButtonItem(
+                title: String("< \(rvcTitle!)") /*@"< rTracker"  // rTracker ... tracks ? */,
+                style: .plain,
+                target: self,
+                action: #selector(addTrackerController.btnCancel))
         }
         navigationItem.leftBarButtonItem = backButton
         
@@ -604,11 +612,11 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 return
             }
         }
-        
+
         tableView!.backgroundColor = UIColor.clear
-        
+
     }
-    
+
     override func viewWillAppear(_ animated: Bool) {
         
         DBGLog("STATE: view will appear start")
@@ -714,9 +722,10 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             
             showSaveBtn()
             updateTrackerTableView()  // need to force redisplay and set sliders, so reload in viewdidappear not so noticeable
-            
-            navigationController?.toolbar.backgroundColor = .tertiarySystemBackground
-            navigationController?.navigationBar.backgroundColor = .tertiarySystemBackground
+
+            // controlled by rTracker_resource.setViewMode()
+            //navigationController?.toolbar.backgroundColor = .red
+            //navigationController?.navigationBar.backgroundColor = .secondarySystemBackground
             navigationController?.setToolbarHidden(false, animated: false)
             
             navigationController?.toolbar.accessibilityIdentifier = "useT_toolbar"
