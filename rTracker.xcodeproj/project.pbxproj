@@ -104,7 +104,6 @@
 		D4A700CD13798874005E0E23 /* togd.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A700CC13798874005E0E23 /* togd.swift */; };
 		D4A700D01379928E005E0E23 /* vogd.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A700CF1379928D005E0E23 /* vogd.swift */; };
 		D4A8D07B14F114EC0028AD03 /* Settings.bundle in Resources */ = {isa = PBXBuildFile; fileRef = D4A8D07A14F114EC0028AD03 /* Settings.bundle */; };
-		D4A9E4371A412FF300BD15B5 /* addTrackerController.xib in Resources */ = {isa = PBXBuildFile; fileRef = D4A9E4361A412FF300BD15B5 /* addTrackerController.xib */; };
 		D4ACDDBC29C8D8B900B1F9A4 /* dbg-defs.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4ACDDBB29C8D8B900B1F9A4 /* dbg-defs.swift */; };
 		D4ACDDBD29CC864800B1F9A4 /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D4B8D0041BAC1500002E94CD /* libsqlite3.tbd */; };
 		D4B3009315A9B51A0042319D /* sampleTrackers in Resources */ = {isa = PBXBuildFile; fileRef = D4B3009215A9B51A0042319D /* sampleTrackers */; };
@@ -282,7 +281,6 @@
 		D4A700CF1379928D005E0E23 /* vogd.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = vogd.swift; sourceTree = "<group>"; };
 		D4A7B00512FCC28500ABC266 /* privDefs.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = privDefs.swift; sourceTree = "<group>"; };
 		D4A8D07A14F114EC0028AD03 /* Settings.bundle */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.plug-in"; path = Settings.bundle; sourceTree = "<group>"; };
-		D4A9E4361A412FF300BD15B5 /* addTrackerController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = addTrackerController.xib; sourceTree = "<group>"; };
 		D4ACDDBB29C8D8B900B1F9A4 /* dbg-defs.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = "dbg-defs.swift"; path = "Classes/dbg-defs.swift"; sourceTree = "<group>"; };
 		D4B091BE2A166EFA00C0D5E3 /* rTracker-Bridging-Header.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "rTracker-Bridging-Header.h"; path = "Classes/rTracker-Bridging-Header.h"; sourceTree = "<group>"; };
 		D4B3009215A9B51A0042319D /* sampleTrackers */ = {isa = PBXFileReference; lastKnownFileType = folder; path = sampleTrackers; sourceTree = "<group>"; };
@@ -641,7 +639,6 @@
 				D494D5BC2DA572C900298132 /* RootViewControllerFileLoad.swift */,
 				D49854AE12312A400009E458 /* useTrackerController.swift */,
 				D4588ADB1177497200AD2106 /* addTrackerController.swift */,
-				D4A9E4361A412FF300BD15B5 /* addTrackerController.xib */,
 				D48F9FB0119B4CA600B37C93 /* addValObjController.swift */,
 				D44695C217D6894A00BB5A38 /* addValObjController7.xib */,
 				D487D7721260A77800298C1D /* configTVObjVC.swift */,
@@ -814,7 +811,6 @@
 				D40607E617D7CB5A00C05A38 /* shadeview-button-7@2x.png in Resources */,
 				D473ED4219571F8A00B4702C /* CalendarRowBottom.png in Resources */,
 				D487D7751260A77800298C1D /* configTVObjVC.xib in Resources */,
-				D4A9E4371A412FF300BD15B5 /* addTrackerController.xib in Resources */,
 				D4BBB58112672C94000F8467 /* datePickerVC.xib in Resources */,
 				D44386D213A2397F00268248 /* bkgnd-cell1-320-56.png in Resources */,
 				D427446A1438B8090011EFE6 /* iTunesArtwork in Resources */,
