@@ -741,24 +741,17 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     // Helper method to update date sliders for zoomed range
     private func updateDateSlidersForZoomedRange() {
         guard let zoomedEarliest = zoomedEarliestDate,
-              let latest = latestDate,
-              let currentStart = selectedStartDate,
-              let _ = selectedEndDate else { return }
-        
-        // Calculate where current selection sits in zoomed range
-        let zoomedRange = latest.timeIntervalSince(zoomedEarliest)
-        
-        // Adjust if current selections are outside zoomed range
-        if currentStart < zoomedEarliest {
-            selectedStartDate = zoomedEarliest
-        }
-        
-        // Update slider values based on new range
-        if zoomedRange > 0 {
-            startDateSlider.value = Float((selectedStartDate!.timeIntervalSince(zoomedEarliest)) / zoomedRange)
-            endDateSlider.value = Float((selectedEndDate!.timeIntervalSince(zoomedEarliest)) / zoomedRange)
-        }
-        
+              let latest = latestDate else { return }
+
+        // Reset selected dates to show the full zoomed range
+        // This "pulls" the sliders to show the complete available range within the zoom window
+        selectedStartDate = zoomedEarliest
+        selectedEndDate = latest
+
+        // Reset slider positions to show full zoomed range
+        startDateSlider.value = 0.0  // Start of zoomed range
+        endDateSlider.value = 1.0    // End of available data
+
         // Update date labels
         updateDateLabels()
     }
