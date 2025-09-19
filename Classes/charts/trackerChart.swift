@@ -2086,21 +2086,25 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     
     internal func loadDateRanges() {
         guard tracker != nil else { return }
-        
+
         // Get date range from tracker data
         let dateRange = fetchDateRange()
         earliestDate = dateRange.earliest
         latestDate = dateRange.latest
-        
-        selectedStartDate = earliestDate
-        selectedEndDate = latestDate
-        
+
+        // Only set to full range on initial load when dates are nil
+        // Once user has set slider positions, preserve them across app lifecycle and data source changes
+        if selectedStartDate == nil || selectedEndDate == nil {
+            selectedStartDate = earliestDate
+            selectedEndDate = latestDate
+        }
+
         // Initialize zoom-related properties
         zoomedEarliestDate = earliestDate
-        
+
         // Update date labels
         updateDateLabels()
-        
+
         // Update axis configurations if they exist
         updateChartDataForCurrentType()
     }
