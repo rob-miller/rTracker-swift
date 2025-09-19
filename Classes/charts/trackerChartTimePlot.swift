@@ -683,12 +683,198 @@ extension TrackerChart {
             yAxisRanges: yAxisRanges
         )
         
+        // Draw markline if specified and data source 1 exists
+        if let marklineValue = marklineValue, timeChartSources[0] != -1 {
+            drawMarkline(
+                value: marklineValue,
+                sourcesData: sourcesData,
+                graphWidth: graphWidth,
+                graphHeight: graphHeight,
+                yAxisRanges: yAxisRanges
+            )
+        }
+
+        // Draw markline legend if markline is active
+        if let marklineValue = marklineValue, timeChartSources[0] != -1 {
+            drawMarklineLegend(
+                value: marklineValue,
+                sourcesData: sourcesData,
+                yAxisRanges: yAxisRanges
+            )
+        }
+
         // Draw legend
         drawTimeChartLegend(sourcesData: sourcesData)
-        
+
         // Ensure the axes (and therefore the Y-axis view) sit on top so they receive taps
         if let axesView = chartView.viewWithTag(2002) {
             chartView.bringSubviewToFront(axesView)
+        }
+
+        // Bring markline legend to front so it can receive taps
+        if let marklineLegend = marklineLegendView {
+            chartView.bringSubviewToFront(marklineLegend)
+        }
+    }
+
+    // Draw horizontal markline at specified Y value
+    internal func drawMarkline(
+        value: Double,
+        sourcesData: [[String: Any]],
+        graphWidth: CGFloat,
+        graphHeight: CGFloat,
+        yAxisRanges: [String: Any]
+    ) {
+        // Only draw markline for data source 1 (first source)
+        guard let firstSourceData = sourcesData.first,
+              let sourceId = firstSourceData["id"] as? Int,
+              timeChartSources[0] == sourceId else {
+            return
+        }
+
+        // Get Y-axis range for data source 1
+        let mode = yAxisRanges["mode"] as? String ?? "individual"
+        var minY: Double = 0
+        var maxY: Double = 1
+
+        switch mode {
+        case "shared":
+            minY = yAxisRanges["min"] as? Double ?? 0
+            maxY = yAxisRanges["max"] as? Double ?? 1
+        case "individual":
+            // For individual mode, get the range for data source 1 (sourceId)
+            // The data structure is: ["ranges": [104: ["max": 450.03, "min": -21.43]], "mode": "individual"]
+            if let ranges = yAxisRanges["ranges"] as? [Int: [String: Any]] {
+                if let firstRange = ranges[sourceId] {
+                    minY = firstRange["min"] as? Double ?? 0
+                    maxY = firstRange["max"] as? Double ?? 1
+                } else {
+                    // Fallback: use first available range
+                    if let firstAvailableRange = ranges.values.first {
+                        minY = firstAvailableRange["min"] as? Double ?? 0
+                        maxY = firstAvailableRange["max"] as? Double ?? 1
+                    }
+                }
+            }
+        default:
+            minY = 0
+            maxY = 1
+        }
+
+        // Check if markline value is within range
+        guard value >= minY && value <= maxY else {
+            return
+        }
+
+        // Calculate Y position
+        let normalizedY = (value - minY) / (maxY - minY)
+        let yPosition = topMargin + CGFloat(1.0 - normalizedY) * graphHeight
+
+
+        // Remove any existing markline first
+        if let existingMarkline = chartView.viewWithTag(2004) {
+            existingMarkline.removeFromSuperview()
+        }
+
+        // Create markline view
+        let marklineView = UIView(frame: CGRect(
+            x: leftMargin,
+            y: yPosition - 0.5,  // Center the 1px line
+            width: graphWidth,
+            height: 1
+        ))
+        marklineView.backgroundColor = .opaqueSeparator  // More visible gray color for both dark/light mode
+        marklineView.tag = 2004  // Tag to identify markline view
+        chartView.addSubview(marklineView)
+
+    }
+
+    // Draw markline legend showing counts/percentages above and below the line
+    internal func drawMarklineLegend(
+        value: Double,
+        sourcesData: [[String: Any]],
+        yAxisRanges: [String: Any]
+    ) {
+        // Only process data source 1
+        guard let firstSourceData = sourcesData.first,
+              let sourceId = firstSourceData["id"] as? Int,
+              timeChartSources[0] == sourceId,
+              let dataPoints = firstSourceData["dataPoints"] as? [(Date, Double)] else {
+            return
+        }
+
+        // Count points above and below the markline
+        var aboveCount = 0
+        var belowCount = 0
+
+        for (_, yValue) in dataPoints {
+            if yValue > value {
+                aboveCount += 1
+            } else if yValue < value {
+                belowCount += 1
+            }
+            // Points exactly on the line are not counted in either category
+        }
+
+        let totalCount = aboveCount + belowCount
+        guard totalCount > 0 else { return }
+
+        // Format display text based on current mode
+        let displayText: String
+        if marklineLegendDisplayMode == 0 {
+            // Count mode
+            displayText = "↑\(aboveCount) ↓\(belowCount)"
+        } else {
+            // Percentage mode
+            let abovePercent = Int(round(Double(aboveCount) * 100.0 / Double(totalCount)))
+            let belowPercent = Int(round(Double(belowCount) * 100.0 / Double(totalCount)))
+            displayText = "↑\(abovePercent)% ↓\(belowPercent)%"
+        }
+
+        // Create markline legend view positioned to the left of main legend
+        let legendWidth: CGFloat = 80  // Increased width for percentage display
+        let legendHeight: CGFloat = 20
+        let legendX = chartView.bounds.width - self.legendWidth - legendRightMargin - legendWidth - 20  // More space from main legend
+
+        marklineLegendView?.removeFromSuperview()  // Remove existing legend
+        marklineLegendView = UIView(frame: CGRect(
+            x: legendX,
+            y: legendTopMargin - 5,
+            width: legendWidth,
+            height: legendHeight
+        ))
+
+        guard let legendView = marklineLegendView else { return }
+
+        legendView.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.8)
+        legendView.layer.cornerRadius = 5
+        legendView.layer.borderWidth = 0.5
+        legendView.layer.borderColor = UIColor.systemGray.cgColor
+
+        // Add tap gesture to cycle between count and percentage
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(marklineLegendTapped))
+        legendView.addGestureRecognizer(tapGesture)
+        legendView.isUserInteractionEnabled = true
+
+        // Add text label
+        let textLabel = UILabel(frame: CGRect(x: 4, y: 2, width: legendWidth - 8, height: legendHeight - 4))
+        textLabel.text = displayText
+        textLabel.font = UIFont.systemFont(ofSize: 10, weight: .medium)
+        textLabel.textColor = .systemBlue  // Use data source 1 color
+        textLabel.textAlignment = .center
+        legendView.addSubview(textLabel)
+
+        chartView.addSubview(legendView)
+    }
+
+    @objc private func marklineLegendTapped() {
+        // Cycle between count (0) and percentage (1) modes
+        marklineLegendDisplayMode = (marklineLegendDisplayMode + 1) % 2
+        DBGLog("Markline legend toggled to mode: \(marklineLegendDisplayMode == 0 ? "count" : "percentage")")
+
+        // Refresh the chart to update the legend
+        if segmentedControl.selectedSegmentIndex == CHART_TYPE_TIME {
+            updateChartDataWithDebounce()
         }
     }
 

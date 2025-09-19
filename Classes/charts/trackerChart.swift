@@ -28,7 +28,7 @@ import UIKit
 // Associated object key for recent data cache
 internal var recentDataCacheKey: UInt8 = 0
 
-class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSource {
+class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSource, UITextFieldDelegate {
     
     // MARK: - Constants
     
@@ -108,6 +108,12 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     internal var selectedYAxisMode: Int = 0  // To cycle through different axis modes when tapped
     internal var showValueLabels: Bool = false  // Toggle value labels
     internal var currentYAxisView: UIView?  // To track current y-axis view for tapping
+
+    // Markline feature for time plots
+    internal var marklineTextField: UITextField!
+    internal var marklineValue: Double?  // Y value for horizontal markline
+    internal var marklineLegendView: UIView?  // Legend showing above/below counts
+    internal var marklineLegendDisplayMode: Int = 0  // 0=count, 1=percentage
     
     // Date range sliders
     internal var startDateSlider: UISlider!
@@ -392,7 +398,32 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         dateRangeLabel.translatesAutoresizingMaskIntoConstraints = false
         dateRangeLabel.text = "Date Range"
         dateRangeLabel.font = UIFont.boldSystemFont(ofSize: 14)
-        
+
+        // Create markline text field (for time plots only)
+        marklineTextField = UITextField()
+        marklineTextField.translatesAutoresizingMaskIntoConstraints = false
+        marklineTextField.placeholder = "Y mark"
+        marklineTextField.font = UIFont.systemFont(ofSize: 12)
+        marklineTextField.borderStyle = .roundedRect
+        marklineTextField.keyboardType = .decimalPad  // Number keyboard only
+        marklineTextField.returnKeyType = .done
+        marklineTextField.accessibilityIdentifier = "marklineTextField"
+        marklineTextField.isHidden = true  // Initially hidden
+        marklineTextField.isEnabled = false  // Initially disabled
+        marklineTextField.delegate = self
+
+        // Add input accessory toolbar with Done button
+        let toolbar = UIToolbar()
+        toolbar.sizeToFit()
+        let doneButton = UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(dismissMarklineKeyboard))
+        let flexSpace = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
+        toolbar.items = [flexSpace, doneButton]
+        marklineTextField.inputAccessoryView = toolbar
+
+        // Add tooltip for markline when selected
+        let marklineHelpText = "Enter Y value to draw horizontal reference line"
+        marklineTextField.accessibilityHint = marklineHelpText
+
         // Create action button (behavior varies by chart type)
         actionButton = UIButton(type: .system)
         actionButton.translatesAutoresizingMaskIntoConstraints = false
@@ -448,6 +479,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         
         
         sliderContainer.addSubview(dateRangeLabel)
+        sliderContainer.addSubview(marklineTextField)
         sliderContainer.addSubview(actionButton)
         sliderContainer.addSubview(dateRangeZoomIcon)
         sliderContainer.addSubview(dateRangeZoomSwitch)
@@ -516,7 +548,13 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         NSLayoutConstraint.activate([
             dateRangeLabel.topAnchor.constraint(equalTo: sliderContainer.topAnchor, constant: 8),
             dateRangeLabel.leadingAnchor.constraint(equalTo: sliderContainer.leadingAnchor),
-            
+
+            // Position markline text field (between Date Range label and action button)
+            marklineTextField.centerYAnchor.constraint(equalTo: dateRangeLabel.centerYAnchor),
+            marklineTextField.leadingAnchor.constraint(equalTo: dateRangeLabel.trailingAnchor, constant: 16),
+            marklineTextField.widthAnchor.constraint(equalToConstant: 60),
+            marklineTextField.heightAnchor.constraint(equalToConstant: 24),
+
             // Position lock switch (right justified)
             dateRangeLockSwitch.centerYAnchor.constraint(equalTo: dateRangeLabel.centerYAnchor),
             dateRangeLockSwitch.trailingAnchor.constraint(equalTo: sliderContainer.trailingAnchor),
@@ -1216,6 +1254,19 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
                     }
                 }
             }
+
+            // Update markline field visibility based on data source 1 selection
+            let showMarkline = timeChartSources[0] != -1
+            marklineTextField.isHidden = !showMarkline
+            marklineTextField.isEnabled = showMarkline
+
+            // Clear markline value if data source 1 is deselected
+            if !showMarkline {
+                marklineValue = nil
+                marklineTextField.text = ""
+                marklineLegendView?.removeFromSuperview()
+                marklineLegendView = nil
+            }
         } else {
             // Update pie chart source button titles
             for i in 0..<pieChartSources.count {
@@ -1521,7 +1572,23 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     @objc internal func chartTypeChanged(_ sender: UISegmentedControl) {
         // Update action button appearance and visibility for the new chart type
         updateActionButtonForChartType()
-        
+
+        // Update markline visibility - only show for time plots with data source 1
+        let isTimeChart = sender.selectedSegmentIndex == CHART_TYPE_TIME
+        let hasDataSource1 = timeChartSources[0] != -1
+        let showMarkline = isTimeChart && hasDataSource1
+
+        marklineTextField.isHidden = !showMarkline
+        marklineTextField.isEnabled = showMarkline
+
+        // Clear markline if switching away from time chart or no data source 1
+        if !showMarkline {
+            marklineValue = nil
+            marklineTextField.text = ""
+            marklineLegendView?.removeFromSuperview()
+            marklineLegendView = nil
+        }
+
         if sender.selectedSegmentIndex == CHART_TYPE_SCATTER {
             setupScatterPlotConfig()
             
@@ -1756,7 +1823,38 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         // Remove the tracking check - now we update during sliding too
         updateChartDataWithDebounce()
     }
-    
+
+
+    @objc internal func dismissMarklineKeyboard() {
+        marklineTextField.resignFirstResponder()
+    }
+
+    // MARK: - UITextFieldDelegate
+
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        if textField == marklineTextField {
+            textField.resignFirstResponder()
+            return true
+        }
+        return false
+    }
+
+    func textFieldDidEndEditing(_ textField: UITextField) {
+        if textField == marklineTextField {
+            // Parse the entered value
+            if let text = textField.text, !text.isEmpty {
+                marklineValue = Double(text)
+                DBGLog("Markline value set to: \(marklineValue?.description ?? "nil")")
+            } else {
+                marklineValue = nil
+            }
+            // Update chart only when editing completes
+            if segmentedControl.selectedSegmentIndex == CHART_TYPE_TIME {
+                updateChartDataWithDebounce()
+            }
+        }
+    }
+
     // Add this method for debounced updates
     internal func updateChartDataWithDebounce() {
         // Cancel any existing work item
