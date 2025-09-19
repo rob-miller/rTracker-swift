@@ -700,33 +700,69 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             // Distribution plot: recent data indicator functionality
             // Cycle through states: 0=off, 1=last, 2=minus1, 3=minus2, 4=minus3, 5=minus4, back to 0
             recentDataIndicatorState = (recentDataIndicatorState + 1) % 6
-            
+
             // Clear cache when indicator is turned off
             if recentDataIndicatorState == 0 {
                 // Clear the recent data cache
                 objc_setAssociatedObject(self, &recentDataCacheKey, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
             }
-            
+
             // Update button appearance
             switch recentDataIndicatorState {
             case 0: // Off
                 sender.setTitle("○", for: .normal)
-                sender.tintColor = .black
+                if #available(iOS 26.0, *), sender.configuration != nil {
+                    var config = sender.configuration!
+                    config.baseForegroundColor = .label
+                    sender.configuration = config
+                } else {
+                    sender.tintColor = .label
+                }
             case 1: // Last entry
                 sender.setTitle("●", for: .normal)
-                sender.tintColor = rTracker_resource.colorSpectrum[0] // red
+                if #available(iOS 26.0, *), sender.configuration != nil {
+                    var config = sender.configuration!
+                    config.baseForegroundColor = rTracker_resource.colorSpectrum[0] // red
+                    sender.configuration = config
+                } else {
+                    sender.tintColor = rTracker_resource.colorSpectrum[0] // red
+                }
             case 2: // Minus 1 entry
                 sender.setTitle("◑", for: .normal)
-                sender.tintColor = rTracker_resource.colorSpectrum[1] // green
+                if #available(iOS 26.0, *), sender.configuration != nil {
+                    var config = sender.configuration!
+                    config.baseForegroundColor = rTracker_resource.colorSpectrum[1] // green
+                    sender.configuration = config
+                } else {
+                    sender.tintColor = rTracker_resource.colorSpectrum[1] // green
+                }
             case 3: // Minus 2 entry
                 sender.setTitle("◐", for: .normal)
-                sender.tintColor = rTracker_resource.colorSpectrum[2] // blue
+                if #available(iOS 26.0, *), sender.configuration != nil {
+                    var config = sender.configuration!
+                    config.baseForegroundColor = rTracker_resource.colorSpectrum[2] // blue
+                    sender.configuration = config
+                } else {
+                    sender.tintColor = rTracker_resource.colorSpectrum[2] // blue
+                }
             case 4: // Minus 3 entry
                 sender.setTitle("◒", for: .normal)
-                sender.tintColor = rTracker_resource.colorSpectrum[3] // cyan
+                if #available(iOS 26.0, *), sender.configuration != nil {
+                    var config = sender.configuration!
+                    config.baseForegroundColor = rTracker_resource.colorSpectrum[3] // cyan
+                    sender.configuration = config
+                } else {
+                    sender.tintColor = rTracker_resource.colorSpectrum[3] // cyan
+                }
             case 5: // Minus 4 entry
                 sender.setTitle("◓", for: .normal)
-                sender.tintColor = rTracker_resource.colorSpectrum[4] // yellow
+                if #available(iOS 26.0, *), sender.configuration != nil {
+                    var config = sender.configuration!
+                    config.baseForegroundColor = rTracker_resource.colorSpectrum[4] // yellow
+                    sender.configuration = config
+                } else {
+                    sender.tintColor = rTracker_resource.colorSpectrum[4] // yellow
+                }
             default:
                 break
             }
@@ -740,33 +776,69 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             // Pie chart: recent data indicator functionality
             // Cycle through states: 0=off, 1=last, 2=minus1, 3=minus2, 4=minus3, 5=minus4, back to 0
             recentDataIndicatorState = (recentDataIndicatorState + 1) % 6
-            
+
             // Clear cache when indicator is turned off
             if recentDataIndicatorState == 0 {
                 // Clear the recent data cache
                 objc_setAssociatedObject(self, &recentDataCacheKey, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
             }
-            
+
             // Update button appearance
             switch recentDataIndicatorState {
             case 0: // Off
                 sender.setTitle("○", for: .normal)
-                sender.tintColor = .black
+                if #available(iOS 26.0, *), sender.configuration != nil {
+                    var config = sender.configuration!
+                    config.baseForegroundColor = .label
+                    sender.configuration = config
+                } else {
+                    sender.tintColor = .label
+                }
             case 1: // Last entry
                 sender.setTitle("●", for: .normal)
-                sender.tintColor = rTracker_resource.colorSpectrum[0] // red
+                if #available(iOS 26.0, *), sender.configuration != nil {
+                    var config = sender.configuration!
+                    config.baseForegroundColor = rTracker_resource.colorSpectrum[0] // red
+                    sender.configuration = config
+                } else {
+                    sender.tintColor = rTracker_resource.colorSpectrum[0] // red
+                }
             case 2: // Minus 1 entry
                 sender.setTitle("◑", for: .normal)
-                sender.tintColor = rTracker_resource.colorSpectrum[1] // green
+                if #available(iOS 26.0, *), sender.configuration != nil {
+                    var config = sender.configuration!
+                    config.baseForegroundColor = rTracker_resource.colorSpectrum[1] // green
+                    sender.configuration = config
+                } else {
+                    sender.tintColor = rTracker_resource.colorSpectrum[1] // green
+                }
             case 3: // Minus 2 entry
                 sender.setTitle("◐", for: .normal)
-                sender.tintColor = rTracker_resource.colorSpectrum[2] // blue
+                if #available(iOS 26.0, *), sender.configuration != nil {
+                    var config = sender.configuration!
+                    config.baseForegroundColor = rTracker_resource.colorSpectrum[2] // blue
+                    sender.configuration = config
+                } else {
+                    sender.tintColor = rTracker_resource.colorSpectrum[2] // blue
+                }
             case 4: // Minus 3 entry
                 sender.setTitle("◒", for: .normal)
-                sender.tintColor = rTracker_resource.colorSpectrum[3] // cyan
+                if #available(iOS 26.0, *), sender.configuration != nil {
+                    var config = sender.configuration!
+                    config.baseForegroundColor = rTracker_resource.colorSpectrum[3] // cyan
+                    sender.configuration = config
+                } else {
+                    sender.tintColor = rTracker_resource.colorSpectrum[3] // cyan
+                }
             case 5: // Minus 4 entry
                 sender.setTitle("◓", for: .normal)
-                sender.tintColor = rTracker_resource.colorSpectrum[4] // yellow
+                if #available(iOS 26.0, *), sender.configuration != nil {
+                    var config = sender.configuration!
+                    config.baseForegroundColor = rTracker_resource.colorSpectrum[4] // yellow
+                    sender.configuration = config
+                } else {
+                    sender.tintColor = rTracker_resource.colorSpectrum[4] // yellow
+                }
             default:
                 break
             }
@@ -2212,10 +2284,16 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             actionButton.isHidden = false
             actionButton.setImage(nil, for: .normal) // Clear any image
             actionButton.setTitle("○", for: .normal)
-            actionButton.tintColor = .black
+            if #available(iOS 26.0, *), actionButton.configuration != nil {
+                var config = actionButton.configuration!
+                config.baseForegroundColor = .label
+                actionButton.configuration = config
+            } else {
+                actionButton.tintColor = .label
+            }
             recentDataIndicatorState = 0 // Reset state when switching chart types
             objc_setAssociatedObject(self, &recentDataCacheKey, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) // Clear cache
-            
+
         case CHART_TYPE_TIME:
             // Time plot: show as navigation button
             actionButton.isHidden = false
@@ -2225,7 +2303,13 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
             } else {
                 actionButton.setTitle("→", for: .normal)
             }
-            actionButton.tintColor = .systemBlue
+            if #available(iOS 26.0, *), actionButton.configuration != nil {
+                var config = actionButton.configuration!
+                config.baseForegroundColor = .systemBlue
+                actionButton.configuration = config
+            } else {
+                actionButton.tintColor = .systemBlue
+            }
             
         case CHART_TYPE_PIE:
             // Pie chart: show as recent data indicator only in single-source mode
@@ -2241,7 +2325,13 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
                 actionButton.isHidden = false
                 actionButton.setImage(nil, for: .normal) // Clear any image
                 actionButton.setTitle("○", for: .normal)
-                actionButton.tintColor = .black
+                if #available(iOS 26.0, *), actionButton.configuration != nil {
+                    var config = actionButton.configuration!
+                    config.baseForegroundColor = .label
+                    actionButton.configuration = config
+                } else {
+                    actionButton.tintColor = .label
+                }
                 recentDataIndicatorState = 0 // Reset state when switching chart types
             objc_setAssociatedObject(self, &recentDataCacheKey, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) // Clear cache
             }
