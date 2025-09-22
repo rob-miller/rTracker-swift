@@ -10,7 +10,6 @@
 
 import UIKit
 
-var editMode = 0
 
 class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDataSource, UITextFieldDelegate {
 
@@ -23,8 +22,6 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     var toolbar: UIToolbar!
     var setupButton: UIBarButtonItem!
     var copyButton: UIBarButtonItem!
-    var segcEditTrackerEditItems: UISegmentedControl!
-    var segmentedControlItem: UIBarButtonItem!
 
     var nameField: UITextField! // created in cellForRow for section 0
     var infoBtn: UIButton! // appears unused, preserved for possible future info button
@@ -35,6 +32,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     var ttoRank: Int? = nil
 
     var modifying: Bool = false
+    var isReorderingInProgress: Bool = false
 
     // MARK: -
     // MARK: core object methods and support
@@ -42,6 +40,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     deinit {
         DBGLog("atc: dealloc")
     }
+
 
     // MARK: -
     // MARK: view support
@@ -92,7 +91,8 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         tableView.delegate = self
         tableView.dataSource = self
         tableView.setEditing(true, animated: false)
-        tableView.allowsSelection = false
+        tableView.allowsSelection = true
+        tableView.allowsSelectionDuringEditing = true
         tableView.separatorStyle = .none
         view.addSubview(tableView)
 
@@ -108,12 +108,6 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         setupButton.accessibilityLabel = "Setup"
         setupButton.accessibilityHint = "Configure tracker settings"
 
-        // Segmented control
-        segcEditTrackerEditItems = UISegmentedControl(items: ["Edit Tracker", "Edit Items"])
-        segcEditTrackerEditItems.selectedSegmentIndex = 0
-        segcEditTrackerEditItems.addTarget(self, action: #selector(toggleEdit(_:)), for: .valueChanged)
-        segcEditTrackerEditItems.accessibilityIdentifier = "addTrkrSegmented"
-        segmentedControlItem = UIBarButtonItem(customView: segcEditTrackerEditItems)
 
         // Copy button
         copyButton = UIBarButtonItem(title: "Copy", style: .plain, target: self, action: #selector(btnCopy(_:)))
@@ -124,7 +118,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         // Fill space
         let flexibleSpace = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
 
-        toolbar.items = [setupButton, flexibleSpace, segmentedControlItem, flexibleSpace, copyButton]
+        toolbar.items = [setupButton, flexibleSpace, copyButton]
 
         // MARK: - Constraints
 
@@ -171,6 +165,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         swipe.direction = .right
         view.addGestureRecognizer(swipe)
 
+
         super.viewDidLoad() // NOTE: super should go at end due to UIKit expectations
     }
 
@@ -183,7 +178,6 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     override func viewWillAppear(_ animated: Bool) {
         DBGLog(String("atc: viewWillAppear, valObjTable count= \(tempTrackerObj?.valObjTable.count)"))
         tableView.reloadData()
-        toggleEdit(segcEditTrackerEditItems)
         super.viewWillAppear(animated)
     }
 
@@ -225,22 +219,6 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         present(ctvovc, animated: true)
     }
 
-    // MARK: -
-    // MARK: Segmented control toggle
-
-    @objc func toggleEdit(_ sender: UISegmentedControl) {
-        editMode = sender.selectedSegmentIndex
-        if editMode == 0 {
-            tableView.setEditing(true, animated: true)
-            copyButton.isEnabled = true
-        } else {
-            tableView.setEditing(false, animated: true)
-            copyButton.isEnabled = false
-        }
-        DispatchQueue.main.async(execute: { [self] in
-            tableView.reloadSections(NSIndexSet(index: 1) as IndexSet, with: .fade)
-        })
-    }
 
     // MARK: -
     // MARK: button press handlers
@@ -393,9 +371,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             return 1
         } else {
             var rval = tempTrackerObj?.valObjTable.count ?? 0
-            if editMode == 0 {
-                rval += 1
-            }
+            rval += 1  // Always add the "add another" row
             return rval
         }
     }
@@ -590,6 +566,24 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         return true
     }
 
+
+    // Track when reordering begins
+    func tableView(_ tableView: UITableView, targetIndexPathForMoveFromRowAt sourceIndexPath: IndexPath, toProposedIndexPath proposedDestinationIndexPath: IndexPath) -> IndexPath {
+        isReorderingInProgress = true
+
+        // Allow move only within section 1 and within valid range
+        if proposedDestinationIndexPath.section != 1 {
+            return sourceIndexPath
+        }
+
+        let maxRow = (tempTrackerObj?.valObjTable.count ?? 1) - 1
+        if proposedDestinationIndexPath.row > maxRow {
+            return IndexPath(row: maxRow, section: 1)
+        }
+
+        return proposedDestinationIndexPath
+    }
+
     func tableView(
         _ tableView: UITableView,
         moveRowAt fromIndexPath: IndexPath,
@@ -606,6 +600,11 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             tempTrackerObj?.valObjTable.insert(vo, at: toRow)
         }
         self.tableView.reloadData()
+
+        // Re-enable selection after a longer delay to ensure reorder gesture is complete
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            self?.isReorderingInProgress = false
+        }
     }
 
     func tableView(_ tableview: UITableView, editingStyleForRowAt indexPath: IndexPath) -> UITableViewCell.EditingStyle {
@@ -687,10 +686,27 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         }
     }
 
+
+    func tableView(_ tableView: UITableView, shouldHighlightRowAt indexPath: IndexPath) -> Bool {
+        // Don't highlight during reordering operations
+        if isReorderingInProgress {
+            return false
+        }
+        return true
+    }
+
+    func tableView(_ tableView: UITableView, willSelectRowAt indexPath: IndexPath) -> IndexPath? {
+        // Don't allow selection during reordering operations
+        if isReorderingInProgress {
+            return nil
+        }
+        return indexPath
+    }
+
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         let row = indexPath.row
         let section = indexPath.section
-        DBGLog(String("selected section \(section) row \(row) "))
+        tableView.deselectRow(at: indexPath, animated: true)
         if 0 == section {
             nameField.becomeFirstResponder()
         } else {
@@ -700,6 +716,12 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     func tableView(_ tableView: UITableView, accessoryButtonTappedForRowWith indexPath: IndexPath) {
         let row = indexPath.row
+
+        // Block accessory button during reordering too
+        if isReorderingInProgress {
+            return
+        }
+
         addValObjR(row)
     }
 
@@ -707,10 +729,6 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         if indexPath.section == 0 {
             return false
         }
-        if editMode == 0 {
-            return true
-        } else {
-            return false
-        }
+        return true
     }
 }
