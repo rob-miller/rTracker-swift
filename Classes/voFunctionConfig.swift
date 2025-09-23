@@ -679,26 +679,171 @@ extension voFunction {
     }
 
     @objc func btnHelp() {
+        guard let ctvovc = ctvovcp else { return }
+
         switch fnSegNdx {
         case FNSEGNDX_OVERVIEW:
-            if let url = URL(string: "http://rob-miller.github.io/rTracker/rTracker/iPhone/QandA/addFunction.html#overview") {
-                UIApplication.shared.open(url, options: [:])
-            }
+            rTracker_resource.showContextualHelp(
+                identifiers: ["page_function_overview"],
+                from: ctvovc.toolBar,
+                in: ctvovc
+            )
         case FNSEGNDX_RANGEBLD:
-            if let url = URL(string: "http://rob-miller.github.io/rTracker/rTracker/iPhone/QandA/addFunction.html#range") {
-                UIApplication.shared.open(url, options: [:])
-            }
+            showFunctionRangeHelp()
         case FNSEGNDX_FUNCTBLD:
-            if let url = URL(string: "http://rob-miller.github.io/rTracker/rTracker/iPhone/QandA/addFunction.html#operators") {
-                UIApplication.shared.open(url, options: [:])
-            }
+            showFunctionDefinitionHelp()
         default:
             dbgNSAssert(false, "fnSegmentAction bad index!")
         }
+    }
 
+    // MARK: - Documentation Mapping Tables
 
+    /// Maps function operator names to documentation identifiers
+    private func getOperatorDocIdentifier(_ operatorName: String) -> String {
+        switch operatorName.lowercased() {
+        // Basic operators
+        case "sum": return "op_sum"
+        case "avg": return "op_avg"
+        case "min": return "op_min"
+        case "max": return "op_max"
+        case "count": return "op_count"
+        case "change_in": return "op_change_in"
 
+        // Pre/post operators with hyphens
+        case "pre-sum": return "op_pre_sum"
+        case "post-sum": return "op_post_sum"
+        case "pre-avg": return "op_pre_avg"
+        case "post-avg": return "op_post_avg"
+        case "pre-min": return "op_pre_min"
+        case "post-min": return "op_post_min"
+        case "pre-max": return "op_pre_max"
+        case "post-max": return "op_post_max"
+        case "pre-count": return "op_pre_count"
+        case "post-count": return "op_post_count"
+        case "pre-change_in": return "op_pre_change_in"
+        case "post-change_in": return "op_post_change_in"
 
+        // Ratio operators
+        case "old/new": return "op_old_new"
+        case "new/old": return "op_new_old"
+
+        // Time elapsed operators
+        case "elapsed_weeks": return "op_elapsed_weeks"
+        case "elapsed_days": return "op_elapsed_days"
+        case "elapsed_hrs": return "op_elapsed_hrs"
+        case "elapsed_mins": return "op_elapsed_mins"
+        case "elapsed_secs": return "op_elapsed_secs"
+
+        // Other operators
+        case "delay": return "op_delay"
+        case "round": return "op_round"
+        case "classify": return "op_classify"
+        case "¬": return "op_not"
+
+        // Arithmetic operators
+        case "+": return "op_plus"
+        case "-": return "op_minus"
+        case "*": return "op_multiply"
+        case "/": return "op_divide"
+
+        // Logical operators
+        case "∧": return "op_and"
+        case "∨": return "op_or"
+        case "⊕": return "op_xor"
+
+        // Comparison operators
+        case "==": return "op_equal"
+        case "!=": return "op_not_equal"
+        case ">": return "op_greater"
+        case "<": return "op_less"
+        case ">=": return "op_greater_equal"
+        case "<=": return "op_less_equal"
+
+        // Floor/ceiling
+        case "⌊": return "op_floor"
+        case "⌈": return "op_ceiling"
+
+        default: return "op_unknown"
+        }
+    }
+
+    /// Maps range endpoint picker selections to documentation identifiers
+    private func getRangeDocIdentifiers() -> [String] {
+        guard let ctvovc = ctvovcp else { return ["page_function_range"] }
+
+        var identifiers = ["page_function_range"]
+
+        // Check for endpoint picker selections
+        if let leftPicker = ctvovc.wDict["frel"] as? UIPickerView {
+            let leftRow = leftPicker.selectedRow(inComponent: 0)
+            if leftRow < votWoSelf.count {
+                // This is a value object selection
+                let vobj = votWoSelf[leftRow]
+                let vtypeName = ValueObjectType.typeNames[vobj.vtype]
+                identifiers.append("value_\(vtypeName.lowercased())")
+            } else {
+                // This is a time offset selection - map to appropriate endpoint
+                identifiers.append("endpoint_time_offset")
+            }
+        }
+
+        if let rightPicker = ctvovc.wDict["frer"] as? UIPickerView {
+            let rightRow = rightPicker.selectedRow(inComponent: 0)
+            if rightRow < votWoSelf.count {
+                // This is a value object selection
+                let vobj = votWoSelf[rightRow]
+                let vtypeName = ValueObjectType.typeNames[vobj.vtype]
+                identifiers.append("value_\(vtypeName.lowercased())")
+            } else {
+                // Check for specific time endpoints
+                let timeOffsets = ["months", "cal_months", "weeks", "days", "hours", "minutes"]
+                let offsetIndex = rightRow - votWoSelf.count
+                if offsetIndex >= 0 && offsetIndex < timeOffsets.count {
+                    identifiers.append("endpoint_\(timeOffsets[offsetIndex])")
+                }
+            }
+        }
+
+        return identifiers
+    }
+
+    /// Shows context-sensitive help for function range based on current picker selections
+    func showFunctionRangeHelp() {
+        guard let ctvovc = ctvovcp else { return }
+
+        let identifiers = getRangeDocIdentifiers()
+
+        rTracker_resource.showContextualHelp(
+            identifiers: identifiers,
+            from: ctvovc.toolBar,
+            in: ctvovc
+        )
+    }
+
+    /// Shows context-sensitive help for function definition based on current picker selection
+    func showFunctionDefinitionHelp() {
+        guard let ctvovc = ctvovcp else { return }
+
+        var identifiers = ["page_function_definition"]
+
+        // Check if there's a picker view and get the selected row
+        if let pickerView = ctvovc.wDict["fdPkr"] as? UIPickerView {
+            let selectedRow = pickerView.selectedRow(inComponent: 0)
+            if selectedRow < fnTitles.count {
+                let operatorToken = fnTitles[selectedRow].intValue
+                let operatorName = fnTokenToStr(operatorToken)
+                let docIdentifier = getOperatorDocIdentifier(operatorName)
+                identifiers.append(docIdentifier)
+            }
+        }
+
+        // Show contextual help with page description and operator-specific help
+        rTracker_resource.showContextualHelp(
+            identifiers: identifiers,
+            from: ctvovc.toolBar,
+            in: ctvovc
+        )
     }
 
     //
@@ -737,7 +882,7 @@ extension voFunction {
             
             let scButtonItem = UIBarButtonItem(
                 customView: segmentedControl)
-            let fnHelpButtonItem = UIBarButtonItem(title: "Help", style: .plain, target: self, action: #selector(RootViewController.btnHelp))
+            let fnHelpButtonItem = rTracker_resource.createHelpInfoButton(target: self, action: #selector(btnHelp))
 
             ctvovc?.toolBar.items = [
                 db,

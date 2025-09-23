@@ -150,15 +150,19 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
     */
 
     @objc func btnChoiceHelp() {
-        if let url = URL(string: "http://rob-miller.github.io/rTracker/rTracker/iPhone/QandA/choices.html") {
-            UIApplication.shared.open(url, options: [:])
-        }
+        rTracker_resource.showContextualHelp(
+            identifiers: ["value_choice"],
+            from: toolBar,
+            in: self
+        )
     }
 
     @objc func btnInfoHelp() {
-        if let url = URL(string: "http://rob-miller.github.io/rTracker/rTracker/iPhone/QandA/info.html") {
-            UIApplication.shared.open(url, options: [:])
-        }
+        rTracker_resource.showContextualHelp(
+            identifiers: ["value_info"],
+            from: toolBar,
+            in: self
+        )
     }
 
     deinit {
@@ -242,12 +246,9 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
 
             var fnHelpButtonItem: UIBarButtonItem?
             if VOT_CHOICE == vo?.vtype {
-                fnHelpButtonItem = UIBarButtonItem(title: "Help", style: .plain, target: self, action: #selector(btnChoiceHelp))
+                fnHelpButtonItem = rTracker_resource.createHelpInfoButton(target: self, action: #selector(btnChoiceHelp))
             } else {
-                fnHelpButtonItem = UIBarButtonItem(title: "Help", style: .plain, target: self, action: #selector(btnInfoHelp))
-            }
-            if #available(iOS 26.0, *) {
-                fnHelpButtonItem?.hidesSharedBackground = true  // Remove white container background
+                fnHelpButtonItem = rTracker_resource.createHelpInfoButton(target: self, action: #selector(btnInfoHelp))
             }
 
             var items: [UIBarButtonItem] = [doneBtn, flexibleSpaceButtonItem]
