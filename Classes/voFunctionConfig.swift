@@ -29,10 +29,10 @@ extension voFunction {
         var ep: Int?
         let n = vo.optDict[key]
         ep = (n != nil ? Int(n!) : nil)
-        DBGLog(String("comp= \(component) ep= \(ep) n= \(n)"))
+        //DBGLog(String("comp= \(component) ep= \(ep) n= \(n)"))
         if n == nil || ep! == FREPDFLT {
             // no endpoint defined, so default row 0
-            DBGLog(" returning 0")
+            //DBGLog(" returning 0")
             return 0
         }
         if ep! >= 0 || ep! <= -TMPUNIQSTART {
@@ -55,13 +55,13 @@ extension voFunction {
         if row != 0 {
             let votc = votWoSelf.count//[MyTracker.valObjTable count];
             if row <= votc {
-                DBGLog(String(" returning \(votWoSelf[row - 1].valueName)"))
+                //DBGLog(String(" returning \(votWoSelf[row - 1].valueName)"))
                 return votWoSelf[row - 1].valueName! //((valueObj*) [MyTracker.valObjTable objectAtIndex:row-1]).valueName;
             } else {
                 row -= votc
             }
         }
-        DBGLog(String(" returning \(epTitles[row])"))
+        //DBGLog(String(" returning \(epTitles[row])"))
         return epTitles[row]
     }
 
@@ -94,7 +94,7 @@ extension voFunction {
             let postLab = (ctvovcp?.wDict)?[post_vkey] as? UILabel
             //postLab.text = [[self fnrRowTitle:row] stringByReplacingOccurrencesOfString:@"cal " withString:@"c "];
             postLab?.text = fnrRowTitle(row)
-            DBGLog(String(" postlab= \(postLab?.text ?? "")"))
+            //DBGLog(String(" postlab= \(postLab?.text ?? "")"))
             if let postLab {
                 ctvovcp?.scroll.addSubview(postLab)
             }
@@ -145,9 +145,9 @@ extension voFunction {
         frame = ctvovcp?.configPicker(frame, key: "frPkr", caller: self) ?? CGRect.zero
         let pkr = (ctvovcp?.wDict)?["frPkr"] as? UIPickerView
 
-        DBGLog(String("pkr component 0 selectRow \(ep(toRow: 0))"))
+        //DBGLog(String("pkr component 0 selectRow \(ep(toRow: 0))"))
         pkr?.selectRow(ep(toRow: 0), inComponent: 0, animated: false)
-        DBGLog(String("pkr component 1 selectRow \(ep(toRow: 1))"))
+        //DBGLog(String("pkr component 1 selectRow \(ep(toRow: 1))"))
         pkr?.selectRow(ep(toRow: 1), inComponent: 1, animated: false)
 
         frame.origin.y += frame.size.height + MARGIN
@@ -774,35 +774,40 @@ extension voFunction {
 
         var identifiers = ["page_function_range"]
 
-        // Check for endpoint picker selections
-        if let leftPicker = ctvovc.wDict["frel"] as? UIPickerView {
-            let leftRow = leftPicker.selectedRow(inComponent: 0)
-            if leftRow < votWoSelf.count {
+        // Check for endpoint picker selections from the range picker (frPkr) with two components
+        if let rangePicker = ctvovc.wDict["frPkr"] as? UIPickerView {
+            // Component 0 is the "Previous" (left) endpoint
+            let leftRow = rangePicker.selectedRow(inComponent: 0)
+            if leftRow == 0 {
+                // Row 0 is "entry"
+                identifiers.append("endpoint_entry")
+            } else if leftRow <= votWoSelf.count {
                 // This is a value object selection
-                let vobj = votWoSelf[leftRow]
-                let vtypeName = ValueObjectType.typeNames[vobj.vtype]
-                identifiers.append("value_\(vtypeName.lowercased())")
+                //let vobj = votWoSelf[leftRow - 1]
+                //let vtypeName = ValueObjectType.typeNames[vobj.vtype]
+                //identifiers.append("value_\(vtypeName.lowercased())")
+                identifiers.append("endpoint_value")
             } else {
                 // This is a time offset selection - map to appropriate endpoint
-                identifiers.append("endpoint_time_offset")
-            }
-        }
-
-        if let rightPicker = ctvovc.wDict["frer"] as? UIPickerView {
-            let rightRow = rightPicker.selectedRow(inComponent: 0)
-            if rightRow < votWoSelf.count {
-                // This is a value object selection
-                let vobj = votWoSelf[rightRow]
-                let vtypeName = ValueObjectType.typeNames[vobj.vtype]
-                identifiers.append("value_\(vtypeName.lowercased())")
-            } else {
-                // Check for specific time endpoints
-                let timeOffsets = ["months", "cal_months", "weeks", "days", "hours", "minutes"]
-                let offsetIndex = rightRow - votWoSelf.count
+                let offsetIndex = leftRow - votWoSelf.count - 1
+                let timeOffsets = ["hours", "days", "weeks", "months", "years", "cal_days", "cal_weeks", "cal_months", "cal_years", "none"]
                 if offsetIndex >= 0 && offsetIndex < timeOffsets.count {
                     identifiers.append("endpoint_\(timeOffsets[offsetIndex])")
+                } else {
+                    identifiers.append("endpoint_time_offset")
                 }
             }
+
+            // Component 1 is the "Current" (right) endpoint
+            let rightRow = rangePicker.selectedRow(inComponent: 1)
+            if rightRow == 0 {
+                // Row 0 is "entry"
+                identifiers.append("endpoint_entry")
+            } else if rightRow <= votWoSelf.count {
+                // This is a value object selection
+                identifiers.append("endpoint_value")
+            }
+            // Note: Component 1 only has votWoSelf.count + 1 rows (no time offsets)
         }
 
         return identifiers
@@ -1103,10 +1108,10 @@ extension voFunction {
     func fnrRowCount(_ component: Int) -> Int {
        // only allow time offset for previous side of range
         if component == 1 {
-            DBGLog(String(" returning \(votWoSelf.count + 1)"))
+            //DBGLog(String(" returning \(votWoSelf.count + 1)"))
             return votWoSelf.count + 1 // [MyTracker.valObjTable count]+1;  // count all +1 for 'current entry'
         } else {
-            DBGLog(String(" returning \(votWoSelf.count + MAXFREP)"))
+            //DBGLog(String(" returning \(votWoSelf.count + MAXFREP)"))
             return votWoSelf.count + MAXFREP //[MyTracker.valObjTable count] + MAXFREP;
         }
     }
@@ -1198,7 +1203,7 @@ extension voFunction {
                 vo.optDict[key] = String("\(((row - votc) + 1) * -1)")  // NSNumber(value: ((row - votc) + 1) * -1)
                 updateValTF(row, component: component)
             }
-            DBGLog(String("picker sel row \(row) \(key) now= \(vo.optDict[key])"))
+            //DBGLog(String("picker sel row \(row) \(key) now= \(vo.optDict[key])"))
         } else if fnSegNdx == FNSEGNDX_FUNCTBLD {
             //DBGLog(@"fn build row %d= %@",row,[self fndRowTitle:row]);
             // Hide all UI elements first
