@@ -463,6 +463,8 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
 
             //NSString *vt=nil;
 
+            // ival: int value entered in UI box, negative if ep0
+            // ndx: 0 or 1 for ep0 or ep1
             switch ep {
             case FREPNONE:
                 // no previous endpoint - find nothing prior to now
@@ -517,7 +519,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                 
                 DBGLog(String("targ= \(targ)"))
 
-            // if any of week, day, month, year we need to wipe hour, minute, second components
+            // if any of cal week, day, month, year we need to wipe hour, minute, second components
                 fallthrough
             case FREPCDAYS:
                 unitFlags.insert(.day)
