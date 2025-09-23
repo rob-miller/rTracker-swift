@@ -35,6 +35,8 @@
 		D417E3142A2121570093564A /* TSQCalendarRowCell.m in Sources */ = {isa = PBXBuildFile; fileRef = D417E30E2A2121570093564A /* TSQCalendarRowCell.m */; };
 		D417E3152A2121570093564A /* changes.rtm in Resources */ = {isa = PBXBuildFile; fileRef = D417E30F2A2121570093564A /* changes.rtm */; };
 		D41AA9032D26CDD6001393C8 /* healthkitSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D41AA9022D26CDD5001393C8 /* healthkitSupport.swift */; };
+		D41D53372E82F488006AB71F /* rtDocs.swift in Sources */ = {isa = PBXBuildFile; fileRef = D41D53362E82F488006AB71F /* rtDocs.swift */; };
+		D41D53382E82F488006AB71F /* rtDocs.swift in Sources */ = {isa = PBXBuildFile; fileRef = D41D53362E82F488006AB71F /* rtDocs.swift */; };
 		D424D06A2D81E84D0027C9E6 /* otViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D424D0692D81E8370027C9E6 /* otViewController.swift */; };
 		D427446A1438B8090011EFE6 /* iTunesArtwork in Resources */ = {isa = PBXBuildFile; fileRef = D42744691438B8090011EFE6 /* iTunesArtwork */; };
 		D43216B225F2444100B2E582 /* ContactsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D43216B025F2444100B2E582 /* ContactsUI.framework */; };
@@ -202,6 +204,7 @@
 		D417E30F2A2121570093564A /* changes.rtm */ = {isa = PBXFileReference; lastKnownFileType = text; name = changes.rtm; path = Classes/TimesSquare/changes.rtm; sourceTree = SOURCE_ROOT; };
 		D41AA9012D26CA62001393C8 /* rTrackerDebug no-log.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = "rTrackerDebug no-log.entitlements"; path = "rTracker/rTrackerDebug no-log.entitlements"; sourceTree = "<group>"; };
 		D41AA9022D26CDD5001393C8 /* healthkitSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = healthkitSupport.swift; sourceTree = "<group>"; };
+		D41D53362E82F488006AB71F /* rtDocs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = rtDocs.swift; sourceTree = "<group>"; };
 		D424D0692D81E8370027C9E6 /* otViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = otViewController.swift; sourceTree = "<group>"; };
 		D42744691438B8090011EFE6 /* iTunesArtwork */ = {isa = PBXFileReference; lastKnownFileType = file; name = iTunesArtwork; path = Resources/png/iTunesArtwork; sourceTree = "<group>"; };
 		D427FD3F126C78D100A8ED9A /* rTracker-constants.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = "rTracker-constants.swift"; path = "Classes/rTracker-constants.swift"; sourceTree = "<group>"; };
@@ -610,6 +613,7 @@
 				D4A314A91189BB6A00F062AC /* tObjBase.swift */,
 				D482D271114FEB5E00CE6BC8 /* trackerList.swift */,
 				D482D275114FEB7500CE6BC8 /* trackerObj.swift */,
+				D41D53362E82F488006AB71F /* rtDocs.swift */,
 				D494D5B62DA569E200298132 /* trackerObjDbCsv.swift */,
 				D4A700CC13798874005E0E23 /* togd.swift */,
 			);
@@ -737,7 +741,7 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastSwiftUpdateCheck = 1500;
 				LastTestingUpgradeCheck = 0600;
-				LastUpgradeCheck = 1630;
+				LastUpgradeCheck = 2600;
 				ORGANIZATIONNAME = "Robert T. Miller";
 				TargetAttributes = {
 					1D6058900D05DD3D006BFB54 = {
@@ -907,6 +911,7 @@
 				D4B6AE6D127EC34D00C036ED /* voText.swift in Sources */,
 				D4620057182C046E00F6F2C2 /* notifyReminder.swift in Sources */,
 				D4B6AE77127EC36E00C036ED /* voSlider.swift in Sources */,
+				D41D53372E82F488006AB71F /* rtDocs.swift in Sources */,
 				D4CB672F18B3FF7100096490 /* voInfo.swift in Sources */,
 				D4EE7D862D8DE57000206D26 /* trackerChart.swift in Sources */,
 				D4B6AE7C127EC38300C036ED /* voChoice.swift in Sources */,
@@ -952,6 +957,7 @@
 			files = (
 				D4CA92BC2D2B115400554F55 /* ahViewController.swift in Sources */,
 				D49F29482ACC8CC800B11560 /* rTrackerUITestsLaunchTests.swift in Sources */,
+				D41D53382E82F488006AB71F /* rtDocs.swift in Sources */,
 				D47E6DDF2DE0CF7F00D68B2F /* main.swift in Sources */,
 				D49F29462ACC8CC800B11560 /* rTrackerUITests.swift in Sources */,
 				D4EE7D852D8DE57000206D26 /* trackerChart.swift in Sources */,
@@ -1136,6 +1142,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "-D__IPHONE_OS_VERSION_MIN_REQUIRED=040100";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Debug;
@@ -1184,6 +1191,7 @@
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CODE_SIGN_FLAGS = "-D__IPHONE_OS_VERSION_MIN_REQUIRED=040100";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VERSIONING_SYSTEM = "apple-generic";
 			};
@@ -1233,6 +1241,7 @@
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CODE_SIGN_FLAGS = "-D__IPHONE_OS_VERSION_MIN_REQUIRED=040100";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = AppStore;
@@ -1704,6 +1713,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "-D__IPHONE_OS_VERSION_MIN_REQUIRED=040100";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = "Debug SQL";
@@ -1815,6 +1825,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "-D__IPHONE_OS_VERSION_MIN_REQUIRED=040100";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = "Debug graph";
@@ -1926,6 +1937,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "-D__IPHONE_OS_VERSION_MIN_REQUIRED=040100";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = "Debug function";
@@ -2037,6 +2049,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "-D__IPHONE_OS_VERSION_MIN_REQUIRED=040100";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = "Debug reminder";
@@ -2148,6 +2161,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "-D__IPHONE_OS_VERSION_MIN_REQUIRED=040100";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = "Debug all";
@@ -2259,6 +2273,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "-D__IPHONE_OS_VERSION_MIN_REQUIRED=040100";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = "Debug no-log";
