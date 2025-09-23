@@ -667,7 +667,7 @@ class privacyV: UIView {
             // Calculate position: want bottom of our view to touch top of bottom bar
             // Our view starts at y = parentView.height (below screen)
             // We need to move up by (our height + bottom safe area) to position correctly
-            let parentHeight = parentView?.frame.size.height ?? 0
+            //let parentHeight = parentView?.frame.size.height ?? 0
             let safeBottom = parentView?.safeAreaInsets.bottom ?? 0
 
             // The translation needed to position the view properly

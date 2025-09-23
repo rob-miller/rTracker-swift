@@ -1427,11 +1427,4 @@ class rTracker_resource: NSObject {
       sourceRect: sourceRect)
   }
 
-  /// Initialize the documentation system
-  /*
-  class func initializeDocumentation() {
-    // Documentation is now initialized automatically when rtDocs.shared is first accessed
-    // This function is kept for compatibility but no longer needs to do anything
-  }
-  */
 }

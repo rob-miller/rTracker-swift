@@ -103,9 +103,6 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
 
         rTracker_resource.initHasAmPm()
 
-        // Initialize documentation system
-        rTracker_resource.initializeDocumentation()
-
         // License acceptance will be handled in scene delegate after UI is set up
 
         // Shortcut items will be handled in scene delegate

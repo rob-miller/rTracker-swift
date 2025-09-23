@@ -429,7 +429,6 @@ class trackerObj: tObjBase {
         let existingDatesQuery = "SELECT date FROM trkrData order by date DESC"
         
         let existingDatesArr = toQry2AryI(sql: existingDatesQuery)  // for debug to look at
-        let existingDates = Set(existingDatesArr)
         
         let calendar = Calendar.current
         var newDates: [TimeInterval] = []
