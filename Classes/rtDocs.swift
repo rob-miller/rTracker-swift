@@ -262,34 +262,69 @@ class rtDocs {
 
         // Range endpoints
         rtDocEntry(
-            identifier: "endpoint_months",
-            title: "months",
-            description: "Time offset in months. The previous endpoint will be the same time of day, but N months back. Example: '-2 months' means 2 months ago from the current entry time.",
+            identifier: "endpoint_entry",
+            title: "entry",
+            description: "The previous or current entry for this tracker.",
+        ),
+        rtDocEntry(
+            identifier: "endpoint_none",
+            title: "<none>",
+            description: "The function only calculates over the current tracker entry.",
+        ),
+        rtDocEntry(
+            identifier: "endpoint_value",
+            title: "value",
+            description: "The previous or current tracker entry where this value is defined.",
+        ),
+        rtDocEntry(
+            identifier: "endpoint_cal_years",
+            title: "cal years",
+            description: "Complete calendar years. The previous endpoint will be counted back by complete calendar years. Example: '-2 cal years' from December 12, 2022 will be 12:00 AM on January 1, 2021.\n'Only Last' means only calculate at the end of the range, otherwise the graph will show values for every entry.",
+        ),
+        rtDocEntry(
+            identifier: "endpoint_years",
+            title: "years",
+            description: "Time offset in years. The previous endpoint will be the same date and time of day, but the specified number of years before. Example: '-2 years' from December 12, 2022 will be December 12, 2020.",
         ),
         rtDocEntry(
             identifier: "endpoint_cal_months",
             title: "cal months",
-            description: "Complete calendar months. The previous endpoint will be counted back by complete calendar months. Example: If current entry is Dec 12 with '-2 cal months', the previous endpoint will be 12:00 AM on Nov 1.",
+            description: "Complete calendar months. The previous endpoint will be counted back by complete calendar months. Example: '-2 cal months' from December 12 will be 12:00 AM on November 1.\n'Only Last' means only calculate at the end of the range, otherwise the graph will show values for every entry.",
+        ),
+        rtDocEntry(
+            identifier: "endpoint_months",
+            title: "months",
+            description: "Time offset in months. The previous endpoint will be the same date and time of day, but the specified number of months before. Example: '-2 months' from December 12 will be October 12.",
+        ),
+        rtDocEntry(
+            identifier: "endpoint_cal_weeks",
+            title: "cal weeks",
+            description: "Complete calendar weeks. The previous endpoint will be counted back by complete calendar weeks. Example: If current entry is Thursday with '-1 cal weeks', the previous endpoint will be 12:00 AM on the first day of the current week for your locale.\n'Only Last' means only calculate at the end of the range, otherwise the graph will show values for every entry.",
         ),
         rtDocEntry(
             identifier: "endpoint_weeks",
             title: "weeks",
-            description: "Time offset in weeks. The previous endpoint will be exactly N weeks (7 days) back from the current entry time.",
+            description: "Time offset in weeks. The previous endpoint will be exactly the specified weeks (7 days) before the current entry time.",
+        ),
+        rtDocEntry(
+            identifier: "endpoint_cal_days",
+            title: "cal days",
+            description: "Complete calendar days. The previous endpoint will be counted back by complete calendar days. Example: If current entry is Dec 12 with '-2 cal days', the previous endpoint will be 12:00 AM on Dec 10.\n'Only Last' means only calculate at the end of the range, otherwise the graph will show values for every entry.",
         ),
         rtDocEntry(
             identifier: "endpoint_days",
             title: "days",
-            description: "Time offset in days. The previous endpoint will be exactly N days back from the current entry time.",
+            description: "Time offset in days. The previous endpoint will be exactly the specified days before the current entry time.",
         ),
         rtDocEntry(
             identifier: "endpoint_hours",
             title: "hours",
-            description: "Time offset in hours. The previous endpoint will be exactly N hours back from the current entry time.",
+            description: "Time offset in hours. The previous endpoint will be exactly the specified hours before the current entry time.",
         ),
         rtDocEntry(
             identifier: "endpoint_minutes",
             title: "minutes",
-            description: "Time offset in minutes. The previous endpoint will be exactly N minutes back from the current entry time.",
+            description: "Time offset in minutes. The previous endpoint will be exactly the specified minutes before the current entry time.",
         ),
 
         // General features
