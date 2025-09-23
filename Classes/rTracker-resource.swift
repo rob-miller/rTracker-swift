@@ -1388,8 +1388,17 @@ class rTracker_resource: NSObject {
 
       // Create attributed string with proper bold formatting
       let attributedContent = NSMutableAttributedString()
+      var shownEntries = Set<String>()
 
       for (index, entry) in entries.enumerated() {
+        // Skip duplicates for second and subsequent entries
+        if shownEntries.contains(entry.identifier) {
+          continue
+        }
+
+        // Track this entry as shown
+        shownEntries.insert(entry.identifier)
+
         if index > 0 {
           // Add spacing between sections
           attributedContent.append(NSAttributedString(string: "\n\n"))
