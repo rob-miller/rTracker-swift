@@ -10,24 +10,22 @@ import SwiftUI
 import HealthKit
 
 struct ahViewController: View {
-    var onDismiss: (String?, String?, Bool, Bool, String, String, String) -> Void
+    var onDismiss: (String?, String?, Bool, String, String, String) -> Void
     @Environment(\.dismiss) var dismiss // For the Back/Exit button
     @State private var currentSelection: String? // Stores the datasource selection
     @State private var currentUnit: HKUnit? // Tracks the selected unit
     @State private var avgDataSwitch: Bool  // Tracks avg value switch
     @State private var prevDateSwitch: Bool  // Tracks previous date switch
-    @State private var hrsMinSwitch: Bool = false  // Tracks hrs:mins display format switch
     @State private var ahFrequency: String = "daily"  // Tracks frequency selection
     @State private var ahTimeFilter: String = "all_day"  // Tracks time filter selection  
     @State private var ahAggregation: String = "avg"  // Tracks aggregation selection
     @State private var showingAvgInfo = false // For average info popup
     @State private var showingPrevDayInfo = false // For previous day info popup
     @State private var showingConfigInfo = false // For selected config info popup
-    @State private var previousHrsMinState: Bool = false
     @State private var seenMinuteSelections: Set<String> = []  // Add this to track which selections we've seen
     @ObservedObject var rthk = rtHealthKit.shared
     
-    init(selectedChoice: String?, selectedUnitString: String?, ahPrevD: Bool, ahHrsMin: Bool = false, ahFrequency: String = "daily", ahTimeFilter: String = "all_day", ahAggregation: String = "avg", onDismiss: @escaping (String?, String?, Bool, Bool, String, String, String) -> Void) {
+    init(selectedChoice: String?, selectedUnitString: String?, ahPrevD: Bool, ahFrequency: String = "daily", ahTimeFilter: String = "all_day", ahAggregation: String = "avg", onDismiss: @escaping (String?, String?, Bool, String, String, String) -> Void) {
         self.onDismiss = onDismiss
         self._currentSelection = State(initialValue: selectedChoice)
         if let unitString = selectedUnitString {
@@ -37,8 +35,6 @@ struct ahViewController: View {
         }
         avgDataSwitch = false  // Always false - no averaging needed
         prevDateSwitch = ahPrevD
-        _hrsMinSwitch = State(initialValue: ahHrsMin)
-        _previousHrsMinState = State(initialValue: ahHrsMin)
         _ahFrequency = State(initialValue: ahFrequency)
         _ahTimeFilter = State(initialValue: ahTimeFilter)
         _ahAggregation = State(initialValue: ahAggregation)
@@ -55,17 +51,6 @@ struct ahViewController: View {
                             if selectedConfig.unit != nil && selectedConfig.needUnit {
                                 currentUnit = selectedConfig.unit?.first
                                 
-                                // If this selection offers minutes and we haven't seen it before
-                                if let newSelection = newSelection,
-                                   currentUnit?.unitString == "min" {
-                                    if !seenMinuteSelections.contains(newSelection) {
-                                        hrsMinSwitch = true  // Turn on for first time
-                                        previousHrsMinState = true
-                                        seenMinuteSelections.insert(newSelection)  // Mark as seen
-                                    } else {
-                                        hrsMinSwitch = previousHrsMinState  // Use previous state
-                                    }
-                                }
                             }
                         }
                     }
@@ -76,10 +61,6 @@ struct ahViewController: View {
                     unitSelectionContent
                 }
                 
-                // Hours:Minutes format switch (only for "min" unit)
-                if currentUnit?.unitString == "min" {
-                    hoursMinutesContent
-                }
                 
                 // Average data switch
                 // averageDataSection
@@ -164,33 +145,9 @@ struct ahViewController: View {
                     currentUnit = config.unit?.first
                 }
             }
-            .onChange(of: currentUnit) { oldUnit, newUnit in
-                // Reset hrs:mins switch if unit is not minutes
-                if newUnit?.unitString == "min" {
-                    hrsMinSwitch = previousHrsMinState
-                } else {
-                    hrsMinSwitch = false
-                }
-            }
             .frame(minHeight: 40)
     }
     
-    private var hoursMinutesContent: some View {
-        HStack {
-            Text("Display minutes as hrs:mins")
-                .font(.system(size: 16))
-                .foregroundColor(.primary)
-            
-            Spacer()
-            Toggle("", isOn: $hrsMinSwitch)
-                .labelsHidden()
-                .onChange(of: hrsMinSwitch) { oldValue, newValue in
-                    previousHrsMinState = newValue
-                }
-        }
-        .padding(.horizontal)
-        .frame(minHeight: 25)
-    }
     
     /*
     private var averageDataSection: some View {
@@ -335,7 +292,7 @@ struct ahViewController: View {
                 if currentSelection == nil {
                     currentSelection = rthk.configurations.first?.displayName
                 }
-                onDismiss(currentSelection, currentUnit?.unitString, prevDateSwitch, hrsMinSwitch, ahFrequency, ahTimeFilter, ahAggregation)
+                onDismiss(currentSelection, currentUnit?.unitString, prevDateSwitch, ahFrequency, ahTimeFilter, ahAggregation)
                 dismiss()
             }) {
                 Text("\u{2611}")

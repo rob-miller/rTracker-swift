@@ -201,7 +201,7 @@ class voNumber: voState, UITextFieldDelegate {
           let r = to.toQry2Str(sql: sql)
           dtf.textColor = .lightGray
           dtf.backgroundColor = .darkGray
-          dtf.text = r
+          dtf.text = formatValueForDisplay(r)
         }
         //sql = nil;
       } else if vo.optDict["ahksrc"] == "1"
@@ -234,13 +234,7 @@ class voNumber: voState, UITextFieldDelegate {
           calendar: calendar
         ) { [weak self] result in
           if let result = result {
-            // Handle hours:minutes formatting if needed
-            if self?.vo.optDict["hrsmins"] ?? "0" == "1", let numValue = Double(result) {
-              let rv = Int(round(numValue))
-              healthKitResult = String(format: "%d:%02d", rv / 60, rv % 60)
-            } else {
-              healthKitResult = result
-            }
+            healthKitResult = self?.formatValueForDisplay(result) ?? result
             Self.healthKitCache[cacheKey] = healthKitResult!
           } else {
             healthKitResult = self?.noHKdataMsg
@@ -258,7 +252,7 @@ class voNumber: voState, UITextFieldDelegate {
       } else if vo.optDict["otsrc"] == "1" {
         self.vo.vos?.addExternalSourceOverlay(to: self.dtf)  // no taps
         if let xrslt = vo.vos?.getOTrslt() {
-          self.dtf.text = xrslt
+          self.dtf.text = formatValueForDisplay(xrslt)
           /*
            self.dtf.isEnabled = false
            self.dtf.textColor = UIColor.black // Much darker than default disabled color
@@ -273,13 +267,7 @@ class voNumber: voState, UITextFieldDelegate {
     } else {
       dtf.backgroundColor = .secondarySystemBackground
       dtf.textColor = .label
-      if vo.optDict["hrsmins"] ?? "0" == "1", let result = Double(vo.value) {
-        let ri = Int(round(result))
-        let formattedValue = String(format: "%d:%02d", ri / 60, ri % 60)
-        dtf.text = formattedValue
-      } else {
-        dtf.text = vo.value
-      }
+      dtf.text = formatValueForDisplay(vo.value)
       if vo.optDict["ahksrc"] == "1" || vo.optDict["otsrc"] == "1" {
         self.vo.vos?.addExternalSourceOverlay(to: self.dtf)  // no taps
         #if DEBUGLOG
@@ -317,6 +305,17 @@ class voNumber: voState, UITextFieldDelegate {
     // Convert to total minutes (e.g., 1:30 -> 90)
     let totalMinutes = (hours * 60) + minutes
     return String(totalMinutes)
+  }
+
+  private func formatValueForDisplay(_ value: String?) -> String {
+    guard let value = value, !value.isEmpty else { return value ?? "" }
+    guard value != noHKdataMsg else { return value }
+
+    if vo.optDict["hrsmins"] ?? "0" == "1", let numValue = Double(value) {
+      let rv = Int(round(numValue))
+      return String(format: "%d:%02d", rv / 60, rv % 60)
+    }
+    return value
   }
 
   override func update(_ instr: String?) -> String {
@@ -1100,18 +1099,16 @@ class voNumber: voState, UITextFieldDelegate {
         selectedChoice: vo.optDict["ahSource"],
         selectedUnitString: vo.optDict["ahUnit"],
         ahPrevD: vo.optDict["ahPrevD"] ?? "0" == "1",
-        ahHrsMin: vo.optDict["hrsmins"] ?? "0" == "1",
         ahFrequency: vo.optDict["ahFrequency"] ?? AHFREQUENCYDFLT,
         ahTimeFilter: vo.optDict["ahTimeFilter"] ?? AHTIMEFILTERDFLT,
         ahAggregation: vo.optDict["ahAggregation"] ?? AHAGGREGATIONDFLT,
         onDismiss: {
           [self]
-          updatedChoice, updatedUnit, updatedAhPrevD, updatedAhHrsMin, updatedAhFrequency,
+          updatedChoice, updatedUnit, updatedAhPrevD, updatedAhFrequency,
           updatedAhTimeFilter, updatedAhAggregation in
           vo.optDict["ahSource"] = updatedChoice
           vo.optDict["ahUnit"] = updatedUnit
           vo.optDict["ahPrevD"] = updatedAhPrevD ? "1" : "0"
-          vo.optDict["hrsmins"] = updatedAhHrsMin ? "1" : "0"
           vo.optDict["ahFrequency"] = updatedAhFrequency
           vo.optDict["ahTimeFilter"] = updatedAhTimeFilter
           vo.optDict["ahAggregation"] = updatedAhAggregation
@@ -1239,7 +1236,24 @@ class voNumber: voState, UITextFieldDelegate {
 
     labframe = ctvovc.configLabel("Other options:", frame: frame, key: "noLab", addsv: true)
 
-    ctvovc.lasty = frame.origin.y + labframe.size.height + MARGIN
+    // Display minutes as hrs:mins switch
+    frame.origin.x = MARGIN
+    frame.origin.y += MARGIN + labframe.size.height
+
+    labframe = ctvovc.configLabel("Display minutes as hrs:mins:", frame: frame, key: "hrsminsLab", addsv: true)
+
+    frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
+
+    frame = ctvovc.configSwitch(
+      frame,
+      key: "hrsminsBtn",
+      state: (vo.optDict["hrsmins"] == "1"),
+      addsv: true)
+
+    frame.origin.x = MARGIN
+    frame.origin.y += MARGIN + frame.size.height
+
+    ctvovc.lasty = frame.origin.y
 
     super.voDrawOptions(ctvovc)
   }
