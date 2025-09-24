@@ -1313,6 +1313,156 @@ class rTracker_resource: NSObject {
     return buttonItem
   }
 
+  /// Creates a modern iOS 26 save button with yellow checkmark circle
+  class func createSaveButton(target: Any?, action: Selector) -> UIBarButtonItem {
+    if #available(iOS 26.0, *) {
+      // iOS 26: Use yellow circle with checkmark
+      let button = UIButton(type: .system)
+
+      var config = UIButton.Configuration.filled()
+      let burntYellow = UIColor(red: 0.85, green: 0.7, blue: 0.05, alpha: 1.0)
+      config.baseBackgroundColor = burntYellow
+      config.cornerStyle = .capsule
+
+      let symSize = UIImage.SymbolConfiguration(pointSize: 22, weight: .regular)
+      let yellowTintedWhite = UIColor(red: 1.0, green: 1.0, blue: 0.2, alpha: 1.0)
+      let image = UIImage(systemName: "checkmark")?
+        .applyingSymbolConfiguration(symSize)?
+        .withTintColor(yellowTintedWhite, renderingMode: .alwaysOriginal)
+
+      config.image = image
+      button.configuration = config
+
+      button.layer.borderWidth = 1.0
+      button.layer.borderColor = yellowTintedWhite.cgColor
+
+      button.addTarget(target, action: action, for: .touchUpInside)
+
+      let saveBtn = UIBarButtonItem(customView: button)
+      saveBtn.hidesSharedBackground = true
+      return saveBtn
+    } else {
+      // Pre-iOS 26: Keep standard system save button
+      return UIBarButtonItem(barButtonSystemItem: .save, target: target, action: action)
+    }
+  }
+
+  /// Creates a modern iOS 26 add button with blue plus symbol
+  class func createAddButton(target: Any?, action: Selector) -> UIBarButtonItem {
+    if #available(iOS 26.0, *) {
+      // iOS 26: Use standard button with blue plus symbol
+      let button = UIButton(type: .system)
+
+      var config = UIButton.Configuration.filled()
+      config.baseBackgroundColor = .systemBackground
+      config.cornerStyle = .capsule
+
+      let symSize = UIImage.SymbolConfiguration(pointSize: 22, weight: .regular)
+      let image = UIImage(systemName: "plus")?
+        .applyingSymbolConfiguration(symSize)?
+        .withTintColor(.systemBlue, renderingMode: .alwaysOriginal)
+
+      config.image = image
+      button.configuration = config
+
+      button.addTarget(target, action: action, for: .touchUpInside)
+
+      let addBtn = UIBarButtonItem(customView: button)
+      addBtn.hidesSharedBackground = true
+      return addBtn
+    } else {
+      // Pre-iOS 26: Keep standard system add button
+      return UIBarButtonItem(barButtonSystemItem: .add, target: target, action: action)
+    }
+  }
+
+  /// Creates a modern iOS 26 back button with standard styling
+  class func createBackButton(target: Any?, action: Selector) -> UIBarButtonItem {
+    if #available(iOS 26.0, *) {
+      // iOS 26: Use standard button with chevron symbol
+      let button = UIButton(type: .system)
+
+      var config = UIButton.Configuration.filled()
+      config.baseBackgroundColor = .systemBackground
+      config.baseForegroundColor = .label  // Ensure symbol is black/system color
+      config.cornerStyle = .capsule
+
+      let symSize = UIImage.SymbolConfiguration(pointSize: 22, weight: .regular)
+      let image = UIImage(systemName: "chevron.left")?
+        .applyingSymbolConfiguration(symSize)
+
+      config.image = image
+      button.configuration = config
+
+      button.addTarget(target, action: action, for: .touchUpInside)
+
+      let backBtn = UIBarButtonItem(customView: button)
+      backBtn.hidesSharedBackground = true
+      return backBtn
+    } else {
+      // Pre-iOS 26: Keep standard system back button
+      return UIBarButtonItem(title: "<", style: .plain, target: target, action: action)
+    }
+  }
+
+  /// Creates a modern iOS 26 edit button with standard styling
+  class func createEditButton(target: Any?, action: Selector) -> UIBarButtonItem {
+    if #available(iOS 26.0, *) {
+      // iOS 26: Use standard button with slider horizontal symbol
+      let button = UIButton(type: .system)
+
+      var config = UIButton.Configuration.filled()
+      config.baseBackgroundColor = .systemBackground
+      config.baseForegroundColor = .label  // Ensure symbol is black/system color
+      config.cornerStyle = .capsule
+
+      let symSize = UIImage.SymbolConfiguration(pointSize: 22, weight: .regular)
+      let image = UIImage(systemName: "slider.horizontal.3")?
+        .applyingSymbolConfiguration(symSize)
+
+      config.image = image
+      button.configuration = config
+
+      button.addTarget(target, action: action, for: .touchUpInside)
+
+      let editBtn = UIBarButtonItem(customView: button)
+      editBtn.hidesSharedBackground = true
+      return editBtn
+    } else {
+      // Pre-iOS 26: Keep standard system edit button
+      return UIBarButtonItem(barButtonSystemItem: .edit, target: target, action: action)
+    }
+  }
+
+  /// Creates a modern iOS 26 copy button with standard styling
+  class func createCopyButton(target: Any?, action: Selector) -> UIBarButtonItem {
+    if #available(iOS 26.0, *) {
+      // iOS 26: Use standard button with document.on.document symbol
+      let button = UIButton(type: .system)
+
+      var config = UIButton.Configuration.filled()
+      config.baseBackgroundColor = .systemBackground
+      config.baseForegroundColor = .label  // Ensure symbol is black/system color
+      config.cornerStyle = .capsule
+
+      let symSize = UIImage.SymbolConfiguration(pointSize: 22, weight: .regular)
+      let image = UIImage(systemName: "document.on.document")?
+        .applyingSymbolConfiguration(symSize)
+
+      config.image = image
+      button.configuration = config
+
+      button.addTarget(target, action: action, for: .touchUpInside)
+
+      let copyBtn = UIBarButtonItem(customView: button)
+      copyBtn.hidesSharedBackground = true
+      return copyBtn
+    } else {
+      // Pre-iOS 26: Keep standard system copy button
+      return UIBarButtonItem(title: "Copy", style: .plain, target: target, action: action)
+    }
+  }
+
   /// Shows help content in a popover or modal presentation
   class func showHelp(
     title: String, content: String, from sourceView: UIView?, in viewController: UIViewController,

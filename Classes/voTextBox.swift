@@ -482,6 +482,8 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         }
         devc?.navigationItem.leftBarButtonItem = backButton
 
+        // Save button will be added only when text changes (see textViewDidChange)
+
     }
 
     override func dataEditVWAppear(_ vc: UIViewController?) {
@@ -719,21 +721,24 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
     }
 
     func textViewDidBeginEditing(_ textView: UITextView) {
-        // provide my own Save button to dismiss the keyboard
-        let saveItem = UIBarButtonItem(
-            barButtonSystemItem: .save,
-            target: self,
-            action: #selector(voDataEdit.saveAction(_:)))
-        if #available(iOS 26.0, *) {
-            saveItem.hidesSharedBackground = true  // Remove white container background
+        // Save button will be added by textViewDidChange when text actually changes
+    }
+
+    func textViewDidChange(_ textView: UITextView) {
+        // Store original text to compare against changes
+        let originalText = vo.value.trimmingCharacters(in: .whitespacesAndNewlines)
+        let currentText = textView.text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Show save button only if text has been modified
+        if currentText != originalText {
+            if devc?.navigationItem.rightBarButtonItem == nil {
+                let saveButton = rTracker_resource.createSaveButton(target: self, action: #selector(saveAction(_:)))
+                devc?.navigationItem.rightBarButtonItem = saveButton
+            }
+        } else {
+            // Hide save button if text reverted to original
+            devc?.navigationItem.rightBarButtonItem = nil
         }
-        
-        saveItem.accessibilityLabel = "Save"
-        saveItem.accessibilityHint = "tap to save text to entry"
-        saveItem.accessibilityIdentifier = "tbox-save"
-        
-        devc?.navigationItem.rightBarButtonItem = saveItem
-        
     }
 
     /*

@@ -75,13 +75,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         navigationItem.leftBarButtonItem = cancelBtn
         navigationItem.leftBarButtonItem?.accessibilityIdentifier = "addTrkrCancel"
 
-        let saveBtn = UIBarButtonItem(
-            barButtonSystemItem: .save,
-            target: self,
-            action: #selector(btnSave))
-        if #available(iOS 26.0, *) {
-            saveBtn.hidesSharedBackground = true  // Remove white container background
-        }
+        let saveBtn = rTracker_resource.createSaveButton(target: self, action: #selector(btnSave))
         navigationItem.rightBarButtonItem = saveBtn
         navigationItem.rightBarButtonItem?.accessibilityIdentifier = "addTrkrSave"
 
@@ -103,14 +97,14 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         view.addSubview(toolbar)
 
         // Setup button
-        setupButton = UIBarButtonItem(title: "Setup", style: .plain, target: self, action: #selector(btnSetup(_:)))
+        setupButton = rTracker_resource.createEditButton(target: self, action: #selector(btnSetup(_:)))
         setupButton.accessibilityIdentifier = "addTrkrSetup"
         setupButton.accessibilityLabel = "Setup"
         setupButton.accessibilityHint = "Configure tracker settings"
 
 
         // Copy button
-        copyButton = UIBarButtonItem(title: "Copy", style: .plain, target: self, action: #selector(btnCopy(_:)))
+        copyButton = rTracker_resource.createCopyButton(target: self, action: #selector(btnCopy(_:)))
         copyButton.accessibilityIdentifier = "addTrkrCopy"
         copyButton.accessibilityLabel = "Copy"
         copyButton.accessibilityHint = "Duplicate last item"

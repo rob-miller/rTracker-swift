@@ -249,15 +249,8 @@ class voDataEdit: UIViewController, UITextViewDelegate {
     }
 
     func textViewDidBeginEditing(_ textView: UITextView) {
-        // provide my own Save button to dismiss the keyboard
-        let saveItem = UIBarButtonItem(
-            barButtonSystemItem: .save,
-            target: self,
-            action: #selector(saveAction(_:)))
-        if #available(iOS 26.0, *) {
-            saveItem.hidesSharedBackground = true  // Remove white container background
-        }
-        navigationItem.rightBarButtonItem = saveItem
+        // Save button is set up in voTextBox.dataEditVDidLoad for voTextBox cases
+        // No need to create one here - back button handles navigation
     }
 
     /*

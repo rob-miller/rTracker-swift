@@ -709,23 +709,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     var _addBtn: UIBarButtonItem?
     var addBtn: UIBarButtonItem {
         if _addBtn == nil {
-            if #available(iOS 26.0, *) {
-                // iOS 26: Use glass effect button
-                let button = UIButton(type: .system)
-                button.setTitle("Add", for: .normal)
-                button.configuration = UIButton.Configuration.glass()
-                button.addTarget(self, action: #selector(btnAddTracker), for: .touchUpInside)
-                _addBtn = UIBarButtonItem(customView: button)
-                _addBtn!.hidesSharedBackground = true  // Remove white container background
-            } else {
-                // Pre-iOS 26: Use system button as before
-                _addBtn = UIBarButtonItem(
-                    barButtonSystemItem: .add,
-                    target: self,
-                    action: #selector(btnAddTracker))
-                _addBtn!.style = UIBarButtonItem.Style.done
-            }
-            
+            _addBtn = rTracker_resource.createAddButton(target: self, action: #selector(btnAddTracker))
             _addBtn!.accessibilityLabel = "Add"
             _addBtn!.accessibilityHint = "tap create a new tracker"
             _addBtn!.accessibilityIdentifier = "add"
@@ -736,27 +720,10 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     var _editBtn: UIBarButtonItem?
     var editBtn: UIBarButtonItem {
         if _editBtn == nil {
-            if #available(iOS 26.0, *) {
-                // iOS 26: Use glass effect button
-                let button = UIButton(type: .system)
-                button.setTitle("Edit", for: .normal)
-                button.configuration = UIButton.Configuration.glass()
-                button.addTarget(self, action: #selector(btnEdit), for: .touchUpInside)
-                _editBtn = UIBarButtonItem(customView: button)
-                _editBtn!.hidesSharedBackground = true  // Remove white container background
-            } else {
-                // Pre-iOS 26: Use system button as before
-                _editBtn = UIBarButtonItem(
-                    barButtonSystemItem: .edit,
-                    target: self,
-                    action: #selector(btnEdit))
-                _editBtn!.style = UIBarButtonItem.Style.plain
-            }
-            
+            _editBtn = rTracker_resource.createEditButton(target: self, action: #selector(btnEdit))
             _editBtn!.accessibilityLabel = "Edit"
             _editBtn!.accessibilityHint = "tap modify existing trackers"
             _editBtn!.accessibilityIdentifier = "edit"
-            
         }
         return _editBtn!
     }

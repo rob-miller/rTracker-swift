@@ -1246,44 +1246,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     var _saveBtn: UIBarButtonItem?
     var saveBtn: UIBarButtonItem {
         if _saveBtn == nil {
-            if #available(iOS 26.0, *) {
-                // iOS 26: Use yellow circle with white checkmark
-                let button = UIButton(type: .system)
-
-                // Back to filled config with custom styling for ring effect
-                var config = UIButton.Configuration.filled()
-                // Slightly lighter burnt yellow background like iOS 26
-                let burntYellow = UIColor(red: 00.85, green: 0.7, blue: 0.05, alpha: 1.0)
-                config.baseBackgroundColor = burntYellow
-                config.cornerStyle = .capsule
-
-                // Make the checkmark thinner and yellow-tinted
-                let symSize = UIImage.SymbolConfiguration(pointSize: 22, weight: .regular) // Thinner lines
-                let yellowTintedWhite = UIColor(red: 1.0, green: 1.0, blue: 0.2, alpha: 1.0) // Perfect yellow checkmark
-                let image = UIImage(systemName: "checkmark")?
-                    .applyingSymbolConfiguration(symSize)?
-                    .withTintColor(yellowTintedWhite, renderingMode: .alwaysOriginal) // << yellow-tinted
-
-                config.image = image
-                button.configuration = config
-
-                // Add subtle yellow ring effect
-                button.layer.borderWidth = 1.0
-                //button.layer.borderColor = UIColor.systemYellow.withAlphaComponent(0.3).cgColor
-                button.layer.borderColor = yellowTintedWhite.cgColor
-
-                button.addTarget(self, action: #selector(addTrackerController.btnSave), for: .touchUpInside)
-
-                _saveBtn = UIBarButtonItem(customView: button)
-                _saveBtn!.hidesSharedBackground = true
-
-            } else {
-                // Pre-iOS 26: Keep standard system save button
-                _saveBtn = UIBarButtonItem(
-                    barButtonSystemItem: .save,
-                    target: self,
-                    action: #selector(addTrackerController.btnSave))
-            }
+            _saveBtn = rTracker_resource.createSaveButton(target: self, action: #selector(addTrackerController.btnSave))
 
             _saveBtn!.accessibilityLabel = "Save"
             _saveBtn!.accessibilityHint = "tap to save this entry"

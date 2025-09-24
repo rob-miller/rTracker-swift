@@ -65,7 +65,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
     // UI element properties
     @IBOutlet var labelField: UITextField!
     @IBOutlet var votPicker: UIPickerView!
-    @IBOutlet var infoBtn: UIButton!
+    @IBOutlet var infoBtn: UIButton! // Keep for Interface Builder connection, but we'll hide it
     @IBOutlet weak var toolbar: UIToolbar!
     private var tmpVtype = 0
     private var tmpVcolor = 0
@@ -103,17 +103,18 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
         cancelBtn.accessibilityIdentifier = "avoCancel"
         navigationItem.leftBarButtonItem = cancelBtn
 
-        let saveBtn = UIBarButtonItem(
-            barButtonSystemItem: .save,
-            target: self,
-            action: #selector(addTrackerController.btnSave))
-        if #available(iOS 26.0, *) {
-            saveBtn.hidesSharedBackground = true  // Remove white container background
-        }
+        let saveBtn = rTracker_resource.createSaveButton(target: self, action: #selector(addTrackerController.btnSave))
         saveBtn.accessibilityIdentifier = "avoSave"
         navigationItem.rightBarButtonItem = saveBtn
 
-        infoBtn.titleLabel?.font = .systemFont(ofSize: 28.0)
+        // Hide the old IBOutlet infoBtn and replace with modern edit button
+        infoBtn.isHidden = true
+
+        // Replace toolbar items with just our modern edit button
+        let setupBtn = rTracker_resource.createEditButton(target: self, action: #selector(btnSetup(_:)))
+        setupBtn.accessibilityLabel = "Setup"
+        setupBtn.accessibilityHint = "Configure value object settings"
+        toolbar?.items = [setupBtn]
 
         sizeVOTLabel = addValObjController.maxLabel(fromArray: ValueObjectType.typeNames) //self.parentTrackerObj.votArray];
         let allGraphs = valueObj.allGraphs()

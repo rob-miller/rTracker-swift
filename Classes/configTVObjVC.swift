@@ -216,24 +216,9 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         scroll.contentSize = CGSize(width: svsize.width, height: lasty + (3 * MARGIN))
         //[self.view addSubview:self.scroll];
 
-        let doneBtn = UIBarButtonItem(
-            title: "\u{2611}" /* ballot box with check */,
-            style: .plain,
-            target: self,
-            action: #selector(btnDone(_:)))
-        if #available(iOS 26.0, *) {
-            doneBtn.hidesSharedBackground = true  // Remove white container background
-        }
-
+        let doneBtn = rTracker_resource.createSaveButton(target: self, action: #selector(btnDone(_:)))
         doneBtn.accessibilityLabel = "Done"
         doneBtn.accessibilityIdentifier = "configtvo_done"
-        
-        doneBtn.setTitleTextAttributes(
-            [
-                .font: UIFont.systemFont(ofSize: 28.0)
-            // doesn't work?  ,NSForegroundColorAttributeName: [UIColor greenColor]
-            ],
-            for: .normal)
 
         if vdlConfigVO && vo?.vtype == VOT_FUNC {
             (vo?.vos as? voFunction)?.funcVDL(self, donebutton: doneBtn)
