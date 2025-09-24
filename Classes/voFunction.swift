@@ -173,6 +173,43 @@ func ISCALFREP(_ x: Int) -> Bool {
 
 let MAXFREP = 11
 
+// Dictionary mapping FREP constants to picker labels
+// CRITICAL: Order must match (FREP_value * -1) - 1 = array index
+let FREP_LABELS: [Int: String] = [
+    FREPENTRY:   "entry",       // -1 → index 0
+    FREPHOURS:   "hours",       // -2 → index 1
+    FREPDAYS:    "days",        // -3 → index 2
+    FREPWEEKS:   "weeks",       // -4 → index 3
+    FREPMONTHS:  "months",      // -5 → index 4
+    FREPYEARS:   "years",       // -6 → index 5
+    FREPCDAYS:   "cal days",    // -7 → index 6
+    FREPCWEEKS:  "cal weeks",   // -8 → index 7
+    FREPCMONTHS: "cal months",  // -9 → index 8
+    FREPCYEARS:  "cal years",   // -10 → index 9
+    FREPNONE:    "<none>"       // -11 → index 10
+]
+
+// Helper to get label from FREP value using the formula
+func frepToLabel(_ frepValue: Int) -> String {
+    return FREP_LABELS[frepValue] ?? "entry"
+}
+
+// Helper to get label from epTitles index
+func epIndexToLabel(_ index: Int) -> String? {
+    // Reverse the formula: FREP_value = (index + 1) * -1
+    let frepValue = (index + 1) * -1
+    return FREP_LABELS[frepValue]
+}
+
+// Helper function to convert picker label to help identifier
+func pickerLabelToHelpIdentifier(_ label: String) -> String {
+    // Remove < and >, replace spaces with underscores, prepend endpoint_
+    let cleaned = label.replacingOccurrences(of: "<", with: "")
+                      .replacingOccurrences(of: ">", with: "")
+                      .replacingOccurrences(of: " ", with: "_")
+    return "endpoint_\(cleaned)"
+}
+
 let FNSEGNDX_OVERVIEW = 0
 let FNSEGNDX_RANGEBLD = 1
 let FNSEGNDX_FUNCTBLD = 2
@@ -240,20 +277,12 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
     private var _epTitles: [String]?
     var epTitles: [String] {
         if _epTitles == nil {
-            // n.b.: tied to FREP symbol defns in voFunctions.h
-            _epTitles = [
-                "entry",
-                "hours",
-                "days",
-                "weeks",
-                "months",
-                "years",
-                "cal days",
-                "cal weeks",
-                "cal months",
-                "cal years",
-                "<none>"
-            ]
+            // Build array where index = (FREP_value * -1) - 1
+            _epTitles = []
+            for i in 0..<MAXFREP {
+                let frepValue = (i + 1) * -1
+                _epTitles!.append(FREP_LABELS[frepValue] ?? "unknown")
+            }
         }
         return _epTitles!
     }

@@ -531,8 +531,8 @@ extension voFunction {
         let ep2 = n != nil ? (ep! + 1) * -1 : 0 // invalid if ep is tmpUniq (negative)
 
         if nil == n || FREPDFLT == ep || FREPNONE == ep {
-            let anEpTitles = epTitles[ep2]
-            return "\(pre) \(anEpTitles)" // FREPDFLT
+            let label = frepToLabel(ep!)
+            return "\(pre) \(label)" // FREPDFLT
         }
 
         if ep! >= 0 || ep! <= -TMPUNIQSTART {
@@ -546,8 +546,8 @@ extension voFunction {
         }
 
         // ep is hours / days / months entry
-        let anEpTitles = epTitles[ep2]
-        return "\(component != 0 ? "+" : "-")\(Int(vo.optDict[vkey] ?? "0")!) \(anEpTitles)"
+        let label = frepToLabel(ep!)
+        return "\(component != 0 ? "+" : "-")\(Int(vo.optDict[vkey] ?? "0")!) \(label)"
     }
 
     func voRangeStr(_ dbg: Bool) -> String? {
@@ -789,12 +789,12 @@ extension voFunction {
                 identifiers.append("endpoint_value")
             } else {
                 // This is a time offset selection - map to appropriate endpoint
-                let offsetIndex = leftRow - votWoSelf.count - 1
-                let timeOffsets = ["hours", "days", "weeks", "months", "years", "cal_days", "cal_weeks", "cal_months", "cal_years", "none"]
-                if offsetIndex >= 0 && offsetIndex < timeOffsets.count {
-                    identifiers.append("endpoint_\(timeOffsets[offsetIndex])")
+                let offsetIndex = leftRow - votWoSelf.count
+                if let label = epIndexToLabel(offsetIndex) {
+                    identifiers.append(pickerLabelToHelpIdentifier(label))
                 } else {
-                    identifiers.append("endpoint_time_offset")
+                    // Fallback - should never happen with valid data
+                    identifiers.append("endpoint_entry")
                 }
             }
 
