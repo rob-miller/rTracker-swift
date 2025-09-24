@@ -289,7 +289,7 @@ class voState: NSObject, voProtocol {
 
         //-- privacy level label
 
-        frame.origin.x += frame.size.width + switchFrame.size.width  //  MARGIN + SPACE
+        frame.origin.x += frame.size.width + switchFrame.size.width + MARGIN + SPACE
         //frame.origin.y += MARGIN + frame.size.height;
         labframe = ctvovc.configLabel("Privacy level: ", frame: frame, key: "gpLab", addsv: true)
 
