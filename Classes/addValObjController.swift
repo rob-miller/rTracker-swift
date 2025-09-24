@@ -93,13 +93,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
 
     override func viewDidLoad() {
 
-        let cancelBtn = UIBarButtonItem(
-            barButtonSystemItem: .cancel,
-            target: self,
-            action: #selector(addTrackerController.btnCancel))
-        if #available(iOS 26.0, *) {
-            cancelBtn.hidesSharedBackground = true  // Remove white container background
-        }
+        let cancelBtn = rTracker_resource.createBackButton(target: self, action: #selector(addTrackerController.btnCancel))
         cancelBtn.accessibilityIdentifier = "avoCancel"
         navigationItem.leftBarButtonItem = cancelBtn
 

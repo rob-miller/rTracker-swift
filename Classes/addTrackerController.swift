@@ -65,13 +65,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
         // cancel / save buttons on top nav bar -- can't seem to do in IB
 
-        let cancelBtn = UIBarButtonItem(
-            barButtonSystemItem: .cancel,
-            target: self,
-            action: #selector(btnCancel))
-        if #available(iOS 26.0, *) {
-            cancelBtn.hidesSharedBackground = true  // Remove white container background
-        }
+        let cancelBtn = rTracker_resource.createBackButton(target: self, action: #selector(btnCancel))
         navigationItem.leftBarButtonItem = cancelBtn
         navigationItem.leftBarButtonItem?.accessibilityIdentifier = "addTrkrCancel"
 
