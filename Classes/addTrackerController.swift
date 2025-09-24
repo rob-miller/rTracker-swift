@@ -656,7 +656,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     func addValObj(_ vo: valueObj?) {
         var avc: addValObjController?
-        avc = addValObjController(nibName: "addValObjController7", bundle: nil)
+        avc = addValObjController()
         avc?.parentTrackerObj = tempTrackerObj
         avc?.tempValObj = vo
         avc?.stashVals()

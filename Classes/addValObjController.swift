@@ -62,11 +62,13 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
     var parentTrackerObj: trackerObj? // this makes a retain cycle....
     var graphTypes: [AnyHashable]?
     var voOptDictStash: [String : String]?
-    // UI element properties
-    @IBOutlet var labelField: UITextField!
-    @IBOutlet var votPicker: UIPickerView!
-    @IBOutlet var infoBtn: UIButton! // Keep for Interface Builder connection, but we'll hide it
-    @IBOutlet weak var toolbar: UIToolbar!
+    // UI element properties (now programmatically created)
+    var labelField: UITextField!
+    var votPicker: UIPickerView!
+    var toolbar: UIToolbar!
+    var typeLabel: UILabel!
+    var graphLabel: UILabel!
+    var containerView: UIView!
     private var tmpVtype = 0
     private var tmpVcolor = 0
     private var tmpVGraphType = 0
@@ -76,11 +78,16 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
     deinit {
         DBGLog("avoc dealloc")
     }
-    init(nibName: String, bundle: Bundle?) {
+    convenience init() {
+        self.init(nibName: nil, bundle: nil)
+    }
+
+    override init(nibName: String?, bundle: Bundle?) {
         super.init(nibName: nibName, bundle: bundle)
     }
+
     required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
+        super.init(coder: coder)
     }
     // MARK: -
     // MARK: view support
@@ -101,14 +108,10 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
         saveBtn.accessibilityIdentifier = "avoSave"
         navigationItem.rightBarButtonItem = saveBtn
 
-        // Hide the old IBOutlet infoBtn and replace with modern edit button
-        infoBtn.isHidden = true
-
-        // Replace toolbar items with just our modern edit button
-        let setupBtn = rTracker_resource.createEditButton(target: self, action: #selector(btnSetup(_:)))
-        setupBtn.accessibilityLabel = "Setup"
-        setupBtn.accessibilityHint = "Configure value object settings"
-        toolbar?.items = [setupBtn]
+        // Create UI elements programmatically
+        createUI()
+        setupConstraints()
+        connectActionsAndDelegates()
 
         sizeVOTLabel = addValObjController.maxLabel(fromArray: ValueObjectType.typeNames) //self.parentTrackerObj.votArray];
         let allGraphs = valueObj.allGraphs()
@@ -191,6 +194,120 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
 
 
         super.viewDidLoad()
+    }
+
+    // MARK: - UI Creation Methods
+
+    func createUI() {
+        view.backgroundColor = .systemBackground
+
+        // Create container view for label and text field
+        containerView = UIView()
+        containerView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(containerView)
+
+        // Create "Label" label
+        let nameLabel = UILabel()
+        nameLabel.text = "Label"
+        nameLabel.font = UIFont.systemFont(ofSize: 17)
+        nameLabel.translatesAutoresizingMaskIntoConstraints = false
+        containerView.addSubview(nameLabel)
+
+        // Create text field
+        labelField = UITextField()
+        labelField.borderStyle = .roundedRect
+        labelField.clearsOnBeginEditing = true
+        labelField.font = UIFont.systemFont(ofSize: 12)
+        labelField.minimumFontSize = 17
+        labelField.accessibilityIdentifier = "valueName"
+        labelField.accessibilityLabel = "value name"
+        labelField.translatesAutoresizingMaskIntoConstraints = false
+        containerView.addSubview(labelField)
+
+        // Create Type label
+        typeLabel = UILabel()
+        typeLabel.text = "Type"
+        typeLabel.font = UIFont.systemFont(ofSize: 17)
+        typeLabel.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(typeLabel)
+
+        // Create Graph label
+        graphLabel = UILabel()
+        graphLabel.text = "Graph"
+        graphLabel.font = UIFont.systemFont(ofSize: 17)
+        graphLabel.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(graphLabel)
+
+        // Create picker view
+        votPicker = UIPickerView()
+        votPicker.accessibilityHint = "left wheel sets value type"
+        votPicker.accessibilityIdentifier = "avoPicker"
+        votPicker.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(votPicker)
+
+        // Create toolbar
+        toolbar = UIToolbar()
+        toolbar.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(toolbar)
+
+        // Add modern edit button to toolbar
+        let setupBtn = rTracker_resource.createEditButton(target: self, action: #selector(btnSetup(_:)))
+        setupBtn.accessibilityLabel = "Setup"
+        setupBtn.accessibilityHint = "Configure value object settings"
+        toolbar.items = [setupBtn]
+
+        // Container constraints
+        NSLayoutConstraint.activate([
+            nameLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 10),
+            nameLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 10),
+            nameLabel.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -10),
+            nameLabel.widthAnchor.constraint(equalToConstant: 50), // Fixed width for "Label" text
+
+            labelField.leadingAnchor.constraint(equalTo: nameLabel.trailingAnchor, constant: 10),
+            labelField.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -20),
+            labelField.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 10),
+            labelField.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -10)
+        ])
+    }
+
+    func setupConstraints() {
+        let safeArea = view.safeAreaLayoutGuide
+
+        NSLayoutConstraint.activate([
+            // Container view
+            containerView.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor),
+            containerView.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor),
+            containerView.topAnchor.constraint(equalTo: safeArea.topAnchor, constant: 187),
+            containerView.heightAnchor.constraint(equalToConstant: 54),
+
+            // Type label
+            typeLabel.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor, constant: 80),
+            typeLabel.topAnchor.constraint(equalTo: containerView.bottomAnchor, constant: 30),
+
+            // Graph label
+            graphLabel.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor, constant: -80),
+            graphLabel.centerYAnchor.constraint(equalTo: typeLabel.centerYAnchor),
+
+            // Picker view
+            votPicker.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor),
+            votPicker.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor),
+            votPicker.topAnchor.constraint(equalTo: typeLabel.bottomAnchor, constant: 20),
+            votPicker.heightAnchor.constraint(equalToConstant: 216),
+
+            // Toolbar
+            toolbar.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor),
+            toolbar.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor),
+            toolbar.bottomAnchor.constraint(equalTo: safeArea.bottomAnchor)
+        ])
+    }
+
+    func connectActionsAndDelegates() {
+        // Connect picker delegate and data source
+        votPicker.delegate = self
+        votPicker.dataSource = self
+
+        // Connect text field action
+        labelField.addTarget(self, action: #selector(labelFieldDone(_:)), for: .editingDidEndOnExit)
     }
 
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
