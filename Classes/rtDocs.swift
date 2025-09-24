@@ -269,7 +269,7 @@ class rtDocs {
         rtDocEntry(
             identifier: "endpoint_none",
             title: "<none>",
-            description: "The function only calculates over the current tracker entry.",
+            description: "The function calculates over the current tracker entry only.",
         ),
         rtDocEntry(
             identifier: "endpoint_value",
