@@ -59,16 +59,21 @@ class trackerCalViewController: UIViewController, TSQCalendarViewDelegate {
         sql = "select id from voInfo where field='graph' and val=0"
         let noGraphIds = tracker?.toQry2SetI(sql: sql)
 
+        sql = "select id,name from voConfig"
+        let idNames = tracker!.toQry2DictIS(sql: sql)
+
         let colorSet = rTracker_resource.colorSet
         let pv = privacyValue
+        DBGLog("Calendar data setup: \(idColors.count) color mappings, \(fnIds?.count ?? 0) functions, \(noGraphIds?.count ?? 0) non-graphed values, privacy level <= \(pv)")
         var dates: [Int]
         if nil == (parentUTC as? useTrackerController)?.searchSet {
             sql = "select date from trkrData where minpriv <= \(pv) order by date asc;"
             dates = tracker!.toQry2AryI(sql: sql)
+            DBGLog("Date source: database query found \(dates.count) dates")
         } else {
             let aSearchSet = (parentUTC as! useTrackerController).searchSet
             dates = aSearchSet!
-
+            DBGLog("Date source: using \(dates.count) dates from search results")
         }
 
         var vidSet: [Int] = []
@@ -80,7 +85,7 @@ class trackerCalViewController: UIViewController, TSQCalendarViewDelegate {
             
             let dayStart = Int(date?.timeIntervalSince1970 ?? 0)
 
-            DBGLog(String("date= \(date)"))
+            //DBGLog(String("date= \(date)"))
             /*
             if (2014 == dc.year) && (6 == dc.month) && (13 == dc.day) {
                 DBGLog(String("date 2014 june = \(date)"))
@@ -139,14 +144,14 @@ class trackerCalViewController: UIViewController, TSQCalendarViewDelegate {
                     dateSelDict[date!] = "" // set for no color
                 } else {
                     dateSelDict[date!] = colorSet[cndx]
-                    DBGLog(String("date: \(date)  valobj \(targVid) UIColor \(colorSet[cndx]) name \(rTracker_resource.colorNames[cndx])"))
+                    DBGLog(String("date: \(date)  valobj \(targVid)  name \(rTracker_resource.colorNames[cndx])"))
                 }
             }
 
 
-            if let date {
-                DBGLog(String("data for date \(date) = \(dateSelDict[date])"))  // as? UIColor)"))
-            }
+            //if let date {
+                //DBGLog(String("data for date \(date) = \(dateSelDict[date])"))  // as? UIColor)"))
+            //}
         }
 
         calendarView.rowCellClass = trackerCalCalendarRowCell.self
