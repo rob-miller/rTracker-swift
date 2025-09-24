@@ -8,8 +8,9 @@
 import UIKit
 
 class rTrackerSceneDelegate: NSObject, UIWindowSceneDelegate {
-    
+
     var window: UIWindow?
+    private var privacyScreenViewController: UIViewController?
     
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = (scene as? UIWindowScene) else { return }
@@ -109,28 +110,35 @@ class rTrackerSceneDelegate: NSObject, UIWindowSceneDelegate {
     func sceneWillEnterForeground(_ scene: UIScene) {
         // Unhide screen, rvc enterForeground refreshes the view
         DBGLog("will enter foreground - sceneDelegate")
-        window?.rootViewController?.dismiss(animated: false, completion: nil)
+
+        // Only dismiss the privacy screen, not all presented view controllers
+        if let privacyScreen = privacyScreenViewController {
+            privacyScreen.dismiss(animated: false, completion: nil)
+            privacyScreenViewController = nil
+        }
     }
     
     func sceneDidEnterBackground(_ scene: UIScene) {
         // hide screen in case private
         DBGLog("did enter background - sceneDelegate")
-        
+
         let blankViewController = UIViewController()
         blankViewController.view.backgroundColor = UIColor.black
         blankViewController.modalPresentationStyle = .fullScreen
-        
+
         // Assuming your launch image is named "LaunchScreenImg" in the asset catalog
         if let launchImage = UIImage(named: "LaunchScreenImg") {
             let imageView = UIImageView(frame: blankViewController.view.bounds)
             imageView.image = launchImage
             imageView.contentMode = .scaleAspectFill
             imageView.clipsToBounds = true
-            
+
             blankViewController.view.addSubview(imageView)
             blankViewController.view.sendSubviewToBack(imageView)
         }
-        
+
+        // Store reference to privacy screen for targeted dismissal
+        privacyScreenViewController = blankViewController
         window?.rootViewController?.present(blankViewController, animated: false, completion: nil)
     }
     
