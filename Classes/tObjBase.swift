@@ -737,6 +737,31 @@ class tObjBase: NSObject {
         }
     }
 
+    func toQry2DictIS(sql: String?) -> [Int : String] {
+        tObjBase.performDatabaseOperation(toid: toid) { [self] in
+            SQLDbg(String("toQry2DictIS: \(dbName!) => _\(sql)_"))
+
+            var stmt: OpaquePointer?
+            var dict: [Int: String] = [:]
+
+            if sqlite3_prepare_v2(tDb, sql, -1, &stmt, nil) == SQLITE_OK {
+                //var rslt: Int
+                while sqlite3_step(stmt) == SQLITE_ROW {
+                    let key = Int(sqlite3_column_int(stmt, 0))
+                    let value = String(cString: sqlite3_column_text(stmt, 1))
+                    dict[key] = value
+                    SQLDbg(String("  rslt: \(key) -> \(value)"))
+                }
+                //tobDoneCheck(rslt, sql: sql)
+                sqlite3_finalize(stmt)
+            } else {
+                tobPrepError(sql)
+            }
+            SQLDbg(String("  returns \(dict)"))
+            return dict
+        }
+    }
+
     func toQry2SetI(sql: String) -> Set<Int> {
         tObjBase.performDatabaseOperation(toid: toid) { [self] in
             SQLDbg(String("toQry2SetI: \(dbName!) => _\(sql)_"))
