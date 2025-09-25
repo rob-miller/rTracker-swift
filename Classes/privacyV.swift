@@ -127,6 +127,7 @@ class privacyV: UIView {
     var parentView: UIView?
     var parent: RootViewController?
     var bottomBarHeight: CGFloat = 0.0  // Height of bottom bar (tab bar or toolbar)
+    private var overlayView: UIView?  // Transparent overlay for tap-outside-to-dismiss
     
     private var _ttv: tictacV?
     var ttv: tictacV? {
@@ -228,14 +229,21 @@ class privacyV: UIView {
                 let vc = window!.rootViewController
                 vc?.present(alert, animated: true)
             } else if PVNOSHOW != newState && PWNEEDPASS == pwState {
-                // must set an initial password to use privacy features        
+                // must set an initial password to use privacy features
                 _showing = PVNEEDPASS
                 ppwv?.createPass(newState, cancel: PVNOSHOW) // recurse on input newState
+                // Ensure ppwV appears on top of privacyV
+                if let ppwv = _ppwv {
+                    parentView?.bringSubviewToFront(ppwv)
+                }
 
                 //[self.ppwv createPass:PVCONFIG cancel:PVNOSHOW]; // need more work // recurse on input newState, config on successful new pass
             } else if PVQUERY == newState {
+                DBGLog("Privacy view entering PVQUERY state")
                 //self.hidden = NO;
                 alpha = 1.0
+                // Show overlay for tap-outside-to-dismiss
+                showOverlay()
                 if PVNEEDPASS == _showing {
                     // if just created, pass is currently up, set up pvquery behind keyboard
                     _pwState = PWKNOWPASS // just successfully created password so don't ask again
@@ -263,6 +271,8 @@ class privacyV: UIView {
                             showPVQ(true)
                         }
                     })
+                    // Ensure privacy view is above overlay
+                    parentView?.bringSubviewToFront(self)
                     //[UIView commitAnimations];
                 }
                 if PVNEEDPASS == _showing {
@@ -274,6 +284,8 @@ class privacyV: UIView {
             } else if PVNOSHOW == newState {
                 //[UIView beginAnimations:nil context:NULL];
                 //[UIView setAnimationDuration:kAnimationDuration];
+                // Hide overlay when dismissing privacy view
+                hideOverlay()
                 UIView.animate(withDuration: 0.2, animations: { [self] in
                     if PVNEEDPASS == self.showing {
                         // if set pass is up, cancelled out of create
@@ -297,6 +309,7 @@ class privacyV: UIView {
 
                 _showing = PVNOSHOW
             } else if PVCONFIG == newState {
+                DBGLog("Privacy view entering PVCONFIG state")
                 if PWKNOWPASS == pwState || (PVCHECKPASS == _showing && ppwv!.ok == ppwv!.nextState) {
                     if PVCHECKPASS == _showing {
                         _pwState = PWKNOWPASS // just successfully entered password so don't ask again
@@ -306,10 +319,16 @@ class privacyV: UIView {
                         //	//[self.ppwv hidePPWVAnimated:FALSE];
                         //else {
                     }
+                    // Show overlay for tap-outside-to-dismiss
+                    showOverlay()
                     hideConfigBtns(false)
                     //[UIView beginAnimations:nil context:NULL];
                     //[UIView setAnimationDuration:kAnimationDuration];
                     //}
+
+                    // Set showing state BEFORE updating position so it uses correct positioning logic
+                    _showing = PVCONFIG
+
                     UIView.animate(withDuration: 0.2, animations: { [self] in
                         updatePpwvPosition()  // Update position before showing password change
                         ppwv?.changePass(PVCONFIG, cancel: PVCONFIG)
@@ -318,14 +337,23 @@ class privacyV: UIView {
                         lockBtn?.isHidden = false
                         setTTV()
                     })
+                    // Ensure privacy view is above overlay
+                    parentView?.bringSubviewToFront(self)
+                    // Ensure ppwV appears on top of privacyV after animation
+                    if let ppwv = _ppwv {
+                        parentView?.bringSubviewToFront(ppwv)
+                    }
 
                     //[UIView commitAnimations];
-                    _showing = PVCONFIG
                     parent?.refreshToolBar(true)
                 } else {
                     _showing = PVCHECKPASS
                     updatePpwvPosition()  // Update position before showing password check
                     ppwv?.checkPass(PVCONFIG, cancel: PVQUERY)
+                    // Ensure ppwV appears on top of privacyV
+                    if let ppwv = _ppwv {
+                        parentView?.bringSubviewToFront(ppwv)
+                    }
                 }
             }
             parent?.refreshToolBar(true)
@@ -546,6 +574,97 @@ class privacyV: UIView {
         return _prevBtn
     }
 
+    // MARK: -
+    // MARK: Overlay for tap-outside-to-dismiss
+
+    private func setupOverlay() {
+        guard let parentView = parentView else {
+            DBGLog("setupOverlay: no parent view")
+            return
+        }
+
+        if overlayView == nil {
+            overlayView = UIView(frame: parentView.bounds)
+            overlayView?.backgroundColor = UIColor.clear  // Transparent overlay
+            overlayView?.alpha = 0.0  // Start hidden
+            overlayView?.isUserInteractionEnabled = true  // Ensure it can receive touches
+
+            // Add tap gesture to dismiss privacy view
+            let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleOverlayTap))
+            tapGesture.cancelsTouchesInView = true  // Prevent touches from going to views below
+            overlayView?.addGestureRecognizer(tapGesture)
+
+            DBGLog("setupOverlay: created tap-outside-to-dismiss overlay")
+        }
+    }
+
+    @objc private func handleOverlayTap(_ gesture: UITapGestureRecognizer) {
+        let tapLocation = gesture.location(in: parentView)
+
+        // If ppwV is visible, check if tap is within ppwV or privacy view bounds
+        if showing == PVCHECKPASS, let ppwv = _ppwv {
+            let ppwvFrame = ppwv.frame
+            let privacyFrame = self.frame
+
+            // Don't dismiss if tap is within ppwV or privacy view area
+            if ppwvFrame.contains(tapLocation) || privacyFrame.contains(tapLocation) {
+                DBGLog("handleOverlayTap: tap within ppwV or privacy view, ignoring")
+                return
+            }
+        } else {
+            // For non-password states, don't dismiss if tap is within privacy view
+            let privacyFrame = self.frame
+            if privacyFrame.contains(tapLocation) {
+                DBGLog("handleOverlayTap: tap within privacy view, ignoring")
+                return
+            }
+        }
+
+        DBGLog("handleOverlayTap: tap outside views, dismissing privacy view")
+
+        // Force keyboard to dismiss first to prevent reappearance issues
+        parentView?.endEditing(true)
+
+        // Dismiss privacy view when tapping outside
+        showing = PVNOSHOW
+    }
+
+    private func showOverlay() {
+        setupOverlay()
+        guard let overlayView = overlayView, let parentView = parentView else { return }
+
+        // Update overlay frame to cover full parent view
+        overlayView.frame = parentView.bounds
+
+        // Add overlay to parent view
+        parentView.addSubview(overlayView)
+
+        // Position overlay correctly based on ppwV visibility
+        if showing == PVCHECKPASS, let ppwv = _ppwv {
+            // When ppwV is visible, position overlay below both privacy view and ppwV
+            // We'll use hit testing in the tap handler to avoid ppwV area
+            parentView.insertSubview(overlayView, belowSubview: ppwv)
+            DBGLog("showOverlay: ppwV visible, using hit testing to protect ppwV")
+        } else {
+            // Normal case: position overlay below privacy view but above other content
+            parentView.insertSubview(overlayView, belowSubview: self)
+        }
+
+        // Animate overlay appearance
+        UIView.animate(withDuration: 0.2) {
+            overlayView.alpha = 1.0
+        }
+    }
+
+    private func hideOverlay() {
+        guard let overlayView = overlayView else { return }
+
+        UIView.animate(withDuration: 0.2, animations: {
+            overlayView.alpha = 0.0
+        }, completion: { _ in
+            overlayView.removeFromSuperview()
+        })
+    }
 
     // MARK: -
     // MARK: ppwV positioning management
@@ -554,15 +673,16 @@ class privacyV: UIView {
         guard let _ppwv = _ppwv else { return }
 
         if showing == PVCONFIG || showing == PVCHECKPASS {
-            // When privacy view is visible in config mode, position ppwV just above the privacy view
-            // Calculate where the privacy view appears when slid up
-            let privacyViewTopWhenVisible = parentView!.frame.size.height - frame.size.height - bottomBarHeight
-            _ppwv.topy = privacyViewTopWhenVisible  // Position ppwV bottom at privacy view top
+            // When privacy view is visible, position ppwV just above the privacy view
+            // Use the actual current frame position of the privacy view
+            _ppwv.topy = self.frame.origin.y  // Position ppwV bottom at privacy view top
+            DBGLog("updatePpwvPosition: PVCONFIG/PVCHECKPASS - ppwV.topy = \(_ppwv.topy), privacyV.frame.origin.y = \(self.frame.origin.y)")
         } else {
             // Default positioning - position above the bottom bar, ready to appear above keyboard
             // The ppwV should appear just above the tab bar/safe area when keyboard shows
             let parentHeight = parentView!.frame.size.height
             _ppwv.topy = parentHeight - bottomBarHeight
+            DBGLog("updatePpwvPosition: default - ppwV.topy = \(_ppwv.topy)")
         }
     }
 
@@ -784,7 +904,6 @@ class privacyV: UIView {
             // The translation needed to position the view properly
             // Move up by our height plus the bottom safe area
             let translationY = -(frame.size.height + safeBottom)
-
 
             // Apply transform from identity
             transform = .identity

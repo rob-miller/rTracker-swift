@@ -36,7 +36,11 @@ Password picker view controller - UI component for text-based password entry wit
 - **COMPLETED**: Button now uses intrinsicContentSize for proper sizing instead of text-based calculations
 - **COMPLETED**: Dynamic width sizing based on parent view instead of hardcoded 320pt
 - **COMPLETED**: Keyboard positioning attachment properly refined via privacyV.updatePpwvPosition()
-- **CURRENT SESSION**: Updated button creation to use new .uiButton extension pattern
+- **COMPLETED**: Updated button creation to use new .uiButton extension pattern
+- **COMPLETED**: Two-button password change system (cancel + confirm checkmark)
+- **COMPLETED**: Fixed erroneous "password changed" messages on keyboard done and cancel
+- **COMPLETED**: Z-order management - ppwV now properly appears on top of privacyV
+- **COMPLETED**: Empty field confirmation handling - no action taken for empty password fields
 
 ## Recent Development History
 - 2025-01-15: iOS 26 Privacy Button Fixes Session
@@ -59,7 +63,15 @@ Password picker view controller - UI component for text-based password entry wit
 - e41ceb5: files from Swiftify
 
 ## Last Updated
-2025-01-15 - Button API Refactoring:
+2025-01-15 - Password Change System Overhaul and Z-Order Fixes:
+- **Two-Button System**: Added confirm button (checkmark.circle) alongside cancel button for explicit password confirmation
+- **Fixed Erroneous Messages**: Eliminated "password changed" messages on keyboard done and cancel button - now only on explicit confirmation
+- **Empty Field Handling**: Checkmark on empty field now silently clears without triggering password logic or repositioning
+- **Z-Order Management**: Added bringSubviewToFront() calls in show() and showPassRqstr() methods to ensure ppwV appears on top
+- **Enhanced Cancel**: Complete event handler cleanup with removeTarget(.allEvents) and proper hidePPWV() call
+- **State Management**: Improved button visibility logic - confirm button only shown in changePass mode
+
+Previous session - Button API Refactoring:
 - **Button API Update**: Updated cancel button creation to use new .uiButton extension pattern
 - **API Consistency**: Now uses createCancelButton().uiButton instead of createCancelUIButton()
 - **Architecture**: Follows unified button creation system with extension-based approach

@@ -130,7 +130,7 @@ class ppwV: UIView, UITextFieldDelegate {
 
             // Use button's intrinsic content size and position properly
             let buttonSize = _cancelBtn?.intrinsicContentSize ?? CGSize.zero
-            let x = (0.4 * frame.size.width) - (buttonSize.width / 2.0)  // Center the button
+            let x = (0.35 * frame.size.width) - (buttonSize.width / 2.0)  // Slightly left of center
             let y = 0.65 * frame.size.height
 
             _cancelBtn?.frame = CGRect(
@@ -139,13 +139,39 @@ class ppwV: UIView, UITextFieldDelegate {
                 width: buttonSize.width,
                 height: buttonSize.height
             )
-            //DBGLog(@"cancel frame: x: %f  y: %f  w: %f  h: %f",f.origin.x,f.origin.y,f.size.width,f.size.height);
 
             if let _cancelBtn {
                 addSubview(_cancelBtn)
             }
         }
         return _cancelBtn
+    }
+
+    private var _confirmBtn: UIButton?
+    var confirmBtn: UIButton? {
+        if nil == _confirmBtn {
+            _confirmBtn = rTracker_resource.createSaveButton(target: self, action: #selector(confirmChangePassword)).uiButton
+
+            // Use button's intrinsic content size and position properly
+            let buttonSize = _confirmBtn?.intrinsicContentSize ?? CGSize.zero
+            let x = (0.65 * frame.size.width) - (buttonSize.width / 2.0)  // Slightly right of center
+            let y = 0.65 * frame.size.height
+
+            _confirmBtn?.frame = CGRect(
+                x: x,
+                y: y,
+                width: buttonSize.width,
+                height: buttonSize.height
+            )
+
+            // Initially hidden - only shown during password change
+            _confirmBtn?.isHidden = true
+
+            if let _confirmBtn {
+                addSubview(_confirmBtn)
+            }
+        }
+        return _confirmBtn
     }
 
     //,saveFrame;
@@ -260,6 +286,9 @@ class ppwV: UIView, UITextFieldDelegate {
         isHidden = false
         DBGLog(String("show: topy= \(topy)  f= \(f.origin.x) \(f.origin.y) \(f.size.width) \(f.size.height)"))
 
+        // Ensure ppwV appears on top of privacyV and other views
+        parentView?.bringSubviewToFront(self)
+
         f.origin.y = topy - frame.size.height
 
         toggleKeyboardNotifications(true)
@@ -314,8 +343,8 @@ class ppwV: UIView, UITextFieldDelegate {
 
     func showPassRqstr() {
 
-        //[UIView beginAnimations:nil context:NULL];
-        //[UIView setAnimationDuration:kAnimationDuration];
+        // Ensure ppwV appears on top before animation starts
+        parentView?.bringSubviewToFront(self)
 
         UIView.animate(withDuration: 0.2, animations: {
             self.show()
@@ -323,17 +352,17 @@ class ppwV: UIView, UITextFieldDelegate {
             // Code to be executed after the animation completes
             self.topTF.becomeFirstResponder()
         }
-            
-
-        //[UIView commitAnimations];
     }
 
     func checkPass(_ okState: UInt, cancel cancelState: UInt) {
-        //DBGLog(@"ppwv check pass");
+        DBGLog("ppwv check pass - single button mode")
         setUpPass(okState, cancel: cancelState)
         topLabel?.text = "Please enter password:"
         topTF.addTarget(self, action: #selector(testp), for: .editingDidEnd)
         cancelBtn?.addTarget(self, action: #selector(cancelp), for: .touchDown)
+
+        // Hide confirm button in check pass mode
+        confirmBtn?.isHidden = true
 
         showPassRqstr()
     }
@@ -341,15 +370,17 @@ class ppwV: UIView, UITextFieldDelegate {
     let SetPassTxt = "Please set a password:"
 
     func createPass(_ okState: UInt, cancel cancelState: UInt) {
-        DBGLog("ppwv create pass")
+        DBGLog("ppwv create pass - single button mode")
         setUpPass(okState, cancel: cancelState)
 
         topLabel?.text = SetPassTxt
         topTF.addTarget(self, action: #selector(setp), for: .editingDidEnd)
         cancelBtn?.addTarget(self, action: #selector(cancelp), for: .touchDown)
 
-        showPassRqstr()
+        // Hide confirm button in create pass mode
+        confirmBtn?.isHidden = true
 
+        showPassRqstr()
     }
 
     //#pragma change password
@@ -361,29 +392,68 @@ class ppwV: UIView, UITextFieldDelegate {
     }
 
     @objc func changePAction() {
-        //[self.topTF resignFirstResponder];
-        //DBGLog(@"change p to .%@.",self.topTF.text);
-        if !dbTestPass(topTF.text) {
-            // skip if the same (spurious editingdidend event on start)
-            setp()
+        // Only dismiss keyboard - do NOT save password
+        // Password is only saved when user explicitly taps confirm button
+        topTF.resignFirstResponder()
+        DBGLog("changePAction: keyboard dismissed, password not saved")
+    }
+
+    @objc func confirmChangePassword() {
+        DBGLog("confirmChangePassword: user confirmed password change")
+
+        let passwordText = topTF.text ?? ""
+        let trimmedText = passwordText.trimmingCharacters(in: .whitespaces)
+
+        // Check if field is empty - don't do anything
+        if trimmedText.isEmpty {
+            DBGLog("confirmChangePassword: empty field, no action taken")
+            // Don't show any message, don't call setp(), don't reposition
+            // Just clear field and dismiss keyboard silently
+            topTF.text = ""
+            topTF.resignFirstResponder()
+            return
+        }
+
+        // Check if password has actually changed (non-empty password)
+        if !dbTestPass(passwordText) {
+            // Password is different, save it
+            setp() // This calls the existing save logic
             topLabel?.text = "password changed"
+
+            // Clear the text field after successful save
+            topTF.text = ""
+
+            // Reset label after delay
             perform(#selector(cpSetTopLabel), with: nil, afterDelay: 1.0)
+        } else {
+            // Password is the same as existing, no change needed
+            DBGLog("confirmChangePassword: password unchanged, clearing field")
+            topTF.text = ""
+            topTF.resignFirstResponder()
         }
     }
 
     func changePass(_ okState: UInt, cancel cancelState: UInt) {
-        //DBGLog(@"ppwv change pass");
+        DBGLog("ppwv change pass - setting up two-button interface")
         setUpPass(okState, cancel: cancelState)
         cpSetTopLabel()
+
+        // Set up text field to only dismiss keyboard on done, not save password
         topTF.removeTarget(self, action: nil, for: .editingDidEnd)
         topTF.addTarget(self, action: #selector(changePAction), for: .editingDidEnd)
 
-        //[UIView beginAnimations:nil context:NULL];
-        //[UIView setAnimationDuration:kAnimationDuration];
+        // Set up cancel button (already configured in cancelBtn property)
+        cancelBtn?.removeTarget(self, action: nil, for: .touchDown)
+        cancelBtn?.addTarget(self, action: #selector(cancelp), for: .touchDown)
+
+        // Show and configure confirm button for password change mode
+        confirmBtn?.isHidden = false
+        confirmBtn?.removeTarget(self, action: nil, for: .touchDown)
+        confirmBtn?.addTarget(self, action: #selector(confirmChangePassword), for: .touchDown)
+
         UIView.animate(withDuration: 0.2, animations: { [self] in
             show()
         })
-        //[UIView commitAnimations];
     }
 
     // MARK: -
@@ -464,8 +534,28 @@ class ppwV: UIView, UITextFieldDelegate {
     }
 
     @objc func cancelp() {
+        DBGLog("cancelp: clearing password field without saving")
+
+        // Clear the text field
         topTF.text = ""
-        topTF.resignFirstResponder() // closing topTF triggers setp action above
+
+        // Remove ALL targets to ensure clean state
+        topTF.removeTarget(nil, action: nil, for: .allEvents)
+
+        // Dismiss keyboard
+        topTF.resignFirstResponder()
+
+        // Hide confirm button if visible (for change password mode)
+        confirmBtn?.isHidden = true
+
+        // Hide ppwV with animation
+        hidePPWV(animated: true)
+
+        // Set nextState to cancel and trigger parent action
+        nextState = cancel
+        let imp = parent!.method(for: parentAction)
+        let funcp = unsafeBitCast(imp, to: (@convention(c) (AnyObject, Selector) -> Void).self)
+        funcp(parent!, parentAction!)
     }
 
     @objc func testp() {

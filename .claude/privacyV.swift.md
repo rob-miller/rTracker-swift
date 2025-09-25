@@ -42,8 +42,11 @@ Privacy view controller that provides graphical password protection for the app
 - **COMPLETED**: Privacy navigation buttons (next/prev) - Fixed direction detection using accessibilityIdentifier instead of currentTitle
 - **COMPLETED**: Dynamic height calculation - replaced fixed 171pt with calculated 242pt height
 - **COMPLETED**: Button clipping issue - removed view bounds clipping constraints
-- **CURRENT SESSION**: Updated button creation to use new .uiButton extension pattern
-- **CURRENT SESSION**: All privacy buttons now use unified rTracker-resource button creation system
+- **COMPLETED**: Updated button creation to use new .uiButton extension pattern
+- **COMPLETED**: All privacy buttons now use unified rTracker-resource button creation system
+- **COMPLETED**: Tap-outside-to-dismiss functionality with keyboard dismissal and ppwV protection
+- **COMPLETED**: ppwV z-order issues - now properly appears on top of privacyV
+- **COMPLETED**: ppwV positioning timing issue in PVCONFIG state - fixed state assignment order
 
 ## Recent Development History
 - 2025-01-15: iOS 26 Privacy Button Fixes Session
@@ -60,7 +63,14 @@ Privacy view controller that provides graphical password protection for the app
 - ea97c39: privacy not visible at bottom on startup - initial iOS 26 issue
 
 ## Last Updated
-2025-01-15 - Privacy Button Refactoring and Navigation Fixes:
+2025-01-15 - Tap-Outside-to-Dismiss and ppwV Positioning Fixes:
+- **Tap-Outside-to-Dismiss**: Implemented comprehensive overlay system with keyboard dismissal and ppwV protection using hit testing
+- **ppwV Z-Order**: Fixed ppwV sliding behind privacyV by adding bringSubviewToFront() calls in show methods and privacyV state transitions
+- **ppwV Positioning**: Fixed timing issue where updatePpwvPosition() used wrong state by moving _showing assignment before position calculation
+- **Overlay Management**: Smart overlay positioning that protects ppwV interaction while allowing background dismissal
+- **State Cleanup**: Enhanced cancelp() method with complete target removal for clean event handling
+
+Previous session - Privacy Button Refactoring and Navigation Fixes:
 - **Button API Update**: Updated all button creation calls to use new .uiButton extension pattern
 - **Navigation Fix**: Fixed privacy navigation buttons (next/prev) using accessibilityIdentifier instead of currentTitle
 - **ppwV Positioning**: Fixed updatePpwvPosition() to properly position password view above privacy view/keyboard
