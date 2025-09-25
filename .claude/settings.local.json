@@ -6,7 +6,8 @@
       "Bash(find:*)",
       "Bash(grep:*)",
       "WebSearch",
-      "Bash(plutil:*)"
+      "Bash(plutil:*)",
+      "Read(//Users/rob/Library/**)"
     ],
     "deny": []
   }

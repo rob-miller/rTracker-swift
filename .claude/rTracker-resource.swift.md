@@ -18,6 +18,13 @@ Central utility class providing shared resources and UI components across the ap
 - `alert(_:msg:vc:)` - Shows alert dialogs with proper threading
 - `ioFilePath(_:access:)` - Provides file paths for app documents
 
+### NEW: iOS 26 Button Creation Functions (Added in Session)
+- `createSaveButton(target:action:)` - Yellow checkmark circle save button
+- `createAddButton(target:action:)` - Blue plus circle add button
+- `createBackButton(target:action:)` - Left chevron circle back button
+- `createEditButton(target:action:)` - Three sliders edit button
+- `createCopyButton(target:action:)` - Document stack copy button
+
 ## Dependencies & Relationships
 - Used throughout the app for UI feedback during long operations
 - Central dependency for file loading operations
@@ -44,9 +51,35 @@ Central utility class providing shared resources and UI components across the ap
   - Proper cleanup of UI elements and references
   - Global state tracking to prevent duplicate indicators
 
+## iOS 26 Button System Implementation Details
+**Major addition during current session:**
+- **createSaveButton**: Yellow circle (RGB: 0.85, 0.7, 0.05) background, yellow-tinted white checkmark, 1pt border
+- **createAddButton**: White background with blue plus symbol using `.withTintColor(.systemBlue, renderingMode: .alwaysOriginal)`
+- **createBackButton**: White background with black/white chevron.left (follows .label color)
+- **createEditButton**: White background with slider.horizontal.3 symbol (setup/configuration)
+- **createCopyButton**: White background with document.on.document symbol
+
+**Common iOS 26 Pattern:**
+- Uses `UIButton.Configuration.filled()` with `.capsule` corner style
+- 22pt symbol size, `.regular` weight
+- `hidesSharedBackground = true` on UIBarButtonItem
+- Pre-iOS 26 fallbacks to appropriate system buttons
+- Consistent `.label` color for visibility in light/dark modes
+
 ## Recent Development History
-- Completely redesigned activity indicator with modern iOS styling
-- Enhanced visual design with shadows, borders, and proper typography
+- **iOS 26 Button System**: Added complete modern button creation system with 5 button types
+- **Color Implementation**: Fixed symbol coloring using `.withTintColor()` method instead of `baseForegroundColor`
+- **Centralized Button Creation**: All iOS 26 buttons now created through rTracker-resource
+- **Fallback Support**: Proper pre-iOS 26 fallbacks for all button types
+- Enhanced visual design with shadows, borders, and proper typography (activity indicators)
 - Improved centering and responsiveness across different screen sizes
 - Added support for multi-line loading messages
 - Maintained backward compatibility with existing API
+
+## Current Issues & TODOs
+- **NEXT SESSION**: Refactor to generic `createStyledButton()` function to reduce code duplication
+- **NEXT SESSION**: Add privacy-specific buttons (clear, lock, chevron circles, cancel bin, special save)
+- **NEXT SESSION**: Update privacy files (ppwV.swift, privacyV.swift, privacy.swift) with new buttons
+
+## Last Updated
+Current session - Added complete iOS 26 button system with 5 button creation functions and centralized styling

@@ -42,4 +42,8 @@ Data entry view controller for text/text box value objects - handles multi-line 
 - Originally converted from Objective-C via Swiftify
 
 ## Last Updated
-2025-09-17: Fixed getInitTVF() frame calculation using safe area insets instead of problematic toolbar frame values. This resolves iOS 18 compatibility issue causing negative frame heights and invisible text views.
+Current session:
+- **MAJOR**: Simplified save button handling - removed complex creation logic from textViewDidBeginEditing
+- **Delegation**: Save button now properly handled by voTextBox.dataEditVDidLoad for iOS 26 styling
+- **Clean Logic**: Eliminated override conflicts where this class was replacing voTextBox's modern buttons
+- 2025-09-17: Fixed getInitTVF() frame calculation using safe area insets for iOS 18 compatibility
