@@ -126,18 +126,20 @@ class ppwV: UIView, UITextFieldDelegate {
     private var _cancelBtn: UIButton?
     var cancelBtn: UIButton? {
         if nil == _cancelBtn {
-            let ttl = " Cancel "
-            _cancelBtn = UIButton(type: .roundedRect)
-            _cancelBtn?.setTitle(ttl, for: .normal)
-            var f = CGRect.zero
-            f.origin.x = 0.4 * frame.size.width
-            f.origin.y = 0.65 * frame.size.height
-            f.size = ttl.size(withAttributes: [
-                NSAttributedString.Key.font: PrefBodyFont
-            ])
-            _cancelBtn?.frame = f
+            _cancelBtn = rTracker_resource.createCancelUIButton(target: self, action: #selector(cancelp))
+
+            // Use button's intrinsic content size and position properly
+            let buttonSize = _cancelBtn?.intrinsicContentSize ?? CGSize.zero
+            let x = (0.4 * frame.size.width) - (buttonSize.width / 2.0)  // Center the button
+            let y = 0.65 * frame.size.height
+
+            _cancelBtn?.frame = CGRect(
+                x: x,
+                y: y,
+                width: buttonSize.width,
+                height: buttonSize.height
+            )
             //DBGLog(@"cancel frame: x: %f  y: %f  w: %f  h: %f",f.origin.x,f.origin.y,f.size.width,f.size.height);
-            _cancelBtn?.addTarget(self, action: #selector(cancelp), for: .touchDown)
 
             if let _cancelBtn {
                 addSubview(_cancelBtn)
@@ -163,8 +165,10 @@ class ppwV: UIView, UITextFieldDelegate {
 
         //frame.origin.x = 0.0
         //frame.origin.y = 372.0
-        frame.size.width = 320.0
-        frame.size.height = 130.0
+
+        // Use dynamic dimensions based on parent view
+        frame.size.width = pv.frame.size.width > 0 ? pv.frame.size.width : 320.0
+        frame.size.height = 130.0  // Keep height as is for now - contains label + text field + button
         //DBGLog(String("ppwV: x=\(frame.origin.x) y=\(frame.origin.y) w=\(frame.size.width) h=\(frame.size.height)"))
 
         //tbh = par.navigationController!.toolbar.frame.height

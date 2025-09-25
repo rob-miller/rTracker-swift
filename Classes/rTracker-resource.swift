@@ -1313,154 +1313,300 @@ class rTracker_resource: NSObject {
     return buttonItem
   }
 
-  /// Creates a modern iOS 26 save button with yellow checkmark circle
-  class func createSaveButton(target: Any?, action: Selector) -> UIBarButtonItem {
+  /// Generic button creation function for iOS 26 styled buttons
+  class func createStyledButton(
+    symbolName: String,
+    target: Any?,
+    action: Selector,
+    backgroundColor: UIColor = .systemBackground,
+    symbolColor: UIColor = .label,
+    borderColor: UIColor? = nil,
+    borderWidth: CGFloat = 0,
+    symbolSize: CGFloat = 18,
+    fallbackSystemItem: UIBarButtonItem.SystemItem? = nil,
+    fallbackTitle: String? = nil
+  ) -> UIBarButtonItem {
     if #available(iOS 26.0, *) {
-      // iOS 26: Use yellow circle with checkmark
       let button = UIButton(type: .system)
 
       var config = UIButton.Configuration.filled()
-      let burntYellow = UIColor(red: 0.85, green: 0.7, blue: 0.05, alpha: 1.0)
-      config.baseBackgroundColor = burntYellow
+      config.baseBackgroundColor = backgroundColor
       config.cornerStyle = .capsule
 
-      let symSize = UIImage.SymbolConfiguration(pointSize: 22, weight: .regular)
-      let yellowTintedWhite = UIColor(red: 1.0, green: 1.0, blue: 0.2, alpha: 1.0)
-      let image = UIImage(systemName: "checkmark")?
+      let symSize = UIImage.SymbolConfiguration(pointSize: symbolSize, weight: .regular)
+      let image = UIImage(systemName: symbolName)?
         .applyingSymbolConfiguration(symSize)?
-        .withTintColor(yellowTintedWhite, renderingMode: .alwaysOriginal)
+        .withTintColor(symbolColor, renderingMode: .alwaysOriginal)
 
       config.image = image
       button.configuration = config
 
-      button.layer.borderWidth = 1.0
-      button.layer.borderColor = yellowTintedWhite.cgColor
+      if let borderColor = borderColor, borderWidth > 0 {
+        button.layer.borderWidth = borderWidth
+        button.layer.borderColor = borderColor.cgColor
+      }
 
       button.addTarget(target, action: action, for: .touchUpInside)
 
-      let saveBtn = UIBarButtonItem(customView: button)
-      saveBtn.hidesSharedBackground = true
-      return saveBtn
+      let buttonItem = UIBarButtonItem(customView: button)
+      buttonItem.hidesSharedBackground = true
+      return buttonItem
     } else {
-      // Pre-iOS 26: Keep standard system save button
-      return UIBarButtonItem(barButtonSystemItem: .save, target: target, action: action)
+      // Pre-iOS 26: Use fallbacks
+      if let systemItem = fallbackSystemItem {
+        return UIBarButtonItem(barButtonSystemItem: systemItem, target: target, action: action)
+      } else if let title = fallbackTitle {
+        return UIBarButtonItem(title: title, style: .plain, target: target, action: action)
+      } else {
+        // Default fallback
+        return UIBarButtonItem(barButtonSystemItem: .done, target: target, action: action)
+      }
     }
+  }
+
+  /// Creates a modern iOS 26 save button with yellow checkmark circle
+  class func createSaveButton(target: Any?, action: Selector) -> UIBarButtonItem {
+    let burntYellow = UIColor(red: 0.85, green: 0.7, blue: 0.05, alpha: 1.0)
+    let yellowTintedWhite = UIColor(red: 1.0, green: 1.0, blue: 0.2, alpha: 1.0)
+
+    return createStyledButton(
+      symbolName: "checkmark",
+      target: target,
+      action: action,
+      backgroundColor: burntYellow,
+      symbolColor: yellowTintedWhite,
+      borderColor: yellowTintedWhite,
+      borderWidth: 1.0,
+      fallbackSystemItem: .save
+    )
   }
 
   /// Creates a modern iOS 26 add button with blue plus symbol
   class func createAddButton(target: Any?, action: Selector) -> UIBarButtonItem {
-    if #available(iOS 26.0, *) {
-      // iOS 26: Use standard button with blue plus symbol
-      let button = UIButton(type: .system)
-
-      var config = UIButton.Configuration.filled()
-      config.baseBackgroundColor = .systemBackground
-      config.cornerStyle = .capsule
-
-      let symSize = UIImage.SymbolConfiguration(pointSize: 22, weight: .regular)
-      let image = UIImage(systemName: "plus")?
-        .applyingSymbolConfiguration(symSize)?
-        .withTintColor(.systemBlue, renderingMode: .alwaysOriginal)
-
-      config.image = image
-      button.configuration = config
-
-      button.addTarget(target, action: action, for: .touchUpInside)
-
-      let addBtn = UIBarButtonItem(customView: button)
-      addBtn.hidesSharedBackground = true
-      return addBtn
-    } else {
-      // Pre-iOS 26: Keep standard system add button
-      return UIBarButtonItem(barButtonSystemItem: .add, target: target, action: action)
-    }
+    return createStyledButton(
+      symbolName: "plus",
+      target: target,
+      action: action,
+      symbolColor: .systemBlue,
+      fallbackSystemItem: .add
+    )
   }
 
   /// Creates a modern iOS 26 back button with standard styling
   class func createBackButton(target: Any?, action: Selector) -> UIBarButtonItem {
-    if #available(iOS 26.0, *) {
-      // iOS 26: Use standard button with chevron symbol
-      let button = UIButton(type: .system)
-
-      var config = UIButton.Configuration.filled()
-      config.baseBackgroundColor = .systemBackground
-      config.baseForegroundColor = .label  // Ensure symbol is black/system color
-      config.cornerStyle = .capsule
-
-      let symSize = UIImage.SymbolConfiguration(pointSize: 22, weight: .regular)
-      let image = UIImage(systemName: "chevron.left")?
-        .applyingSymbolConfiguration(symSize)
-
-      config.image = image
-      button.configuration = config
-
-      button.addTarget(target, action: action, for: .touchUpInside)
-
-      let backBtn = UIBarButtonItem(customView: button)
-      backBtn.hidesSharedBackground = true
-      return backBtn
-    } else {
-      // Pre-iOS 26: Keep standard system back button
-      return UIBarButtonItem(title: "<", style: .plain, target: target, action: action)
-    }
+    return createStyledButton(
+      symbolName: "chevron.left",
+      target: target,
+      action: action,
+      fallbackTitle: "<"
+    )
   }
 
   /// Creates a modern iOS 26 edit button with standard styling
   class func createEditButton(target: Any?, action: Selector) -> UIBarButtonItem {
-    if #available(iOS 26.0, *) {
-      // iOS 26: Use standard button with slider horizontal symbol
-      let button = UIButton(type: .system)
-
-      var config = UIButton.Configuration.filled()
-      config.baseBackgroundColor = .systemBackground
-      config.baseForegroundColor = .label  // Ensure symbol is black/system color
-      config.cornerStyle = .capsule
-
-      let symSize = UIImage.SymbolConfiguration(pointSize: 22, weight: .regular)
-      let image = UIImage(systemName: "slider.horizontal.3")?
-        .applyingSymbolConfiguration(symSize)
-
-      config.image = image
-      button.configuration = config
-
-      button.addTarget(target, action: action, for: .touchUpInside)
-
-      let editBtn = UIBarButtonItem(customView: button)
-      editBtn.hidesSharedBackground = true
-      return editBtn
-    } else {
-      // Pre-iOS 26: Keep standard system edit button
-      return UIBarButtonItem(barButtonSystemItem: .edit, target: target, action: action)
-    }
+    return createStyledButton(
+      symbolName: "slider.horizontal.3",
+      target: target,
+      action: action,
+      fallbackSystemItem: .edit
+    )
   }
 
   /// Creates a modern iOS 26 copy button with standard styling
   class func createCopyButton(target: Any?, action: Selector) -> UIBarButtonItem {
+    return createStyledButton(
+      symbolName: "document.on.document",
+      target: target,
+      action: action,
+      fallbackTitle: "Copy"
+    )
+  }
+
+  // MARK: - Privacy Screen Button Functions
+
+  /// Creates a modern iOS 26 clear button for privacy screens
+  class func createClearButton(target: Any?, action: Selector) -> UIBarButtonItem {
+    return createStyledButton(
+      symbolName: "clear",
+      target: target,
+      action: action,
+      fallbackTitle: "Clear"
+    )
+  }
+
+  /// Creates a modern iOS 26 lock button for privacy screens
+  class func createLockButton(target: Any?, action: Selector) -> UIBarButtonItem {
+    return createStyledButton(
+      symbolName: "lock.fill",
+      target: target,
+      action: action,
+      fallbackTitle: "Lock"
+    )
+  }
+
+  /// Creates a modern iOS 26 special save button for privacy screens
+  class func createPrivacySaveButton(target: Any?, action: Selector) -> UIBarButtonItem {
+    return createStyledButton(
+      symbolName: "checkmark.rectangle.stack",
+      target: target,
+      action: action,
+      fallbackTitle: "Save"
+    )
+  }
+
+  /// Creates a modern iOS 26 left chevron circle button for privacy navigation
+  class func createLeftChevronCircleButton(target: Any?, action: Selector) -> UIBarButtonItem {
+    return createStyledButton(
+      symbolName: "chevron.left.circle",
+      target: target,
+      action: action,
+      fallbackTitle: "<"
+    )
+  }
+
+  /// Creates a modern iOS 26 right chevron circle button for privacy navigation
+  class func createRightChevronCircleButton(target: Any?, action: Selector) -> UIBarButtonItem {
+    return createStyledButton(
+      symbolName: "chevron.right.circle",
+      target: target,
+      action: action,
+      fallbackTitle: ">"
+    )
+  }
+
+  /// Creates a modern iOS 26 cancel/delete button for privacy screens
+  class func createCancelBinButton(target: Any?, action: Selector) -> UIBarButtonItem {
+    return createStyledButton(
+      symbolName: "xmark.bin",
+      target: target,
+      action: action,
+      fallbackTitle: "Cancel"
+    )
+  }
+
+  /// Creates a modern iOS 26 cancel button with X circle
+  class func createCancelButton(target: Any?, action: Selector) -> UIBarButtonItem {
+    return createStyledButton(
+      symbolName: "xmark.circle",
+      target: target,
+      action: action,
+      fallbackTitle: "Cancel"
+    )
+  }
+
+  // MARK: - UIButton Helper Functions (for view-based buttons, not navigation bar buttons)
+
+  /// Generic UIButton creation function for iOS 26 styled buttons in views
+  class func createStyledUIButton(
+    symbolName: String,
+    target: Any?,
+    action: Selector,
+    backgroundColor: UIColor = .systemBackground,
+    symbolColor: UIColor = .label,
+    borderColor: UIColor? = nil,
+    borderWidth: CGFloat = 0,
+    symbolSize: CGFloat = 18,
+    fallbackTitle: String? = nil
+  ) -> UIButton {
     if #available(iOS 26.0, *) {
-      // iOS 26: Use standard button with document.on.document symbol
       let button = UIButton(type: .system)
 
       var config = UIButton.Configuration.filled()
-      config.baseBackgroundColor = .systemBackground
-      config.baseForegroundColor = .label  // Ensure symbol is black/system color
+      config.baseBackgroundColor = backgroundColor
       config.cornerStyle = .capsule
 
-      let symSize = UIImage.SymbolConfiguration(pointSize: 22, weight: .regular)
-      let image = UIImage(systemName: "document.on.document")?
-        .applyingSymbolConfiguration(symSize)
+      let symSize = UIImage.SymbolConfiguration(pointSize: symbolSize, weight: .regular)
+      let image = UIImage(systemName: symbolName)?
+        .applyingSymbolConfiguration(symSize)?
+        .withTintColor(symbolColor, renderingMode: .alwaysOriginal)
 
       config.image = image
       button.configuration = config
 
-      button.addTarget(target, action: action, for: .touchUpInside)
+      if let borderColor = borderColor, borderWidth > 0 {
+        button.layer.borderWidth = borderWidth
+        button.layer.borderColor = borderColor.cgColor
+      }
 
-      let copyBtn = UIBarButtonItem(customView: button)
-      copyBtn.hidesSharedBackground = true
-      return copyBtn
+      button.addTarget(target, action: action, for: .touchUpInside)
+      return button
     } else {
-      // Pre-iOS 26: Keep standard system copy button
-      return UIBarButtonItem(title: "Copy", style: .plain, target: target, action: action)
+      // Pre-iOS 26: Use standard button with title
+      let button = UIButton(type: .roundedRect)
+      button.setTitle(fallbackTitle ?? "Button", for: .normal)
+      button.addTarget(target, action: action, for: .touchUpInside)
+      return button
     }
+  }
+
+  /// Creates a modern iOS 26 cancel UIButton for views
+  class func createCancelUIButton(target: Any?, action: Selector) -> UIButton {
+    return createStyledUIButton(
+      symbolName: "xmark.circle",
+      target: target,
+      action: action,
+      fallbackTitle: "Cancel"
+    )
+  }
+
+  /// Creates a modern iOS 26 clear UIButton for privacy screens
+  class func createClearUIButton(target: Any?, action: Selector) -> UIButton {
+    return createStyledUIButton(
+      symbolName: "clear",
+      target: target,
+      action: action,
+      fallbackTitle: "Clear"
+    )
+  }
+
+  /// Creates a modern iOS 26 setup/config UIButton for privacy screens
+  class func createSetupUIButton(target: Any?, action: Selector, title: String = "Setup") -> UIButton {
+    return createStyledUIButton(
+      symbolName: "slider.horizontal.3",
+      target: target,
+      action: action,
+      fallbackTitle: title
+    )
+  }
+
+  /// Creates a modern iOS 26 privacy save UIButton for privacy screens
+  class func createPrivacySaveUIButton(target: Any?, action: Selector) -> UIButton {
+    return createStyledUIButton(
+      symbolName: "checkmark.rectangle.stack",
+      target: target,
+      action: action,
+      fallbackTitle: "Save"
+    )
+  }
+
+  /// Creates a modern iOS 26 left chevron circle UIButton for privacy navigation
+  class func createLeftChevronUIButton(target: Any?, action: Selector) -> UIButton {
+    return createStyledUIButton(
+      symbolName: "chevron.left.circle",
+      target: target,
+      action: action,
+      fallbackTitle: "<"
+    )
+  }
+
+  /// Creates a modern iOS 26 right chevron circle UIButton for privacy navigation
+  class func createRightChevronUIButton(target: Any?, action: Selector) -> UIButton {
+    return createStyledUIButton(
+      symbolName: "chevron.right.circle",
+      target: target,
+      action: action,
+      fallbackTitle: ">"
+    )
+  }
+
+  /// Creates a modern iOS 26 lock UIButton for privacy screens
+  class func createLockUIButton(target: Any?, action: Selector) -> UIButton {
+    return createStyledUIButton(
+      symbolName: "lock.fill",
+      target: target,
+      action: action,
+      fallbackTitle: "Lock"
+    )
   }
 
   /// Shows help content in a popover or modal presentation
