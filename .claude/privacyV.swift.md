@@ -36,11 +36,14 @@ Privacy view controller that provides graphical password protection for the app
 - Width adapts to parent view width instead of hardcoded 320px
 
 ## Current Issues & TODOs
-- **PARTIALLY FIXED**: Button sizing and positioning - now uses intrinsicContentSize and clipsToBounds = false
-- **IN PROGRESS**: ppwV positioning to attach to keyboard properly - logic updated but needs completion
-- **PARTIALLY FIXED**: Button overlap issue - separate lock button created, needs show/hide logic implementation
+- **COMPLETED**: Button sizing and positioning - now uses intrinsicContentSize and clipsToBounds = false
+- **COMPLETED**: ppwV positioning to attach to keyboard properly - fixed updatePpwvPosition() logic
+- **COMPLETED**: Button overlap issue - separate lock button created with proper show/hide logic implementation
+- **COMPLETED**: Privacy navigation buttons (next/prev) - Fixed direction detection using accessibilityIdentifier instead of currentTitle
 - **COMPLETED**: Dynamic height calculation - replaced fixed 171pt with calculated 242pt height
 - **COMPLETED**: Button clipping issue - removed view bounds clipping constraints
+- **CURRENT SESSION**: Updated button creation to use new .uiButton extension pattern
+- **CURRENT SESSION**: All privacy buttons now use unified rTracker-resource button creation system
 
 ## Recent Development History
 - 2025-01-15: iOS 26 Privacy Button Fixes Session
@@ -57,7 +60,14 @@ Privacy view controller that provides graphical password protection for the app
 - ea97c39: privacy not visible at bottom on startup - initial iOS 26 issue
 
 ## Last Updated
-2025-01-15 - iOS 26 Privacy Button Fixes:
+2025-01-15 - Privacy Button Refactoring and Navigation Fixes:
+- **Button API Update**: Updated all button creation calls to use new .uiButton extension pattern
+- **Navigation Fix**: Fixed privacy navigation buttons (next/prev) using accessibilityIdentifier instead of currentTitle
+- **ppwV Positioning**: Fixed updatePpwvPosition() to properly position password view above privacy view/keyboard
+- **Lock/Setup Logic**: Completed show/hide logic for separate lock and setup buttons using iOS 26 approach
+- **Code Consistency**: All privacy buttons now use unified rTracker-resource button creation system
+
+Previous session - iOS 26 Privacy Button Fixes:
 - Fixed critical button sizing and clipping issues affecting iOS 26 SF symbol buttons
 - Replaced sizeToFit() with intrinsicContentSize for proper button dimensions
 - Created separate lock button to resolve setup/lock button overlap

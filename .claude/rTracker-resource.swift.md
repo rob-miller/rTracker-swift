@@ -82,16 +82,20 @@ Central utility class providing shared resources and UI components across the ap
 - **COMPLETED**: Updated privacy files (ppwV.swift, privacyV.swift) with new buttons
 - **COMPLETED**: Added `createStyledUIButton()` function for view-based buttons (not navigation bar buttons)
 - **COMPLETED**: Added 6 UIButton helper functions for privacy screens
-- **NEW SESSION**: Fixed UIBarButtonSystemItem renamed to UIBarButtonItem.SystemItem compilation error
-- **NEW SESSION**: Reduced SF symbol size from 22pt to 18pt for better proportion in privacy screens
-- **NEW SESSION**: Added `createLockUIButton()` function for separate lock button state
+- **COMPLETED**: Fixed UIBarButtonSystemItem renamed to UIBarButtonItem.SystemItem compilation error
+- **COMPLETED**: Reduced SF symbol size from 22pt to 18pt for better proportion in privacy screens
+- **COMPLETED**: Added `createLockUIButton()` function for separate lock button state
+- **CURRENT SESSION**: Eliminated code duplication by removing all createXUIButton functions and createStyledUIButton
+- **CURRENT SESSION**: Added UIBarButtonItem.uiButton extension for privacy views
+- **CURRENT SESSION**: Unified button creation API - one function per button type instead of two
 
 ## Last Updated
-2025-01-15 - iOS 26 Privacy Button Fixes Session:
-- **Fixed**: UIBarButtonSystemItem compilation error (renamed to UIBarButtonItem.SystemItem)
-- **Optimized**: SF symbol size reduced from 22pt to 18pt for better proportion
-- **Added**: `createLockUIButton()` function for separate lock button state
-- **Improved**: Button sizing logic for privacy screens to fix clipping and overlap issues
+2025-01-15 - Button Creation Refactoring Session:
+- **Major Refactor**: Eliminated ~110+ lines of duplicate code by removing createStyledUIButton and all createXUIButton functions
+- **Added Extension**: UIBarButtonItem.uiButton property for privacy views that need direct UIButton access
+- **Unified API**: Single button creation functions (returns UIBarButtonItem) with .uiButton extension for view usage
+- **Updated Files**: privacyV.swift and ppwV.swift to use new .uiButton extension pattern
+- **Architecture**: More Swift-idiomatic approach using extensions instead of duplicate function APIs
 
 Previous session - Added complete iOS 26 button system:
 - **Refactored**: All existing button functions to use generic `createStyledButton()`

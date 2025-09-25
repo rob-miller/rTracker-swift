@@ -34,8 +34,9 @@ Password picker view controller - UI component for text-based password entry wit
 ## Current Issues & TODOs
 - **COMPLETED**: Cancel button converted to new iOS 26 button creation system
 - **COMPLETED**: Button now uses intrinsicContentSize for proper sizing instead of text-based calculations
-- **IMPROVED**: Dynamic width sizing based on parent view instead of hardcoded 320pt
-- **IN PROGRESS**: Keyboard positioning attachment may need further refinement
+- **COMPLETED**: Dynamic width sizing based on parent view instead of hardcoded 320pt
+- **COMPLETED**: Keyboard positioning attachment properly refined via privacyV.updatePpwvPosition()
+- **CURRENT SESSION**: Updated button creation to use new .uiButton extension pattern
 
 ## Recent Development History
 - 2025-01-15: iOS 26 Privacy Button Fixes Session
@@ -58,7 +59,12 @@ Password picker view controller - UI component for text-based password entry wit
 - e41ceb5: files from Swiftify
 
 ## Last Updated
-2025-01-15 - iOS 26 Privacy Button Fixes:
+2025-01-15 - Button API Refactoring:
+- **Button API Update**: Updated cancel button creation to use new .uiButton extension pattern
+- **API Consistency**: Now uses createCancelButton().uiButton instead of createCancelUIButton()
+- **Architecture**: Follows unified button creation system with extension-based approach
+
+Previous session - iOS 26 Privacy Button Fixes:
 - Fixed cancel button sizing and positioning issues
 - Updated to use modern iOS 26 button creation system
 - Improved dynamic sizing and positioning logic
