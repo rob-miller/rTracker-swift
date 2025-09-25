@@ -126,7 +126,7 @@ class ppwV: UIView, UITextFieldDelegate {
     private var _cancelBtn: UIButton?
     var cancelBtn: UIButton? {
         if nil == _cancelBtn {
-            _cancelBtn = rTracker_resource.createCancelUIButton(target: self, action: #selector(cancelp))
+            _cancelBtn = rTracker_resource.createCancelButton(target: self, action: #selector(cancelp)).uiButton
 
             // Use button's intrinsic content size and position properly
             let buttonSize = _cancelBtn?.intrinsicContentSize ?? CGSize.zero

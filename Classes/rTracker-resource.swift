@@ -1494,120 +1494,17 @@ class rTracker_resource: NSObject {
     )
   }
 
-  // MARK: - UIButton Helper Functions (for view-based buttons, not navigation bar buttons)
+}
 
-  /// Generic UIButton creation function for iOS 26 styled buttons in views
-  class func createStyledUIButton(
-    symbolName: String,
-    target: Any?,
-    action: Selector,
-    backgroundColor: UIColor = .systemBackground,
-    symbolColor: UIColor = .label,
-    borderColor: UIColor? = nil,
-    borderWidth: CGFloat = 0,
-    symbolSize: CGFloat = 18,
-    fallbackTitle: String? = nil
-  ) -> UIButton {
-    if #available(iOS 26.0, *) {
-      let button = UIButton(type: .system)
-
-      var config = UIButton.Configuration.filled()
-      config.baseBackgroundColor = backgroundColor
-      config.cornerStyle = .capsule
-
-      let symSize = UIImage.SymbolConfiguration(pointSize: symbolSize, weight: .regular)
-      let image = UIImage(systemName: symbolName)?
-        .applyingSymbolConfiguration(symSize)?
-        .withTintColor(symbolColor, renderingMode: .alwaysOriginal)
-
-      config.image = image
-      button.configuration = config
-
-      if let borderColor = borderColor, borderWidth > 0 {
-        button.layer.borderWidth = borderWidth
-        button.layer.borderColor = borderColor.cgColor
-      }
-
-      button.addTarget(target, action: action, for: .touchUpInside)
-      return button
-    } else {
-      // Pre-iOS 26: Use standard button with title
-      let button = UIButton(type: .roundedRect)
-      button.setTitle(fallbackTitle ?? "Button", for: .normal)
-      button.addTarget(target, action: action, for: .touchUpInside)
-      return button
-    }
+// MARK: - UIBarButtonItem Extension for Privacy Views
+extension UIBarButtonItem {
+  /// Returns the underlying UIButton from customView for privacy views that need direct UIButton access
+  var uiButton: UIButton? {
+    return self.customView as? UIButton
   }
+}
 
-  /// Creates a modern iOS 26 cancel UIButton for views
-  class func createCancelUIButton(target: Any?, action: Selector) -> UIButton {
-    return createStyledUIButton(
-      symbolName: "xmark.circle",
-      target: target,
-      action: action,
-      fallbackTitle: "Cancel"
-    )
-  }
-
-  /// Creates a modern iOS 26 clear UIButton for privacy screens
-  class func createClearUIButton(target: Any?, action: Selector) -> UIButton {
-    return createStyledUIButton(
-      symbolName: "clear",
-      target: target,
-      action: action,
-      fallbackTitle: "Clear"
-    )
-  }
-
-  /// Creates a modern iOS 26 setup/config UIButton for privacy screens
-  class func createSetupUIButton(target: Any?, action: Selector, title: String = "Setup") -> UIButton {
-    return createStyledUIButton(
-      symbolName: "slider.horizontal.3",
-      target: target,
-      action: action,
-      fallbackTitle: title
-    )
-  }
-
-  /// Creates a modern iOS 26 privacy save UIButton for privacy screens
-  class func createPrivacySaveUIButton(target: Any?, action: Selector) -> UIButton {
-    return createStyledUIButton(
-      symbolName: "checkmark.rectangle.stack",
-      target: target,
-      action: action,
-      fallbackTitle: "Save"
-    )
-  }
-
-  /// Creates a modern iOS 26 left chevron circle UIButton for privacy navigation
-  class func createLeftChevronUIButton(target: Any?, action: Selector) -> UIButton {
-    return createStyledUIButton(
-      symbolName: "chevron.left.circle",
-      target: target,
-      action: action,
-      fallbackTitle: "<"
-    )
-  }
-
-  /// Creates a modern iOS 26 right chevron circle UIButton for privacy navigation
-  class func createRightChevronUIButton(target: Any?, action: Selector) -> UIButton {
-    return createStyledUIButton(
-      symbolName: "chevron.right.circle",
-      target: target,
-      action: action,
-      fallbackTitle: ">"
-    )
-  }
-
-  /// Creates a modern iOS 26 lock UIButton for privacy screens
-  class func createLockUIButton(target: Any?, action: Selector) -> UIButton {
-    return createStyledUIButton(
-      symbolName: "lock.fill",
-      target: target,
-      action: action,
-      fallbackTitle: "Lock"
-    )
-  }
+extension rTracker_resource {
 
   /// Shows help content in a popover or modal presentation
   class func showHelp(

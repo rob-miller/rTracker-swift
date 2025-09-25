@@ -413,6 +413,8 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         marklineTextField.delegate = self
 
         // Add input accessory toolbar with Done button
+        // this is for the line plot to enter a horizontal markline
+
         let toolbar = UIToolbar()
         toolbar.sizeToFit()
         let doneButton = UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(dismissMarklineKeyboard))
@@ -922,6 +924,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
     }
     
     internal func createConfigButton(title: String, action: Selector) -> UIButton {
+        // buttons for graph data sources, keep as text buttons
         let button = UIButton(type: .system)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.setTitle(title, for: .normal)

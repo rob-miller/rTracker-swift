@@ -160,34 +160,6 @@ class CustomAccessoryView: UIView {
 
 
 class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextViewDelegate {
-    /*{
-
-        UIButton *tbButton;
-    	UITextView *textView;
-    	UIView *accessoryView;
-    	UIButton *addButton;
-    	UISegmentedControl *segControl;
-    	UIPickerView *pv;
-
-    	NSArray *alphaArray;
-    	NSArray *namesArray;
-    	NSArray *historyArray;
-    	NSArray *historyNdx;
-        NSArray *namesNdx;
-
-    	//NSMutableDictionary *peopleDict;
-    	//NSMutableDictionary *historyDict;
-
-    	BOOL showNdx;
-
-    	voDataEdit *devc;
-    	CGRect saveFrame;
-
-        useTrackerController *parentUTC;
-
-    }*/
-
-    
     private var _tbButton: UIButton?
     var tbButton: UIButton? {
         if nil == _tbButton {
@@ -387,11 +359,6 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
     }
 
     deinit {
-        //DBGLog(@"dealloc voTextBox");
-
-        //DBGLog(@"tbBtn= %0x  rcount= %d",tbButton,[tbButton retainCount]);
-        // convenience constructor, do not own (enven tho retained???)
-        //foo accessoryView = nil
         cav = nil
         devc = nil
 

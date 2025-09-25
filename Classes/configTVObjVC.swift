@@ -620,6 +620,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
     
     func configActionBtn(_ pframe: CGRect, key: String?, label: String?, target: Any?, action: Selector) -> CGRect {
         // button consisting of title only which starts an action like 'database info' or 'set reminders'
+        // doesn't use rtracker-resource ios26 buttons because more bespoke, title only buttons without obvious sf symbol
 
         let button = UIButton(type: .roundedRect)
         var frame = pframe

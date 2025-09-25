@@ -24,7 +24,6 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     var copyButton: UIBarButtonItem!
 
     var nameField: UITextField! // created in cellForRow for section 0
-    var infoBtn: UIButton! // appears unused, preserved for possible future info button
     var itemCopyBtn: UIBarButtonItem! // mapped to copyButton
 
     var deleteIndexPath: IndexPath? // remember row to delete if user confirms in checkTrackerDelete alert
@@ -122,10 +121,6 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             toolbar.rightAnchor.constraint(equalTo: view.safeAreaLayoutGuide.rightAnchor),
             toolbar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
         ])
-
-        // For info button, if needed in future:
-        infoBtn = UIButton(type: .infoLight)
-        infoBtn.isHidden = true // currently not displayed
 
         // Logic for tracker object setup
         if tempTrackerObj == nil {
