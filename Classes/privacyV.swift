@@ -867,7 +867,7 @@ class privacyV: UIView {
         ///*
         var k: Int
         var dir: Bool
-        if btn?.currentTitle == NXTBTNLBL {
+        if btn?.accessibilityIdentifier == "next" {
             // next
             dir = true
         } else {
