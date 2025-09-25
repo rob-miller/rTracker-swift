@@ -77,9 +77,25 @@ Central utility class providing shared resources and UI components across the ap
 - Maintained backward compatibility with existing API
 
 ## Current Issues & TODOs
-- **NEXT SESSION**: Refactor to generic `createStyledButton()` function to reduce code duplication
-- **NEXT SESSION**: Add privacy-specific buttons (clear, lock, chevron circles, cancel bin, special save)
-- **NEXT SESSION**: Update privacy files (ppwV.swift, privacyV.swift, privacy.swift) with new buttons
+- **COMPLETED**: Refactored to generic `createStyledButton()` function to reduce code duplication
+- **COMPLETED**: Added privacy-specific buttons (clear, lock, chevron circles, cancel bin, special save)
+- **COMPLETED**: Updated privacy files (ppwV.swift, privacyV.swift) with new buttons
+- **COMPLETED**: Added `createStyledUIButton()` function for view-based buttons (not navigation bar buttons)
+- **COMPLETED**: Added 6 UIButton helper functions for privacy screens
+- **NEW SESSION**: Fixed UIBarButtonSystemItem renamed to UIBarButtonItem.SystemItem compilation error
+- **NEW SESSION**: Reduced SF symbol size from 22pt to 18pt for better proportion in privacy screens
+- **NEW SESSION**: Added `createLockUIButton()` function for separate lock button state
 
 ## Last Updated
-Current session - Added complete iOS 26 button system with 5 button creation functions and centralized styling
+2025-01-15 - iOS 26 Privacy Button Fixes Session:
+- **Fixed**: UIBarButtonSystemItem compilation error (renamed to UIBarButtonItem.SystemItem)
+- **Optimized**: SF symbol size reduced from 22pt to 18pt for better proportion
+- **Added**: `createLockUIButton()` function for separate lock button state
+- **Improved**: Button sizing logic for privacy screens to fix clipping and overlap issues
+
+Previous session - Added complete iOS 26 button system:
+- **Refactored**: All existing button functions to use generic `createStyledButton()`
+- **Added**: 6 new privacy-specific UIBarButtonItem functions
+- **Added**: Generic `createStyledUIButton()` for view-based buttons
+- **Added**: 6 UIButton helper functions for privacy screens
+- **Updated**: ppwV.swift and privacyV.swift to use new button system

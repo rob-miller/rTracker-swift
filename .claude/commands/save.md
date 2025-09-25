@@ -8,7 +8,7 @@ When you want to save your current progress and context for future sessions, thi
 
 - Identify the main theme/focus of the current work session
 - Document the most recent and important changes
-- Create a versioned save file in `.claude/saves/save.X` format
+- Create a versioned save file in `.claude/saves/save.N.YYYY-MM-DD-MainTheme` format
 - Focus on actionable context rather than historical details
 - **Explicitly include any unfinished todo lists from the current session**
 
@@ -18,7 +18,7 @@ When you want to save your current progress and context for future sessions, thi
 3. Document key files modified and their current state
 4. **Capture any active TodoWrite lists with pending/in_progress items**
 5. Note any immediate next steps or pending issues
-6. Create next numbered save file (save.1, save.2, etc.)
+6. Create descriptive save file: `save.N.YYYY-MM-DD-MainTheme` (sequential number, date, theme with dashes)
 
 ## Save File Format
 ```

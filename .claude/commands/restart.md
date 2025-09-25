@@ -9,15 +9,15 @@ Read a save file and restore work context to resume where you left off
 
 When starting a new session and you want to quickly get back into the context of your previous work:
 
-- Without argument: Automatically finds the highest numbered save file in `.claude/saves/`
-- With argument N: Loads the specific `save.N` file
+- Without argument: Automatically finds the highest numbered save file in `.claude/saves/` (searches for `save.N.*` pattern)
+- With argument N: Loads the specific save file starting with `save.N.` (matches `save.N.YYYY-MM-DD-MainTheme`)
 - Reads and presents the selected session's context
 - Restores understanding of work focus and progress
 - **Recreates any unfinished todo lists using TodoWrite tool**
 
 ## Process
-1. If no argument provided: Scan `.claude/saves/` for highest numbered save file
-2. If argument N provided: Load `.claude/saves/save.N` specifically
+1. If no argument provided: Scan `.claude/saves/` for most recent save file (pattern: `save.*`)
+2. If argument N provided: Find and load the save file matching `save.N.*` pattern
 3. Read and parse the selected save file content
 4. Present the session's work focus and progress
 5. **Automatically recreate any unfinished TodoWrite lists from the save file**
@@ -50,9 +50,9 @@ When starting a new session and you want to quickly get back into the context of
 ```
 
 ## Examples
-- `restart` → loads latest save file (e.g., save.5)
-- `restart 3` → loads save.3 specifically
-- `restart 1` → loads the very first save file
+- `restart` → loads most recent save file (e.g., save.15.2025-01-15-iOS26-Privacy-Fixes)
+- `restart 3` → loads save.3.* file specifically
+- `restart 127` → loads save.127.* file
 
 ## When to Use
 - Beginning of new work sessions

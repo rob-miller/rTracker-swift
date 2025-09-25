@@ -36,10 +36,19 @@ Privacy view controller that provides graphical password protection for the app
 - Width adapts to parent view width instead of hardcoded 320px
 
 ## Current Issues & TODOs
-- No current issues - positioning and animation working correctly
-- Debug logging has been removed from production code
+- **PARTIALLY FIXED**: Button sizing and positioning - now uses intrinsicContentSize and clipsToBounds = false
+- **IN PROGRESS**: ppwV positioning to attach to keyboard properly - logic updated but needs completion
+- **PARTIALLY FIXED**: Button overlap issue - separate lock button created, needs show/hide logic implementation
+- **COMPLETED**: Dynamic height calculation - replaced fixed 171pt with calculated 242pt height
+- **COMPLETED**: Button clipping issue - removed view bounds clipping constraints
 
 ## Recent Development History
+- 2025-01-15: iOS 26 Privacy Button Fixes Session
+  - Fixed button sizing using intrinsicContentSize instead of sizeToFit()
+  - Added clipsToBounds = false to prevent button clipping
+  - Created separate lockBtn property and added to view hierarchy
+  - Updated privacy view height from fixed 171pt to dynamic 242pt calculation
+  - Updated ppwV positioning logic to fix keyboard attachment issues
 - b952b22: Comment tweaks - final cleanup
 - 275d422: make db ops return values not optional
 - 4493fc6: priv value too small for 100
@@ -48,4 +57,11 @@ Privacy view controller that provides graphical password protection for the app
 - ea97c39: privacy not visible at bottom on startup - initial iOS 26 issue
 
 ## Last Updated
-2025-09-18 - iOS 26 positioning issues resolved, debug logging removed, view positioning now dynamic based on bottom bar detection
+2025-01-15 - iOS 26 Privacy Button Fixes:
+- Fixed critical button sizing and clipping issues affecting iOS 26 SF symbol buttons
+- Replaced sizeToFit() with intrinsicContentSize for proper button dimensions
+- Created separate lock button to resolve setup/lock button overlap
+- Updated privacy view to use dynamic height (242pt) instead of fixed 171pt
+- Improved ppwV positioning logic for better keyboard attachment
+
+Previous: 2025-09-18 - iOS 26 positioning issues resolved, debug logging removed, view positioning now dynamic based on bottom bar detection
