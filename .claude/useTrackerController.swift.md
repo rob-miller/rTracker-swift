@@ -21,7 +21,8 @@ Main view controller for data entry in trackers. Displays value objects in a tab
 - Uses `valueObj` and `voState` for individual field handling
 - Connects to HealthKit and Other Tracker systems
 - Manages `datePickerVC` and `trackerCalViewController` for date navigation
-- Links to chart system via `TrackerChart`
+- **Uses DatePickerResult** from datePickerVC.swift for modal communication
+- Links to chart system via `TrackerChart` and `graphTrackerVC`
 
 ## Notable Patterns & Conventions
 - Extensive use of dispatch groups for async data loading
@@ -37,9 +38,25 @@ Main view controller for data entry in trackers. Displays value objects in a tab
 - **Memory Management**: Careful cleanup of observers and temporary data
 - **UI State**: Handles view rotation, keyboard management, and modal presentations
 - **Export Features**: Multiple export formats (CSV, tracker files) with sharing
+- **Date Picker Integration**: Uses lazy `DatePickerResult` property for communication with modal date pickers
+  - `.new` action: Creates new entry with save conflict checking via `createNewEntry()`
+  - `.set` action: Changes tracker date and marks as modified (needSave = true)
+  - `.goto`/`.gotoPost` actions: Navigates to selected date with save conflict checking
+  - Cancel handling: Restores original tracker date when user cancels save alerts
 
 ## Recent Development History
-**Current Session (2025-01-15) - Button System Refactoring:**
+**Current Session (2025-09-26) - Date Picker Modernization and Save Handling:**
+- **MAJOR**: Updated DatePickerResult integration from legacy dpRslt to modern enum-based system
+- **Enhanced save conflict handling**: Added `createNewEntry()` function with proper unsaved changes checking
+- **Fixed cancel behavior**: Implemented `originalTrackerDate` restoration when user cancels save alerts
+- **Save workflow improvements**:
+  - `.new` action now uses `createNewEntry()` with save conflict checking before creating entries
+  - `.set` action properly marks tracker as modified (needSave = true) when changing dates
+  - Added `CSNEWENTRY` constant and alert response handling for new entry conflicts
+- **UI consistency fixes**: Cancel button now correctly displays original tracker date, not attempted goto date
+- **Modern enum usage**: All date picker actions now use `.new`, `.set`, `.goto`, `.gotoPost` instead of integer constants
+
+**Previous Session (2025-01-15) - Button System Refactoring:**
 - **Eliminated ~216 lines of duplicate code**: Replaced verbose iOS 26 conditional button creation with unified button system
 - **Updated 8 buttons**: backButton, menuBtn, calBtn, searchBtn, delBtn, skip2EndBtn, createChartBtn using rTracker-resource functions
 - **Color theming**: Pale green calendar, pale blue menu, red back button in rejectable mode, blue search, red delete
@@ -64,15 +81,13 @@ Main view controller for data entry in trackers. Displays value objects in a tab
 - **Navigation**: Complex date navigation with search set support and swipe gestures
 
 ## Current Issues & TODOs
-- **COMPLETED**: Button code duplication eliminated - all 8 buttons now use unified system
-- **COMPLETED**: Color theming implemented for visual distinction
-- **COMPLETED**: SF Symbol integration for modern appearance
-- **COMPLETED**: Accept/reject mode visual clarity with red/green color coding
+- ✅ **COMPLETED**: DatePickerResult modernization with enum-based actions
+- ✅ **COMPLETED**: Save conflict handling for new entries via createNewEntry()
+- ✅ **COMPLETED**: Cancel behavior fixed - restores original tracker date
+- ✅ **COMPLETED**: Button code duplication eliminated - all 8 buttons now use unified system
+- ✅ **COMPLETED**: Color theming implemented for visual distinction
+- ✅ **COMPLETED**: SF Symbol integration for modern appearance
+- ✅ **COMPLETED**: Accept/reject mode visual clarity with red/green color coding
 
 ## Last Updated
-2025-01-15 - Button System Refactoring Session:
-- **Major code reduction**: ~216 lines of duplicate iOS 26 conditional code eliminated
-- **Unified button implementation**: All 8 buttons now use rTracker-resource functions
-- **Enhanced visual design**: Color-coded buttons (pale green calendar, pale blue menu, red back in reject mode)
-- **Modern SF symbols**: Replaced text and emoji with appropriate SF symbols
-- **Architecture improvement**: Single source of truth for button styling and behavior
+2025-09-26 - Date Picker Modernization: Enhanced save conflict handling and UI consistency fixes
