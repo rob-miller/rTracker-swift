@@ -85,7 +85,6 @@
 		D482D272114FEB5E00CE6BC8 /* trackerList.swift in Sources */ = {isa = PBXBuildFile; fileRef = D482D271114FEB5E00CE6BC8 /* trackerList.swift */; };
 		D482D276114FEB7500CE6BC8 /* trackerObj.swift in Sources */ = {isa = PBXBuildFile; fileRef = D482D275114FEB7500CE6BC8 /* trackerObj.swift */; };
 		D487D7741260A77800298C1D /* configTVObjVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = D487D7721260A77800298C1D /* configTVObjVC.swift */; };
-		D487D7751260A77800298C1D /* configTVObjVC.xib in Resources */ = {isa = PBXBuildFile; fileRef = D487D7731260A77800298C1D /* configTVObjVC.xib */; };
 		D48E98642A23BE8100AC5ACB /* voTextBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4B6AE71127EC35E00C036ED /* voTextBox.swift */; };
 		D48E98672A23E65700AC5ACB /* voTBacc2.xib in Resources */ = {isa = PBXBuildFile; fileRef = D48E98602A22831200AC5ACB /* voTBacc2.xib */; };
 		D48F9E7F119AA02A00B37C93 /* valueObj.swift in Sources */ = {isa = PBXBuildFile; fileRef = D48F9E7E119AA02A00B37C93 /* valueObj.swift */; };
@@ -120,7 +119,6 @@
 		D4B8D0011BAC14E4002E94CD /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D4B8CFFF1BAC148B002E94CD /* libz.tbd */; };
 		D4B8D0031BAC14F0002E94CD /* libc++.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D4B8D0021BAC14F0002E94CD /* libc++.tbd */; };
 		D4BBB58012672C94000F8467 /* datePickerVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4BBB57E12672C94000F8467 /* datePickerVC.swift */; };
-		D4BBB58112672C94000F8467 /* datePickerVC.xib in Resources */ = {isa = PBXBuildFile; fileRef = D4BBB57F12672C94000F8467 /* datePickerVC.xib */; };
 		D4C0B3DC23E9C3BB00304511 /* bell 3.caf in Resources */ = {isa = PBXBuildFile; fileRef = D4C0B3D323E9C3BA00304511 /* bell 3.caf */; };
 		D4C0B3DD23E9C3BB00304511 /* bugle_charge.caf in Resources */ = {isa = PBXBuildFile; fileRef = D4C0B3D423E9C3BA00304511 /* bugle_charge.caf */; };
 		D4C0B3DE23E9C3BB00304511 /* bell 2.caf in Resources */ = {isa = PBXBuildFile; fileRef = D4C0B3D523E9C3BA00304511 /* bell 2.caf */; };
@@ -260,7 +258,6 @@
 		D482D271114FEB5E00CE6BC8 /* trackerList.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = trackerList.swift; sourceTree = "<group>"; };
 		D482D275114FEB7500CE6BC8 /* trackerObj.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = trackerObj.swift; sourceTree = "<group>"; };
 		D487D7721260A77800298C1D /* configTVObjVC.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = configTVObjVC.swift; sourceTree = "<group>"; };
-		D487D7731260A77800298C1D /* configTVObjVC.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = configTVObjVC.xib; path = ../Resources/xib/configTVObjVC.xib; sourceTree = "<group>"; };
 		D48E98602A22831200AC5ACB /* voTBacc2.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = voTBacc2.xib; path = Resources/xib/voTBacc2.xib; sourceTree = SOURCE_ROOT; };
 		D48F9E7E119AA02A00B37C93 /* valueObj.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = valueObj.swift; sourceTree = "<group>"; };
 		D48F9FB0119B4CA600B37C93 /* addValObjController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = addValObjController.swift; sourceTree = "<group>"; };
@@ -298,7 +295,6 @@
 		D4B8D0021BAC14F0002E94CD /* libc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libc++.tbd"; path = "usr/lib/libc++.tbd"; sourceTree = SDKROOT; };
 		D4B8D0041BAC1500002E94CD /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
 		D4BBB57E12672C94000F8467 /* datePickerVC.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = datePickerVC.swift; sourceTree = "<group>"; };
-		D4BBB57F12672C94000F8467 /* datePickerVC.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = datePickerVC.xib; path = ../Resources/xib/datePickerVC.xib; sourceTree = "<group>"; };
 		D4C0B3D323E9C3BA00304511 /* bell 3.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "bell 3.caf"; sourceTree = "<group>"; };
 		D4C0B3D423E9C3BA00304511 /* bugle_charge.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = bugle_charge.caf; sourceTree = "<group>"; };
 		D4C0B3D523E9C3BA00304511 /* bell 2.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "bell 2.caf"; sourceTree = "<group>"; };
@@ -641,7 +637,6 @@
 				D4588ADB1177497200AD2106 /* addTrackerController.swift */,
 				D48F9FB0119B4CA600B37C93 /* addValObjController.swift */,
 				D487D7721260A77800298C1D /* configTVObjVC.swift */,
-				D487D7731260A77800298C1D /* configTVObjVC.xib */,
 				D4A317B21192B7C800F062AC /* configTlistController.swift */,
 				D47B564419411739002B0CCA /* trackerCalViewController.swift */,
 				D4CA92BA2D2B115400554F55 /* ahViewController.swift */,
@@ -664,7 +659,6 @@
 			isa = PBXGroup;
 			children = (
 				D4BBB57E12672C94000F8467 /* datePickerVC.swift */,
-				D4BBB57F12672C94000F8467 /* datePickerVC.xib */,
 				D4DC23FE138404140086E5F3 /* dpRslt.swift */,
 			);
 			name = "date picker";
@@ -807,8 +801,6 @@
 				D4D7DCED125B25F70049EB93 /* unchecked.png in Resources */,
 				D40607E617D7CB5A00C05A38 /* shadeview-button-7@2x.png in Resources */,
 				D473ED4219571F8A00B4702C /* CalendarRowBottom.png in Resources */,
-				D487D7751260A77800298C1D /* configTVObjVC.xib in Resources */,
-				D4BBB58112672C94000F8467 /* datePickerVC.xib in Resources */,
 				D44386D213A2397F00268248 /* bkgnd-cell1-320-56.png in Resources */,
 				D427446A1438B8090011EFE6 /* iTunesArtwork in Resources */,
 				D4735FF91A51E81C006F12FC /* demoTrackers in Resources */,
