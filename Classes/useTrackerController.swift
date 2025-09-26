@@ -65,6 +65,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     var tlist: trackerList?
     var alertResponse = 0
     var saveTargD = 0
+    var saveNewDate: Date?
+    var originalTrackerDate: Date?
     var searchSet: [Int]?
     var rvcTitle: String?
     var tableView: UITableView?
@@ -305,6 +307,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         tracker!.vc = self
         alertResponse = 0
         saveTargD = 0
+        saveNewDate = nil
+        originalTrackerDate = nil
         
         //load temp tracker data here if available
         if tracker!.loadTempTrackerData() {
@@ -629,10 +633,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             if _dpr != nil {
                 switch dpr.action {
                 case .new:
-                    tracker!.resetData()
-                    tracker!.trackerDate = Date(
-                        timeIntervalSince1970: TimeInterval(
-                            tracker!.noCollideDate(Int(dpr.date!.timeIntervalSince1970))))
+                    createNewEntry(dpr.date!)
                 case .set:
                     if tracker!.hasData() {
                         tracker!.change(dpr.date)
@@ -640,8 +641,9 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                     } else {
                         tracker!.trackerDate = dpr.date
                     }
-                    //[self updateToolBar];
                 case .goto:
+                    // Save original date in case user cancels
+                    originalTrackerDate = tracker!.trackerDate
                     var targD = 0
                     if nil != dpr.date {
                         // set to nil to cause reset tracker, ready for new
@@ -672,8 +674,6 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                     loadTrackerDate(targD)
                 case .cancel:
                     break
-                default:
-                    dbgNSAssert(false, "failed to determine dpr action")
                 }
                 dpr.date = nil
                 _dpvc = nil
@@ -1388,7 +1388,12 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     func dispatchHandleModifiedTracker(_ choice: Int) {
         
         if 0 == choice {
-            // cancel
+            // cancel - restore original tracker date and refresh UI
+            if let originalDate = originalTrackerDate {
+                tracker!.trackerDate = originalDate
+                originalTrackerDate = nil
+            }
+            updateToolBar()
             return
         }
         
@@ -1400,11 +1405,17 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 // discard
             }
             needSave = false
+            originalTrackerDate = nil  // Clear saved date since operation completed
             if CSSETDATE == alertResponse {
                 let tsdate = saveTargD
                 alertResponse = 0
                 saveTargD = 0
                 loadTrackerDate(tsdate)
+            } else if CSNEWENTRY == alertResponse {
+                let newDate = saveNewDate!
+                alertResponse = 0
+                saveNewDate = nil
+                createNewEntry(newDate)
             } else if CSCANCEL == alertResponse {
                 alertResponse = 0
                 btnCancel()
@@ -1466,14 +1477,14 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     }
     
     func loadTrackerDate(_ targD: Int) {
-        
+
         if needSave {
             alertResponse = CSSETDATE
             saveTargD = targD
             alertChkSave()
             return
         }
-        
+
         if targD > 0 {
             DBGLog(
                 String(" setTrackerDate: \(targD) = \(Date(timeIntervalSince1970: TimeInterval(targD)))"))
@@ -1485,8 +1496,28 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             DBGLog(String(" setTrackerDate: \(targD) = reset to now"))
             tracker!.resetData()
         }
-        
+
         needSave = false  // dumping anything not saved by going to another date.
+        showSaveBtn()
+        updateToolBar()
+        updateTrackerTableView()
+    }
+
+    func createNewEntry(_ newDate: Date) {
+
+        if needSave {
+            alertResponse = CSNEWENTRY
+            saveNewDate = newDate
+            alertChkSave()
+            return
+        }
+
+        DBGLog("creating new entry for date: \(newDate)")
+        tracker!.resetData()
+        tracker!.trackerDate = Date(
+            timeIntervalSince1970: TimeInterval(
+                tracker!.noCollideDate(Int(newDate.timeIntervalSince1970))))
+        needSave = false
         showSaveBtn()
         updateToolBar()
         updateTrackerTableView()
@@ -2110,3 +2141,4 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 let CSCANCEL = 1
 let CSSETDATE = 2
 let CSSHOWCAL = 3
+let CSNEWENTRY = 4
