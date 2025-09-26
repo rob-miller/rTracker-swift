@@ -49,7 +49,18 @@ Privacy view controller that provides graphical password protection for the app
 - **COMPLETED**: ppwV positioning timing issue in PVCONFIG state - fixed state assignment order
 
 ## Recent Development History
-- 2025-01-15: iOS 26 Privacy Button Fixes Session
+**Current Session (2025-09-26) - Button Consolidation Fixes:**
+- **FIXED**: Updated all button creation calls to use consolidated button functions
+- **FIXED**: `createClearButton()` → `createActionButton(symbolName: "clear")`
+- **FIXED**: `createLockButton()` → `createActionButton(symbolName: "lock.fill")`
+- **FIXED**: `createLeftChevronCircleButton()` → `createActionButton(symbolName: "chevron.left.circle")`
+- **FIXED**: `createRightChevronCircleButton()` → `createActionButton(symbolName: "chevron.right.circle")`
+- **FIXED**: `createCancelBinButton()` → `createActionButton(symbolName: "xmark.bin")`
+- **FIXED**: `createCancelButton()` → `createActionButton(symbolName: "xmark.circle")`
+- **Compilation**: Resolved all button-related compilation errors from consolidation
+- **Architecture**: All buttons now use consolidated 4-function system
+
+**Previous Session - 2025-01-15: iOS 26 Privacy Button Fixes Session**
   - Fixed button sizing using intrinsicContentSize instead of sizeToFit()
   - Added clipsToBounds = false to prevent button clipping
   - Created separate lockBtn property and added to view hierarchy
@@ -63,7 +74,12 @@ Privacy view controller that provides graphical password protection for the app
 - ea97c39: privacy not visible at bottom on startup - initial iOS 26 issue
 
 ## Last Updated
-2025-01-15 - Tap-Outside-to-Dismiss and ppwV Positioning Fixes:
+2025-09-26 - Button consolidation fixes applied:
+- Updated all privacy buttons to use consolidated button system (createActionButton)
+- Resolved compilation errors from button function consolidation
+- All button functionality preserved with cleaner implementation
+
+Previous Update - 2025-01-15 - Tap-Outside-to-Dismiss and ppwV Positioning Fixes:
 - **Tap-Outside-to-Dismiss**: Implemented comprehensive overlay system with keyboard dismissal and ppwV protection using hit testing
 - **ppwV Z-Order**: Fixed ppwV sliding behind privacyV by adding bringSubviewToFront() calls in show methods and privacyV state transitions
 - **ppwV Positioning**: Fixed timing issue where updatePpwvPosition() used wrong state by moving _showing assignment before position calculation

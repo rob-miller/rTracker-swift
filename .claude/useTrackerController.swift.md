@@ -39,7 +39,15 @@ Main view controller for data entry in trackers. Displays value objects in a tab
 - **Export Features**: Multiple export formats (CSV, tracker files) with sharing
 
 ## Recent Development History
-- **September 2025**: Implemented comprehensive iOS 26 Liquid Glass solution to remove solid white backgrounds on ALL buttons: navigation bar buttons (save, share/menu, back) use hidesSharedBackground=true with standard UIBarButtonItem, toolbar buttons (delete, skip-to-end, chart, calendar, search, date/time) use UIButton.Configuration.glass() with hidesSharedBackground=true. Replaced desk inbox emoji with familiar square.and.arrow.up share icon.
+**Current Session (2025-01-15) - Button System Refactoring:**
+- **Eliminated ~216 lines of duplicate code**: Replaced verbose iOS 26 conditional button creation with unified button system
+- **Updated 8 buttons**: backButton, menuBtn, calBtn, searchBtn, delBtn, skip2EndBtn, createChartBtn using rTracker-resource functions
+- **Color theming**: Pale green calendar, pale blue menu, red back button in rejectable mode, blue search, red delete
+- **SF Symbol integration**: Modern symbols (calendar, magnifyingglass.circle, xmark.bin, chevron.forward.to.line, chart.line.uptrend.xyaxis)
+- **Accept button enhancement**: Uses arrow.down.doc.fill SF symbol in green for clear import acceptance indication
+- **Architecture improvement**: Single source of truth for button styling in rTracker-resource.swift
+
+**Previous Session (September 2025)**: Implemented comprehensive iOS 26 Liquid Glass solution to remove solid white backgrounds on ALL buttons: navigation bar buttons (save, share/menu, back) use hidesSharedBackground=true with standard UIBarButtonItem, toolbar buttons (delete, skip-to-end, chart, calendar, search, date/time) use UIButton.Configuration.glass() with hidesSharedBackground=true. Replaced desk inbox emoji with familiar square.and.arrow.up share icon.
 - `1b8f625`: Fixed issue with save-return behavior not resetting data when viewing history
 - `c6247bc`: Resolved first view not showing latest HealthKit data
 - `49f0a95`: Addressed swipe right navigation definition issues
@@ -48,8 +56,23 @@ Main view controller for data entry in trackers. Displays value objects in a tab
 - `66b26ec`: Added support for hidden valueObjs functionality
 
 ## Current Architecture Notes
+- **Button System**: All buttons now use unified rTracker-resource functions with consistent iOS 26 styling
 - **Refresh System**: Two-tier refresh (light refresh for current record, full refresh for all data)
 - **Data Sources**: Supports HealthKit, Other Trackers, Function calculations, and manual entry
 - **Privacy Integration**: Respects tracker and valueObj privacy levels
 - **Export System**: Comprehensive sharing with temporary file management
 - **Navigation**: Complex date navigation with search set support and swipe gestures
+
+## Current Issues & TODOs
+- **COMPLETED**: Button code duplication eliminated - all 8 buttons now use unified system
+- **COMPLETED**: Color theming implemented for visual distinction
+- **COMPLETED**: SF Symbol integration for modern appearance
+- **COMPLETED**: Accept/reject mode visual clarity with red/green color coding
+
+## Last Updated
+2025-01-15 - Button System Refactoring Session:
+- **Major code reduction**: ~216 lines of duplicate iOS 26 conditional code eliminated
+- **Unified button implementation**: All 8 buttons now use rTracker-resource functions
+- **Enhanced visual design**: Color-coded buttons (pale green calendar, pale blue menu, red back in reject mode)
+- **Modern SF symbols**: Replaced text and emoji with appropriate SF symbols
+- **Architecture improvement**: Single source of truth for button styling and behavior
