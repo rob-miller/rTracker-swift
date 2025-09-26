@@ -24,9 +24,10 @@
 import UIKit
 import UserNotifications
 
+@main
 class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
-    @IBOutlet var window: UIWindow?
-    @IBOutlet var navigationController: UINavigationController!
+    var window: UIWindow?
+    var navigationController: UINavigationController!
     var pendingTid: NSNumber?
     var regNotifs: Bool = false
 

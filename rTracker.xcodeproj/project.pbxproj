@@ -53,7 +53,6 @@
 		D467CF9B2DB93B4900EF479F /* trackerChartDistributionPlot.swift in Sources */ = {isa = PBXBuildFile; fileRef = D467CF9A2DB93B3900EF479F /* trackerChartDistributionPlot.swift */; };
 		D467CF9D2DB93DC700EF479F /* trackerChartScatterPlot.swift in Sources */ = {isa = PBXBuildFile; fileRef = D467CF9C2DB93DB600EF479F /* trackerChartScatterPlot.swift */; };
 		D467CF9F2DB9406800EF479F /* trackerChartPieChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = D467CF9E2DB9405A00EF479F /* trackerChartPieChart.swift */; };
-		D469CEBB1A2BAC3800B8F48B /* MainWindow.xib in Resources */ = {isa = PBXBuildFile; fileRef = D469CEBA1A2BAC3800B8F48B /* MainWindow.xib */; };
 		D46E56AB1B73A10F0023CE55 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D46E56A51B73A10F0023CE55 /* Security.framework */; };
 		D46E56AD1B73A10F0023CE55 /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D46E56A61B73A10F0023CE55 /* SystemConfiguration.framework */; };
 		D46F7C951BA89E3A00CC768B /* numField.swift in Sources */ = {isa = PBXBuildFile; fileRef = D46F7C941BA89E3A00CC768B /* numField.swift */; };
@@ -76,8 +75,6 @@
 		D47E6DD52DDFC2FA00D68B2F /* rTrackerSceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D47E6DD42DDFC2FA00D68B2F /* rTrackerSceneDelegate.swift */; };
 		D47E6DD62DDFC2FA00D68B2F /* rTrackerSceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D47E6DD42DDFC2FA00D68B2F /* rTrackerSceneDelegate.swift */; };
 		D47E6DD82DDFC3D000D68B2F /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D47E6DD72DDFC3D000D68B2F /* HealthKit.framework */; };
-		D47E6DDF2DE0CF7F00D68B2F /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = D47E6DDE2DE0CF7F00D68B2F /* main.swift */; };
-		D47E6DE02DE0CF7F00D68B2F /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = D47E6DDE2DE0CF7F00D68B2F /* main.swift */; };
 		D47FBB7F14A9E2D700CE0547 /* closedview-button.png in Resources */ = {isa = PBXBuildFile; fileRef = D47FBB7E14A9E2D700CE0547 /* closedview-button.png */; };
 		D47FBB8114A9E2E300CE0547 /* fullview-button.png in Resources */ = {isa = PBXBuildFile; fileRef = D47FBB8014A9E2E300CE0547 /* fullview-button.png */; };
 		D47FBB8314A9E2F100CE0547 /* shadeview-button.png in Resources */ = {isa = PBXBuildFile; fileRef = D47FBB8214A9E2F100CE0547 /* shadeview-button.png */; };
@@ -224,7 +221,6 @@
 		D467CF9A2DB93B3900EF479F /* trackerChartDistributionPlot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = trackerChartDistributionPlot.swift; sourceTree = "<group>"; };
 		D467CF9C2DB93DB600EF479F /* trackerChartScatterPlot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = trackerChartScatterPlot.swift; sourceTree = "<group>"; };
 		D467CF9E2DB9405A00EF479F /* trackerChartPieChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = trackerChartPieChart.swift; sourceTree = "<group>"; };
-		D469CEBA1A2BAC3800B8F48B /* MainWindow.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; name = MainWindow.xib; path = Resources/xib/MainWindow.xib; sourceTree = "<group>"; };
 		D46E56A51B73A10F0023CE55 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
 		D46E56A61B73A10F0023CE55 /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
 		D46F7C941BA89E3A00CC768B /* numField.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = numField.swift; sourceTree = "<group>"; };
@@ -247,7 +243,6 @@
 		D47E6DD42DDFC2FA00D68B2F /* rTrackerSceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = rTrackerSceneDelegate.swift; sourceTree = "<group>"; };
 		D47E6DD72DDFC3D000D68B2F /* HealthKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HealthKit.framework; path = System/Library/Frameworks/HealthKit.framework; sourceTree = SDKROOT; };
 		D47E6DD92DDFC3F600D68B2F /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
-		D47E6DDE2DE0CF7F00D68B2F /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		D47FBB7E14A9E2D700CE0547 /* closedview-button.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "closedview-button.png"; path = "Resources/png/closedview-button.png"; sourceTree = "<group>"; };
 		D47FBB8014A9E2E300CE0547 /* fullview-button.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "fullview-button.png"; path = "Resources/png/fullview-button.png"; sourceTree = "<group>"; };
 		D47FBB8214A9E2F100CE0547 /* shadeview-button.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "shadeview-button.png"; path = "Resources/png/shadeview-button.png"; sourceTree = "<group>"; };
@@ -364,7 +359,6 @@
 		080E96DDFE201D6D7F000001 /* Classes */ = {
 			isa = PBXGroup;
 			children = (
-				D47E6DDE2DE0CF7F00D68B2F /* main.swift */,
 				1D3623250D0F684500981E51 /* rTrackerAppDelegate.swift */,
 				D47E6DD42DDFC2FA00D68B2F /* rTrackerSceneDelegate.swift */,
 				D4956B2212E076B900B0BB9B /* views */,
@@ -425,7 +419,6 @@
 				D4D5550D1BAC7C8900064968 /* Launch Screen.storyboard */,
 				D464C8B71A5100450009E20B /* icon120.png */,
 				D464C8B51A50FDB40009E20B /* Icon512x512.png */,
-				D469CEBA1A2BAC3800B8F48B /* MainWindow.xib */,
 				D481089919E056D600B422A8 /* Images.xcassets */,
 				8D1107310486CEB800E47090 /* Info.plist */,
 				D4A8D07A14F114EC0028AD03 /* Settings.bundle */,
@@ -645,20 +638,12 @@
 				D47D168D19028F2C006563B9 /* notifyReminderVC2.xib */,
 				D47B5647194118D5002B0CCA /* trackerCalCalendarRowCell.swift */,
 				D43C494412FA129000B95AB7 /* gfx.swift */,
+				D4BBB57E12672C94000F8467 /* datePickerVC.swift */,
 				D4821F012D9B2EB600BE5A4C /* charts */,
 				D4956B2112E0717400B0BB9B /* graphing */,
-				D4956B2312E076E100B0BB9B /* date picker */,
 				D4956B3A12E0886E00B0BB9B /* privacy */,
 			);
 			name = views;
-			sourceTree = "<group>";
-		};
-		D4956B2312E076E100B0BB9B /* date picker */ = {
-			isa = PBXGroup;
-			children = (
-				D4BBB57E12672C94000F8467 /* datePickerVC.swift */,
-			);
-			name = "date picker";
 			sourceTree = "<group>";
 		};
 		D4956B3A12E0886E00B0BB9B /* privacy */ = {
@@ -804,7 +789,6 @@
 				D40607E817D7CB5A00C05A38 /* shadeview-button-blue-7@2x.png in Resources */,
 				D40607DF17D7CB5A00C05A38 /* closedview-button-7.png in Resources */,
 				D481089A19E056D600B422A8 /* Images.xcassets in Resources */,
-				D469CEBB1A2BAC3800B8F48B /* MainWindow.xib in Resources */,
 				D40607E717D7CB5A00C05A38 /* shadeview-button-blue-7.png in Resources */,
 				D47FBB7F14A9E2D700CE0547 /* closedview-button.png in Resources */,
 				D47FBB8114A9E2E300CE0547 /* fullview-button.png in Resources */,
@@ -866,7 +850,6 @@
 			files = (
 				D417E3142A2121570093564A /* TSQCalendarRowCell.m in Sources */,
 				1D3623260D0F684500981E51 /* rTrackerAppDelegate.swift in Sources */,
-				D47E6DE02DE0CF7F00D68B2F /* main.swift in Sources */,
 				D467CF9D2DB93DC700EF479F /* trackerChartScatterPlot.swift in Sources */,
 				D4CA92BE2D2EF2E400554F55 /* filePickerVC.swift in Sources */,
 				28C286E10D94DF7D0034E888 /* RootViewController.swift in Sources */,
@@ -942,7 +925,6 @@
 				D4CA92BC2D2B115400554F55 /* ahViewController.swift in Sources */,
 				D49F29482ACC8CC800B11560 /* rTrackerUITestsLaunchTests.swift in Sources */,
 				D41D53382E82F488006AB71F /* rtDocs.swift in Sources */,
-				D47E6DDF2DE0CF7F00D68B2F /* main.swift in Sources */,
 				D49F29462ACC8CC800B11560 /* rTrackerUITests.swift in Sources */,
 				D4EE7D852D8DE57000206D26 /* trackerChart.swift in Sources */,
 				D47E6DD52DDFC2FA00D68B2F /* rTrackerSceneDelegate.swift in Sources */,
