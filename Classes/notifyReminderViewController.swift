@@ -1569,7 +1569,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         DBGLog("gear button here")
         nrFromGui()
 
-        let nrvc2 = notifyReminderVC2(nibName: "notifyReminderVC2", bundle: nil)
+        let nrvc2 = notifyReminderVC2()
         //nrvc.view.hidden = NO;
         nrvc2.parentNRVC = self
         nrvc2.modalPresentationStyle = .fullScreen

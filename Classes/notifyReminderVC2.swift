@@ -32,15 +32,18 @@ class notifyReminderVC2: UIViewController, UIPickerViewDelegate, UIPickerViewDat
     */
     var parentNRVC: notifyReminderViewController?
     var soundFiles: [String]?
-    @IBOutlet var datePicker: UIDatePicker!
-    @IBOutlet var soundPicker: UIPickerView!
-    @IBOutlet var btnTestOutlet: UIButton!
-    @IBOutlet var btnHelpOutlet: UIBarButtonItem!
-    @IBOutlet var btnDoneOutlet: UIBarButtonItem!
-    @IBOutlet weak var clearStartDate: UIButton!
+    private var datePicker: UIDatePicker!
+    private var soundPicker: UIPickerView!
+    private var btnTestOutlet: UIButton!
+    private var btnHelpOutlet: UIBarButtonItem!
+    private var btnDoneOutlet: UIBarButtonItem!
+    private var clearStartDate: UIButton!
+    private var toolbar: UIToolbar!
+    private var startDateLabel: UILabel!
+    private var soundLabel: UILabel!
     
     override init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) {
-        super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)
+        super.init(nibName: nil, bundle: nil)
         var sfa: [String] = []
         //datePicker.date = Date(timeIntervalSince1970: TimeInterval(parentNRVC!.nr!.saveDate))
 
@@ -57,38 +60,132 @@ class notifyReminderVC2: UIViewController, UIPickerViewDelegate, UIPickerViewDat
         soundFiles = sfa
     }
 
+    override func loadView() {
+        view = UIView()
+        view.backgroundColor = .systemBackground
+
+        setupUI()
+        setupConstraints()
+    }
+
+    private func setupUI() {
+        // Create "Start Date:" label
+        startDateLabel = UILabel()
+        startDateLabel.text = "Start Date:"
+        startDateLabel.font = UIFont.systemFont(ofSize: 17)
+        startDateLabel.accessibilityLabel = "start Date"
+        startDateLabel.accessibilityHint = "start for delay if not last tracker"
+        startDateLabel.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(startDateLabel)
+
+        // Create date picker
+        datePicker = UIDatePicker()
+        datePicker.datePickerMode = .dateAndTime
+        datePicker.preferredDatePickerStyle = .wheels
+        datePicker.minuteInterval = 1
+        datePicker.accessibilityIdentifier = "nrvc2_datepicker"
+        datePicker.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(datePicker)
+
+        // Create reset button
+        clearStartDate = UIButton(type: .system)
+        clearStartDate.setTitle("Reset", for: .normal)
+        clearStartDate.accessibilityHint = "reset the start date"
+        clearStartDate.accessibilityIdentifier = "clearStartDate"
+        clearStartDate.addTarget(self, action: #selector(btnResetStartDate(_:)), for: .touchUpInside)
+        clearStartDate.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(clearStartDate)
+
+        // Create "Sound:" label
+        soundLabel = UILabel()
+        soundLabel.text = "Sound:"
+        soundLabel.font = UIFont.systemFont(ofSize: 17)
+        soundLabel.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(soundLabel)
+
+        // Create sound picker
+        soundPicker = UIPickerView()
+        soundPicker.dataSource = self
+        soundPicker.delegate = self
+        soundPicker.accessibilityHint = "sound to play with notification"
+        soundPicker.accessibilityIdentifier = "nr-sound-chooser"
+        soundPicker.accessibilityLabel = "sound choice"
+        soundPicker.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(soundPicker)
+
+        // Create sample button
+        btnTestOutlet = UIButton(type: .system)
+        btnTestOutlet.setTitle("Sample", for: .normal)
+        btnTestOutlet.setTitleShadowColor(UIColor(red: 0.5, green: 0.5, blue: 0.5, alpha: 1.0), for: .normal)
+        btnTestOutlet.accessibilityHint = "tap to play selected sound"
+        btnTestOutlet.accessibilityIdentifier = "nr-sound-play"
+        btnTestOutlet.accessibilityLabel = "play sample"
+        btnTestOutlet.addTarget(self, action: #selector(btnTest(_:)), for: .touchUpInside)
+        btnTestOutlet.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(btnTestOutlet)
+
+        // Create toolbar
+        toolbar = UIToolbar()
+        toolbar.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(toolbar)
+
+        // Create toolbar items
+        btnDoneOutlet = UIBarButtonItem(title: "✓", style: .plain, target: self, action: #selector(btnDone(_:)))
+        btnDoneOutlet.accessibilityLabel = "done"
+        btnDoneOutlet.accessibilityIdentifier = "nrvc2_done"
+        btnDoneOutlet.setTitleTextAttributes([.font: UIFont.systemFont(ofSize: 28.0)], for: .normal)
+
+        btnHelpOutlet = UIBarButtonItem(title: "?", style: .plain, target: self, action: #selector(btnHelp(_:)))
+        btnHelpOutlet.setTitleTextAttributes([.font: UIFont.systemFont(ofSize: 28.0)], for: .normal)
+
+        let flexibleSpace = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
+
+        toolbar.setItems([btnDoneOutlet, flexibleSpace, btnHelpOutlet], animated: false)
+    }
+
+    private func setupConstraints() {
+
+        NSLayoutConstraint.activate([
+            // Start Date label
+            startDateLabel.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 10),
+            startDateLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 19),
+
+            // Reset button
+            clearStartDate.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -33),
+            clearStartDate.firstBaselineAnchor.constraint(equalTo: startDateLabel.firstBaselineAnchor),
+
+            // Date picker
+            datePicker.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 10),
+            datePicker.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
+            datePicker.topAnchor.constraint(equalTo: startDateLabel.bottomAnchor, constant: 5),
+
+            // Sound label
+            soundLabel.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 10),
+            soundLabel.topAnchor.constraint(equalTo: datePicker.bottomAnchor, constant: 5),
+
+            // Sample button
+            btnTestOutlet.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -30),
+            btnTestOutlet.centerYAnchor.constraint(equalTo: soundLabel.centerYAnchor),
+
+            // Sound picker
+            soundPicker.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 10),
+            soundPicker.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
+            soundPicker.topAnchor.constraint(equalTo: soundLabel.bottomAnchor, constant: 5),
+
+            // Toolbar
+            toolbar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            toolbar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            toolbar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+        ])
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
         datePicker.date = Date(timeIntervalSince1970: TimeInterval(parentNRVC!.nr!.saveDate))
-        btnHelpOutlet.setTitleTextAttributes(
-            [
-                .font: UIFont.systemFont(ofSize: 28.0)
-            //,NSForegroundColorAttributeName: [UIColor greenColor]
-            ],
-            for: .normal)
 
-        btnDoneOutlet.title = "\u{2611}"
-        
-        btnDoneOutlet.accessibilityLabel = "done"
-        btnDoneOutlet.accessibilityIdentifier = "nrvc2_done"
-
-        
-        btnDoneOutlet.setTitleTextAttributes(
-            [
-                .font: UIFont.systemFont(ofSize: 28.0)
-            //,NSForegroundColorAttributeName: [UIColor greenColor]
-            ],
-            for: .normal)
-
-        
-        datePicker.accessibilityIdentifier = "nrvc2_datepicker"
-        
         let swipe = UISwipeGestureRecognizer(target: self, action: #selector(addTrackerController.handleViewSwipeRight(_:)))
         swipe.direction = .right
         view.addGestureRecognizer(swipe)
-
-
-        // Do any additional setup after loading the view.
     }
 
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
@@ -110,8 +207,6 @@ class notifyReminderVC2: UIViewController, UIPickerViewDelegate, UIPickerViewDat
             btnTestOutlet.isEnabled = true
         }
 
-        navigationController?.setToolbarHidden(false, animated: false)
-
         super.viewWillAppear(animated)
     }
 
@@ -120,12 +215,12 @@ class notifyReminderVC2: UIViewController, UIPickerViewDelegate, UIPickerViewDat
         // Dispose of any resources that can be recreated.
     }
 
-    @IBAction func btnHelp(_ sender: Any) {
+    @objc func btnHelp(_ sender: Any) {
         DBGLog("btnHelp")
         rTracker_resource.alert("Reminder details", msg: "Set the start date and time for the reminder delay here if not based on the last tracker save.\nSet the sound to be played when the reminder is triggered.  The default sound cannot be played while rTracker is the active application.", vc: self)
     }
 
-    @IBAction func btnTest(_ sender: Any) {
+    @objc func btnTest(_ sender: Any) {
         DBGLog("btnTest")
         //[self.parentNRVC.nr present];
         //[self.parentNRVC.nr schedule:[NSDate dateWithTimeIntervalSinceNow:1]];
@@ -133,17 +228,26 @@ class notifyReminderVC2: UIViewController, UIPickerViewDelegate, UIPickerViewDat
 
     }
 
-    @IBAction func btnDone(_ sender: Any?) {
-        //ios6 [self dismissModalViewControllerAnimated:YES];
+    @objc func btnDone(_ sender: Any?) {
+        DBGLog("btnDone called")
         DBGLog(String("leaving - datepicker says \(datePicker.date)"))
-        parentNRVC?.nr?.saveDate = Int(datePicker.date.timeIntervalSince1970)
+
+        guard let parentNRVC = parentNRVC,
+              let nr = parentNRVC.nr else {
+            DBGErr("parentNRVC or nr is nil")
+            return
+        }
+
+        nr.saveDate = Int(datePicker.date.timeIntervalSince1970)
+        DBGLog("saveDate set to \(nr.saveDate)")
 
         dismiss(animated: true) {
-            self.parentNRVC?.updateEnabledButton()
+            DBGLog("dismiss completed, calling updateEnabledButton")
+            parentNRVC.updateEnabledButton()
         }
     }
     
-    @IBAction func btnResetStartDate(_ sender: Any) {
+    @objc func btnResetStartDate(_ sender: Any) {
         datePicker.date = Date()
     }
     /*
@@ -212,7 +316,7 @@ class notifyReminderVC2: UIViewController, UIPickerViewDelegate, UIPickerViewDat
     }
 
     required init?(coder aDecoder: NSCoder) {
-        super.init(coder: aDecoder)
+        fatalError("XIB-based initialization not supported")
     }
 }
 

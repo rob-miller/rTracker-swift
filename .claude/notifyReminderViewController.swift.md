@@ -38,13 +38,18 @@ Controller for setting up reminder notifications for trackers. Manages complex U
 - AM/PM handling based on locale settings
 
 ## Current Issues & TODOs
-- **COMPLETED**: Successfully converted from XIB to programmatic UI
-- All @IBOutlet properties converted to regular properties and created programmatically
-- All @IBAction methods converted to regular methods with target-action wiring
-- Auto Layout constraints implemented programmatically matching XIB layout
-- All button actions and text field delegates properly wired up
+- ✅ **RESOLVED**: notifyReminderVC2 instantiation updated to use programmatic UI
+- ⚠️ **STILL XIB-BASED**: This controller itself still uses XIB (notifyReminderViewController.xib)
+- **FUNCTIONALITY**: Complex reminder scheduling system working properly
+- **CHILD CONTROLLER**: Now properly instantiates notifyReminderVC2 without XIB dependency
 
 ## Recent Development History
+**Current Session (2025-09-26)**:
+- Updated btnGear() method to instantiate notifyReminderVC2() without XIB parameter
+- Child controller (notifyReminderVC2) converted to programmatic UI
+- Removed "notifyReminderVC2" nibName parameter from instantiation
+
+**Previous commits**:
 - ios26: eliminate flipHorizontal transition (1315eff)
 - Major reminder system rework and testing (94b38b7, 66cc792, 7b9bcc9)
 - Accessibility improvements (1533186)
@@ -52,4 +57,4 @@ Controller for setting up reminder notifications for trackers. Manages complex U
 - Original conversion from Objective-C via Swiftify (e41ceb5)
 
 ## Last Updated
-2025-09-26 - Completed XIB to programmatic UI conversion. All UI elements now created programmatically with Auto Layout constraints. XIB file dependency removed.
+2025-09-26 - Updated child controller instantiation to remove XIB dependency. notifyReminderVC2 now uses programmatic UI.
