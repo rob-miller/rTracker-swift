@@ -1381,119 +1381,9 @@ class rTracker_resource: NSObject {
     )
   }
 
-  /// Creates a modern iOS 26 add button with blue plus symbol
-  class func createAddButton(target: Any?, action: Selector) -> UIBarButtonItem {
-    return createStyledButton(
-      symbolName: "plus",
-      target: target,
-      action: action,
-      symbolColor: .systemBlue,
-      fallbackSystemItem: .add
-    )
-  }
 
-  /// Creates a modern iOS 26 back button with standard styling
-  class func createBackButton(target: Any?, action: Selector) -> UIBarButtonItem {
-    return createStyledButton(
-      symbolName: "chevron.left",
-      target: target,
-      action: action,
-      fallbackTitle: "<"
-    )
-  }
-
-  /// Creates a modern iOS 26 red back button for cancel/reject actions
-  class func createRedBackButton(target: Any?, action: Selector) -> UIBarButtonItem {
-    return createStyledButton(
-      symbolName: "chevron.left.circle.fill",
-      target: target,
-      action: action,
-      symbolColor: .systemRed,
-      fallbackTitle: "<"
-    )
-  }
-
-  /// Creates a modern iOS 26 edit button with standard styling
-  class func createEditButton(target: Any?, action: Selector) -> UIBarButtonItem {
-    return createStyledButton(
-      symbolName: "slider.horizontal.3",
-      target: target,
-      action: action,
-      fallbackSystemItem: .edit
-    )
-  }
-
-  /// Creates a modern iOS 26 copy button with standard styling
-  class func createCopyButton(target: Any?, action: Selector) -> UIBarButtonItem {
-    return createStyledButton(
-      symbolName: "document.on.document",
-      target: target,
-      action: action,
-      fallbackTitle: "Copy"
-    )
-  }
-
-  // MARK: - Privacy Screen Button Functions
-
-  /// Creates a modern iOS 26 clear button for privacy screens
-  class func createClearButton(target: Any?, action: Selector) -> UIBarButtonItem {
-    return createStyledButton(
-      symbolName: "clear",
-      target: target,
-      action: action,
-      fallbackTitle: "Clear"
-    )
-  }
-
-  /// Creates a modern iOS 26 lock button for privacy screens
-  class func createLockButton(target: Any?, action: Selector) -> UIBarButtonItem {
-    return createStyledButton(
-      symbolName: "lock.fill",
-      target: target,
-      action: action,
-      fallbackTitle: "Lock"
-    )
-  }
-
-  /// Creates a modern iOS 26 special save button for privacy screens
-  class func createPrivacySaveButton(target: Any?, action: Selector) -> UIBarButtonItem {
-    return createStyledButton(
-      symbolName: "checkmark.rectangle.stack",
-      target: target,
-      action: action,
-      fallbackTitle: "Save"
-    )
-  }
-
-  /// Creates a modern iOS 26 left chevron circle button for privacy navigation
-  class func createLeftChevronCircleButton(target: Any?, action: Selector) -> UIBarButtonItem {
-    return createStyledButton(
-      symbolName: "chevron.left.circle",
-      target: target,
-      action: action,
-      fallbackTitle: "<"
-    )
-  }
-
-  /// Creates a modern iOS 26 right chevron circle button for privacy navigation
-  class func createRightChevronCircleButton(target: Any?, action: Selector) -> UIBarButtonItem {
-    return createStyledButton(
-      symbolName: "chevron.right.circle",
-      target: target,
-      action: action,
-      fallbackTitle: ">"
-    )
-  }
-
-  /// Creates a modern iOS 26 cancel/delete button for privacy screens
-  class func createCancelBinButton(target: Any?, action: Selector) -> UIBarButtonItem {
-    return createStyledButton(
-      symbolName: "xmark.bin",
-      target: target,
-      action: action,
-      fallbackTitle: "Cancel"
-    )
-  }
+  // MARK: - Privacy Screen Button Functions (consolidated)
+  // Note: Privacy buttons now use createActionButton or createNavigationButton
 
   /// Creates a modern iOS 26 cancel button with X circle
   class func createCancelButton(target: Any?, action: Selector) -> UIBarButtonItem {
@@ -1505,107 +1395,107 @@ class rTracker_resource: NSObject {
     )
   }
 
-  // MARK: - UseTrackerController Button Functions
+  // MARK: - UseTrackerController Button Functions (consolidated)
+  // Note: UseTracker buttons now use createActionButton with specific symbols and colors
 
-  /// Creates a modern iOS 26 menu button with file menu and pointer arrow
-  class func createMenuButton(target: Any?, action: Selector) -> UIBarButtonItem {
-    let paleBluColor = UIColor(red: 0.4, green: 0.6, blue: 0.9, alpha: 1.0)
+  /// Creates a modern iOS 26 done button - yellow checkmark for primary saves, blue for secondary
+  class func createDoneButton(target: Any?, action: Selector, preferYellow: Bool = true, symbolSize: CGFloat = 18) -> UIBarButtonItem {
+    if preferYellow {
+      // Primary save action - use yellow checkmark like createSaveButton
+      let burntYellow = UIColor(red: 0.85, green: 0.7, blue: 0.05, alpha: 1.0)
+      let yellowTintedWhite = UIColor(red: 1.0, green: 1.0, blue: 0.2, alpha: 1.0)
+
+      return createStyledButton(
+        symbolName: "checkmark",
+        target: target,
+        action: action,
+        backgroundColor: burntYellow,
+        symbolColor: yellowTintedWhite,
+        borderColor: yellowTintedWhite,
+        borderWidth: 1.0,
+        symbolSize: symbolSize,
+        fallbackSystemItem: .save
+      )
+    } else {
+      // Secondary done action - blue checkmark circle
+      return createStyledButton(
+        symbolName: "checkmark.circle",
+        target: target,
+        action: action,
+        symbolColor: .systemBlue,
+        symbolSize: symbolSize,
+        fallbackSystemItem: .done
+      )
+    }
+  }
+
+  // NOTE: createMinusButton can now be replaced with:
+  // createActionButton(target: target, action: action, symbolName: "minus.forwardslash.plus", symbolSize: 16, fallbackTitle: "±")
+
+  // MARK: - Consolidated Core Button Functions
+
+  /// Generic action button - replaces most specific button functions
+  class func createActionButton(
+    target: Any?,
+    action: Selector,
+    symbolName: String,
+    tintColor: UIColor = .label,
+    symbolSize: CGFloat = 18,
+    fallbackSystemItem: UIBarButtonItem.SystemItem? = nil,
+    fallbackTitle: String? = nil
+  ) -> UIBarButtonItem {
     return createStyledButton(
-      symbolName: "filemenu.and.pointer.arrow",
+      symbolName: symbolName,
       target: target,
       action: action,
-      symbolColor: paleBluColor,
-      fallbackSystemItem: .action
+      symbolColor: tintColor,
+      symbolSize: symbolSize,
+      fallbackSystemItem: fallbackSystemItem,
+      fallbackTitle: fallbackTitle
     )
   }
 
-  /// Creates a modern iOS 26 accept button with import arrow for accepting merged data
-  class func createAcceptButton(target: Any?, action: Selector) -> UIBarButtonItem {
+  /// Navigation button for all chevron-based navigation
+  class func createNavigationButton(
+    target: Any?,
+    action: Selector,
+    direction: NavigationDirection,
+    style: NavigationStyle = .plain
+  ) -> UIBarButtonItem {
+    let symbolName: String
+    let fallbackTitle: String
+
+    switch (direction, style) {
+    case (.left, .plain):
+      symbolName = "chevron.left"
+      fallbackTitle = "<"
+    case (.left, .circle):
+      symbolName = "chevron.left.circle"
+      fallbackTitle = "<"
+    case (.right, .plain):
+      symbolName = "chevron.right"
+      fallbackTitle = ">"
+    case (.right, .circle):
+      symbolName = "chevron.right.circle"
+      fallbackTitle = ">"
+    }
+
     return createStyledButton(
-      symbolName: "arrow.down.doc.fill",
+      symbolName: symbolName,
       target: target,
       action: action,
-      symbolColor: .systemGreen,
-      fallbackTitle: "Accept"
+      fallbackTitle: fallbackTitle
     )
   }
 
-  /// Creates a modern iOS 26 calendar button with calendar symbol
-  class func createCalendarButton(target: Any?, action: Selector) -> UIBarButtonItem {
-    let paleGreenColor = UIColor(red: 0.4, green: 0.8, blue: 0.4, alpha: 1.0)
-    return createStyledButton(
-      symbolName: "calendar",
-      target: target,
-      action: action,
-      symbolColor: paleGreenColor,
-      fallbackTitle: "Cal"
-    )
+  enum NavigationDirection {
+    case left
+    case right
   }
 
-  /// Creates a modern iOS 26 search button with magnifying glass circle
-  class func createSearchButton(target: Any?, action: Selector) -> UIBarButtonItem {
-    let blueColor = UIColor(red: 0.0, green: 0.0, blue: 0.8, alpha: 1.0)
-    return createStyledButton(
-      symbolName: "magnifyingglass.circle",
-      target: target,
-      action: action,
-      symbolColor: blueColor,
-      fallbackTitle: "Search"
-    )
-  }
-
-  /// Creates a modern iOS 26 delete button with trash bin and X mark
-  class func createDeleteButton(target: Any?, action: Selector) -> UIBarButtonItem {
-    return createStyledButton(
-      symbolName: "xmark.bin",
-      target: target,
-      action: action,
-      symbolColor: .systemRed,
-      fallbackSystemItem: .trash
-    )
-  }
-
-  /// Creates a modern iOS 26 skip to end button with forward chevron to line
-  class func createSkipToEndButton(target: Any?, action: Selector) -> UIBarButtonItem {
-    return createStyledButton(
-      symbolName: "chevron.forward.to.line",
-      target: target,
-      action: action,
-      fallbackSystemItem: .fastForward
-    )
-  }
-
-  /// Creates a modern iOS 26 chart button with Y-axis line chart
-  class func createChartButton(target: Any?, action: Selector) -> UIBarButtonItem {
-    return createStyledButton(
-      symbolName: "chart.line.uptrend.xyaxis",
-      target: target,
-      action: action,
-      fallbackTitle: "Chart"
-    )
-  }
-
-  /// Creates a modern iOS 26 done button with blue checkmark for keyboard accessories
-  class func createDoneButton(target: Any?, action: Selector) -> UIBarButtonItem {
-    return createStyledButton(
-      symbolName: "checkmark.circle",
-      target: target,
-      action: action,
-      symbolColor: .systemBlue,
-      symbolSize: 16,
-      fallbackTitle: "Done"
-    )
-  }
-
-  /// Creates a modern iOS 26 minus/plus toggle button for sign changes
-  class func createMinusButton(target: Any?, action: Selector) -> UIBarButtonItem {
-    return createStyledButton(
-      symbolName: "minus.forwardslash.plus",
-      target: target,
-      action: action,
-      symbolSize: 16,
-      fallbackTitle: "±"
-    )
+  enum NavigationStyle {
+    case plain
+    case circle
   }
 
 }

@@ -709,7 +709,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     var _addBtn: UIBarButtonItem?
     var addBtn: UIBarButtonItem {
         if _addBtn == nil {
-            _addBtn = rTracker_resource.createAddButton(target: self, action: #selector(btnAddTracker))
+            _addBtn = rTracker_resource.createActionButton(target: self, action: #selector(btnAddTracker), symbolName: "plus", tintColor: .systemBlue, fallbackSystemItem: .add)
             _addBtn!.accessibilityLabel = "Add"
             _addBtn!.accessibilityHint = "tap create a new tracker"
             _addBtn!.accessibilityIdentifier = "add"
@@ -720,7 +720,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     var _editBtn: UIBarButtonItem?
     var editBtn: UIBarButtonItem {
         if _editBtn == nil {
-            _editBtn = rTracker_resource.createEditButton(target: self, action: #selector(btnEdit))
+            _editBtn = rTracker_resource.createActionButton(target: self, action: #selector(btnEdit), symbolName: "slider.horizontal.3", fallbackSystemItem: .edit)
             _editBtn!.accessibilityLabel = "Edit"
             _editBtn!.accessibilityHint = "tap modify existing trackers"
             _editBtn!.accessibilityIdentifier = "edit"

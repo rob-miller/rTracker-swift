@@ -64,7 +64,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
         // cancel / save buttons on top nav bar -- can't seem to do in IB
 
-        let cancelBtn = rTracker_resource.createBackButton(target: self, action: #selector(btnCancel))
+        let cancelBtn = rTracker_resource.createNavigationButton(target: self, action: #selector(btnCancel), direction: .left)
         navigationItem.leftBarButtonItem = cancelBtn
         navigationItem.leftBarButtonItem?.accessibilityIdentifier = "addTrkrCancel"
 
@@ -90,14 +90,14 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         view.addSubview(toolbar)
 
         // Setup button
-        setupButton = rTracker_resource.createEditButton(target: self, action: #selector(btnSetup(_:)))
+        setupButton = rTracker_resource.createActionButton(target: self, action: #selector(btnSetup(_:)), symbolName: "slider.horizontal.3", fallbackSystemItem: .edit)
         setupButton.accessibilityIdentifier = "addTrkrSetup"
         setupButton.accessibilityLabel = "Setup"
         setupButton.accessibilityHint = "Configure tracker settings"
 
 
         // Copy button
-        copyButton = rTracker_resource.createCopyButton(target: self, action: #selector(btnCopy(_:)))
+        copyButton = rTracker_resource.createActionButton(target: self, action: #selector(btnCopy(_:)), symbolName: "doc.on.doc", fallbackSystemItem: .action, fallbackTitle: "Copy")
         copyButton.accessibilityIdentifier = "addTrkrCopy"
         copyButton.accessibilityLabel = "Copy"
         copyButton.accessibilityHint = "Duplicate last item"

@@ -99,8 +99,8 @@ class voNumber: voState, UITextFieldDelegate {
     borderLine.autoresizingMask = [.flexibleWidth]
     containerView.addSubview(borderLine)
 
-    // Create Done button using unified button system
-    let doneButtonItem = rTracker_resource.createDoneButton(target: self, action: #selector(selectDoneButton))
+    // Create Done button using unified button system - use blue for secondary done (not primary save)
+    let doneButtonItem = rTracker_resource.createDoneButton(target: self, action: #selector(selectDoneButton), preferYellow: false, symbolSize: 16)
     if let doneButton = doneButtonItem.uiButton {
         doneButton.frame = CGRect(x: UIScreen.main.bounds.width - 70, y: 7, width: 60, height: 30)
         doneButton.autoresizingMask = [.flexibleLeftMargin]
@@ -108,7 +108,7 @@ class voNumber: voState, UITextFieldDelegate {
     }
 
     // Create Minus button using unified button system
-    let minusButtonItem = rTracker_resource.createMinusButton(target: self, action: #selector(selectMinusButton))
+    let minusButtonItem = rTracker_resource.createActionButton(target: self, action: #selector(selectMinusButton), symbolName: "minus.forwardslash.plus", symbolSize: 16, fallbackTitle: "±")
     if let minusButton = minusButtonItem.uiButton {
         minusButton.frame = CGRect(x: UIScreen.main.bounds.width - 140, y: 7, width: 60, height: 30)
         minusButton.autoresizingMask = [.flexibleLeftMargin]

@@ -417,7 +417,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
 
         let toolbar = UIToolbar()
         toolbar.sizeToFit()
-        let doneButton = UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(dismissMarklineKeyboard))
+        let doneButton = rTracker_resource.createDoneButton(target: self, action: #selector(dismissMarklineKeyboard))
         let flexSpace = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
         toolbar.items = [flexSpace, doneButton]
         marklineTextField.inputAccessoryView = toolbar
@@ -962,51 +962,46 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         pickerView.dataSource = self
         pickerContainer.addSubview(pickerView)
         
-        let doneButton = UIButton(type: .system)
-        doneButton.translatesAutoresizingMaskIntoConstraints = false
-        doneButton.setTitle("Done", for: .normal)
-        doneButton.titleLabel?.font = UIFont.boldSystemFont(ofSize: 16)
-        doneButton.addTarget(self, action: #selector(dismissPicker), for: .touchUpInside)
-
-        // Apply iOS 26 glass configuration
-        if #available(iOS 26.0, *) {
-            doneButton.configuration = UIButton.Configuration.glass()
+        // Create done button using unified button system - use blue for secondary done (not primary save)
+        let doneButtonItem = rTracker_resource.createDoneButton(target: self, action: #selector(dismissPicker), preferYellow: false)
+        var doneButton: UIButton?
+        if let button = doneButtonItem.uiButton {
+            button.translatesAutoresizingMaskIntoConstraints = false
+            pickerContainer.addSubview(button)
+            doneButton = button
         }
 
-        pickerContainer.addSubview(doneButton)
-        
-        let cancelButton = UIButton(type: .system)
-        cancelButton.translatesAutoresizingMaskIntoConstraints = false
-        cancelButton.setTitle("Cancel", for: .normal)
-        cancelButton.titleLabel?.font = UIFont.systemFont(ofSize: 16)
-        cancelButton.addTarget(self, action: #selector(cancelPicker), for: .touchUpInside)
-
-        // Apply iOS 26 glass configuration
-        if #available(iOS 26.0, *) {
-            cancelButton.configuration = UIButton.Configuration.glass()
+        // Create cancel button using unified button system
+        let cancelButtonItem = rTracker_resource.createCancelButton(target: self, action: #selector(cancelPicker))
+        var cancelButton: UIButton?
+        if let button = cancelButtonItem.uiButton {
+            button.translatesAutoresizingMaskIntoConstraints = false
+            pickerContainer.addSubview(button)
+            cancelButton = button
         }
 
-        pickerContainer.addSubview(cancelButton)
-        
-        NSLayoutConstraint.activate([
-            pickerContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            pickerContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            pickerContainer.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            pickerContainer.heightAnchor.constraint(equalToConstant: 300),
-            
-            pickerView.topAnchor.constraint(equalTo: pickerContainer.topAnchor, constant: 10),
-            pickerView.leadingAnchor.constraint(equalTo: pickerContainer.leadingAnchor),
-            pickerView.trailingAnchor.constraint(equalTo: pickerContainer.trailingAnchor),
-            pickerView.bottomAnchor.constraint(equalTo: doneButton.topAnchor, constant: -10),
-            
-            cancelButton.leadingAnchor.constraint(equalTo: pickerContainer.leadingAnchor, constant: 20),
-            cancelButton.bottomAnchor.constraint(equalTo: pickerContainer.bottomAnchor, constant: -20),
-            cancelButton.heightAnchor.constraint(equalToConstant: 44),
-            
-            doneButton.trailingAnchor.constraint(equalTo: pickerContainer.trailingAnchor, constant: -20),
-            doneButton.bottomAnchor.constraint(equalTo: pickerContainer.bottomAnchor, constant: -20),
-            doneButton.heightAnchor.constraint(equalToConstant: 44)
-        ])
+        // Set up constraints if buttons were created successfully
+        if let doneBtn = doneButton, let cancelBtn = cancelButton {
+            NSLayoutConstraint.activate([
+                pickerContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+                pickerContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+                pickerContainer.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+                pickerContainer.heightAnchor.constraint(equalToConstant: 300),
+
+                pickerView.topAnchor.constraint(equalTo: pickerContainer.topAnchor, constant: 10),
+                pickerView.leadingAnchor.constraint(equalTo: pickerContainer.leadingAnchor),
+                pickerView.trailingAnchor.constraint(equalTo: pickerContainer.trailingAnchor),
+                pickerView.bottomAnchor.constraint(equalTo: doneBtn.topAnchor, constant: -10),
+
+                cancelBtn.leadingAnchor.constraint(equalTo: pickerContainer.leadingAnchor, constant: 20),
+                cancelBtn.bottomAnchor.constraint(equalTo: pickerContainer.bottomAnchor, constant: -20),
+                cancelBtn.heightAnchor.constraint(equalToConstant: 44),
+
+                doneBtn.trailingAnchor.constraint(equalTo: pickerContainer.trailingAnchor, constant: -20),
+                doneBtn.bottomAnchor.constraint(equalTo: pickerContainer.bottomAnchor, constant: -20),
+                doneBtn.heightAnchor.constraint(equalToConstant: 44)
+            ])
+        }
     }
     
     // MARK: - Initialization

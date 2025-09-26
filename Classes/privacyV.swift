@@ -377,7 +377,7 @@ class privacyV: UIView {
     private var _clearBtn: UIButton?
     var clearBtn: UIButton? {
         if _clearBtn == nil {
-            _clearBtn = rTracker_resource.createClearButton(target: self, action: #selector(doClear(_:))).uiButton
+            _clearBtn = rTracker_resource.createActionButton(target: self, action: #selector(doClear(_:)), symbolName: "clear", fallbackTitle: "Clear").uiButton
 
             // Let button use its intrinsic content size, then position
             let buttonSize = _clearBtn?.intrinsicContentSize ?? CGSize.zero
@@ -401,7 +401,7 @@ class privacyV: UIView {
     private var _configBtn: UIButton?
     var configBtn: UIButton? {
         if _configBtn == nil {
-            _configBtn = rTracker_resource.createEditButton(target: self, action: #selector(showConfig(_:))).uiButton
+            _configBtn = rTracker_resource.createActionButton(target: self, action: #selector(showConfig(_:)), symbolName: "slider.horizontal.3", fallbackSystemItem: .edit).uiButton
 
             // Let button use its intrinsic content size, then position
             let buttonSize = _configBtn?.intrinsicContentSize ?? CGSize.zero
@@ -425,7 +425,7 @@ class privacyV: UIView {
     private var _lockBtn: UIButton?
     var lockBtn: UIButton? {
         if _lockBtn == nil {
-            _lockBtn = rTracker_resource.createLockButton(target: self, action: #selector(showConfig(_:))).uiButton
+            _lockBtn = rTracker_resource.createActionButton(target: self, action: #selector(showConfig(_:)), symbolName: "lock.fill", fallbackTitle: "Lock").uiButton
 
             // Let button use its intrinsic content size, then position
             let buttonSize = _lockBtn?.intrinsicContentSize ?? CGSize.zero
@@ -451,7 +451,7 @@ class privacyV: UIView {
     private var _saveBtn: UIButton?
     var saveBtn: UIButton? {
         if _saveBtn == nil {
-            _saveBtn = rTracker_resource.createPrivacySaveButton(target: self, action: #selector(saveConfig(_:))).uiButton
+            _saveBtn = rTracker_resource.createDoneButton(target: self, action: #selector(saveConfig(_:))).uiButton
 
             // Let button use its intrinsic content size, then position
             let buttonSize = _saveBtn?.intrinsicContentSize ?? CGSize.zero
@@ -527,7 +527,7 @@ class privacyV: UIView {
     private var _nextBtn: UIButton?
     var nextBtn: UIButton? {
         if _nextBtn == nil {
-            _nextBtn = rTracker_resource.createRightChevronCircleButton(target: self, action: #selector(adjustTTV(_:))).uiButton
+            _nextBtn = rTracker_resource.createNavigationButton(target: self, action: #selector(adjustTTV(_:)), direction: .right, style: .circle).uiButton
 
             // Let button use its intrinsic content size, then position
             let buttonSize = _nextBtn?.intrinsicContentSize ?? CGSize.zero
@@ -552,7 +552,7 @@ class privacyV: UIView {
     private var _prevBtn: UIButton?
     var prevBtn: UIButton? {
         if _prevBtn == nil {
-            _prevBtn = rTracker_resource.createLeftChevronCircleButton(target: self, action: #selector(adjustTTV(_:))).uiButton
+            _prevBtn = rTracker_resource.createNavigationButton(target: self, action: #selector(adjustTTV(_:)), direction: .left, style: .circle).uiButton
 
             // Let button use its intrinsic content size, then position
             let buttonSize = _prevBtn?.intrinsicContentSize ?? CGSize.zero
