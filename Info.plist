@@ -85,7 +85,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>8198</string>
+	<string>8205</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
@@ -98,8 +98,6 @@
 	<string>Enable user to load HealthKit identifiers</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Enable reading Apple Health data into your trackers</string>
-	<key>NSMainNibFile</key>
-	<string>MainWindow</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
