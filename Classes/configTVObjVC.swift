@@ -78,9 +78,9 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
     var saveFrame = CGRect.zero
     var lfHeight: CGFloat = 0.0
     // UI element properties
-    @IBOutlet var navBar: UINavigationBar!
-    @IBOutlet var toolBar: UIToolbar!
-    @IBOutlet weak var scroll: UIScrollView!
+    var navBar: UINavigationBar!
+    var toolBar: UIToolbar!
+    var scroll: UIScrollView!
     var activeField: UITextField? //just a pointer, no retain
     var processingTfDone = false
     var rDates: [AnyHashable]?
@@ -95,7 +95,17 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
     // override init() {
     //    super.init()
     override init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) {
-        super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)
+        super.init(nibName: nil, bundle: nil)
+        processingTfDone = false
+        rDates = []
+    }
+
+    convenience init() {
+        self.init(nibName: nil, bundle: nil)
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
         processingTfDone = false
         rDates = []
     }
@@ -170,6 +180,10 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
     }
 
     override func viewDidLoad() {
+        super.viewDidLoad()
+
+        // Create UI elements programmatically
+        setupViews()
 
         var name: String?
         if vo == nil {
@@ -261,7 +275,48 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         view.addGestureRecognizer(swipe)
 
 
-        super.viewDidLoad()
+    }
+
+    func setupViews() {
+        view.backgroundColor = .systemBackground
+
+        // Create navigation bar
+        navBar = UINavigationBar()
+        navBar.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(navBar)
+
+        // Create toolbar
+        toolBar = UIToolbar()
+        toolBar.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(toolBar)
+
+        // Create scroll view
+        scroll = UIScrollView()
+        scroll.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(scroll)
+
+        // Set up constraints
+        NSLayoutConstraint.activate([
+            // Navigation bar constraints
+            navBar.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            navBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            navBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+
+            // Scroll view constraints
+            scroll.topAnchor.constraint(equalTo: navBar.bottomAnchor),
+            scroll.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            scroll.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            scroll.bottomAnchor.constraint(equalTo: toolBar.topAnchor),
+
+            // Toolbar constraints
+            toolBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            toolBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            toolBar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+        ])
+
+        // Create a navigation item for the navigation bar
+        let navItem = UINavigationItem(title: "Configure")
+        navBar.setItems([navItem], animated: false)
     }
 
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
@@ -1249,9 +1304,6 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         drawGeneralToOpts()
     }
 
-    required init?(coder aDecoder: NSCoder) {
-        super.init(coder: aDecoder)
-    }
 
 }
 

@@ -481,7 +481,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
                 return
             }
         }
-        let ctvovc = configTVObjVC(nibName: "configTVObjVC", bundle: nil)
+        let ctvovc = configTVObjVC()
         ctvovc.to = parentTrackerObj
         //[parentTrackerObj retain];
         ctvovc.vo = tempValObj
