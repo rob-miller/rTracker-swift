@@ -61,8 +61,6 @@ class trackerCalViewController: UIViewController, TSQCalendarViewDelegate {
         sql = "select id from voInfo where field='graph' and val=0"
         let noGraphIds = tracker?.toQry2SetI(sql: sql)
 
-        sql = "select id,name from voConfig"
-        let idNames = tracker!.toQry2DictIS(sql: sql)
 
         let colorSet = rTracker_resource.colorSet
         let pv = privacyValue

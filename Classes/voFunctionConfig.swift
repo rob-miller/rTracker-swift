@@ -528,7 +528,6 @@ extension voFunction {
         var ep: Int?
         let n = vo.optDict[key]
         ep = (n != nil ? Int(n!) : nil)
-        let ep2 = n != nil ? (ep! + 1) * -1 : 0 // invalid if ep is tmpUniq (negative)
 
         if nil == n || FREPDFLT == ep || FREPNONE == ep {
             let label = frepToLabel(ep!)
