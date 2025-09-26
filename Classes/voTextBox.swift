@@ -33,55 +33,132 @@ extension Notification.Name {
 
 class CustomAccessoryView: UIView {
 
-    @IBOutlet weak var addButton: UIButton!
-    @IBOutlet weak var segControl: UISegmentedControl!
-    @IBOutlet weak var searchSeg: UISegmentedControl!
-    @IBOutlet weak var clearButton: UIButton!
-    @IBOutlet weak var orAndSeg: UISegmentedControl!
+    var addButton: UIButton!
+    var segControl: UISegmentedControl!
+    var searchSeg: UISegmentedControl!
+    var clearButton: UIButton!
+    var orAndSeg: UISegmentedControl!
     var votb: voTextBox!
     
     class func instanceFromNib(_ invotb: voTextBox) -> CustomAccessoryView {
-        let cav =  UINib(nibName: "voTBacc2", bundle: nil).instantiate(withOwner: nil, options: nil)[0] as! CustomAccessoryView
+        let cav = CustomAccessoryView(frame: CGRect(x: 0, y: 0, width: 680, height: 43))
         cav.votb = invotb
-
-        // Lower constraint priorities to avoid conflicts with picker layout
-        for constraint in cav.constraints {
-            if constraint.priority == UILayoutPriority.required {
-                constraint.priority = UILayoutPriority(999)
-            }
-        }
-
+        cav.setupUI()
         return cav
     }
     
     override init(frame: CGRect) {
         super.init(frame: frame)
-        
-        // Initialize your view
-
     }
-    
+
     required init?(coder aDecoder: NSCoder) {
         super.init(coder: aDecoder)
-        
-        // Initialize your view
+    }
 
+    func setupUI() {
+        backgroundColor = .systemBackground
+        autoresizingMask = [.flexibleLeftMargin, .flexibleWidth, .flexibleRightMargin]
+
+        createSubviews()
+        setupConstraints()
+    }
+
+    private func createSubviews() {
+        // Create main segmented control (Contacts/History/Keyboard)
+        segControl = UISegmentedControl(items: ["👥", "📖", "⌨"])
+        segControl.selectedSegmentIndex = 2 // Default to keyboard
+        segControl.translatesAutoresizingMaskIntoConstraints = false
+        segControl.addTarget(self, action: #selector(segmentChanged), for: .valueChanged)
+        addSubview(segControl)
+
+        // Create add button using iOS 26 pattern
+        addButton = rTracker_resource.createActionButton(
+            target: self,
+            action: #selector(addButtonPressed),
+            symbolName: "plus.circle",
+            symbolSize: 24,
+            fallbackTitle: "Add"
+        ).uiButton!
+        addButton.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(addButton)
+
+        // Create search segmented control (Use/Search)
+        searchSeg = UISegmentedControl(items: ["✔︎", "🔍"])
+        searchSeg.selectedSegmentIndex = 0 // Default to "Use"
+        searchSeg.translatesAutoresizingMaskIntoConstraints = false
+        searchSeg.addTarget(self, action: #selector(searchSegChanged), for: .valueChanged)
+        addSubview(searchSeg)
+
+        // Create or/and segmented control (hidden by default)
+        orAndSeg = UISegmentedControl(items: ["∪", "∩"])
+        orAndSeg.selectedSegmentIndex = 0
+        orAndSeg.isHidden = true
+        orAndSeg.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(orAndSeg)
+
+        // Create clear button using iOS 26 pattern
+        clearButton = rTracker_resource.createStyledButton(
+            symbolName: "xmark.circle",
+            target: self,
+            action: #selector(clearButtonPressed),
+            backgroundColor: .clear,
+            symbolColor: .systemRed,
+            symbolSize: 24,
+            fallbackTitle: "❌"
+        ).uiButton!
+        clearButton.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(clearButton)
+    }
+
+    private func setupConstraints() {
+        NSLayoutConstraint.activate([
+            // Main segmented control
+            segControl.leadingAnchor.constraint(equalTo: leadingAnchor),
+            segControl.centerYAnchor.constraint(equalTo: centerYAnchor),
+
+            // Add button - positioned between segControl and search controls
+            addButton.centerXAnchor.constraint(equalTo: centerXAnchor),
+            addButton.centerYAnchor.constraint(equalTo: centerYAnchor),
+            addButton.widthAnchor.constraint(equalToConstant: 32),
+            addButton.heightAnchor.constraint(equalToConstant: 32),
+
+            // Search segmented control
+            searchSeg.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -80),
+            searchSeg.centerYAnchor.constraint(equalTo: centerYAnchor),
+
+            // Or/And segmented control (positioned where clear button is - they're mutually exclusive)
+            orAndSeg.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -10),
+            orAndSeg.centerYAnchor.constraint(equalTo: centerYAnchor),
+
+            // Clear button
+            clearButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -30),
+            clearButton.centerYAnchor.constraint(equalTo: centerYAnchor),
+            clearButton.widthAnchor.constraint(equalToConstant: 30),
+            clearButton.heightAnchor.constraint(equalToConstant: 30)
+        ])
+
+        // Lower constraint priorities to avoid conflicts with picker layout
+        for constraint in constraints {
+            if constraint.priority == UILayoutPriority.required {
+                constraint.priority = UILayoutPriority(999)
+            }
+        }
     }
 
     
-    @IBAction func addButtonPressed(_ sender: Any) {
+    @objc func addButtonPressed(_ sender: Any) {
         votb.addPickerData()
     }
-    
-    @IBAction func clearButtonPressed(_ sender: UIButton) {
+
+    @objc func clearButtonPressed(_ sender: UIButton) {
         votb.clear()
     }
-    
-    @IBAction func segmentChanged(_ sender: UISegmentedControl) {
+
+    @objc func segmentChanged(_ sender: UISegmentedControl) {
         votb.segmentChanged(sender.selectedSegmentIndex)
     }
-    
-    @IBAction func searchSegChanged(_ sender: UISegmentedControl) {
+
+    @objc func searchSegChanged(_ sender: UISegmentedControl) {
         if 0 == searchSeg.selectedSegmentIndex {
             orAndSeg.isHidden = true
             clearButton.isHidden = false
@@ -94,66 +171,72 @@ class CustomAccessoryView: UIView {
     func initAccView() {
         addButton.isHidden = true
         let fsize: CGFloat = 20.0
+
+        // Set up segmented controls with proper font size
         segControl.setTitleTextAttributes([
             .font: UIFont.systemFont(ofSize: fsize)
         ], for: .normal)
-        
+
+        searchSeg.setTitleTextAttributes([
+            .font: UIFont.systemFont(ofSize: fsize)
+        ], for: .normal)
+
+        orAndSeg.setTitleTextAttributes([
+            .font: UIFont.systemFont(ofSize: fsize)
+        ], for: .normal)
+
+        // Set up accessibility for main segmented control
         segControl.accessibilityIdentifier = "tbox-seg-control"
-        // Set accessibility properties for each segment with safe array access
         if segControl.subviews.indices.contains(0) {
             segControl.subviews[0].accessibilityLabel = "Contacts"
             segControl.subviews[0].accessibilityHint = "select to choose from Contacts"
             segControl.subviews[0].accessibilityIdentifier = "tbox-seg-contacts"
         }
-
         if segControl.subviews.indices.contains(1) {
             segControl.subviews[1].accessibilityLabel = "History"
             segControl.subviews[1].accessibilityHint = "select to choose lines from previous entries"
             segControl.subviews[1].accessibilityIdentifier = "tbox-seg-history"
         }
-
         if segControl.subviews.indices.contains(2) {
             segControl.subviews[2].accessibilityLabel = "Keyboard"
             segControl.subviews[2].accessibilityHint = "select to use keyboard"
             segControl.subviews[2].accessibilityIdentifier = "tbox-seg-keyboard"
         }
-        
-        searchSeg.setTitleTextAttributes([
-            .font: UIFont.systemFont(ofSize: fsize)
-        ], for: .normal)
-        
+
+        // Set up accessibility for search segmented control
         searchSeg.accessibilityIdentifier = "tbox-seg-search"
-        // Set accessibility properties for search segment with safe array access
+        if searchSeg.subviews.indices.contains(0) {
+            searchSeg.subviews[0].accessibilityLabel = "Use"
+            searchSeg.subviews[0].accessibilityHint = "select to use text for this entry"
+            searchSeg.subviews[0].accessibilityIdentifier = "tbox-mode-use"
+        }
         if searchSeg.subviews.indices.contains(1) {
-            searchSeg.subviews[1].accessibilityLabel = "Use"
-            searchSeg.subviews[1].accessibilityHint = "select to use text for this entry"
-            searchSeg.subviews[1].accessibilityIdentifier = "tbox-mode-use"
+            searchSeg.subviews[1].accessibilityLabel = "Search"
+            searchSeg.subviews[1].accessibilityHint = "select to use text for searching previous entries"
+            searchSeg.subviews[1].accessibilityIdentifier = "tbox-mode-srch"
         }
 
-        if searchSeg.subviews.indices.contains(0) {
-            searchSeg.subviews[0].accessibilityLabel = "Search"
-            searchSeg.subviews[0].accessibilityHint = "select to use text for searching previous entries"
-            searchSeg.subviews[0].accessibilityIdentifier = "tbox-mode-srch"
-        }
-        
-        orAndSeg.setTitleTextAttributes([
-            .font: UIFont.systemFont(ofSize: fsize)
-        ], for: .normal)
-        
+        // Set up accessibility for or/and segmented control
         orAndSeg.accessibilityIdentifier = "tbox-seg-search-mode"
-        // Set accessibility properties for or/and segment with safe array access
         if orAndSeg.subviews.indices.contains(0) {
             orAndSeg.subviews[0].accessibilityLabel = "And"
             orAndSeg.subviews[0].accessibilityHint = "search for entries with all lines"
             orAndSeg.subviews[0].accessibilityIdentifier = "tbox-srch-and"
         }
-
         if orAndSeg.subviews.indices.contains(1) {
             orAndSeg.subviews[1].accessibilityLabel = "Or"
             orAndSeg.subviews[1].accessibilityHint = "search for entries with any of lines"
             orAndSeg.subviews[1].accessibilityIdentifier = "tbox-srch-or"
         }
 
+        // Set up button accessibility
+        addButton.accessibilityLabel = "add line"
+        addButton.accessibilityHint = "tap to add selected contact or history line"
+        addButton.accessibilityIdentifier = "tbox-add-sel-line"
+
+        clearButton.accessibilityLabel = "clear all text"
+        clearButton.accessibilityHint = "tap to remove all text"
+        clearButton.accessibilityIdentifier = "tbox-clear"
     }
     
 }  // end of accessoryView
@@ -565,6 +648,11 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
 
         //DBGLog(@"add picker data %@",str);
         textView?.text = (textView?.text ?? "") + str
+
+        // Manually trigger textViewDidChange to show save button
+        if let textView = textView {
+            textViewDidChange(textView)
+        }
     }
      
     func finishSegChanged1(_ ndx:Int) {

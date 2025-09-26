@@ -82,7 +82,6 @@
 		D482D276114FEB7500CE6BC8 /* trackerObj.swift in Sources */ = {isa = PBXBuildFile; fileRef = D482D275114FEB7500CE6BC8 /* trackerObj.swift */; };
 		D487D7741260A77800298C1D /* configTVObjVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = D487D7721260A77800298C1D /* configTVObjVC.swift */; };
 		D48E98642A23BE8100AC5ACB /* voTextBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4B6AE71127EC35E00C036ED /* voTextBox.swift */; };
-		D48E98672A23E65700AC5ACB /* voTBacc2.xib in Resources */ = {isa = PBXBuildFile; fileRef = D48E98602A22831200AC5ACB /* voTBacc2.xib */; };
 		D48F9E7F119AA02A00B37C93 /* valueObj.swift in Sources */ = {isa = PBXBuildFile; fileRef = D48F9E7E119AA02A00B37C93 /* valueObj.swift */; };
 		D48F9FB2119B4CA600B37C93 /* addValObjController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D48F9FB0119B4CA600B37C93 /* addValObjController.swift */; };
 		D494D5B52DA567C500298132 /* healthKitData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D494D5B42DA567B800298132 /* healthKitData.swift */; };
@@ -249,7 +248,6 @@
 		D482D271114FEB5E00CE6BC8 /* trackerList.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = trackerList.swift; sourceTree = "<group>"; };
 		D482D275114FEB7500CE6BC8 /* trackerObj.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = trackerObj.swift; sourceTree = "<group>"; };
 		D487D7721260A77800298C1D /* configTVObjVC.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = configTVObjVC.swift; sourceTree = "<group>"; };
-		D48E98602A22831200AC5ACB /* voTBacc2.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = voTBacc2.xib; path = Resources/xib/voTBacc2.xib; sourceTree = SOURCE_ROOT; };
 		D48F9E7E119AA02A00B37C93 /* valueObj.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = valueObj.swift; sourceTree = "<group>"; };
 		D48F9FB0119B4CA600B37C93 /* addValObjController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = addValObjController.swift; sourceTree = "<group>"; };
 		D494D5B42DA567B800298132 /* healthKitData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = healthKitData.swift; sourceTree = "<group>"; };
@@ -579,7 +577,6 @@
 				D4B6AE82127EC39800C036ED /* voBoolean.swift */,
 				D4B6AE7B127EC38300C036ED /* voChoice.swift */,
 				D4B6AE71127EC35E00C036ED /* voTextBox.swift */,
-				D48E98602A22831200AC5ACB /* voTBacc2.xib */,
 				D4C1873E128A971000A612C4 /* voDataEdit.swift */,
 				D4B6AE6C127EC34D00C036ED /* voText.swift */,
 				D4B6AE67127EC33500C036ED /* voNumber.swift */,
@@ -793,7 +790,6 @@
 				D40607E117D7CB5A00C05A38 /* closedview-button-blue-7.png in Resources */,
 				D44C0DAD14AE4FF800C3DEB0 /* shadeview-button-blue.png in Resources */,
 				D4A8D07B14F114EC0028AD03 /* Settings.bundle in Resources */,
-				D48E98672A23E65700AC5ACB /* voTBacc2.xib in Resources */,
 				D4B3009315A9B51A0042319D /* sampleTrackers in Resources */,
 				D40607E417D7CB5A00C05A38 /* fullview-button-blue-7@2x.png in Resources */,
 				D4D555111BAC84C600064968 /* LaunchScreenImg.png in Resources */,
