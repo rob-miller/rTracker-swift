@@ -968,12 +968,7 @@ extension trackerObj {
     func voHasData(_ vid: Int) -> Bool {
         let sql = "select count(*) from voData where id=\(vid);"
         let rslt = toQry2Int(sql:sql)
-        //self.sql = nil;
-
-        if rslt == 0 {
-            return false
-        }
-        return true
+        return rslt != 0
     }
 
     func checkData() -> Bool {
