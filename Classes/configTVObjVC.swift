@@ -977,7 +977,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
 
     @objc func notifyReminderView() {
         DBGLog("notify reminder view!")
-        let nrvc = notifyReminderViewController(nibName: "notifyReminderViewController", bundle: nil)
+        let nrvc = notifyReminderViewController(nibName: nil, bundle: nil)
         nrvc.tracker = to
         nrvc.modalPresentationStyle = .fullScreen
         nrvc.modalTransitionStyle = .coverVertical

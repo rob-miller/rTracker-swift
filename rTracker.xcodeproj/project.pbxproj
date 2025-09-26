@@ -104,7 +104,6 @@
 		D4ACDDBD29CC864800B1F9A4 /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D4B8D0041BAC1500002E94CD /* libsqlite3.tbd */; };
 		D4B3009315A9B51A0042319D /* sampleTrackers in Resources */ = {isa = PBXBuildFile; fileRef = D4B3009215A9B51A0042319D /* sampleTrackers */; };
 		D4B634B817B1C3B500E96BC1 /* notifyReminderViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4B634B617B1C3B500E96BC1 /* notifyReminderViewController.swift */; };
-		D4B634B917B1C3B500E96BC1 /* notifyReminderViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = D4B634B717B1C3B500E96BC1 /* notifyReminderViewController.xib */; };
 		D4B6AE68127EC33500C036ED /* voNumber.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4B6AE67127EC33500C036ED /* voNumber.swift */; };
 		D4B6AE6D127EC34D00C036ED /* voText.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4B6AE6C127EC34D00C036ED /* voText.swift */; };
 		D4B6AE77127EC36E00C036ED /* voSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4B6AE76127EC36E00C036ED /* voSlider.swift */; };
@@ -275,7 +274,6 @@
 		D4B091BE2A166EFA00C0D5E3 /* rTracker-Bridging-Header.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "rTracker-Bridging-Header.h"; path = "Classes/rTracker-Bridging-Header.h"; sourceTree = "<group>"; };
 		D4B3009215A9B51A0042319D /* sampleTrackers */ = {isa = PBXFileReference; lastKnownFileType = folder; path = sampleTrackers; sourceTree = "<group>"; };
 		D4B634B617B1C3B500E96BC1 /* notifyReminderViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = notifyReminderViewController.swift; sourceTree = "<group>"; };
-		D4B634B717B1C3B500E96BC1 /* notifyReminderViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = notifyReminderViewController.xib; sourceTree = "<group>"; };
 		D4B6AE67127EC33500C036ED /* voNumber.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = voNumber.swift; sourceTree = "<group>"; };
 		D4B6AE6C127EC34D00C036ED /* voText.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = voText.swift; sourceTree = "<group>"; };
 		D4B6AE71127EC35E00C036ED /* voTextBox.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = voTextBox.swift; sourceTree = "<group>"; };
@@ -633,7 +631,6 @@
 				D4CA92BA2D2B115400554F55 /* ahViewController.swift */,
 				D424D0692D81E8370027C9E6 /* otViewController.swift */,
 				D4B634B617B1C3B500E96BC1 /* notifyReminderViewController.swift */,
-				D4B634B717B1C3B500E96BC1 /* notifyReminderViewController.xib */,
 				D47D169019028FBE006563B9 /* notifyReminderVC2.swift */,
 				D47D168D19028F2C006563B9 /* notifyReminderVC2.xib */,
 				D47B5647194118D5002B0CCA /* trackerCalCalendarRowCell.swift */,
@@ -803,7 +800,6 @@
 				D48E98672A23E65700AC5ACB /* voTBacc2.xib in Resources */,
 				D4B3009315A9B51A0042319D /* sampleTrackers in Resources */,
 				D40607E417D7CB5A00C05A38 /* fullview-button-blue-7@2x.png in Resources */,
-				D4B634B917B1C3B500E96BC1 /* notifyReminderViewController.xib in Resources */,
 				D4D555111BAC84C600064968 /* LaunchScreenImg.png in Resources */,
 				D4C0B3E023E9C3BB00304511 /* bell 1.caf in Resources */,
 				D417E3122A2121570093564A /* LICENSE in Resources */,
