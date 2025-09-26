@@ -1055,6 +1055,27 @@ extension trackerObj {
         return URL(fileURLWithPath:fpath)
     }
 
+    func writeTmpDatabase() -> URL? {
+        let tmpPath = getTmpPath(".sqlite3")
+
+        // Ensure database is flushed and WAL files are checkpointed
+        if tDb != nil {
+            toExecSql(sql: "PRAGMA wal_checkpoint(TRUNCATE)")
+        }
+
+        // Copy database file to temp location
+        guard let dbName = dbName else { return nil }
+        let sourcePath = rTracker_resource.ioFilePath(dbName, access: DBACCESS)
+
+        do {
+            try FileManager.default.copyItem(atPath: sourcePath, toPath: tmpPath)
+            return URL(fileURLWithPath: tmpPath)
+        } catch {
+            DBGErr("Failed to copy database: \(error)")
+            return nil
+        }
+    }
+
     func writeTmpRtrk(_ withData: Bool) -> URL? {
         var tData: [AnyHashable : Any] = [:]
 

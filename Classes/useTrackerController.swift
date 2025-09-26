@@ -1976,6 +1976,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         case shareCSV = "Share CSV"
         case shareTracker = "Share Tracker"
         case shareTrackerData = "Share Tracker+Data"
+        case shareDatabase = "Share Database (.sqlite3)"
         case saveToPC = "Save to app directory"
         case saveRecord = "Save unchanged record"
         case duplicateEntry = "Duplicate entry to Now"
@@ -1998,7 +1999,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         let alert = UIAlertController(
             title: tracker?.trackerName ?? "", message: nil, preferredStyle: .actionSheet)
         
-        var options: [MenuOption] = [.shareCSV, .shareTracker, .shareTrackerData, .saveToPC]
+        var options: [MenuOption] = [.shareCSV, .shareTracker, .shareTrackerData, .shareDatabase, .saveToPC]
         
         let postD = tracker!.postDate()
         let lastD = tracker!.lastDate()
@@ -2037,6 +2038,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             fileURL = tracker.writeTmpCSV()
         case .shareTracker, .shareTrackerData:
             fileURL = tracker.writeTmpRtrk(option == .shareTrackerData)
+        case .shareDatabase:
+            fileURL = tracker.writeTmpDatabase()
         case .saveToPC:
             iTunesExport()
         case .saveRecord:
