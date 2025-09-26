@@ -1507,12 +1507,14 @@ class rTracker_resource: NSObject {
 
   // MARK: - UseTrackerController Button Functions
 
-  /// Creates a modern iOS 26 menu button with file menu and cursor arrow
+  /// Creates a modern iOS 26 menu button with file menu and pointer arrow
   class func createMenuButton(target: Any?, action: Selector) -> UIBarButtonItem {
+    let paleBluColor = UIColor(red: 0.4, green: 0.6, blue: 0.9, alpha: 1.0)
     return createStyledButton(
-      symbolName: "filemenu.and.cursor.arrow",
+      symbolName: "filemenu.and.pointer.arrow",
       target: target,
       action: action,
+      symbolColor: paleBluColor,
       fallbackSystemItem: .action
     )
   }
