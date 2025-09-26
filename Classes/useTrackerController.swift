@@ -240,23 +240,9 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         keyboardIsShown = false
         
         // navigationbar setup
-        let backButton: UIBarButtonItem
-        if #available(iOS 26.0, *) {
-            // iOS 26: Use glass effect button
-            let button = UIButton(type: .system)
-            button.setTitle(String("< \(rvcTitle!)"), for: .normal)
-            button.configuration = UIButton.Configuration.glass()
-            button.addTarget(self, action: #selector(addTrackerController.btnCancel), for: .touchUpInside)
-            backButton = UIBarButtonItem(customView: button)
-            backButton.hidesSharedBackground = true  // Remove white container background
-        } else {
-            // Pre-iOS 26: Use text button as before
-            backButton = UIBarButtonItem(
-                title: String("< \(rvcTitle!)") /*@"< rTracker"  // rTracker ... tracks ? */,
-                style: .plain,
-                target: self,
-                action: #selector(addTrackerController.btnCancel))
-        }
+        let backButton = rejectable ?
+            rTracker_resource.createRedBackButton(target: self, action: #selector(addTrackerController.btnCancel)) :
+            rTracker_resource.createBackButton(target: self, action: #selector(addTrackerController.btnCancel))
         navigationItem.leftBarButtonItem = backButton
         
         // toolbar setup - defer to viewWillAppear to avoid constraint conflicts
@@ -1259,35 +1245,18 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     var menuBtn: UIBarButtonItem {
         if _menuBtn == nil {
             if rejectable {
-                _menuBtn = UIBarButtonItem(
-                    title: "Accept",
-                    style: .plain,
-                    target: self,
-                    action: #selector(btnAccept))
-                if #available(iOS 26.0, *) {
-                    _menuBtn!.hidesSharedBackground = true  // Remove white container background
-                }
-                _menuBtn!.tintColor = .green
-
+                _menuBtn = rTracker_resource.createAcceptButton(target: self, action: #selector(btnAccept))
                 _menuBtn!.accessibilityLabel = "Accept"
                 _menuBtn!.accessibilityHint = "tap to accept importing this tracker"
                 _menuBtn!.accessibilityIdentifier = "trkrAccept"
             } else {
-                _menuBtn = UIBarButtonItem(
-                    image: UIImage(systemName: "square.and.arrow.up"),
-                    style: .plain,
-                    target: self,
-                    action: #selector(btnMenu))
-                if #available(iOS 26.0, *) {
-                    _menuBtn!.hidesSharedBackground = true  // Remove white container background
-                }
-
+                _menuBtn = rTracker_resource.createMenuButton(target: self, action: #selector(btnMenu))
                 _menuBtn!.accessibilityLabel = "Share Menu"
                 _menuBtn!.accessibilityHint = "tap to show sharing options"
                 _menuBtn!.accessibilityIdentifier = "trkrMenu"
             }
         }
-        
+
         return _menuBtn!
     }
     
@@ -1862,31 +1831,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     var _calBtn: UIBarButtonItem?
     var calBtn: UIBarButtonItem {
         if _calBtn == nil {
-            if #available(iOS 26.0, *) {
-                // iOS 26: Use glass effect button
-                let button = UIButton(type: .system)
-                button.setTitle("📆", for: .normal)
-                button.configuration = UIButton.Configuration.glass()
-                button.addTarget(self, action: #selector(btnCal), for: .touchUpInside)
-                _calBtn = UIBarButtonItem(customView: button)
-                _calBtn!.hidesSharedBackground = true  // Remove white container background
-            } else {
-                // Pre-iOS 26: Use text button as before
-                _calBtn = UIBarButtonItem(
-                    title: "📆" /* @"\u2630" //@"Cal" */,
-                    style: .plain,
-                    target: self,
-                    action: #selector(btnCal))
-                _calBtn!.setTitleTextAttributes(
-                    [
-                        .font: UIFont.systemFont(ofSize: 28.0)
-                        //,NSForegroundColorAttributeName: [UIColor greenColor]
-                    ],
-                    for: .normal)
-            }
-            _calBtn!.tintColor = UIColor(red: 0.0, green: 0.8, blue: 0.0, alpha: 1.0)
-            //_calBtn.tintColor = [UIColor greenColor];
-
+            _calBtn = rTracker_resource.createCalendarButton(target: self, action: #selector(btnCal))
             _calBtn!.accessibilityLabel = "Calendar"
             _calBtn!.accessibilityHint = "tap to select entries by date"
             _calBtn!.accessibilityIdentifier = "trkrCal"
@@ -1898,35 +1843,10 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     var _searchBtn: UIBarButtonItem?
     var searchBtn: UIBarButtonItem {
         if _searchBtn == nil {
-            if #available(iOS 26.0, *) {
-                // iOS 26: Use glass effect button
-                let button = UIButton(type: .system)
-                button.setTitle("🔍", for: .normal)
-                button.configuration = UIButton.Configuration.glass()
-                button.addTarget(self, action: #selector(btnSearch), for: .touchUpInside)
-                _searchBtn = UIBarButtonItem(customView: button)
-                _searchBtn!.hidesSharedBackground = true  // Remove white container background
-            } else {
-                // Pre-iOS 26: Use text button as before
-                _searchBtn = UIBarButtonItem(
-                    title: "🔍" /*@"Cal" */,
-                    style: .plain,
-                    target: self,
-                    action: #selector(btnSearch))
-                _searchBtn!.setTitleTextAttributes(
-                    [
-                        .font: UIFont.systemFont(ofSize: 28.0)
-                        //,NSForegroundColorAttributeName: [UIColor greenColor]
-                    ],
-                    for: .normal)
-            }
-            _searchBtn!.tintColor = UIColor(red: 0.0, green: 0.0, blue: 0.8, alpha: 1.0)
-            //_searchBtn.tintColor = [UIColor greenColor];
-
+            _searchBtn = rTracker_resource.createSearchButton(target: self, action: #selector(btnSearch))
             _searchBtn!.accessibilityLabel = "Search"
             _searchBtn!.accessibilityHint = "tap for search instructions"
             _searchBtn!.accessibilityIdentifier = "trkrSearch"
-
         }
 
         return _searchBtn!
@@ -1943,70 +1863,21 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     var _delBtn: UIBarButtonItem?
     var delBtn: UIBarButtonItem {
         if _delBtn == nil {
-            if #available(iOS 26.0, *) {
-                // iOS 26: Use glass effect button with custom glass background
-                let button = UIButton(type: .system)
-                button.setTitle("🗑️", for: .normal)
-                button.configuration = UIButton.Configuration.glass()
-                button.addTarget(self, action: #selector(btnDel), for: .touchUpInside)
-                _delBtn = UIBarButtonItem(customView: button)
-                _delBtn!.hidesSharedBackground = true  // Remove white container background
-            } else if #available(iOS 18.0, *) {
-                // iOS 18: Use text-based button to avoid system button constraint issues
-                _delBtn = UIBarButtonItem(
-                    title: "🗑️",
-                    style: .plain,
-                    target: self,
-                    action: #selector(btnDel))
-            } else {
-                // Pre-iOS 18: Use system button as before
-                _delBtn = UIBarButtonItem(
-                    barButtonSystemItem: .trash,
-                    target: self,
-                    action: #selector(btnDel))
-            }
-            _delBtn!.tintColor = .red
-            //[_delBtn setTitleTextAttributes:@{
-            //                                 NSFontAttributeName: [UIFont systemFontOfSize:28.0]
-            //                                 ,NSForegroundColorAttributeName: [UIColor redColor]
-            //                                 } forState:UIControlStateNormal];
+            _delBtn = rTracker_resource.createDeleteButton(target: self, action: #selector(btnDel))
         }
-        
+
         return _delBtn!
     }
     
     var _skip2EndBtn: UIBarButtonItem?
     var skip2EndBtn: UIBarButtonItem {
         if _skip2EndBtn == nil {
-            if #available(iOS 26.0, *) {
-                // iOS 26: Use glass effect button with custom glass background
-                let button = UIButton(type: .system)
-                button.setTitle("⏩", for: .normal)
-                button.configuration = UIButton.Configuration.glass()
-                button.addTarget(self, action: #selector(btnSkip2End), for: .touchUpInside)
-                _skip2EndBtn = UIBarButtonItem(customView: button)
-                _skip2EndBtn!.hidesSharedBackground = true  // Remove white container background
-            } else if #available(iOS 18.0, *) {
-                // iOS 18: Use text-based button to avoid system button constraint issues
-                _skip2EndBtn = UIBarButtonItem(
-                    title: "⏩",
-                    style: .plain,
-                    target: self,
-                    action: #selector(btnSkip2End))
-            } else {
-                // Pre-iOS 18: Use system button as before
-                _skip2EndBtn = UIBarButtonItem(
-                    barButtonSystemItem: .fastForward,
-                    target: self,
-                    action: #selector(btnSkip2End))
-            }
-
+            _skip2EndBtn = rTracker_resource.createSkipToEndButton(target: self, action: #selector(btnSkip2End))
             _skip2EndBtn!.accessibilityLabel = "Skip"
             _skip2EndBtn!.accessibilityHint = "tap to skip to new entry"
             _skip2EndBtn!.accessibilityIdentifier = "trkrSkip"
-
         }
-        
+
         return _skip2EndBtn!
     }
     
@@ -2044,35 +1915,10 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     var _createChartBtn: UIBarButtonItem?
     var createChartBtn: UIBarButtonItem {
         if _createChartBtn == nil {
-            if #available(iOS 26.0, *) {
-                // iOS 26: Use glass effect button with custom glass background
-                let button = UIButton(type: .system)
-                button.setTitle("📊", for: .normal)
-                button.configuration = UIButton.Configuration.glass()
-                button.addTarget(self, action: #selector(btnCreateChart), for: .touchUpInside)
-                _createChartBtn = UIBarButtonItem(customView: button)
-                _createChartBtn!.hidesSharedBackground = true  // Remove white container background
-            } else if #available(iOS 18.0, *) {
-                // iOS 18: Use text-based button to avoid SF Symbol constraint issues
-                _createChartBtn = UIBarButtonItem(
-                    title: "📊",
-                    style: .plain,
-                    target: self,
-                    action: #selector(btnCreateChart))
-            } else {
-                // Pre-iOS 18: Use SF Symbol as before
-                _createChartBtn = UIBarButtonItem(
-                    image: UIImage(systemName: "chart.bar.xaxis"),
-                    style: .plain,
-                    target: self,
-                    action: #selector(btnCreateChart))
-            }
-
+            _createChartBtn = rTracker_resource.createChartButton(target: self, action: #selector(btnCreateChart))
             _createChartBtn!.accessibilityLabel = "Chart"
             _createChartBtn!.accessibilityHint = "tap to view data charts"
             _createChartBtn!.accessibilityIdentifier = "trkrChart"
-
-            // Constraint configuration no longer needed since we use emoji buttons on iOS 18+ and glass buttons on iOS 26+
         }
         return _createChartBtn!
     }

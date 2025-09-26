@@ -1402,6 +1402,17 @@ class rTracker_resource: NSObject {
     )
   }
 
+  /// Creates a modern iOS 26 red back button for cancel/reject actions
+  class func createRedBackButton(target: Any?, action: Selector) -> UIBarButtonItem {
+    return createStyledButton(
+      symbolName: "chevron.left.circle.fill",
+      target: target,
+      action: action,
+      symbolColor: .systemRed,
+      fallbackTitle: "<"
+    )
+  }
+
   /// Creates a modern iOS 26 edit button with standard styling
   class func createEditButton(target: Any?, action: Selector) -> UIBarButtonItem {
     return createStyledButton(
@@ -1491,6 +1502,84 @@ class rTracker_resource: NSObject {
       target: target,
       action: action,
       fallbackTitle: "Cancel"
+    )
+  }
+
+  // MARK: - UseTrackerController Button Functions
+
+  /// Creates a modern iOS 26 menu button with file menu and cursor arrow
+  class func createMenuButton(target: Any?, action: Selector) -> UIBarButtonItem {
+    return createStyledButton(
+      symbolName: "filemenu.and.cursor.arrow",
+      target: target,
+      action: action,
+      fallbackSystemItem: .action
+    )
+  }
+
+  /// Creates a modern iOS 26 accept button with import arrow for accepting merged data
+  class func createAcceptButton(target: Any?, action: Selector) -> UIBarButtonItem {
+    return createStyledButton(
+      symbolName: "arrow.down.doc.fill",
+      target: target,
+      action: action,
+      symbolColor: .systemGreen,
+      fallbackTitle: "Accept"
+    )
+  }
+
+  /// Creates a modern iOS 26 calendar button with calendar symbol
+  class func createCalendarButton(target: Any?, action: Selector) -> UIBarButtonItem {
+    let paleGreenColor = UIColor(red: 0.4, green: 0.8, blue: 0.4, alpha: 1.0)
+    return createStyledButton(
+      symbolName: "calendar",
+      target: target,
+      action: action,
+      symbolColor: paleGreenColor,
+      fallbackTitle: "Cal"
+    )
+  }
+
+  /// Creates a modern iOS 26 search button with magnifying glass circle
+  class func createSearchButton(target: Any?, action: Selector) -> UIBarButtonItem {
+    let blueColor = UIColor(red: 0.0, green: 0.0, blue: 0.8, alpha: 1.0)
+    return createStyledButton(
+      symbolName: "magnifyingglass.circle",
+      target: target,
+      action: action,
+      symbolColor: blueColor,
+      fallbackTitle: "Search"
+    )
+  }
+
+  /// Creates a modern iOS 26 delete button with trash bin and X mark
+  class func createDeleteButton(target: Any?, action: Selector) -> UIBarButtonItem {
+    return createStyledButton(
+      symbolName: "xmark.bin",
+      target: target,
+      action: action,
+      symbolColor: .systemRed,
+      fallbackSystemItem: .trash
+    )
+  }
+
+  /// Creates a modern iOS 26 skip to end button with forward chevron to line
+  class func createSkipToEndButton(target: Any?, action: Selector) -> UIBarButtonItem {
+    return createStyledButton(
+      symbolName: "chevron.forward.to.line",
+      target: target,
+      action: action,
+      fallbackSystemItem: .fastForward
+    )
+  }
+
+  /// Creates a modern iOS 26 chart button with Y-axis line chart
+  class func createChartButton(target: Any?, action: Selector) -> UIBarButtonItem {
+    return createStyledButton(
+      symbolName: "chart.line.uptrend.xyaxis",
+      target: target,
+      action: action,
+      fallbackTitle: "Chart"
     )
   }
 
