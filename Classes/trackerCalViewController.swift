@@ -11,15 +11,17 @@
 //include TimesSquare/TimesSquare.h
 import UIKit
 
+// Note: DatePickerResult and DatePickerAction are defined in datePickerVC.swift
+
 class trackerCalViewController: UIViewController, TSQCalendarViewDelegate {
     /*
      {
         trackerObj *tracker;
-        dpRslt *dpr;
+        DatePickerResult *dpr;
     }
     */
     var tracker: trackerObj?
-    var dpr: dpRslt?
+    var dpr: DatePickerResult?
 
     private var _calendar: Calendar?
     var calendar: Calendar? {
@@ -177,7 +179,7 @@ class trackerCalViewController: UIViewController, TSQCalendarViewDelegate {
 
     func leaveCalendar() {
         dpr?.date = nil
-        dpr?.action = DPA_CANCEL
+        dpr?.action = .cancel
         //[self dismissModalViewControllerAnimated:YES];
         dismiss(animated: true)
     }
@@ -258,7 +260,7 @@ class trackerCalViewController: UIViewController, TSQCalendarViewDelegate {
         }
 
         dpr?.date = date
-        dpr?.action = DPA_GOTO_POST
+        dpr?.action = .gotoPost
         //[self dismissModalViewControllerAnimated:YES];
         dismiss(animated: true)
         /*

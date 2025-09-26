@@ -48,6 +48,8 @@
 import MessageUI
 import UIKit
 
+// Note: DatePickerResult and DatePickerAction are defined in datePickerVC.swift
+
 class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDataSource,
                             UITextFieldDelegate, MFMailComposeViewControllerDelegate,
                             UIAdaptivePresentationControllerDelegate, RefreshProgressDelegate
@@ -124,10 +126,10 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         return _dpvc!
     }
     
-    var _dpr: dpRslt?
-    var dpr: dpRslt {
+    var _dpr: DatePickerResult?
+    var dpr: DatePickerResult {
         if _dpr == nil {
-            _dpr = dpRslt()
+            _dpr = DatePickerResult()
         }
         return _dpr!
     }
@@ -626,12 +628,12 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             
             if _dpr != nil {
                 switch dpr.action {
-                case DPA_NEW:
+                case .new:
                     tracker!.resetData()
                     tracker!.trackerDate = Date(
                         timeIntervalSince1970: TimeInterval(
                             tracker!.noCollideDate(Int(dpr.date!.timeIntervalSince1970))))
-                case DPA_SET:
+                case .set:
                     if tracker!.hasData() {
                         tracker!.change(dpr.date)
                         needSave = true
@@ -639,7 +641,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                         tracker!.trackerDate = dpr.date
                     }
                     //[self updateToolBar];
-                case DPA_GOTO:
+                case .goto:
                     var targD = 0
                     if nil != dpr.date {
                         // set to nil to cause reset tracker, ready for new
@@ -653,8 +655,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                         }
                     }
                     loadTrackerDate(targD)
-                case DPA_GOTO_POST /* for TimesSquare calendar which gives date with time=midnight (= beginning of day) */
-                    :
+                case .gotoPost /* for TimesSquare calendar which gives date with time=midnight (= beginning of day) */:
                     var targD = 0
                     if nil != dpr.date {
                         // set to nil to cause reset tracker, ready for new
@@ -669,7 +670,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                         }
                     }
                     loadTrackerDate(targD)
-                case DPA_CANCEL:
+                case .cancel:
                     break
                 default:
                     dbgNSAssert(false, "failed to determine dpr action")
@@ -899,7 +900,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         gt?.tracker = tracker
         if tracker!.hasData() {
             dpr.date = tracker!.trackerDate
-            dpr.action = DPA_GOTO
+            dpr.action = .goto
         }
         gt?.dpr = dpr
         gt?.parentUTC = self

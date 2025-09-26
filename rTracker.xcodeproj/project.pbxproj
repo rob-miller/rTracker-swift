@@ -140,7 +140,6 @@
 		D4D555111BAC84C600064968 /* LaunchScreenImg.png in Resources */ = {isa = PBXBuildFile; fileRef = D4D555101BAC84C600064968 /* LaunchScreenImg.png */; };
 		D4D7DCEB125B25E00049EB93 /* checked.png in Resources */ = {isa = PBXBuildFile; fileRef = D4D7DCEA125B25E00049EB93 /* checked.png */; };
 		D4D7DCED125B25F70049EB93 /* unchecked.png in Resources */ = {isa = PBXBuildFile; fileRef = D4D7DCEC125B25F70049EB93 /* unchecked.png */; };
-		D4DC23FF138404140086E5F3 /* dpRslt.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4DC23FE138404140086E5F3 /* dpRslt.swift */; };
 		D4E5FDD8125283B1004BB4EC /* graphTrackerVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5FDD6125283B1004BB4EC /* graphTrackerVC.swift */; };
 		D4E5FE4612529300004BB4EC /* graphTrackerV.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5FE4512529300004BB4EC /* graphTrackerV.swift */; };
 		D4E8F90112E8682100A2526B /* privacyV.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E8F90012E8682100A2526B /* privacyV.swift */; };
@@ -314,7 +313,6 @@
 		D4D555101BAC84C600064968 /* LaunchScreenImg.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = LaunchScreenImg.png; path = Resources/png/LaunchScreenImg.png; sourceTree = "<group>"; };
 		D4D7DCEA125B25E00049EB93 /* checked.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = checked.png; path = Resources/png/checked.png; sourceTree = "<group>"; };
 		D4D7DCEC125B25F70049EB93 /* unchecked.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = unchecked.png; path = Resources/png/unchecked.png; sourceTree = "<group>"; };
-		D4DC23FE138404140086E5F3 /* dpRslt.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = dpRslt.swift; sourceTree = "<group>"; };
 		D4E5FDD6125283B1004BB4EC /* graphTrackerVC.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = graphTrackerVC.swift; sourceTree = "<group>"; };
 		D4E5FE4512529300004BB4EC /* graphTrackerV.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = graphTrackerV.swift; sourceTree = "<group>"; };
 		D4E8F90012E8682100A2526B /* privacyV.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = privacyV.swift; sourceTree = "<group>"; };
@@ -659,7 +657,6 @@
 			isa = PBXGroup;
 			children = (
 				D4BBB57E12672C94000F8467 /* datePickerVC.swift */,
-				D4DC23FE138404140086E5F3 /* dpRslt.swift */,
 			);
 			name = "date picker";
 			sourceTree = "<group>";
@@ -927,7 +924,6 @@
 				D4F0239E137BFFB40097AC16 /* gtYAxV.swift in Sources */,
 				D47B564519411739002B0CCA /* trackerCalViewController.swift in Sources */,
 				D4F023A1137BFFD80097AC16 /* gtVONameV.swift in Sources */,
-				D4DC23FF138404140086E5F3 /* dpRslt.swift in Sources */,
 				D4B634B817B1C3B500E96BC1 /* notifyReminderViewController.swift in Sources */,
 				D47B5648194118D5002B0CCA /* trackerCalCalendarRowCell.swift in Sources */,
 				117E46C68F269835B99C0F81 /* gfx.swift in Sources */,

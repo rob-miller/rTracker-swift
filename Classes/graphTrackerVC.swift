@@ -51,6 +51,8 @@
 
 import UIKit
 
+// Note: DatePickerResult and DatePickerAction are defined in datePickerVC.swift
+
 class graphTrackerVC: UIViewController, UIScrollViewDelegate {
     /*{
     	trackerObj *tracker;
@@ -64,7 +66,7 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
         gtXAxV *xAV;
         gtYAxV *yAV;
 
-        dpRslt *dpr;
+        DatePickerResult *dpr;
 
         useTrackerController *parentUTC;
 
@@ -81,7 +83,7 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
     var voNameView: gtVONameV?
     var xAV: gtXAxV?
     var yAV: gtYAxV?
-    var dpr: dpRslt?
+    var dpr: DatePickerResult?
     var parentUTC: useTrackerController?
 
     
@@ -213,7 +215,7 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
         gtv?.tracker = tracker
         gtv?.gtvCurrVO = currVO
         gtv?.parentGTVC = self
-        if DPA_GOTO == dpr?.action {
+        if dpr?.action == .goto {
             let targSecs = Int(dpr!.date!.timeIntervalSince1970) - tracker!.togd!.firstDate
             gtv?.xMark = Double(targSecs) * (tracker!.togd!.dateScale)
             xAV?.markDate = dpr!.date
@@ -235,7 +237,7 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
         //DBGLog(@".");
         super.viewWillAppear(animated)
 
-        if DPA_GOTO == dpr?.action {
+        if dpr?.action == .goto {
             let targSecs = Int(dpr!.date!.timeIntervalSince1970) - tracker!.togd!.firstDate
             gtv?.xMark = Double(targSecs) * (tracker!.togd!.dateScale)
         }
@@ -713,14 +715,14 @@ class graphTrackerVC: UIViewController, UIScrollViewDelegate {
             let nearDate = Int(Double(tracker!.togd!.firstDate) + (touchPoint!.x * (tracker!.togd!.dateScaleInv)))
             let newDate = tracker?.dateNearest(nearDate) ?? 0
             dpr?.date = Date(timeIntervalSince1970: TimeInterval(newDate))
-            dpr?.action = DPA_GOTO
+            dpr?.action = .goto
             //self.gtv.xMark = touchPoint.x;
             gtv?.xMark = Double(newDate - tracker!.togd!.firstDate) * tracker!.togd!.dateScale
             xAV?.markDate = dpr?.date
         } else if (2 == touch?.tapCount) && (1 == (touches?.count ?? 0)) {
             DBGLog("gtvTap: cancel")
             gtv?.xMark = NOXMARK
-            dpr?.action = DPA_GOTO
+            dpr?.action = .goto
             dpr?.date = nil
             xAV?.markDate = nil
         } else {

@@ -24,6 +24,33 @@
 
 import UIKit
 
+// MARK: - Date Picker Action Types (consolidated from dpRslt.swift)
+
+enum DatePickerAction: Int {
+    case cancel = 0
+    case new = 1
+    case set = 2
+    case goto = 3
+    case gotoPost = 4
+}
+
+class DatePickerResult: NSObject {
+    var date: Date?
+    var action: DatePickerAction = .cancel
+
+    override init() {
+        super.init()
+        action = .cancel
+    }
+}
+
+// Legacy constants for backwards compatibility during transition
+let DPA_CANCEL = DatePickerAction.cancel.rawValue
+let DPA_NEW = DatePickerAction.new.rawValue
+let DPA_SET = DatePickerAction.set.rawValue
+let DPA_GOTO = DatePickerAction.goto.rawValue
+let DPA_GOTO_POST = DatePickerAction.gotoPost.rawValue
+
 ///************
 /// datePickerVC.h
 /// Copyright 2010-2021 Robert T. Miller
@@ -55,7 +82,7 @@ let SEG_TIME = 1
 class datePickerVC: UIViewController {
 
     var myTitle: String?
-    var dpr: dpRslt?
+    var dpr: DatePickerResult?
     var titleLabel: UILabel!
     var datePicker: UIDatePicker!
     var entryNewBtn: UIBarButtonItem!
@@ -78,7 +105,7 @@ class datePickerVC: UIViewController {
 
     @objc func btnCancel(_ btn: UIButton?) {
         dpr?.date = datePicker.date
-        dpr?.action = DPA_CANCEL
+        dpr?.action = .cancel
         dismiss(animated: true)
     }
 
@@ -249,7 +276,7 @@ class datePickerVC: UIViewController {
 
     @objc func entryNewBtnAction() {
         dpr?.date = datePicker.date
-        dpr?.action = DPA_NEW
+        dpr?.action = .new
         dismiss(animated: true)
 
         (presentationController?.delegate as? UIViewController)?.beginAppearanceTransition(true, animated: true)
@@ -259,7 +286,7 @@ class datePickerVC: UIViewController {
     //- (IBAction) entryCopyBtnAction;
     @objc func dateSetBtnAction() {
         dpr?.date = datePicker.date
-        dpr?.action = DPA_SET
+        dpr?.action = .set
         dismiss(animated: true)
 
         (presentationController?.delegate as? UIViewController)?.beginAppearanceTransition(true, animated: true)
@@ -270,7 +297,7 @@ class datePickerVC: UIViewController {
     //- (IBAction) dateModeChoice:(id)sender;
     @objc func dateGotoBtnAction() {
         dpr?.date = datePicker.date
-        dpr?.action = DPA_GOTO
+        dpr?.action = .goto
 
         dismiss(animated: true)
 
