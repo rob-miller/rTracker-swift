@@ -1583,6 +1583,29 @@ class rTracker_resource: NSObject {
     )
   }
 
+  /// Creates a modern iOS 26 done button with blue checkmark for keyboard accessories
+  class func createDoneButton(target: Any?, action: Selector) -> UIBarButtonItem {
+    return createStyledButton(
+      symbolName: "checkmark.circle",
+      target: target,
+      action: action,
+      symbolColor: .systemBlue,
+      symbolSize: 16,
+      fallbackTitle: "Done"
+    )
+  }
+
+  /// Creates a modern iOS 26 minus/plus toggle button for sign changes
+  class func createMinusButton(target: Any?, action: Selector) -> UIBarButtonItem {
+    return createStyledButton(
+      symbolName: "minus.forwardslash.plus",
+      target: target,
+      action: action,
+      symbolSize: 16,
+      fallbackTitle: "±"
+    )
+  }
+
 }
 
 // MARK: - UIBarButtonItem Extension for Privacy Views

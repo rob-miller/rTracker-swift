@@ -99,24 +99,21 @@ class voNumber: voState, UITextFieldDelegate {
     borderLine.autoresizingMask = [.flexibleWidth]
     containerView.addSubview(borderLine)
 
-    // Create Done button
-    let doneButton = UIButton(type: .system)
-    doneButton.setTitle("Done", for: .normal)
-    doneButton.titleLabel?.font = UIFont.systemFont(ofSize: 17)
-    doneButton.addTarget(self, action: #selector(selectDoneButton), for: .touchUpInside)
-    doneButton.frame = CGRect(x: UIScreen.main.bounds.width - 70, y: 7, width: 60, height: 30)
-    doneButton.autoresizingMask = [.flexibleLeftMargin]
-    containerView.addSubview(doneButton)
+    // Create Done button using unified button system
+    let doneButtonItem = rTracker_resource.createDoneButton(target: self, action: #selector(selectDoneButton))
+    if let doneButton = doneButtonItem.uiButton {
+        doneButton.frame = CGRect(x: UIScreen.main.bounds.width - 70, y: 7, width: 60, height: 30)
+        doneButton.autoresizingMask = [.flexibleLeftMargin]
+        containerView.addSubview(doneButton)
+    }
 
-    // Create Minus button
-    let minusButton = UIButton(type: .system)
-    minusButton.setTitle("−", for: .normal)  // Using proper minus sign (U+2212)
-    minusButton.titleLabel?.font = UIFont.boldSystemFont(ofSize: 24)  // Larger and bold
-    minusButton.setTitleColor(.label, for: .normal)  // Ensure visibility
-    minusButton.addTarget(self, action: #selector(selectMinusButton), for: .touchUpInside)
-    minusButton.frame = CGRect(x: UIScreen.main.bounds.width - 140, y: 7, width: 60, height: 30)
-    minusButton.autoresizingMask = [.flexibleLeftMargin]
-    containerView.addSubview(minusButton)
+    // Create Minus button using unified button system
+    let minusButtonItem = rTracker_resource.createMinusButton(target: self, action: #selector(selectMinusButton))
+    if let minusButton = minusButtonItem.uiButton {
+        minusButton.frame = CGRect(x: UIScreen.main.bounds.width - 140, y: 7, width: 60, height: 30)
+        minusButton.autoresizingMask = [.flexibleLeftMargin]
+        containerView.addSubview(minusButton)
+    }
 
     return containerView
   }
