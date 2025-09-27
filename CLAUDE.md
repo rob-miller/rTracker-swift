@@ -237,27 +237,17 @@ ls -la .claude/
 
 # 🚫 BUILD AND TEST RESTRICTIONS 🚫
 
-## CRITICAL: Never Run Build Commands
-**ABSOLUTELY NEVER** run xcodebuild, swift build, or any compilation commands as they consume excessive tokens and time.
-
-**Instead of building:**
+**Instead of building to save tokens and time:**
 - ✅ **Review code for syntax errors** - Look for missing semicolons, brackets, type mismatches
 - ✅ **Check method signatures** - Ensure protocol conformance and parameter types match
 - ✅ **Verify imports and dependencies** - Make sure all required modules are imported
 - ✅ **Logic review** - Check for potential runtime issues and edge cases
 
 ## 🚫 Swift Syntax Checking - USER PERMISSION REQUIRED
-**NEVER run swiftc syntax checking unless explicitly requested by user:**
 ```bash
 cd "/Users/rob/Library/Mobile Documents/com~apple~CloudDocs/sync/proj/rTracker-swift"
 swiftc -parse "Classes/[filename].swift" 2>&1 | head -20
 ```
-
-**STRICT USAGE POLICY:**
-- 🚫 **DO NOT run automatically** - Only when user explicitly requests syntax checking
-- 🚫 **No proactive validation** - Do not run after edits unless user asks
-- ✅ **User must request** - Wait for explicit "run syntax check" or similar command
-- ✅ **Ask permission first** - "Would you like me to run a syntax check?" if uncertain
 
 ## Testing Guidelines
 - **NEVER assume test frameworks** - Always check README or search codebase for testing approach
