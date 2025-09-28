@@ -8,7 +8,8 @@
       "WebSearch",
       "Bash(plutil:*)",
       "Read(//Users/rob/Library/**)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(swiftc:*)"
     ],
     "deny": []
   }
