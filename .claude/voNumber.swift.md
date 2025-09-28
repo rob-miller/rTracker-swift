@@ -1,7 +1,7 @@
 # voNumber.swift Analysis Notes
 
 ## Purpose & Role
-Handles numeric input fields in trackers, supporting manual entry, HealthKit integration, and other tracker data sources. Manages display, validation, data storage, and external data synchronization for numeric values.
+Handles numeric input fields in trackers, supporting manual entry, HealthKit integration, and other tracker data sources. Manages display, validation, data storage, and external data synchronization for numeric values. Includes enhanced ahPrevD (previous day) support with proper date shifting logic.
 
 ## Key Classes/Structs/Protocols
 - `voNumber`: Main class extending `voState` and implementing `UITextFieldDelegate`
@@ -12,10 +12,12 @@ Handles numeric input fields in trackers, supporting manual entry, HealthKit int
 ## Important Methods/Functions
 - `voDisplay(_:)`: Creates and configures the text field, handles HealthKit/Other Tracker data loading
 - `update(_:)`: Returns current value, handles time format conversion
-- `loadHKdata(forDate:dispatchGroup:)`: Loads HealthKit data into database
+- `loadHKdata(forDate:dispatchGroup:)`: Loads HealthKit data into database with enhanced ahPrevD support
 - `clearHKdata(forDate:)`: Removes HealthKit-sourced data from database
 - `createTextField()`: Sets up the UITextField with proper formatting and input accessories
 - `textFieldDidEndEditing(_:)`: Handles value changes and notifications
+- `processHealthQuery()`: Enhanced HealthKit data processing with proper date shifting for ahPrevD
+- `getHealthKitDates()`: Improved date handling using `HealthDataQuery.makeSampleType()`
 
 ## Dependencies & Relationships
 - Imports: Foundation, UIKit, SwiftUI, HealthKit
@@ -33,39 +35,44 @@ Handles numeric input fields in trackers, supporting manual entry, HealthKit int
 - Input accessory toolbar with Done and minus buttons (modern SF symbols)
 
 ## Implementation Details
-- **HealthKit Integration**: Queries HealthKit on display, caches results, handles averaging and previous-day options
+- **Enhanced ahPrevD Support**: Proper date shifting logic - shifts trkrData dates forward for storage, shifts HealthKit query dates backward
+- **HealthKit Integration**: Uses `HealthDataQuery.makeSampleType()` for unified type creation, supports all sample types
+- **Date Management**: Complex dual-direction shifting for ahPrevD mode to handle "previous day" data attribution
+- **Debug Enhancements**: Added debug date limiting (3 months back) and improved logging with target dates
 - **Data Storage**: Values stored as text in voData table, with associated voHKstatus entries for HealthKit tracking
 - **Display Logic**: Shows "<no data>" for empty HealthKit fields, different placeholders for manual vs external data
 - **Input Handling**: Decimal pad keyboard with blue checkmark Done button (checkmark.circle), minus/plus toggle button (minus.forwardslash.plus) for sign changes
 - **Privacy**: Respects privacy levels for data access
 
 ## Recent Development History
-**Current Session (2025-01-15) - Keyboard Accessory Button Refactoring:**
-- **Replaced text buttons with SF symbols**: Done button now shows blue checkmark.circle, minus button shows minus.forwardslash.plus
-- **Unified button system integration**: Uses rTracker-resource.createDoneButton() and createMinusButton() with .uiButton extension
-- **Modern appearance**: 16pt SF symbols instead of text labels for better visual clarity
-- **Architecture consistency**: Follows same .uiButton extension pattern as other modernized components
+**Latest Changes (2025-09-28) - Enhanced ahPrevD and HealthKit Integration:**
+- **Major ahPrevD Overhaul**: Complete redesign of previous day logic with proper bidirectional date shifting
+- **HealthKit Type Support**: Updated to use `HealthDataQuery.makeSampleType()` for unified quantity/category/workout support
+- **Date Shifting Logic**:
+  - For ahPrevD: Store dates shifted +1 day in trkrData, query HealthKit with dates shifted -1 day
+  - Ensures "previous day" data appears on correct tracker date
+- **Debug Enhancements**: Added 3-month debug date limiting and improved target date logging
+- **Storage Date Calculation**: Enhanced processHealthQuery to handle date shifting for proper storage location
 
-**Previous Commits:**
-- `bcb59f1`: Fixed issue where disabling HealthKit source incorrectly deleted manually entered data
-- `2df5306`: Added "<no data>" display for empty fields from external sources
-- `a0d3a8a`: Fixed resetData clearing voNumber during data loading
-- `65d8bfd`: Implemented AnyValue for other tracker sources, mergeDates functionality
-- `834d4d3`: Added progress bar support for full refresh operations
-- `1759803`: Fixed regression where null HealthKit data showed as 0, improved cache key with unit
+**Previous Major Changes:**
+- **Keyboard Accessory Modernization**: SF symbol buttons (checkmark.circle, minus.forwardslash.plus)
+- **Data Management Fixes**: Prevented manual data deletion when disabling HealthKit sources
+- **Cache Improvements**: Enhanced HealthKit caching with unit-specific keys
 
 ## Current Issues & TODOs
+- **COMPLETED**: Enhanced ahPrevD implementation with proper date shifting
+- **COMPLETED**: HealthKit integration updated for all sample types (quantity/category/workout)
+- **COMPLETED**: Debug enhancements for development efficiency
 - **COMPLETED**: Keyboard accessory button modernization with SF symbols
-- **COMPLETED**: Integration with unified button creation system
-- **COMPLETED**: .uiButton extension pattern implementation
 
 ## Issues Fixed
 - **HealthKit Data Clearing Bug**: The loadHKdata query was incorrectly processing dates with manually-entered data, creating voHKstatus entries that caused manual data to be deleted when HealthKit was disabled. Fixed by modifying the SQL query to exclude dates that already have manually-entered voData.
 - **HealthKit Cross-Contamination Bug** (2025-08-26): Fixed issue where low-frequency HealthKit valueObjs would repeatedly reprocess dates where we already knew there was `noData`. The complex OR-based SQL query only excluded `stat = hkData` entries but allowed `stat = noData` entries to be reprocessed indefinitely. Simplified to exclude ANY existing voHKstatus entry for the specific valueObj, preventing unnecessary reprocessing of dates we've already attempted.
 
 ## Last Updated
-2025-01-15 - Keyboard Accessory Button Modernization:
-- **SF Symbol integration**: Replaced "Done" text with blue checkmark.circle, "−" text with minus.forwardslash.plus symbol
-- **Unified button system**: Uses rTracker-resource button functions with .uiButton extension extraction
-- **Visual improvement**: Modern 16pt SF symbols provide clearer visual indication of button functions
-- **Architecture alignment**: Follows established .uiButton extension pattern used across the app
+2025-09-28 - Enhanced ahPrevD and HealthKit Integration:
+- **Major ahPrevD Redesign**: Implemented proper bidirectional date shifting for accurate "previous day" data attribution
+- **HealthKit Type Unification**: Updated to support all sample types (quantity/category/workout) via `makeSampleType()`
+- **Debug Improvements**: Added 3-month debug date limiting and enhanced target date logging
+- **Storage Logic Enhancement**: Proper date shifting in processHealthQuery for correct data placement
+- **Complex Date Management**: Handles shifting dates forward for storage, backward for queries in ahPrevD mode
