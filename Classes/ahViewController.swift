@@ -11,6 +11,7 @@ import HealthKit
 import UIKit
 
 struct ahViewController: View {
+    let valueName: String
     var onDismiss: (String?, String?, Bool, String, String, String) -> Void
     @Environment(\.dismiss) var dismiss // For the Back/Exit button
     @State private var currentSelection: String? // Stores the datasource selection
@@ -18,7 +19,7 @@ struct ahViewController: View {
     @State private var avgDataSwitch: Bool  // Tracks avg value switch
     @State private var prevDateSwitch: Bool  // Tracks previous date switch
     @State private var ahFrequency: String = "daily"  // Tracks frequency selection
-    @State private var ahTimeFilter: String = "all_day"  // Tracks time filter selection  
+    @State private var ahTimeFilter: String = "all_day"  // Tracks time filter selection
     @State private var ahAggregation: String = "avg"  // Tracks aggregation selection
     @State private var showingAvgInfo = false // For average info popup
     @State private var showingPrevDayInfo = false // For previous day info popup
@@ -28,7 +29,8 @@ struct ahViewController: View {
     @State private var workoutFilter: WorkoutCategoryFilter = .all
     @ObservedObject var rthk = rtHealthKit.shared
     
-    init(selectedChoice: String?, selectedUnitString: String?, ahPrevD: Bool, ahFrequency: String = "daily", ahTimeFilter: String = "all_day", ahAggregation: String = "avg", onDismiss: @escaping (String?, String?, Bool, String, String, String) -> Void) {
+    init(valueName: String, selectedChoice: String?, selectedUnitString: String?, ahPrevD: Bool, ahFrequency: String = "daily", ahTimeFilter: String = "all_day", ahAggregation: String = "avg", onDismiss: @escaping (String?, String?, Bool, String, String, String) -> Void) {
+        self.valueName = valueName
         self.onDismiss = onDismiss
 
         self._currentSelection = State(initialValue: selectedChoice)
@@ -56,6 +58,9 @@ struct ahViewController: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 8) {
+                // Custom header with valueObj name
+                customHeader
+
                 // Sample type selector
                 sampleTypeSelector
                 if sampleFilter == .workouts {
@@ -101,7 +106,8 @@ struct ahViewController: View {
             }
             .padding(.horizontal)
             .padding(.top, 4)
-            .navigationTitle("Choose source")
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .bottomBar) {
                     bottomToolbar
@@ -109,7 +115,23 @@ struct ahViewController: View {
             }
         }
     }
-    
+
+    private var customHeader: some View {
+        VStack(spacing: 4) {
+            Text(valueName)
+                .font(.title2)
+                .fontWeight(.semibold)
+                .foregroundColor(.primary)
+                .multilineTextAlignment(.center)
+
+            Text("Choose data source")
+                .font(.system(size: 18))
+                .foregroundColor(.secondary)
+        }
+        .padding(.top, 8)
+        .padding(.bottom, 4)
+    }
+
     private var infoButtonRow: some View {
         HStack {
             Spacer()

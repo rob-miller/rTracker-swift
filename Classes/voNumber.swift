@@ -1147,6 +1147,7 @@ class voNumber: voState, UITextFieldDelegate {
 
     let hostingController = UIHostingController(
       rootView: ahViewController(
+        valueName: vo.valueName ?? "",
         selectedChoice: vo.optDict["ahSource"],
         selectedUnitString: vo.optDict["ahUnit"],
         ahPrevD: vo.optDict["ahPrevD"] ?? "0" == "1",
