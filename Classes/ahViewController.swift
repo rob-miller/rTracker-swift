@@ -8,6 +8,7 @@
 
 import SwiftUI
 import HealthKit
+import UIKit
 
 struct ahViewController: View {
     var onDismiss: (String?, String?, Bool, String, String, String) -> Void
@@ -23,11 +24,23 @@ struct ahViewController: View {
     @State private var showingPrevDayInfo = false // For previous day info popup
     @State private var showingConfigInfo = false // For selected config info popup
     @State private var seenMinuteSelections: Set<String> = []  // Add this to track which selections we've seen
+    @State private var sampleFilter: SampleFilter = .metrics
+    @State private var workoutFilter: WorkoutCategoryFilter = .all
     @ObservedObject var rthk = rtHealthKit.shared
     
     init(selectedChoice: String?, selectedUnitString: String?, ahPrevD: Bool, ahFrequency: String = "daily", ahTimeFilter: String = "all_day", ahAggregation: String = "avg", onDismiss: @escaping (String?, String?, Bool, String, String, String) -> Void) {
         self.onDismiss = onDismiss
+
         self._currentSelection = State(initialValue: selectedChoice)
+
+        if let choice = selectedChoice,
+           let match = healthDataQueries.first(where: { $0.displayName == choice }) {
+            _sampleFilter = State(initialValue: SampleFilter(sampleType: match.sampleType))
+            if match.sampleType == .workout {
+                _workoutFilter = State(initialValue: WorkoutCategoryFilter(category: match.workoutCategory))
+            }
+        }
+
         if let unitString = selectedUnitString {
             self._currentUnit = State(initialValue: HKUnit(from: unitString))
         } else {
@@ -43,6 +56,12 @@ struct ahViewController: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 8) {
+                // Sample type selector
+                sampleTypeSelector
+                if sampleFilter == .workouts {
+                    workoutCategorySelector
+                }
+
                 // Picker (Choice Wheel)
                 dataSourcePicker
                     .onChange(of: currentSelection) { oldSelection, newSelection in
@@ -54,7 +73,9 @@ struct ahViewController: View {
                             }
                         }
                     }
-                
+
+                infoButtonRow
+
                 // Unit selection control
                 if let selectedConfig = selectedConfiguration(),
                    selectedConfig.unit != nil {
@@ -82,9 +103,6 @@ struct ahViewController: View {
             .padding(.top, 4)
             .navigationTitle("Choose source")
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    navigationInfoButton
-                }
                 ToolbarItem(placement: .bottomBar) {
                     bottomToolbar
                 }
@@ -92,32 +110,40 @@ struct ahViewController: View {
         }
     }
     
-    // Navigation bar info button
-    private var navigationInfoButton: some View {
-        Group {
-            if let selectedConfig = selectedConfiguration(),
-               let info = selectedConfig.info,
-               !info.isEmpty {
-                Button(action: {
+    private var infoButtonRow: some View {
+        HStack {
+            Spacer()
+            if let info = selectedInfo {
+                HelpInfoButtonView {
                     showingConfigInfo = true
-                }) {
-                    Image(systemName: "info.circle")
-                        .foregroundColor(.blue)
                 }
+                .frame(width: 30, height: 30)
                 .accessibilityLabel("Source Information")
-                .sheet(isPresented: $showingConfigInfo) {
-                    infoSheet(title: selectedConfig.displayName, content: info)
-                }
+                .accessibilityIdentifier("confighk_info")
+            } else {
+                Color.clear
+                    .frame(width: 30, height: 30)
+            }
+        }
+        .frame(height: 34)
+        .padding(.trailing, 8)
+        .sheet(isPresented: $showingConfigInfo) {
+            if let info = selectedInfo {
+                infoSheet(title: info.title, content: info.message)
+            } else {
+                EmptyView()
             }
         }
     }
     
     private var dataSourcePicker: some View {
         Picker("Choose data source", selection: $currentSelection) {
-            if rthk.configurations.isEmpty {
-                Text("Waiting for HealthKit data").tag("None")
+            let configs = filteredConfigurations
+            if configs.isEmpty {
+                let message = rthk.configurations.isEmpty ? "Waiting for HealthKit data" : "No entries in this category"
+                Text(message).tag("None")
             } else {
-                ForEach(rthk.configurations, id: \.displayName) { config in
+                ForEach(configs, id: \.displayName) { config in
                     HStack {
                         Text(config.displayName)
                         
@@ -135,17 +161,40 @@ struct ahViewController: View {
         .pickerStyle(WheelPickerStyle())
         .frame(maxHeight: 120)
         .clipped()
+        .onAppear(perform: ensureSelectionMatchesFilter)
+        .onChange(of: sampleFilter) { _, _ in
+            ensureSelectionMatchesFilter()
+        }
+        .onChange(of: workoutFilter) { _, _ in
+            ensureSelectionMatchesFilter()
+        }
+        .onReceive(rthk.$configurations) { _ in
+            ensureSelectionMatchesFilter()
+        }
     }
-    
+
+    private var selectedInfo: (title: String, message: String)? {
+        guard let config = selectedConfiguration(),
+              let info = config.info,
+              !info.isEmpty else {
+            return nil
+        }
+        return (config.displayName, info)
+    }
+
     private var unitSelectionContent: some View {
-        UnitSegmentedControl(selectedConfig: selectedConfiguration()!, currentUnit: $currentUnit)
-            .onChange(of: selectedConfiguration()?.identifier) { oldIdentifier, newIdentifier in
-                if let config = rthk.configurations.first(where: { $0.identifier == newIdentifier }),
-                   config.needUnit && currentUnit == nil {
-                    currentUnit = config.unit?.first
-                }
+        Group {
+            if let config = selectedConfiguration() {
+                UnitSegmentedControl(selectedConfig: config, currentUnit: $currentUnit)
+                    .onChange(of: selectedConfiguration()?.identifier) { oldIdentifier, newIdentifier in
+                        if let config = rthk.configurations.first(where: { $0.identifier == newIdentifier }),
+                           config.needUnit && currentUnit == nil {
+                            currentUnit = config.unit?.first
+                        }
+                    }
             }
-            .frame(minHeight: 40)
+        }
+        .frame(minHeight: 40)
     }
     
     
@@ -303,11 +352,22 @@ struct ahViewController: View {
             .accessibilityIdentifier("confighk_done")
             
             Spacer()
-            
-            Button("Update HealthKit Choices") {
+
+            Button(action: {
                 rthk.dbInitialised = false
                 rthk.loadHealthKitConfigurations()
+            }) {
+                Text("Update HealthKit Choices")
+                    .font(.system(size: 15, weight: .semibold))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .foregroundColor(.blue)
+                    .background(
+                        Capsule()
+                            .stroke(Color.blue, lineWidth: 1.5)
+                    )
             }
+            .accessibilityIdentifier("confighk_refresh")
         }
     }
     
@@ -358,6 +418,208 @@ struct ahViewController: View {
     }
 }
 
+// MARK: - Sample type filtering helpers
+
+extension ahViewController {
+    private enum SampleFilter: String, CaseIterable, Identifiable {
+        case metrics
+        case sleep     // renamed from 'categories'
+        case workouts
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .metrics:
+                return MenuTab.metrics.title
+            case .sleep:
+                return MenuTab.sleep.title
+            case .workouts:
+                return MenuTab.workouts.title
+            }
+        }
+
+        var sampleType: HealthDataQuery.SampleType {
+            switch self {
+            case .metrics:
+                return .quantity
+            case .sleep:
+                return .category
+            case .workouts:
+                return .workout
+            }
+        }
+
+        init(sampleType: HealthDataQuery.SampleType) {
+            switch sampleType {
+            case .quantity:
+                self = .metrics
+            case .category:
+                self = .sleep
+            case .workout:
+                self = .workouts
+            }
+        }
+    }
+
+    private func effectiveMenuTab(for config: HealthDataQuery) -> MenuTab {
+        // Debug: Always log what we're checking
+        DBGLog("Checking \(config.displayName) - menuTab: \(config.menuTab?.rawValue ?? "nil"), sampleType: \(config.sampleType)")
+
+        // Use override if specified
+        if let override = config.menuTab {
+            DBGLog("\(config.displayName) using override tab: \(override)")
+            return override
+        }
+        // Otherwise use default based on sampleType
+        let defaultTab: MenuTab
+        switch config.sampleType {
+        case .quantity: defaultTab = .metrics
+        case .category: defaultTab = .sleep
+        case .workout: defaultTab = .workouts
+        }
+        DBGLog("\(config.displayName) using default tab: \(defaultTab)")
+        return defaultTab
+    }
+
+    private var filteredConfigurations: [HealthDataQuery] {
+        switch sampleFilter {
+        case .metrics:
+            return rthk.configurations
+                .filter { effectiveMenuTab(for: $0) == .metrics }
+        case .sleep:
+            return rthk.configurations
+                .filter { effectiveMenuTab(for: $0) == .sleep }
+        case .workouts:
+            return rthk.configurations
+                .filter { config in
+                    guard effectiveMenuTab(for: config) == .workouts else { return false }
+                    if let category = workoutFilter.category {
+                        return config.workoutCategory == category
+                    }
+                    return true
+                }
+                .sorted { $0.displayName < $1.displayName }
+        }
+    }
+
+    private var sampleTypeSelector: some View {
+        Picker("Data Category", selection: $sampleFilter) {
+            ForEach(SampleFilter.allCases) { filter in
+                Text(filter.title).tag(filter)
+            }
+        }
+        .pickerStyle(SegmentedPickerStyle())
+        .accessibilityIdentifier("confighk_category")
+    }
+
+    private var workoutCategorySelector: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(WorkoutCategoryFilter.allCases) { filter in
+                    let isSelected = workoutFilter == filter
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.1)) {
+                            workoutFilter = filter
+                        }
+                    }) {
+                        Text(filter.title)
+                            .font(.system(size: 14, weight: .semibold))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(isSelected ? Color.blue : Color(.secondarySystemFill))
+                            .foregroundColor(isSelected ? .white : .primary)
+                            .clipShape(Capsule())
+                    }
+                    .accessibilityIdentifier("confighk_workout_category_\(filter.rawValue)")
+                }
+            }
+            .padding(.vertical, 4)
+        }
+    }
+
+    private func ensureSelectionMatchesFilter() {
+        let configs = filteredConfigurations
+        if configs.isEmpty {
+            currentSelection = nil
+            currentUnit = nil
+            return
+        }
+
+        if let current = currentSelection,
+           configs.contains(where: { $0.displayName == current }) {
+            if let config = selectedConfiguration(), config.needUnit && currentUnit == nil {
+                currentUnit = config.unit?.first
+            }
+            return
+        }
+
+        if let first = configs.first {
+            currentSelection = first.displayName
+            if first.needUnit {
+                currentUnit = first.unit?.first
+            } else {
+                currentUnit = nil
+            }
+        }
+    }
+
+    private enum WorkoutCategoryFilter: String, CaseIterable, Identifiable {
+        case all
+        case cardio
+        case training
+        case sports
+        case mindAndBody
+        case outdoor
+        case wheel
+        case other
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .all: return "All"
+            case .cardio: return "Cardio"
+            case .training: return "Training"
+            case .sports: return "Sports"
+            case .mindAndBody: return "Mind & Body"
+            case .outdoor: return "Outdoor"
+            case .wheel: return "Wheel"
+            case .other: return "Other"
+            }
+        }
+
+        var category: HealthDataQuery.WorkoutCategory? {
+            switch self {
+            case .all: return nil
+            case .cardio: return .cardio
+            case .training: return .training
+            case .sports: return .sports
+            case .mindAndBody: return .mindAndBody
+            case .outdoor: return .outdoor
+            case .wheel: return .wheelchair
+            case .other: return .other
+            }
+        }
+
+        init(category: HealthDataQuery.WorkoutCategory?) {
+            guard let category = category else {
+                self = .all
+                return
+            }
+            switch category {
+            case .cardio: self = .cardio
+            case .training: self = .training
+            case .sports: self = .sports
+            case .mindAndBody: self = .mindAndBody
+            case .outdoor: self = .outdoor
+            case .wheelchair: self = .wheel
+            case .other: self = .other
+            }
+        }
+    }
+}
+
 struct UnitSegmentedControl: View {
     let selectedConfig: HealthDataQuery
     @Binding var currentUnit: HKUnit?
@@ -388,6 +650,46 @@ struct UnitSegmentedControl: View {
             if selectedConfig.needUnit && currentUnit == nil {
                 currentUnit = selectedConfig.unit?.first
             }
+        }
+    }
+}
+
+// MARK: - UIKit helpers
+
+private struct HelpInfoButtonView: UIViewRepresentable {
+    let action: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(action: action)
+    }
+
+    func makeUIView(context: Context) -> UIButton {
+        let barButton = rTracker_resource.createHelpInfoButton(target: context.coordinator, action: #selector(Coordinator.tapped))
+        if let button = barButton.customView as? UIButton {
+            context.coordinator.button = button
+            return button
+        }
+
+        let fallback = UIButton(type: .infoDark)
+        fallback.addTarget(context.coordinator, action: #selector(Coordinator.tapped), for: .touchUpInside)
+        context.coordinator.button = fallback
+        return fallback
+    }
+
+    func updateUIView(_ uiView: UIButton, context: Context) {
+        uiView.isUserInteractionEnabled = true
+    }
+
+    final class Coordinator: NSObject {
+        let action: () -> Void
+        weak var button: UIButton?
+
+        init(action: @escaping () -> Void) {
+            self.action = action
+        }
+
+        @objc func tapped() {
+            action()
         }
     }
 }

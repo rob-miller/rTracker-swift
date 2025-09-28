@@ -209,15 +209,158 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                             dispatchGroup3.leave() // Mark this task as completed
                         }
                     }
-                    if query.identifier.hasPrefix("HKQuantityTypeIdentifier"),
-                       let quantityType = HKObjectType.quantityType(forIdentifier: HKQuantityTypeIdentifier(rawValue: query.identifier)) {
-                        status = healthStore.authorizationStatus(for: quantityType)  // only checks write access, cannot query read access
-                        
-                        if (status == .sharingAuthorized || status == .sharingDenied) {  // reading denied same as reading no data present
+                    switch query.sampleType {
+                    case .quantity:
+                        if let quantityType = HKObjectType.quantityType(forIdentifier: HKQuantityTypeIdentifier(rawValue: query.identifier)) {
+                            status = healthStore.authorizationStatus(for: quantityType)  // only checks write access, cannot query read access
+
+                            if (status == .sharingAuthorized || status == .sharingDenied) {  // reading denied same as reading no data present
+                                status = .sharingAuthorized
+                                let predicate = HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: [])
+                                let sampleQuery = HKSampleQuery(sampleType: quantityType, predicate: predicate, limit: 1, sortDescriptors: nil) { (_, samples, _) in
+                                    DBGLog("\(query.identifier) \(query.displayName) \(samples?.count ?? -1)")
+                                    dataExists = (samples?.count ?? 0) > 0
+                                    processQueryResult()
+                                }
+                                healthStore.execute(sampleQuery)
+                            } else {
+                                processQueryResult()
+                            }
+                        } else {
+                            processQueryResult()
+                        }
+
+                    case .category:
+                        if let categoryType = HKObjectType.categoryType(forIdentifier: HKCategoryTypeIdentifier(rawValue: query.identifier)) {
+                            status = healthStore.authorizationStatus(for: categoryType)
+
+                            if (status == .sharingAuthorized || status == .sharingDenied) {
+                                status = .sharingAuthorized
+                                var predicate = HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: [])
+
+                                if query.identifier == "HKCategoryTypeIdentifierSleepAnalysis" {  // filter on sleep sample types
+                                    let displayName = query.displayName
+                                    let components = displayName.split(separator: "-", maxSplits: 1, omittingEmptySubsequences: true)
+                                    if components.count > 1 {
+                                        let suffix = components[1].trimmingCharacters(in: .whitespaces) // Extract and trim the part after '-'
+                                        switch suffix {
+                                        case "In Bed":
+                                            predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                                HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.inBed.rawValue)
+                                            ])
+                                        case "Deep":
+                                            predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                                HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepDeep.rawValue)
+                                            ])
+                                        case "Other":
+                                            predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                                HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue)
+                                            ])
+                                        case "All":  // assume core will always be present at some point for all sleep
+                                            fallthrough
+                                        case "Total":  // previous name for core + deep + rem
+                                            fallthrough
+                                        case "Specified":
+                                            fallthrough
+                                        case "Core + Deep + REM":  // assume core will always be present at some point for total sleep
+                                            fallthrough
+                                        case "Core":
+                                            predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                                HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepCore.rawValue)
+                                            ])
+                                        case "REM":
+                                            predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                                HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepREM.rawValue)
+                                            ])
+                                        case "Awake":
+                                            predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                                HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.awake.rawValue)
+                                            ])
+                                        // Add cases for the new sleep metrics
+                                        case "Deep Segments":
+                                            // For Deep Segments, check if any Deep sleep data exists
+                                            predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                                HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepDeep.rawValue)
+                                            ])
+                                        case "REM Segments":
+                                            // For REM Segments, check if any REM sleep data exists
+                                            predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                                HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepREM.rawValue)
+                                            ])
+                                        case "Cycles":
+                                            // For Sleep Cycles, check if both Deep and REM sleep data exist
+                                            // Since we need both, let's check for Deep sleep here (simplification)
+                                            predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                                HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepDeep.rawValue)
+                                            ])
+                                        case "Transitions":
+                                            // For Transitions, we'll just check if any sleep data exists
+                                            // This is a simplified approach - ideally we'd check for multiple stages
+                                            predicate = HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: [])
+                                        default:
+                                            DBGErr("Unhandled display name suffix: \(suffix)")
+                                            // Handle other cases
+                                        }
+                                    } else {
+                                        if displayName == "Sleep" {
+                                            predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                                HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue)
+                                            ])
+                                        } else {
+                                            DBGErr("No suffix found in displayName: \(displayName)")
+                                            // Handle cases where there is no '-'
+                                        }
+                                    }
+
+                                }
+                                let sampleQuery = HKSampleQuery(sampleType: categoryType, predicate: predicate, limit: 1, sortDescriptors: nil) { (_, samples, _) in
+                                    dataExists = (samples?.count ?? 0) > 0
+
+                                    // Special handling for "Sleep - Cycles" which needs both Deep and REM
+                                    if query.displayName == "Sleep - Cycles" && dataExists {
+                                        // We checked for Deep sleep above, now check for REM
+                                        let remPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                            HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                            NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepREM.rawValue)
+                                        ])
+
+                                        let remQuery = HKSampleQuery(sampleType: categoryType, predicate: remPredicate, limit: 1, sortDescriptors: nil) { (_, remSamples, _) in
+                                            // Data exists only if both Deep and REM sleep data exist
+                                            dataExists = dataExists && (remSamples?.count ?? 0) > 0
+                                            processQueryResult()
+                                        }
+                                        self.healthStore.execute(remQuery)
+                                    } else {
+                                        processQueryResult()
+                                    }
+                                }
+                                healthStore.execute(sampleQuery)
+                            } else {
+                                processQueryResult()
+                            }
+                        } else {
+                            processQueryResult()
+                        }
+
+                    case .workout:
+                        let workoutType = HKObjectType.workoutType()
+                        status = healthStore.authorizationStatus(for: workoutType)
+
+                        if (status == .sharingAuthorized || status == .sharingDenied) {
                             status = .sharingAuthorized
-                            let predicate = HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: [])
-                            let sampleQuery = HKSampleQuery(sampleType: quantityType, predicate: predicate, limit: 1, sortDescriptors: nil) { (_, samples, _) in
-                                DBGLog("\(query.identifier) \(query.displayName) \(samples?.count ?? -1)")
+                            let predicate = self.workoutPredicate(for: query, startDate: Date.distantPast, endDate: Date())
+                            let sampleQuery = HKSampleQuery(sampleType: workoutType, predicate: predicate, limit: 1, sortDescriptors: nil) { (_, samples, _) in
+                                DBGLog("workout \(query.displayName) \(samples?.count ?? -1)")
                                 dataExists = (samples?.count ?? 0) > 0
                                 processQueryResult()
                             }
@@ -225,126 +368,6 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                         } else {
                             processQueryResult()
                         }
-                    } else if query.identifier.hasPrefix("HKCategoryTypeIdentifier"),
-                              let categoryType = HKObjectType.categoryType(forIdentifier: HKCategoryTypeIdentifier(rawValue: query.identifier)) {
-                        status = healthStore.authorizationStatus(for: categoryType)
-                        
-                        if (status == .sharingAuthorized || status == .sharingDenied) {
-                            status = .sharingAuthorized
-                            var predicate = HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: [])
-                            
-                            if query.identifier == "HKCategoryTypeIdentifierSleepAnalysis" {  // filter on sleep sample types
-                                let displayName = query.displayName
-                                let components = displayName.split(separator: "-", maxSplits: 1, omittingEmptySubsequences: true)
-                                if components.count > 1 {
-                                    let suffix = components[1].trimmingCharacters(in: .whitespaces) // Extract and trim the part after '-'
-                                    switch suffix {
-                                    case "In Bed":
-                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-                                                    HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
-                                                    NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.inBed.rawValue)
-                                                ])
-                                    case "Deep":
-                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-                                                    HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
-                                                    NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepDeep.rawValue)
-                                                ])
-                                    case "Other":
-                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-                                                    HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
-                                                    NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue)
-                                                ])
-                                    case "All":  // assume core will always be present at some point for all sleep
-                                        fallthrough
-                                    case "Total":  // previous name for core + deep + rem
-                                        fallthrough
-                                    case "Specified":
-                                        fallthrough
-                                    case "Core + Deep + REM":  // assume core will always be present at some point for total sleep
-                                        fallthrough
-                                    case "Core":
-                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-                                                    HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
-                                                    NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepCore.rawValue)
-                                                ])
-                                    case "REM":
-                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-                                                    HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
-                                                    NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepREM.rawValue)
-                                                ])
-                                    case "Awake":
-                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-                                                    HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
-                                                    NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.awake.rawValue)
-                                                ])
-                                    // Add cases for the new sleep metrics
-                                    case "Deep Segments":
-                                        // For Deep Segments, check if any Deep sleep data exists
-                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-                                                    HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
-                                                    NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepDeep.rawValue)
-                                                ])
-                                    case "REM Segments":
-                                        // For REM Segments, check if any REM sleep data exists
-                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-                                                    HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
-                                                    NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepREM.rawValue)
-                                                ])
-                                    case "Cycles":
-                                        // For Sleep Cycles, check if both Deep and REM sleep data exist
-                                        // Since we need both, let's check for Deep sleep here (simplification)
-                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-                                                    HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
-                                                    NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepDeep.rawValue)
-                                                ])
-                                    case "Transitions":
-                                        // For Transitions, we'll just check if any sleep data exists
-                                        // This is a simplified approach - ideally we'd check for multiple stages
-                                        predicate = HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: [])
-                                    default:
-                                        DBGErr("Unhandled display name suffix: \(suffix)")
-                                        // Handle other cases
-                                    }
-                                } else {
-                                    if displayName == "Sleep" {
-                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-                                                    HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
-                                                    NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue)
-                                                ])
-                                    } else {
-                                        DBGErr("No suffix found in displayName: \(displayName)")
-                                        // Handle cases where there is no '-'
-                                    }
-                                }
-                                
-                            }
-                            let sampleQuery = HKSampleQuery(sampleType: categoryType, predicate: predicate, limit: 1, sortDescriptors: nil) { (_, samples, _) in
-                                dataExists = (samples?.count ?? 0) > 0
-                                
-                                // Special handling for "Sleep - Cycles" which needs both Deep and REM
-                                if query.displayName == "Sleep - Cycles" && dataExists {
-                                    // We checked for Deep sleep above, now check for REM
-                                    let remPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-                                        HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
-                                        NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepREM.rawValue)
-                                    ])
-                                    
-                                    let remQuery = HKSampleQuery(sampleType: categoryType, predicate: remPredicate, limit: 1, sortDescriptors: nil) { (_, remSamples, _) in
-                                        // Data exists only if both Deep and REM sleep data exist
-                                        dataExists = dataExists && (remSamples?.count ?? 0) > 0
-                                        processQueryResult()
-                                    }
-                                    self.healthStore.execute(remQuery)
-                                } else {
-                                    processQueryResult()
-                                }
-                            }
-                            healthStore.execute(sampleQuery)
-                        } else {
-                            processQueryResult()
-                        }
-                    } else {
-                        processQueryResult()
                     }
                 }
                 // Notify when all tasks are done
@@ -369,14 +392,17 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         var readTypes: Set<HKObjectType> = []
         
         for query in healthDataQueries {
-            if query.identifier.hasPrefix("HKQuantityTypeIdentifier") {
+            switch query.sampleType {
+            case .quantity:
                 if let quantityType = HKObjectType.quantityType(forIdentifier: HKQuantityTypeIdentifier(rawValue: query.identifier)) {
                     readTypes.insert(quantityType)
                 }
-            } else if query.identifier.hasPrefix("HKCategoryTypeIdentifier") {
+            case .category:
                 if let categoryType = HKObjectType.categoryType(forIdentifier: HKCategoryTypeIdentifier(rawValue: query.identifier)) {
                     readTypes.insert(categoryType)
                 }
+            case .workout:
+                readTypes.insert(HKObjectType.workoutType())
             }
         }
         
@@ -434,7 +460,13 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                         customProcessor: query.customProcessor,
                         aggregationType: query.aggregationType,
                         aggregationTime: query.aggregationTime,
-                        info: query.info
+                        info: query.info,
+                        sampleType: query.sampleType,
+                        workoutActivities: query.workoutActivities,
+                        workoutMetric: query.workoutMetric,
+                        workoutLocation: query.workoutLocation,
+                        workoutCategory: query.workoutCategory,
+                        menuTab: query.menuTab
                     ))
                 }
             }
@@ -442,6 +474,32 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
             // Assign to backing variable
             configurations = localConfigurations
         }
+    }
+
+    private func workoutPredicate(for queryConfig: HealthDataQuery, startDate: Date, endDate: Date) -> NSPredicate {
+        var predicates: [NSPredicate] = [HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [])]
+
+        if let activities = queryConfig.workoutActivities, !activities.isEmpty {
+            let activityPredicates = activities.map { HKQuery.predicateForWorkouts(with: $0) }
+            predicates.append(NSCompoundPredicate(orPredicateWithSubpredicates: activityPredicates))
+        }
+
+        if let location = queryConfig.workoutLocation {
+            switch location {
+            case .indoor:
+                predicates.append(NSPredicate(format: "metadata.%K == YES", HKMetadataKeyIndoorWorkout))
+            case .outdoor:
+                predicates.append(NSPredicate(format: "metadata.%K == NO", HKMetadataKeyIndoorWorkout))
+            default:
+                break
+            }
+        }
+
+        if predicates.count == 1 {
+            return predicates[0]
+        }
+
+        return NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
     }
 
     private func handleSleepAnalysisQuery(
@@ -700,6 +758,94 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         healthStore.execute(query)
     }
 
+    private func handleCategoryTypeQuery(
+        queryConfig: HealthDataQuery,
+        startDate: Date,
+        endDate: Date,
+        specifiedUnit: HKUnit?,
+        completion: @escaping ([HealthQueryResult]) -> Void
+    ) {
+        guard let categoryType = HKObjectType.categoryType(forIdentifier: HKCategoryTypeIdentifier(rawValue: queryConfig.identifier)) else {
+            DBGLog("Unsupported category type for identifier: \(queryConfig.identifier)")
+            completion([])
+            return
+        }
+
+        let baseUnit = specifiedUnit ?? queryConfig.unit?.first ?? HKUnit.count()
+        let calendar = Calendar.current
+        var queryStart = startDate
+        var queryEnd = endDate
+
+        let timePredicate = HKQuery.predicateForSamples(withStart: queryStart, end: queryEnd, options: [])
+
+        var predicate: NSPredicate = timePredicate
+        if let categories = queryConfig.categories, !categories.isEmpty {
+            let categoryPredicates = categories.map { value in
+                HKQuery.predicateForCategorySamples(with: .equalTo, value: value)
+            }
+            predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                timePredicate,
+                NSCompoundPredicate(orPredicateWithSubpredicates: categoryPredicates)
+            ])
+        }
+
+        let query = HKSampleQuery(sampleType: categoryType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, error in
+            guard error == nil else {
+                DBGLog("Error querying HealthKit categories: \(error!.localizedDescription)")
+                completion([])
+                return
+            }
+
+            guard let categorySamples = samples as? [HKCategorySample] else {
+                completion([])
+                return
+            }
+
+            let processedSamples: [Double] = categorySamples.map { sample in
+                let value = queryConfig.customProcessor?(sample) ?? Double(sample.value)
+                return self.convertCategoryValue(value, unit: baseUnit, config: queryConfig)
+            }
+
+            if queryConfig.identifier == "HKCategoryTypeIdentifierMindfulSession" {
+                DBGLog("Mindful Minutes fetched \(categorySamples.count) samples")
+                let totalMinutes = processedSamples.reduce(0, +)
+                DBGLog("Mindful Minutes total (\(baseUnit.unitString)): \(totalMinutes)")
+            }
+
+            let results: [HealthQueryResult]
+            switch queryConfig.aggregationStyle {
+            case .discreteArithmetic:
+                results = zip(categorySamples, processedSamples).map { sample, value in
+                    HealthQueryResult(date: sample.startDate, value: value, unit: baseUnit)
+                }
+            case .cumulative:
+                let total = processedSamples.reduce(0, +)
+                if let lastSample = categorySamples.last {
+                    results = [HealthQueryResult(date: lastSample.endDate, value: total, unit: baseUnit)]
+                } else {
+                    results = []
+                }
+            default:
+                DBGLog("Unsupported aggregation style for category query \(queryConfig.displayName)")
+                results = []
+            }
+
+            completion(results)
+        }
+
+        healthStore.execute(query)
+    }
+
+    private func convertCategoryValue(_ value: Double, unit: HKUnit, config: HealthDataQuery) -> Double {
+        guard let units = config.unit else { return value }
+        if units.contains(where: { $0 == HKUnit.minute() }) {
+            if unit == HKUnit.hour() {
+                return value / 60.0
+            }
+        }
+        return value
+    }
+
     // Helper function to check if any sleep data exists for the time period
     private func checkForAnySleepData(startDate: Date, endDate: Date, completion: @escaping (Bool) -> Void) {
         guard let categoryType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
@@ -943,6 +1089,112 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         return transitions
     }
     
+    private func defaultUnit(for queryConfig: HealthDataQuery) -> HKUnit {
+        if let unit = queryConfig.unit?.first {
+            return unit
+        }
+
+        if let metric = queryConfig.workoutMetric {
+            switch metric {
+            case .duration:
+                return HKUnit.second()
+            case .totalEnergy:
+                return HKUnit.kilocalorie()
+            case .totalDistance:
+                return HKUnit.meter()
+            }
+        }
+
+        return HKUnit.count()
+    }
+
+    private func workoutValue(
+        for workout: HKWorkout,
+        unit: HKUnit,
+        queryConfig: HealthDataQuery
+    ) -> Double? {
+        if let customProcessor = queryConfig.customProcessor {
+            return customProcessor(workout)
+        }
+
+        let metric = queryConfig.workoutMetric ?? .duration
+
+        switch metric {
+        case .duration:
+            let quantity = HKQuantity(unit: HKUnit.second(), doubleValue: workout.duration)
+            return quantity.doubleValue(for: unit)
+        case .totalEnergy:
+            guard let energy = workout.totalEnergyBurned else { return nil }
+            return energy.doubleValue(for: unit)
+        case .totalDistance:
+            guard let distance = workout.totalDistance else { return nil }
+            return distance.doubleValue(for: unit)
+        }
+    }
+
+    private func handleWorkoutQuery(
+        queryConfig: HealthDataQuery,
+        startDate: Date,
+        endDate: Date,
+        specifiedUnit: HKUnit?,
+        completion: @escaping ([HealthQueryResult]) -> Void
+    ) {
+        let workoutType = HKObjectType.workoutType()
+        let predicate = workoutPredicate(for: queryConfig, startDate: startDate, endDate: endDate)
+        let query = HKSampleQuery(sampleType: workoutType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { [weak self] _, samples, error in
+            guard let self = self else {
+                completion([])
+                return
+            }
+
+            guard error == nil else {
+                DBGLog("Error querying HealthKit workouts: \(error!.localizedDescription)")
+                completion([])
+                return
+            }
+
+            guard let workouts = samples as? [HKWorkout] else {
+                completion([])
+                return
+            }
+
+            let unit = specifiedUnit ?? self.defaultUnit(for: queryConfig)
+            let results: [HealthQueryResult]
+
+            switch queryConfig.aggregationStyle {
+            case .discreteArithmetic:
+                results = workouts.compactMap { workout in
+                    guard let value = self.workoutValue(for: workout, unit: unit, queryConfig: queryConfig) else {
+                        return nil
+                    }
+                    return HealthQueryResult(date: workout.startDate, value: value, unit: unit)
+                }
+
+            case .cumulative:
+                let total = workouts.reduce(0.0) { partialResult, workout in
+                    guard let value = self.workoutValue(for: workout, unit: unit, queryConfig: queryConfig) else {
+                        return partialResult
+                    }
+                    return partialResult + value
+                }
+
+                if !workouts.isEmpty {
+                    results = [HealthQueryResult(date: workouts.last?.startDate ?? startDate, value: total, unit: unit)]
+                } else {
+                    results = []
+                }
+
+            default:
+                DBGLog("Unsupported aggregation style for workout query \(queryConfig.displayName)")
+                results = []
+            }
+
+            completion(results)
+        }
+
+        healthStore.execute(query)
+    }
+
     private func handleQuantityTypeQuery(
         queryConfig: HealthDataQuery,
         startDate: Date,
@@ -1059,11 +1311,18 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
             }
         }
         
-        if queryConfig.identifier == "HKCategoryTypeIdentifierSleepAnalysis" {
-            let unit = specifiedUnit ?? queryConfig.unit?.first ?? HKUnit.hour()
-            handleSleepAnalysisQuery(startDate: finalStartDate, endDate: finalEndDate, specifiedUnit:unit, queryConfig: queryConfig, completion: completion)
-        } else {
+        switch queryConfig.sampleType {
+        case .category:
+            if queryConfig.identifier == "HKCategoryTypeIdentifierSleepAnalysis" {
+                let unit = specifiedUnit ?? queryConfig.unit?.first ?? HKUnit.hour()
+                handleSleepAnalysisQuery(startDate: finalStartDate, endDate: finalEndDate, specifiedUnit: unit, queryConfig: queryConfig, completion: completion)
+            } else {
+                handleCategoryTypeQuery(queryConfig: queryConfig, startDate: finalStartDate, endDate: finalEndDate, specifiedUnit: specifiedUnit, completion: completion)
+            }
+        case .quantity:
             handleQuantityTypeQuery(queryConfig: queryConfig, startDate: finalStartDate, endDate: finalEndDate, specifiedUnit: specifiedUnit, completion: completion)
+        case .workout:
+            handleWorkoutQuery(queryConfig: queryConfig, startDate: finalStartDate, endDate: finalEndDate, specifiedUnit: specifiedUnit, completion: completion)
         }
     }
 
@@ -1109,25 +1368,30 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         let timePredicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [])
         
         // Handle the predicate creation differently based on type
-        var predicate: NSPredicate = timePredicate
+        var predicate: NSPredicate
         
-        if let categories = queryConfig.categories, !categories.isEmpty {
-            if hkObjectType is HKCategoryType {
-                // For category types, create separate predicates for each category and combine with OR
-                let categoryPredicates = categories.map { categoryValue in
-                    return HKQuery.predicateForCategorySamples(with: .equalTo, value: categoryValue)
+        if queryConfig.sampleType == .workout {
+            predicate = workoutPredicate(for: queryConfig, startDate: startDate, endDate: endDate)
+        } else {
+            predicate = timePredicate
+            if let categories = queryConfig.categories, !categories.isEmpty {
+                if hkObjectType is HKCategoryType {
+                    // For category types, create separate predicates for each category and combine with OR
+                    let categoryPredicates = categories.map { categoryValue in
+                        return HKQuery.predicateForCategorySamples(with: .equalTo, value: categoryValue)
+                    }
+                    
+                    // Combine all category predicates with OR
+                    let categoriesCompoundPredicate = NSCompoundPredicate(orPredicateWithSubpredicates: categoryPredicates)
+                    
+                    // Combine time predicate with categories predicate using AND
+                    predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [timePredicate, categoriesCompoundPredicate])
+                } else {
+                    // For non-category types, continue with your original approach
+                    // This shouldn't happen based on your data structure, but keeping it for safety
+                    let categoryPredicate = NSPredicate(format: "value IN %@", categories)
+                    predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [timePredicate, categoryPredicate])
                 }
-                
-                // Combine all category predicates with OR
-                let categoriesCompoundPredicate = NSCompoundPredicate(orPredicateWithSubpredicates: categoryPredicates)
-                
-                // Combine time predicate with categories predicate using AND
-                predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [timePredicate, categoriesCompoundPredicate])
-            } else {
-                // For non-category types, continue with your original approach
-                // This shouldn't happen based on your data structure, but keeping it for safety
-                let categoryPredicate = NSPredicate(format: "value IN %@", categories)
-                predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [timePredicate, categoryPredicate])
             }
         }
 
@@ -1148,13 +1412,23 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
             healthStore.execute(query)
             
         case .cumulative:
-            if queryConfig.aggregationType == nil {
-                // Use HKStatisticsCollectionQuery for daily aggregation
-                guard let quantityType = hkObjectType as? HKQuantityType else {
-                    DBGLog("Invalid quantity type for cumulative daily aggregation.")
-                    completion([])
-                    return
+            if queryConfig.sampleType == .workout {
+                let query = HKSampleQuery(sampleType: hkObjectType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, error in
+                    guard let samples = samples else {
+                        DBGLog("Error fetching workout samples: \(error?.localizedDescription ?? "Unknown error")")
+                        completion([])
+                        return
+                    }
+                    let timestamps = samples.map { $0.startDate.timeIntervalSince1970 }
+                    completion(timestamps)
                 }
+                healthStore.execute(query)
+                return
+            }
+            if queryConfig.aggregationType == nil {
+                // Handle both quantity AND category types for cumulative daily aggregation
+                if let quantityType = hkObjectType as? HKQuantityType {
+                    // Use HKStatisticsCollectionQuery for quantity types
                 
                 let calendar = Calendar.current
                 let anchorDate = calendar.startOfDay(for: Date())
@@ -1179,8 +1453,34 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                     //self.dbgTimestamps(queryConfig.displayName, timestamps)
                     completion(timestamps)
                 }
-                
+
                 healthStore.execute(statsQuery)
+
+                } else if let categoryType = hkObjectType as? HKCategoryType {
+                    // Handle category types for cumulative daily aggregation
+                    let query = HKSampleQuery(sampleType: categoryType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, error in
+                        guard let samples = samples else {
+                            DBGLog("Error fetching category samples for cumulative aggregation: \(error?.localizedDescription ?? "Unknown error")")
+                            completion([])
+                            return
+                        }
+
+                        // For cumulative categories, group by day and return daily timestamps
+                        let calendar = Calendar.current
+                        let groupedByDay = Dictionary(grouping: samples) { sample in
+                            calendar.startOfDay(for: sample.startDate).timeIntervalSince1970
+                        }
+
+                        let timestamps = Array(groupedByDay.keys).sorted()
+                        completion(timestamps)
+                    }
+                    healthStore.execute(query)
+
+                } else {
+                    DBGLog("Invalid type for cumulative daily aggregation.")
+                    completion([])
+                }
+
             } else if queryConfig.aggregationType == .groupedByNight {
                 // Group sleep data into nights
                 guard let categoryType = hkObjectType as? HKCategoryType else {
@@ -1322,12 +1622,9 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
             
         case .cumulative:
             if queryConfig.aggregationType == nil {
-                // Use HKStatisticsCollectionQuery for daily aggregation - count the days
-                guard let quantityType = hkObjectType as? HKQuantityType else {
-                    DBGLog("Invalid quantity type for cumulative daily aggregation.")
-                    completion(0)
-                    return
-                }
+                // Handle both quantity AND category types for cumulative daily aggregation - count the days
+                if let quantityType = hkObjectType as? HKQuantityType {
+                    // Use HKStatisticsCollectionQuery for quantity types
                 
                 let calendar = Calendar.current
                 let anchorDate = calendar.startOfDay(for: Date())
@@ -1352,6 +1649,31 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                 }
                 
                 healthStore.execute(statsQuery)
+
+                } else if let categoryType = hkObjectType as? HKCategoryType {
+                    // Handle category types for cumulative daily aggregation - count days with data
+                    let query = HKSampleQuery(sampleType: categoryType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, error in
+                        guard let samples = samples else {
+                            DBGErr("Error fetching category samples for cumulative count: \(error?.localizedDescription ?? "Unknown error")")
+                            completion(0)
+                            return
+                        }
+
+                        // For cumulative categories, count unique days with data
+                        let calendar = Calendar.current
+                        let uniqueDays = Set(samples.map { sample in
+                            calendar.startOfDay(for: sample.startDate).timeIntervalSince1970
+                        })
+
+                        completion(uniqueDays.count)
+                    }
+                    healthStore.execute(query)
+
+                } else {
+                    DBGLog("Invalid type for cumulative daily aggregation.")
+                    completion(0)
+                }
+
             } else if queryConfig.aggregationType == .groupedByNight {
                 // Group sleep data into nights - estimate based on date range
                 guard let categoryType = hkObjectType as? HKCategoryType else {
