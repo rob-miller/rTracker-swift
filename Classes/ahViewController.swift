@@ -37,8 +37,21 @@ struct ahViewController: View {
 
         if let choice = selectedChoice,
            let match = healthDataQueries.first(where: { $0.displayName == choice }) {
-            _sampleFilter = State(initialValue: SampleFilter(sampleType: match.sampleType))
-            if match.sampleType == .workout {
+            // Determine effective menu tab (same logic as effectiveMenuTab function)
+            let effectiveTab: MenuTab
+            if let override = match.menuTab {
+                effectiveTab = override
+            } else {
+                switch match.sampleType {
+                case .quantity: effectiveTab = .metrics
+                case .category: effectiveTab = .sleep
+                case .workout: effectiveTab = .workouts
+                }
+            }
+
+            _sampleFilter = State(initialValue: SampleFilter(menuTab: effectiveTab))
+            // Set workout filter if we're going to the workouts tab and have a workout category
+            if effectiveTab == .workouts && match.workoutCategory != nil {
                 _workoutFilter = State(initialValue: WorkoutCategoryFilter(category: match.workoutCategory))
             }
         }
@@ -479,6 +492,17 @@ extension ahViewController {
             case .category:
                 self = .sleep
             case .workout:
+                self = .workouts
+            }
+        }
+
+        init(menuTab: MenuTab) {
+            switch menuTab {
+            case .metrics:
+                self = .metrics
+            case .sleep:
+                self = .sleep
+            case .workouts:
                 self = .workouts
             }
         }
