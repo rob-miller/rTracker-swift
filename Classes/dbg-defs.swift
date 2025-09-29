@@ -77,7 +77,7 @@ func SYSTEM_VERSION_LESS_THAN_OR_EQUAL_TO(_ v: String) -> Bool {
 
 // Color enum for debug message backgrounds
 enum DBGColor {
-    case RED, BLUE, GREEN, YELLOW, CYAN, VIOLET, MAGENTA, WHITE
+    case RED, BLUE, GREEN, YELLOW, ORANGE, CYAN, VIOLET, MAGENTA, WHITE
     
     var ansiCode: String {
         switch self {
@@ -89,6 +89,8 @@ enum DBGColor {
             return "\u{001B}[42m"
         case .YELLOW:
             return "\u{001B}[43m"
+        case .ORANGE:
+            return "\u{001B}[43;91m"
         case .CYAN:
             return "\u{001B}[46m"
         case .VIOLET:
