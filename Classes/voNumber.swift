@@ -819,10 +819,7 @@ class voNumber: voState, UITextFieldDelegate {
             startDate: windowStartDate, endDate: windowEndDate
           ) { hkDates in
             allHKDates.append(contentsOf: hkDates)
-            DBGLog("[\(srcName)] Retrieved \(hkDates.count) HK dates from window \(windowIndex + 1)/\(numberOfWindows)")
-            if !hkDates.isEmpty, let first = hkDates.min(), let last = hkDates.max() {
-                DBGLog("[\(srcName)] Date range: \(Date(timeIntervalSince1970: first)) to \(Date(timeIntervalSince1970: last))")
-            }
+            //DBGLog("Retrieved \(hkDates.count) HK dates: \(hkDates.map { Date(timeIntervalSince1970: $0) })")
             DispatchQueue.main.async {
                 to.refreshDelegate?.updateFullRefreshProgress()
             }
@@ -1457,26 +1454,20 @@ class voNumber: voState, UITextFieldDelegate {
   private func applyTimeFilter(results: [rtHealthKit.HealthQueryResult], timeFilter: String)
     -> [rtHealthKit.HealthQueryResult]
   {
-    DBGLog("applyTimeFilter: Filtering \(results.count) results with filter '\(timeFilter)'")
-    let filtered = results.filter { result in
+    return results.filter { result in
       // Extract local hour directly from UTC date (Calendar handles timezone conversion)
       let localHour = Calendar.current.component(.hour, from: result.date)
+      //DBGLog("Filtering: \(result.date) -> local hour \(localHour) for filter '\(timeFilter)'")
 
-      let passes: Bool
       switch timeFilter {
-      case "morning": passes = localHour >= 6 && localHour < 10
-      case "daytime": passes = localHour >= 10 && localHour < 18
-      case "evening": passes = localHour >= 18 && localHour < 23
-      case "sleep_hours": passes = localHour >= 23 || localHour < 6
-      case "wake_hours": passes = localHour >= 6 && localHour < 23
-      default: passes = true  // "all_day"
+      case "morning": return localHour >= 6 && localHour < 10
+      case "daytime": return localHour >= 10 && localHour < 18
+      case "evening": return localHour >= 18 && localHour < 23
+      case "sleep_hours": return localHour >= 23 || localHour < 6
+      case "wake_hours": return localHour >= 6 && localHour < 23
+      default: return true  // "all_day"
       }
-
-      DBGLog("  Sample: \(result.date) -> local hour \(localHour) -> \(passes ? "PASS" : "FAIL")")
-      return passes
     }
-    DBGLog("applyTimeFilter: \(filtered.count) results passed filter (removed \(results.count - filtered.count))")
-    return filtered
   }
 
   private func applyAggregation(results: [rtHealthKit.HealthQueryResult], aggregation: String)

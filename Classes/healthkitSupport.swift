@@ -1407,12 +1407,6 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                     completion([])
                     return
                 }
-                DBGLog("[\(queryConfig.displayName)] HealthKit returned \(samples.count) samples")
-                if !samples.isEmpty {
-                    let firstSample = samples.first!
-                    let lastSample = samples.last!
-                    DBGLog("[\(queryConfig.displayName)] Sample range: \(firstSample.startDate) to \(lastSample.startDate)")
-                }
                 // Use endDate for interval-based measurements (e.g., overnight sleep data)
                 let timestamps = samples.map { queryConfig.useEndDate ? $0.endDate.timeIntervalSince1970 : $0.startDate.timeIntervalSince1970 }
                 //self.dbgTimestamps(queryConfig.displayName, timestamps)
