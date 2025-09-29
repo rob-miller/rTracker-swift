@@ -53,6 +53,7 @@ struct HealthDataQuery {
     let customProcessor: ((HKSample) -> Double)? // custom processing logic (sleep aggregation)
     let aggregationType: AggregationType?      // custom grouping logic (night sleep)
     let aggregationTime: DateComponents?       // Optional time for aggregation (e.g., start/end of day). if specified, aggregate over supplied targDate +/- 10 hours
+    let useEndDate: Bool                       // Use sample.endDate instead of startDate for interval-based measurements (e.g., overnight sleep data)
     let info: String?
     let sampleType: SampleType
     let workoutActivities: [HKWorkoutActivityType]?
@@ -75,6 +76,7 @@ struct HealthDataQuery {
         customProcessor: ((HKSample) -> Double)? = nil,
         aggregationType: AggregationType? = nil,
         aggregationTime: DateComponents? = nil,
+        useEndDate: Bool = false,
         info: String? = nil,
         sampleType: SampleType = .quantity,
         workoutActivities: [HKWorkoutActivityType]? = nil,
@@ -92,6 +94,7 @@ struct HealthDataQuery {
         self.customProcessor = customProcessor
         self.aggregationType = aggregationType
         self.aggregationTime = aggregationTime
+        self.useEndDate = useEndDate
         self.info = info
         self.sampleType = sampleType
         self.workoutActivities = workoutActivities
@@ -742,6 +745,7 @@ private let baseHealthDataQueries: [HealthDataQuery] = [
         customProcessor: nil,
         aggregationType: .highFrequency,
         aggregationTime: DateComponents(hour: 12, minute: 0),
+        useEndDate: true,
         info: nil,
         sampleType: .quantity,
         menuTab: .sleep

@@ -646,7 +646,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
             
             // Handle specialized sleep metrics
             switch queryConfig.displayName {
-            case "Sleep - Deep Segments":
+            case "Deep Sleep Segments":
                 let segmentCount = self.countSleepSegments(
                     samples: categorySamples,
                     targetValue: HKCategoryValueSleepAnalysis.asleepDeep.rawValue,
@@ -661,8 +661,8 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                         unit: specifiedUnit
                     ))
                 }
-                
-            case "Sleep - REM Segments":
+
+            case "REM Sleep Segments":
                 let segmentCount = self.countSleepSegments(
                     samples: categorySamples,
                     targetValue: HKCategoryValueSleepAnalysis.asleepREM.rawValue,
@@ -680,8 +680,8 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                         unit: specifiedUnit
                     ))
                 }
-                
-            case "Sleep - Cycles":
+
+            case "Sleep Cycles":
                 let cycleCount = self.countSleepCycles(
                     samples: categorySamples,
                     minSegmentMinutes: MINSLEEPSEGMENTDURATION
@@ -693,8 +693,8 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                         unit: specifiedUnit
                     ))
                 }
-                
-            case "Sleep - Transitions":
+
+            case "Sleep Transitions":
                 let transitionCount = self.countSleepTransitions(samples: categorySamples)
                 if transitionCount > 0 {
                     results.append(HealthQueryResult(
@@ -1231,7 +1231,9 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                     return quantitySamples.compactMap { sample in
                         let value = sample.quantity.doubleValue(for: unit)
                         let adjustedValue = queryConfig.unit?.first == HKUnit.percent() ? value * 100 : value
-                        return HealthQueryResult(date: sample.startDate, value: adjustedValue, unit: unit)
+                        // Use endDate for interval-based measurements (e.g., overnight sleep data)
+                        let sampleDate = queryConfig.useEndDate ? sample.endDate : sample.startDate
+                        return HealthQueryResult(date: sampleDate, value: adjustedValue, unit: unit)
                     }
 
                 case .cumulative:
@@ -1405,7 +1407,14 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                     completion([])
                     return
                 }
-                let timestamps = samples.map { $0.startDate.timeIntervalSince1970 }
+                DBGLog("[\(queryConfig.displayName)] HealthKit returned \(samples.count) samples")
+                if !samples.isEmpty {
+                    let firstSample = samples.first!
+                    let lastSample = samples.last!
+                    DBGLog("[\(queryConfig.displayName)] Sample range: \(firstSample.startDate) to \(lastSample.startDate)")
+                }
+                // Use endDate for interval-based measurements (e.g., overnight sleep data)
+                let timestamps = samples.map { queryConfig.useEndDate ? $0.endDate.timeIntervalSince1970 : $0.startDate.timeIntervalSince1970 }
                 //self.dbgTimestamps(queryConfig.displayName, timestamps)
                 completion(timestamps)
             }

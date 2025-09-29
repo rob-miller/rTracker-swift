@@ -465,8 +465,13 @@ class trackerObj: tObjBase {
         let hasRecordForToday = toQry2Int(sql: checkSql) > 0
         
         for inDate in inDates {
-            // Skip only the most recent inDate if it matches today's date AND we have no saved record for today
-            if inDate == mostRecentInDate && calendar.isDateInToday(Date(timeIntervalSince1970: inDate)) {
+            if inDate == mostRecentInDate {
+                DBGLog("mostRecentInDate = \(Date(timeIntervalSince1970: inDate))")
+            }
+            // Skip only the most recent inDate if it is today or future AND we have no saved record for today
+            if inDate == mostRecentInDate && inDate >= todayStart.timeIntervalSince1970 {
+                DBGLog(" and is today or later")
+
                 let now = Date()
                 let inDateObj = Date(timeIntervalSince1970: inDate)
                 
@@ -490,8 +495,12 @@ class trackerObj: tObjBase {
                     // After aggregation time - system would have auto-created records, so don't skip
                     // (This handles sleep data at 12:00 PM when current time is 2:00 PM)
                 } else {
+                    DBGLog(" but before aggregation time")
+
                     // Before aggregation time - use pre-calculated record check for today
                     if !hasRecordForToday {
+                        DBGLog("and no saved record for today so skipping")
+
                         // No saved record for today yet - skip to avoid creating empty entry
                         continue
                     }

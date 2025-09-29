@@ -48,5 +48,10 @@ Defines HealthKit data query configurations for health metrics, workouts, and ca
 - **Category Organization**: WorkoutCategory enum for UI filtering and logical grouping
 - **Sleep Display Names**: Improved sleep analysis display names for better clarity
 
+## Current Issues & TODOs
+- **COMPLETED (2025-09-29)**: Fixed sleeping wrist temperature date attribution by adding `useEndDate` flag
+
 ## Last Updated
-2025-09-28: Major restructuring with MenuTab system, comprehensive workout support (200+ workout types), and expanded HealthDataQuery struct. Added SampleType/WorkoutMetric/WorkoutCategory enums, programmatic workout query generation, and MenuTab override system for flexible UI organization.
+2025-09-29: **Date Attribution Fix** - Added `useEndDate: Bool` field to HealthDataQuery struct to handle interval-based measurements that should be attributed to the end of their interval rather than the start. Applied to Sleeping Wrist Temperature to fix overnight measurement attribution (previously attributed to evening instead of morning).
+
+Previous: 2025-09-28 - Major restructuring with MenuTab system, comprehensive workout support (200+ workout types), and expanded HealthDataQuery struct.

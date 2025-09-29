@@ -47,5 +47,11 @@ Handles HealthKit integration for querying and processing health metrics, catego
 - **MenuTab Preservation**: Fixed critical bug where menuTab overrides were lost during configuration loading
 - **Authorization Updates**: Extended permission requests to include workout types
 
+## Current Issues & TODOs
+- **COMPLETED (2025-09-29)**: Fixed date attribution for interval-based measurements using `useEndDate` flag
+- **COMPLETED (2025-09-29)**: Fixed sleep cycles/segments/transitions naming mismatch
+
 ## Last Updated
-2025-09-28: Major restructuring for three-way sample type support (quantity/category/workout). Added comprehensive workout handling, fixed MenuTab preservation bug, and enhanced category data processing. Now supports hundreds of workout types with proper filtering and authorization.
+2025-09-29: **Sleep Cycles Naming Fix** - Fixed critical bug in `handleSleepAnalysisQuery()` where switch cases used incorrect display names with dashes ("Sleep - Cycles", "Sleep - Deep Segments", etc.) instead of the actual names from healthkitData.swift ("Sleep Cycles", "Deep Sleep Segments", etc.). This caused specialized counting functions to never execute, resulting in 0 values for sleep cycles, segments, and transitions. Fixed by updating switch cases to match actual display names (lines 649, 665, 684, 697).
+
+Previous: 2025-09-29 - Date Attribution Fix for interval-based measurements.

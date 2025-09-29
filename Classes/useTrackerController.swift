@@ -1696,6 +1696,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             targD = filteredValues.min() ?? 0  // past last search targ go to blank tracker
         }
         loadTrackerDate(targD)
+
         if targD > 0 {
             tableView!.reloadData()
         }
