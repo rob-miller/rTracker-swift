@@ -685,6 +685,7 @@ class voNumber: voState, UITextFieldDelegate {
             let specifiedDate = date //min(date, lastDbDate) 
             // single refresh, if specifieddate is current update any missing db entries to now
             specifiedStartDate = calendar.startOfDay(for:Date(timeIntervalSince1970: TimeInterval(specifiedDate)))
+            specifiedEndDate = calendar.date(byAdding: .day, value: 1, to: specifiedStartDate!)
             //if date < lastDbDate {  // specified date is historical, just do the 1 day
             //    specifiedEndDate = calendar.date(byAdding: .day, value: 1, to: specifiedStartDate!)
             //} // else leave end date nil to get all entries to now
