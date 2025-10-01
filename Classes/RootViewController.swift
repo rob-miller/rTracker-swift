@@ -605,7 +605,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
 
     public override func viewWillDisappear(_ animated: Bool) {
-            DBGLog("rvc viewWillDisappear")
+            //DBGLog("rvc viewWillDisappear")
 
             // Update badge count using ios 17 new API
             let count = pendingNotificationCount()

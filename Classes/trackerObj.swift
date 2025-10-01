@@ -255,7 +255,9 @@ class trackerObj: tObjBase {
         }
         
         let totalOTSteps = otCount * maxMissingCount
-        DBGLog("countOTsteps: Found \(otCount) OT valueObjs, max missing dates per valueObj: \(maxMissingCount) = \(totalOTSteps) total steps")
+        if otCount > 0 {
+            DBGLog("countOTsteps: Found \(otCount) OT valueObjs, max missing dates per valueObj: \(maxMissingCount) = \(totalOTSteps) total steps")
+        }
         return totalOTSteps
     }
     
@@ -425,6 +427,22 @@ class trackerObj: tObjBase {
         return rslt
     }
 
+    /// Merges incoming dates (e.g., from HealthKit) with existing tracker dates to determine which dates need new records.
+    ///
+    /// Performs calendar-day-based matching to separate incoming dates into two categories:
+    /// - **newDates**: Dates on calendar days with no existing trkrData records (need new records created)
+    /// - **matchedDates**: Existing trkrData timestamps that fall on same calendar days as incoming dates (need data refresh)
+    ///
+    /// **Special Handling for Today:**
+    /// - Skips most recent incoming date if it's today/future AND no saved record exists AND before aggregation time
+    /// - Prevents creating empty entries for live data that's already displayed via processHealthQuery
+    /// - Allows processing if after aggregation time or existing record found
+    ///
+    /// - Parameters:
+    ///   - inDates: Incoming timestamps to merge (typically from HealthKit or other external sources)
+    ///   - set12: If true, adjusts newDates to 12:00 noon and caps future dates to current time (default: true).  False when called for loadOTdata.
+    ///   - aggregationTime: Optional time when daily aggregation occurs (e.g., sleep data at 12:00 PM)
+    /// - Returns: Tuple containing (newDates: dates needing new records, matchedDates: existing dates to refresh)
     func mergeDates(inDates:[TimeInterval], set12: Bool = true, aggregationTime: DateComponents? = nil) -> (newDates: [TimeInterval], matchedDates: [TimeInterval]) {
         let existingDatesQuery = "SELECT date FROM trkrData order by date DESC"
         
@@ -558,6 +576,23 @@ class trackerObj: tObjBase {
         return currentHour / intervalHours // Which slot (0-based)
     }
     
+    /// Generates intra-day time slots from HealthKit dates for high-frequency data collection.
+    ///
+    /// Converts daily HealthKit date entries into multiple time slots per day based on the specified frequency
+    /// (e.g., hourly, every 2h, every 4h, etc.). Performs **exact timestamp matching** against existing trkrData
+    /// records to determine which slots need creation vs refresh.
+    ///
+    /// **Current Time Slot Handling for Today:**
+    /// - Skips ONLY the current time slot if no existing records exist for today
+    /// - Creates all earlier time slots for today (e.g., at 3 PM, creates slots for 12 PM, 1 PM, 2 PM but not 3 PM)
+    /// - Allows current slot processing if any saved record exists for today
+    /// - Filters out all future time slots from results
+    ///
+    /// - Parameters:
+    ///   - hkDates: HealthKit dates to expand into time slots
+    ///   - frequency: Frequency string determining slot interval (e.g., "every_1h", "every_4h", "twice_daily")
+    ///   - aggregationTime: Optional aggregation time (passed through if frequency doesn't match time slot pattern)
+    /// - Returns: Tuple containing (newDates: slots needing new records, matchedDates: existing slots to refresh)
     func generateTimeSlots(from hkDates: [TimeInterval], frequency: String, aggregationTime: DateComponents? = nil) -> (newDates: [TimeInterval], matchedDates: [TimeInterval]) {
         let existingDatesQuery = "SELECT date FROM trkrData order by date DESC"
         let existingDatesArr = toQry2AryI(sql: existingDatesQuery)
@@ -765,7 +800,9 @@ class trackerObj: tObjBase {
                 rslt = true
             }
         }
-        DBGLog("OT value objects to process: \(otValueObjCount)")
+        if otValueObjCount > 0 {
+            DBGLog("OT value objects to process: \(otValueObjCount)")
+        }
         
         // Start background processing
         otProcessingQueue.async { [weak self] in
@@ -857,7 +894,7 @@ class trackerObj: tObjBase {
 
     private func processFnData(forDate date: Int? = nil, dispatchGroup: DispatchGroup? = nil, forceAll: Bool = false, completion: (() -> Void)? = nil) -> Bool {
         // Diagnostic step 1: Verify delegate is set
-        DBGLog("[\(Date())] processFnData called - refreshDelegate is \(refreshDelegate != nil ? "SET" : "NOT SET!")")
+
         // For full refresh operations, check if progress bar should be initialized
         refreshDelegate?.updateFullRefreshProgress(step: 0, phase: "Computing functions", totalSteps: countFNsteps(), threshold: 15)  // threshold 15 as only update every 5 steps
         
@@ -875,7 +912,8 @@ class trackerObj: tObjBase {
             completion?()
             return rslt
         }
-        
+        DBGLog("[\(Date())] processFnData called - refreshDelegate is \(refreshDelegate != nil ? "SET" : "NOT SET!")")
+
         let currDate = Int(trackerDate?.timeIntervalSince1970 ?? 0)
         
         // Determine start date and collect dates needing processing

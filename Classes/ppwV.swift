@@ -243,7 +243,7 @@ class ppwV: UIView, UITextFieldDelegate {
                 name: UIResponder.keyboardWillHideNotification,
                 object: window)
             ObservingKeyboardNotification = true
-            DBGLog("*** watching keyboard notifications")
+            //DBGLog("*** watching keyboard notifications")
         } else {
             NotificationCenter.default.removeObserver(
                 self,
@@ -255,7 +255,7 @@ class ppwV: UIView, UITextFieldDelegate {
                 name: UIResponder.keyboardWillHideNotification,
                 object: window)
             ObservingKeyboardNotification = false
-            DBGLog("*** STOP watching keyboard notifications")
+            //DBGLog("*** STOP watching keyboard notifications")
         }
     }
 

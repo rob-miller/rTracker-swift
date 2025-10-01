@@ -840,7 +840,7 @@ extension trackerObj {
     func prevDate() -> Int {
         let sql = "select max(date) from trkrData where date < \(Int(trackerDate?.timeIntervalSince1970 ?? 0)) and minpriv <= \(privacyValue);"
         let rslt = toQry2Int(sql:sql)
-        DBGLog(String("curr: \(trackerDate) prev: \(Date(timeIntervalSince1970: TimeInterval(rslt)))"))
+        //DBGLog(String("curr: \(trackerDate?.description ?? "nil") prev: \(Date(timeIntervalSince1970: TimeInterval(rslt)))"))
 
         return rslt
     }

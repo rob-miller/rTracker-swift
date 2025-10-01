@@ -676,13 +676,13 @@ class privacyV: UIView {
             // When privacy view is visible, position ppwV just above the privacy view
             // Use the actual current frame position of the privacy view
             _ppwv.topy = self.frame.origin.y  // Position ppwV bottom at privacy view top
-            DBGLog("updatePpwvPosition: PVCONFIG/PVCHECKPASS - ppwV.topy = \(_ppwv.topy), privacyV.frame.origin.y = \(self.frame.origin.y)")
+            //DBGLog("updatePpwvPosition: PVCONFIG/PVCHECKPASS - ppwV.topy = \(_ppwv.topy), privacyV.frame.origin.y = \(self.frame.origin.y)")
         } else {
             // Default positioning - position above the bottom bar, ready to appear above keyboard
             // The ppwV should appear just above the tab bar/safe area when keyboard shows
             let parentHeight = parentView!.frame.size.height
             _ppwv.topy = parentHeight - bottomBarHeight
-            DBGLog("updatePpwvPosition: default - ppwV.topy = \(_ppwv.topy)")
+            //DBGLog("updatePpwvPosition: default - ppwV.topy = \(_ppwv.topy)")
         }
     }
 

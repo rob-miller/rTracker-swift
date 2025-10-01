@@ -611,7 +611,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
     override func viewWillAppear(_ animated: Bool) {
         
-        DBGLog("STATE: view will appear start")
+        //DBGLog("STATE: view will appear start")
         
         viewDisappearing = false
         
@@ -720,7 +720,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             #if DEBUGLOG
             // Add layout debugging to catch constraint conflicts
             if let toolbar = navigationController?.toolbar {
-                DBGLog("Updating toolbar with frame: \(toolbar.frame)")
+                //DBGLog("Updating toolbar with frame: \(toolbar.frame)")
             }
             #endif
 
@@ -736,7 +736,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     
     override func viewDidAppear(_ animated: Bool) {
         
-        DBGLog("STATE: view did appear start")
+        //DBGLog("STATE: view did appear start")
         // in case we just regained active after interruption -- sadly view still seen if done in viewWillAppear
         if (nil != tracker) && (tracker!.getPrivacyValue() > privacyValue) {
             //[self.navigationController popViewControllerAnimated:YES];
@@ -1130,7 +1130,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                     self.fullRefreshProgressContainerView?.layoutIfNeeded()
                 }
             } else {
-                DBGLog("phase \(self.currentRefreshPhase) Current total steps: \(currentTotalSteps), Progress threshold: \(currentProgressThreshold), frac: \((Double(currentTotalSteps) / Double(currentProgressThreshold))), progBarShown: \(progressBarShown)")
+                //DBGLog("phase \(self.currentRefreshPhase) Current total steps: \(currentTotalSteps), Progress threshold: \(currentProgressThreshold), frac: \((Double(currentTotalSteps) / Double(currentProgressThreshold))), progBarShown: \(progressBarShown)")
                 if currentTotalSteps > 1
                         && (Double(currentTotalSteps) / Double(currentProgressThreshold)) > 0.1 && !progressBarShown
             {

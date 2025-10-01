@@ -658,14 +658,21 @@ class voNumber: voState, UITextFieldDelegate {
 
     // enter done at trackerObj before calling here -- dispatchGroup?.enter()  // wait for getHealthkitDates processing overall
 
+    //*********
     // 1st determine if hk has date entries this tracker does not, if so identify and add them
+    // if date specified it is refresh of current to historical date
+    // if no date specified it is full refresh (no db entries) or just current
+    //*********
 
     // Create a separate DispatchGroup for getHealthKitDates processing
     let hkDispatchGroup = DispatchGroup()
-    
+
     // Declare newDates and matchedDates at method level so they're accessible throughout the method
     var newDates: [TimeInterval] = []
     var matchedDates: [TimeInterval] = []
+    #if DEBUGLOG
+    var detailedLogging = false
+    #endif
 
     hkDispatchGroup.enter()
 
@@ -673,8 +680,9 @@ class voNumber: voState, UITextFieldDelegate {
     var specifiedEndDate: Date? = nil
 
     // if historical specified date, use it for start and end because single date refresh
-    // if database entries, use the last one as startDate and test if start is after hk data
-    // if no database entries, then wiped so full refresh
+    // else if database entries and specified date after, use the last db date as startDate and no end date to get all new
+    // if no database entries, then wiped so full refresh, no start or end date.
+
     let sql = "select max(date) from voHKstatus where id = \(Int(vo.vid)) and stat = \(hkStatus.hkData.rawValue)"
     let lastDbDate = to.toQry2Int(sql: sql)
     DBGLog("last db date is \(lastDbDate > 0 ? Date(timeIntervalSince1970: TimeInterval(lastDbDate)).description : "none")")
@@ -684,8 +692,10 @@ class voNumber: voState, UITextFieldDelegate {
         if let date = date {
             let specifiedDate = date //min(date, lastDbDate) 
             // single refresh, if specifieddate is current update any missing db entries to now
+            // XXXXXX not following spec here, should be bigger window?
             specifiedStartDate = calendar.startOfDay(for:Date(timeIntervalSince1970: TimeInterval(specifiedDate)))
             specifiedEndDate = calendar.date(byAdding: .day, value: 1, to: specifiedStartDate!)
+            // XXXXXX
             //if date < lastDbDate {  // specified date is historical, just do the 1 day
             //    specifiedEndDate = calendar.date(byAdding: .day, value: 1, to: specifiedStartDate!)
             //} // else leave end date nil to get all entries to now
@@ -703,6 +713,9 @@ class voNumber: voState, UITextFieldDelegate {
     )
 
     // Adjust start date for data types with aggregation boundaries (like sleep at 12:00 PM)
+    // so move start date back to previous boundary to ensure we get all data
+    // XXX end date is just plus 1 day from start date, probaly needs to be range based on nextdbdate or current date 
+
     if let queryConfig = healthDataQueries.first(where: { $0.displayName == srcName }),
        let aggregationTime = queryConfig.aggregationTime,
        let currentStartDate = specifiedStartDate {
@@ -719,6 +732,8 @@ class voNumber: voState, UITextFieldDelegate {
         DBGLog("[\(srcName)] Adjusted dates for aggregation boundary to  start: \(specifiedStartDate?.description ?? "nil") and end: \(specifiedEndDate?.description ?? "nil")")
     }
 
+// XXXX also need to adjust dates for high frew data types set to 'sleep hours' starting at 23:00 on night before - need to link to sleep hours defn or highlight with comments
+
     #if DEBUGLOG
     // Debug-only: Limit to recent data when no start date specified
     let USE_DEBUG_DATE_LIMIT = true  // Easy toggle
@@ -733,13 +748,16 @@ class voNumber: voState, UITextFieldDelegate {
     }
     #endif
 
-    // Use standard HealthKit date window
-    DBGLog("[\(srcName)] Using effective window size: \(hkDateWindow) days")
+    if specifiedStartDate == nil {
+        // remind standard HealthKit date window
+        DBGLog("[\(srcName)] no startdate, full refresh, Using effective window size: \(hkDateWindow) days")
+    }
 
     #if DEBUGLOG
       let startTime = CFAbsoluteTimeGetCurrent()
     #endif
 
+    // Adjust for ahPrevD if needed - shift both start and end dates back by 1 day for HK query
     if isAhPrevD {
         DBGLog("[\(srcName)] ahPrevD enabled: shifting start date back by 1 day")
         if let currentStartDate = specifiedStartDate {
@@ -751,7 +769,8 @@ class voNumber: voState, UITextFieldDelegate {
         DBGLog("[\(srcName)] Adjusted dates for ahPrevD to  start: \(specifiedStartDate?.description ?? "nil") and end: \(specifiedEndDate?.description ?? "nil")")
     }
  
-    //
+    //*****  Use HK to get start or end dates where not yet specified, otherwise use specified dates unchanged
+
     rthk.sampleDateRange(
       for: hkObjectType as HKSampleType, useStartDate: specifiedStartDate,
       useEndDate: specifiedEndDate
@@ -776,6 +795,12 @@ class voNumber: voState, UITextFieldDelegate {
         return
       }
 
+      //***** At this point have valid start and end dates
+
+      DBGLog("[\(srcName)] final HealthKit query date range: \(hkStartDate) to \(hkEndDate)", color: .VIOLET)
+
+      // if more thatn a hkDateWindow we need progress bar
+
       // Calculate number of date windows needed for chunked processing
       let daysBetween = calendar.dateComponents([.day], from: hkStartDate, to: hkEndDate).day ?? 0
       let numberOfWindows = (daysBetween + hkDateWindow - 1) / hkDateWindow  // Round up
@@ -786,7 +811,9 @@ class voNumber: voState, UITextFieldDelegate {
       var allHKDates: [TimeInterval] = []
       let chunkDispatchGroup = DispatchGroup()
 
-      // Process date ranges in chunks with rate limiting on background queue
+      //***** Process date ranges in chunks with rate limiting on background queue
+      //***** get all HK entry dates in the specified range
+
       for windowIndex in 0..<numberOfWindows {
         chunkDispatchGroup.enter()
 
@@ -830,11 +857,14 @@ class voNumber: voState, UITextFieldDelegate {
       }
 
       // Wait for all chunks to complete, then process combined results
+
+      //***** now have all HK dates with entries for this source for thespecified/determined date range
+
       chunkDispatchGroup.notify(queue: .main) { [self] in
         to.refreshDelegate?.updateFullRefreshProgress(completed: true)
         let isAhPrevD = self.vo.optDict["ahPrevD"] ?? "0" == "1"
 
-        // For ahPrevD, we need to check SHIFTED +1 dates against dates in trkrData
+        // For ahPrevD, we need shift the HK result dates +1 day to be the dates they are recorded in the tracker database
         var datesToCheck = allHKDates
         if isAhPrevD {
             let now = Date()
@@ -845,16 +875,25 @@ class voNumber: voState, UITextFieldDelegate {
             }
             DBGLog("ahPrevD enabled: checking \(datesToCheck.count) shifted dates against trkrData dates (future dates filtered)")
         }
-        if let earliest = datesToCheck.min(), let latest = datesToCheck.max() {
-            DBGLog("  datesToCheck Date range: \(Date(timeIntervalSince1970: earliest)) to \(Date(timeIntervalSince1970: latest))")
-        }   
+
+        #if DEBUGLOG
+            if let earliest = datesToCheck.min(), let latest = datesToCheck.max() {
+                DBGLog("  datesToCheck Date range: \(Date(timeIntervalSince1970: earliest)) to \(Date(timeIntervalSince1970: latest))")
+            }
+        #endif
+  
+        //***** now have HK entry dates for the specified time range as they will be entered in db.
+
         // Move heavy processing to background thread to avoid UI freeze
         DispatchQueue.global(qos: .userInitiated).async { [self] in
           let frequency = self.vo.optDict["ahFrequency"] ?? "daily"
 
+          //***** map HK dates to where they should be in tracker database, generating new dates and matched dates.
+          //** mergeResult and timeSlotResult both filter today/now entries for current tracker view.
+          //***** here we may insert trackerDates even if just refreshing current day
+
           // ignore ahPrevD here.  these are the tracker dates to be in the database for the values whether specified day or previous day
           if frequency == "daily" {
-            // Use original daily logic with potentially shifted dates
             let mergeResult = to.mergeDates(inDates: datesToCheck, aggregationTime: queryConfig.aggregationTime)
             newDates = mergeResult.newDates
             matchedDates = mergeResult.matchedDates
@@ -864,6 +903,18 @@ class voNumber: voState, UITextFieldDelegate {
             newDates = timeSlotResult.newDates
             matchedDates = timeSlotResult.matchedDates
           }
+
+          #if DEBUGLOG
+          detailedLogging = newDates.count < 24 || matchedDates.count < 24
+          if detailedLogging {
+            if newDates.count < 24 {
+              DBGLog("[\(srcName)] newDates (\(newDates.count)): \(newDates.map { Date(timeIntervalSince1970: $0) })")
+            }
+            if matchedDates.count < 24 {
+              DBGLog("[\(srcName)] matchedDates (\(matchedDates.count)): \(matchedDates.map { Date(timeIntervalSince1970: $0) })")
+            }
+          }
+          #endif
 
           // Insert the new dates into trkrData
           // trkrData is 'on conflict replace'
@@ -917,6 +968,9 @@ class voNumber: voState, UITextFieldDelegate {
     // 2nd log hk data entries for each date in voData and hkStatus
 
     // Wait for getHealthKitDates processing to complete before proceeding
+
+    //***** tracker db now has all dates in trkrData for this source
+
     hkDispatchGroup.notify(queue: .main) { [self] in
       DBGLog("HealthKit dates for \(srcName) processed, continuing with loadHKdata.", color:.GREEN)
       
@@ -928,7 +982,7 @@ class voNumber: voState, UITextFieldDelegate {
       var datesToProcess: [TimeInterval]
 
       if isAhPrevD {
-        // newDates and matchedDates are the tracker dates for shifted hk dates, for ahPrevD we need to shift back to query the day before
+        // newDates and matchedDates are the tracker dates for shifted hk dates, for ahPrevD we need to shift back to query the HK data for the day before
         let unshiftedNewDates = newDates.compactMap { date in
           calendar.date(byAdding: .day, value: -1, to: Date(timeIntervalSince1970: date))?.timeIntervalSince1970
         }
@@ -1024,23 +1078,27 @@ class voNumber: voState, UITextFieldDelegate {
                 let statusSql =
                   "insert into voHKstatus (id, date, stat) values (\(self.vo.vid), \(storageDate), \(hkStatus.hkData.rawValue))"
                 to.toExecSql(sql: statusSql)
-                ///*
-                DBGLog(
-                  "Stored HK data value \(result) for \(self.vo.valueName ?? "unknown") on \(Date(timeIntervalSince1970: TimeInterval(storageDate))) (vid: \(self.vo.vid))",
-                  color: .GREEN
-                )
-                //*/
+                #if DEBUGLOG
+                if detailedLogging {
+                  DBGLog(
+                    "Stored HK data value \(result) for \(self.vo.valueName ?? "unknown") on \(Date(timeIntervalSince1970: TimeInterval(storageDate))) (vid: \(self.vo.vid))",
+                    color: .GREEN
+                  )
+                }
+                #endif
               } else {
                 // No data found - record no data status
                 let sql =
                   "insert into voHKstatus (id, date, stat) values (\(self.vo.vid), \(storageDate), \(hkStatus.noData.rawValue))"
                 to.toExecSql(sql: sql)
-                ///*
-                DBGLog(
-                  "No HK data for \(self.vo.valueName ?? "unknown") on \(Date(timeIntervalSince1970: TimeInterval(storageDate))) (vid: \(self.vo.vid))",
-                  color: .ORANGE
-                )
-                //*/
+                #if DEBUGLOG
+                if detailedLogging {
+                  DBGLog(
+                    "No HK data for \(self.vo.valueName ?? "unknown") on \(Date(timeIntervalSince1970: TimeInterval(storageDate))) (vid: \(self.vo.vid))",
+                    color: .ORANGE
+                  )
+                }
+                #endif
               }
 
               #if DEBUGLOG

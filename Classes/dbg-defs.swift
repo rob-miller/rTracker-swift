@@ -106,7 +106,24 @@ enum DBGColor {
 }
 
 // implementation for debug messages:
-     
+
+func coloredFileName(_ fileName: String) -> String {
+    let color: DBGColor?
+    switch fileName {
+    case "trackerObj":
+        color = .BLUE
+    case "voNumber":
+        color = .CYAN
+    case "useTrackerController":
+        color = .MAGENTA
+    case "healthKitSupport":
+        color = .ORANGE
+    default:
+        return fileName
+    }
+    return "\(color!.ansiCode)\(fileName)\(DBGColor.reset)"
+}
+
 func SQLDbg(_ message: String) {
 #if SQLDEBUG
     print(message)
@@ -119,17 +136,21 @@ func SQLDbg(_ message: String) {
 func DBGLog(_ message: String, color: DBGColor? = nil, file: String = #file, function: String = #function, line: Int = #line) {
 #if DEBUGLOG
     //#define DBGLog(args...) NSLog(@"%s%d: %@",__PRETTY_FUNCTION__,__LINE__,[NSString stringWithFormat: args])
-    let fileName = file.components(separatedBy: "/").last ?? ""
+    var fileName = file.components(separatedBy: "/").last ?? ""
+    if fileName.hasSuffix(".swift") {
+        fileName = String(fileName.dropLast(6))
+    }
+    let coloredFile = coloredFileName(fileName)
     let tim = CFAbsoluteTimeGetCurrent()
-    
+
     let formattedMessage: String
     if let color = color {
         formattedMessage = "\(color.ansiCode)\(message)\(DBGColor.reset)"
     } else {
         formattedMessage = message
     }
-    
-    print("\(tim):[\(fileName):\(line)] \(function): \(formattedMessage)")
+
+    print("\(tim):[\(coloredFile):\(line)] \(function): \(formattedMessage)")
 #endif
 }
 
