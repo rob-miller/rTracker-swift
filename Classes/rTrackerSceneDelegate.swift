@@ -191,12 +191,12 @@ class rTrackerSceneDelegate: NSObject, UIWindowSceneDelegate {
         let sud = UserDefaults.standard
         if !sud.bool(forKey: "acceptLicense") {
             let freeMsg = "Copyright 2010-2025 Robert T. Miller\n\nrTracker is free and open source software, distributed under the Apache License, Version 2.0.\n\nrTracker is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n\nrTracker source code is available at https://github.com/rob-miller/rTracker-swift\n\nThe full Apache License is available at http://www.apache.org/licenses/LICENSE-2.0"
-            
+
             let alert = UIAlertController(
                 title: "rTracker is free software.",
                 message: freeMsg,
                 preferredStyle: .alert)
-            
+
             let defaultAction = UIAlertAction(
                 title: "Accept",
                 style: .default,
@@ -204,21 +204,30 @@ class rTrackerSceneDelegate: NSObject, UIWindowSceneDelegate {
                     rTracker_resource.setAcceptLicense(true)
                     UserDefaults.standard.set(true, forKey: "acceptLicense")
                     UserDefaults.standard.synchronize()
-                    
+
                     appDelegate.pleaseRegister(forNotifications: rootViewController)
                 })
-            
+
             let recoverAction = UIAlertAction(
                 title: "Reject",
                 style: .default,
                 handler: { action in
                     exit(0)
                 })
-            
+
             alert.addAction(defaultAction)
             alert.addAction(recoverAction)
-            
+
             rootViewController.present(alert, animated: true)
+        } else {
+            // License already accepted - check if we need to show backup requester to existing users
+            let toldAboutSwipe = sud.bool(forKey: "toldAboutSwipe")
+            let toldToBackup = sud.bool(forKey: "toldToBackup")
+
+            if toldAboutSwipe && !toldToBackup {
+                // This is an existing user who hasn't been told about backup yet
+                rootViewController.presentBackupRequester()
+            }
         }
     }
 }

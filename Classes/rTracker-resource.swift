@@ -71,6 +71,7 @@ var acceptLicense = ACCEPTLICENSEDFLT
 var toldAboutSwipe = false
 var toldAboutSwipe2 = false
 var toldAboutNotifications = false
+var toldToBackup = false
 var notificationsEnabled = false
 var maintainerRqst = false
 
@@ -781,6 +782,14 @@ class rTracker_resource: NSObject {
   class func setToldAboutNotifications(_ toldNotifications: Bool) {
     toldAboutNotifications = toldNotifications
     //DBGLog(String("updateToldAboutNotifications:\(toldAboutNotifications)"))
+  }
+
+  class func getToldToBackup() -> Bool {
+    return toldToBackup
+  }
+
+  class func setToldToBackup(_ told: Bool) {
+    toldToBackup = told
   }
 
   class func setNotificationsEnabled() {

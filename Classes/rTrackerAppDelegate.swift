@@ -69,9 +69,14 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
                     style: .default,
                     handler: { [self] action in
                         registerForNotifications()
-                        
+
                         rTracker_resource.setToldAboutNotifications(true)
                         UserDefaults.standard.set(true, forKey: "toldAboutNotifications")
+
+                        // Mark new users as already told about backup (they don't need the prompt)
+                        rTracker_resource.setToldToBackup(true)
+                        UserDefaults.standard.set(true, forKey: "toldToBackup")
+
                         UserDefaults.standard.synchronize()
                     })
                 

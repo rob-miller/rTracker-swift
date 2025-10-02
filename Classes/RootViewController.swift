@@ -60,6 +60,7 @@ import UserNotifications
 
 import Foundation
 import AVFoundation
+import ZIPFoundation
 
 extension Notification.Name {
     static let notifyOpenTracker = Notification.Name("notifyOpenTracker")
@@ -90,6 +91,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     var stashAnimated = false
     var audioPlayer: AVAudioPlayer?
     var tldStashedTID = -1
+    var backupZipOption: configTlistController.MenuOption? = nil
 
     let SUPPLY_DEMOS = 0
     let SUPPLY_SAMPLES = 1
@@ -412,6 +414,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         rTracker_resource.setToldAboutSwipe(sud.bool(forKey: "toldAboutSwipe"))
         rTracker_resource.setToldAboutSwipe2(sud.bool(forKey: "toldAboutSwipe2"))
         rTracker_resource.setToldAboutNotifications(sud.bool(forKey: "toldAboutNotifications"))
+        rTracker_resource.setToldToBackup(sud.bool(forKey: "toldToBackup"))
         rTracker_resource.setAcceptLicense(sud.bool(forKey: "acceptLicense"))
 
         //DBGLog(@"entry prefs-- resetPass: %d  reloadsamples: %d",resetPassPref,reloadSamplesPref);
@@ -901,6 +904,167 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
     }
      */
+
+    // MARK: -
+    // MARK: Backup methods
+
+    @objc func startBackupExportZip() {
+        guard let backupZipOption = self.backupZipOption,
+              backupZipOption == .shareRtrkZip else {
+            DBGLog("Invalid or nil backupZipOption")
+            return
+        }
+
+        autoreleasepool {
+            // Export all trackers to .rtrk format
+            var ndx: Float = 1.0
+            jumpMaxPriv()
+
+            let sql = "select id from toplevel"
+            let idSet = tlist.toQry2AryI(sql: sql)
+            let all = Float(idSet.count)
+
+            for tid in idSet {
+                let to = trackerObj(tid)
+                _ = to.writeTmpRtrk(true)
+
+                rTracker_resource.setProgressVal(ndx / all)
+                ndx += 1.0
+            }
+
+            restorePriv()
+
+            // Create the .zip file
+            let fpatho = rTracker_resource.ioFilePath(nil, access: false, tmp: true)
+            let fpathu = URL(fileURLWithPath: fpatho)
+            try? FileManager.default.createDirectory(atPath: fpatho, withIntermediateDirectories: false, attributes: nil)
+            let zipFileName = "rTracker_exportAllRtrk.zip"
+            let fpattern = "*.rtrk"
+
+            DBGLog("Temporary directory path: \(fpatho)")
+
+            // List files in the directory to verify what's there
+            do {
+                let contents = try FileManager.default.contentsOfDirectory(atPath: fpatho)
+                DBGLog("Files in temporary directory before ZIP creation: \(contents)")
+            } catch {
+                DBGLog("Error listing directory contents: \(error.localizedDescription)")
+            }
+
+            let zipFileURL = URL(fileURLWithPath: fpatho).appendingPathComponent(zipFileName)
+
+            do {
+                // Create ZIP using helper method from configTlistController
+                try createZipFile(at: zipFileURL, withFilesMatching: fpattern, in: fpathu)
+
+                // Verify ZIP file size after creation
+                let attributes = try FileManager.default.attributesOfItem(atPath: zipFileURL.path)
+                let fileSize = attributes[FileAttributeKey.size] as? UInt64 ?? 0
+                DBGLog("Zip file created at: \(zipFileURL) with size: \(fileSize) bytes")
+            } catch {
+                DBGLog("Failed to create zip file: \(error.localizedDescription)")
+            }
+
+            safeDispatchSync({ [self] in
+                rTracker_resource.finishProgressBar(view, navItem: navigationItem, disable: true)
+
+                // Present the activity view controller for sharing
+                let activityViewController = UIActivityViewController(activityItems: [zipFileURL], applicationActivities: nil)
+                activityViewController.completionWithItemsHandler = { activityType, completed, returnedItems, activityError in
+                    // Clean up temporary files
+                    do {
+                        let fileURLs = try FileManager.default.contentsOfDirectory(at: fpathu, includingPropertiesForKeys: nil)
+                        for fileURL in fileURLs {
+                            try FileManager.default.removeItem(at: fileURL)
+                        }
+                        DBGLog("All files in the temp directory have been removed.")
+                    } catch {
+                        DBGLog("Failed to clear temp directory: \(error.localizedDescription)")
+                    }
+                }
+
+                self.present(activityViewController, animated: true)
+            })
+        }
+    }
+
+    // Helper to create a ZIP file (copied from configTlistController)
+    func createZipFile(at zipURL: URL, withFilesMatching pattern: String, in directory: URL) throws {
+        // Remove existing ZIP file if it exists
+        if FileManager.default.fileExists(atPath: zipURL.path) {
+            try FileManager.default.removeItem(at: zipURL)
+        }
+
+        // Create a ZIP archive with the throwing initializer
+        let archive: Archive
+        do {
+            archive = try Archive(url: zipURL, accessMode: .create)
+        } catch {
+            throw NSError(domain: "ZIPFoundationError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Unable to create archive: \(error.localizedDescription)"])
+        }
+
+        // Get matching files
+        let files = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
+            .filter { file in
+                if pattern == "*.rtrk" {
+                    return file.pathExtension == "rtrk"
+                }
+                return false
+            }
+
+        DBGLog("Found \(files.count) files matching pattern \(pattern)")
+        for file in files {
+            DBGLog("Adding to ZIP: \(file.lastPathComponent)")
+        }
+
+        // Add files to the ZIP archive
+        for file in files {
+            try archive.addEntry(with: file.lastPathComponent, fileURL: file)
+        }
+    }
+
+    func doBackupNow() {
+        DBGLog("Starting backup export")
+        backupZipOption = .shareRtrkZip
+
+        let navframe = navigationController?.navigationBar.frame
+        rTracker_resource.startProgressBar(view, navItem: navigationItem, disable: true, yloc: (navframe?.size.height ?? 0.0) + (navframe?.origin.y ?? 0.0))
+
+        Thread.detachNewThreadSelector(#selector(startBackupExportZip), toTarget: self, with: nil)
+    }
+
+    func presentBackupRequester() {
+        let alert = UIAlertController(
+            title: "Backup Your Data",
+            message: "This is a new version of rTracker with many new features and probably new bugs as well. Please backup all your trackers to ensure you don't lose any data. Be sure to try the Apple HealthKit sources for the number values, and the new charts!",
+            preferredStyle: .alert)
+
+        let backupAction = UIAlertAction(
+            title: "Backup Now",
+            style: .default,
+            handler: { [weak self] action in
+                rTracker_resource.setToldToBackup(true)
+                UserDefaults.standard.set(true, forKey: "toldToBackup")
+                UserDefaults.standard.synchronize()
+
+                self?.doBackupNow()
+            })
+
+        let skipAction = UIAlertAction(
+            title: "Skip",
+            style: .cancel,
+            handler: { action in
+                rTracker_resource.setToldToBackup(true)
+                UserDefaults.standard.set(true, forKey: "toldToBackup")
+                UserDefaults.standard.synchronize()
+            })
+
+        alert.addAction(backupAction)
+        alert.addAction(skipAction)
+
+        present(alert, animated: true)
+    }
+
     // MARK: -
     // MARK: Table view methods
     
