@@ -668,8 +668,8 @@ class voNumber: voState, UITextFieldDelegate {
     let hkDispatchGroup = DispatchGroup()
 
     // Declare newDates and matchedDates at method level so they're accessible throughout the method
-    var newDates: [TimeInterval] = []
-    var matchedDates: [TimeInterval] = []
+    var newDates: Set<TimeInterval> = []
+    var matchedDates: Set<TimeInterval> = []
     #if DEBUGLOG
     var detailedLogging = false
     #endif
@@ -685,8 +685,7 @@ class voNumber: voState, UITextFieldDelegate {
 
     let sql = "select max(date) from voHKstatus where id = \(Int(vo.vid)) and stat = \(hkStatus.hkData.rawValue)"
     let lastDbDate = to.toQry2Int(sql: sql)
-    DBGLog("last db date is \(lastDbDate > 0 ? Date(timeIntervalSince1970: TimeInterval(lastDbDate)).description : "none")")
-    DBGLog("date is \(date.map { $0 > 0 ? Date(timeIntervalSince1970: TimeInterval($0)).description : "zero" } ?? "nil")")
+    DBGLog("last db date is \(lastDbDate > 0 ? i2ltd(lastDbDate) : "none") input date is \(date.map { $0 > 0 ? i2ltd($0) : "zero" } ?? "nil")")
 
     if lastDbDate > 0 {
         if let date = date {
@@ -701,7 +700,7 @@ class voNumber: voState, UITextFieldDelegate {
             //} // else leave end date nil to get all entries to now
 
             DBGLog(
-                "Single date refresh: querying from \(specifiedStartDate?.description ?? "nil") to \(specifiedEndDate?.description ?? "nil")"
+                "Single date refresh: querying from \(specifiedStartDate.map { ltd($0) } ?? "nil") to \(specifiedEndDate.map { ltd($0) } ?? "nil")"
             )
         } else {
             specifiedStartDate = Date(timeIntervalSince1970: TimeInterval(lastDbDate))
@@ -709,7 +708,7 @@ class voNumber: voState, UITextFieldDelegate {
     }
 
     DBGLog(
-      "Using specified start date: \(specifiedStartDate?.description ?? "nil") and end date: \(specifiedEndDate?.description ?? "nil")"
+      "Using specified start date: \(specifiedStartDate.map { ltd($0) } ?? "nil") and end date: \(specifiedEndDate.map { ltd($0) } ?? "nil")"
     )
 
     // Adjust start date for data types with aggregation boundaries (like sleep at 12:00 PM)
@@ -729,21 +728,64 @@ class voNumber: voState, UITextFieldDelegate {
         specifiedStartDate = calendar.date(byAdding: .day, value: -1, to: boundaryDate)
         specifiedEndDate = calendar.date(byAdding: .day, value: 1, to: specifiedStartDate!)
         // start is yesterday's aggregation boundary, end is one day later
-        DBGLog("[\(srcName)] Adjusted dates for aggregation boundary to  start: \(specifiedStartDate?.description ?? "nil") and end: \(specifiedEndDate?.description ?? "nil")")
+        DBGLog("[\(srcName)] Adjusted dates for aggregation boundary to  start: \(specifiedStartDate.map { ltd($0) } ?? "nil") and end: \(specifiedEndDate.map { ltd($0) } ?? "nil")")
     }
 
-// XXXX also need to adjust dates for high frew data types set to 'sleep hours' starting at 23:00 on night before - need to link to sleep hours defn or highlight with comments
+    // Adjust dates for high-frequency data with sleep_hours time filter
+    if queryConfig.aggregationType == .highFrequency,
+       let timeFilter = vo.optDict["ahTimeFilter"],
+       timeFilter == "sleep_hours",
+       vo.optDict["ahFrequency"] ?? "daily" == "daily",
+       let currentStartDate = specifiedStartDate {
+
+        // sleep_hours = 23:00 local (night before) to 06:00 local (tracker date morning)
+        // Use .byAdding instead of .bySettingHour for correct timezone handling
+
+        // Debug: Log the original tracker date and timezone info
+        /*
+        if let dateValue = date {
+            DBGLog("[\(srcName)] Original tracker date: \(i2ltd(dateValue))", color: .CYAN)
+            DBGLog("[\(srcName)] Calendar timezone: \(calendar.timeZone.identifier) (GMT\(calendar.timeZone.secondsFromGMT()/3600))", color: .CYAN)
+        }
+        */
+
+        // Get start of tracker day in local time
+        let trackerDay = calendar.startOfDay(for: currentStartDate)
+
+        // Go back one day to get previous day at 00:00 local
+        let previousDay = calendar.date(byAdding: .day, value: -1, to: trackerDay)!
+
+        // Sleep starts at 23:00 previous day local (previous day + 23 hours)
+        let sleepStart = calendar.date(byAdding: .hour, value: 23, to: previousDay)!
+
+        // Sleep ends at 06:00 tracker day local (tracker day + 6 hours)
+        let sleepEnd = calendar.date(byAdding: .hour, value: 6, to: trackerDay)!
+
+        specifiedStartDate = sleepStart
+        specifiedEndDate = sleepEnd
+        DBGLog("[\(srcName)] Adjusted for sleep_hours time filter: \(ltd(sleepStart)) to \(ltd(sleepEnd))")
+    }
 
     #if DEBUGLOG
     // Debug-only: Limit to recent data when no start date specified
-    let USE_DEBUG_DATE_LIMIT = true  // Easy toggle
+    let USE_DEBUG_DATE_LIMIT = false  // Easy toggle
     if USE_DEBUG_DATE_LIMIT && specifiedStartDate == nil {
-        // Use data from last 3 months only instead of querying from beginning of time
-        let debugMonthsBack = 3
+        // Use data from last N months/days only instead of querying from beginning of time
+        let debugMonthsBack = 0  // Set to 0 to use days instead
+        let debugDaysBack = 2    // Only used if debugMonthsBack = 0
         let calendar = Calendar.current
-        if let debugStartDate = calendar.date(byAdding: .month, value: -debugMonthsBack, to: Date()) {
+
+        let debugStartDate: Date?
+        if debugMonthsBack > 0 {
+            debugStartDate = calendar.date(byAdding: .month, value: -debugMonthsBack, to: Date())
+        } else {
+            debugStartDate = calendar.date(byAdding: .day, value: -debugDaysBack, to: Date())
+        }
+
+        if let debugStartDate = debugStartDate {
             specifiedStartDate = debugStartDate
-            DBGLog("DEBUG OVERRIDE: No start date specified, limiting to \(debugMonthsBack) months ago: \(debugStartDate)", color: .RED)
+            let period = debugMonthsBack > 0 ? "\(debugMonthsBack) months" : "\(debugDaysBack) days"
+            DBGLog("DEBUG OVERRIDE: No start date specified, limiting to \(period) ago: \(ltd(debugStartDate))", color: .RED)
         }
     }
     #endif
@@ -766,7 +808,7 @@ class voNumber: voState, UITextFieldDelegate {
         if let currentEndDate = specifiedEndDate {
             specifiedEndDate = calendar.date(byAdding: .day, value: -1, to: currentEndDate)
         }
-        DBGLog("[\(srcName)] Adjusted dates for ahPrevD to  start: \(specifiedStartDate?.description ?? "nil") and end: \(specifiedEndDate?.description ?? "nil")")
+        DBGLog("[\(srcName)] Adjusted dates for ahPrevD to  start: \(specifiedStartDate.map { ltd($0) } ?? "nil") and end: \(specifiedEndDate.map { ltd($0) } ?? "nil")")
     }
  
     //*****  Use HK to get start or end dates where not yet specified, otherwise use specified dates unchanged
@@ -778,7 +820,7 @@ class voNumber: voState, UITextFieldDelegate {
       // Calculate appropriate end date
 
       DBGLog(
-        "[\(srcName)] querying from \(hkStartDate?.description ?? "nil") to \(hkEndDate?.description ?? "nil")"
+        "[\(srcName)] querying from \(hkStartDate.map { ltd($0) } ?? "nil") to \(hkEndDate.map { ltd($0) } ?? "nil")"
       )
 
       guard let hkStartDate = hkStartDate, let hkEndDate = hkEndDate else {
@@ -790,20 +832,21 @@ class voNumber: voState, UITextFieldDelegate {
       // Check if start date is after end date - invalid range
       if hkStartDate > hkEndDate {
         DBGLog(
-          "[\(srcName)] no new hk data: start date \(hkStartDate) is after end date \(hkEndDate)")
+          "[\(srcName)] no new hk data: start date \(ltd(hkStartDate)) is after end date \(ltd(hkEndDate))")
         hkDispatchGroup.leave()
         return
       }
 
       //***** At this point have valid start and end dates
 
-      DBGLog("[\(srcName)] final HealthKit query date range: \(hkStartDate) to \(hkEndDate)", color: .VIOLET)
+      DBGLog("[\(srcName)] final HealthKit query date range: \(ltd(hkStartDate)) to \(ltd(hkEndDate))", color: .VIOLET)
 
-      // if more thatn a hkDateWindow we need progress bar
+      // if more than a hkDateWindow we need progress bar
 
       // Calculate number of date windows needed for chunked processing
-      let daysBetween = calendar.dateComponents([.day], from: hkStartDate, to: hkEndDate).day ?? 0
+      let daysBetween = max(1, calendar.dateComponents([.day], from: hkStartDate, to: hkEndDate).day ?? 1)
       let numberOfWindows = (daysBetween + hkDateWindow - 1) / hkDateWindow  // Round up
+      DBGLog("[\(srcName)] total days: \(daysBetween), processing in \(numberOfWindows) windows of up to \(hkDateWindow) days each")
 
       to.refreshDelegate?.updateFullRefreshProgress(
         step: 0, phase: "loading dates for \(self.vo.valueName ?? "unknown")", totalSteps: numberOfWindows, threshold: 2)
@@ -838,9 +881,13 @@ class voNumber: voState, UITextFieldDelegate {
               ?? hkEndDate
           }
 
-          DBGLog(
-            "[\(srcName)] Processing HealthKit date window \(windowIndex + 1)/\(numberOfWindows): \(windowStartDate) to \(windowEndDate)"
-          )
+          // Log first, last, and every 10th window
+          let shouldLog = (windowIndex == 0) || (windowIndex == numberOfWindows - 1) || ((windowIndex + 1) % 10 == 0)
+          if shouldLog {
+            DBGLog(
+              "[\(srcName)] Processing HealthKit date window \(windowIndex + 1)/\(numberOfWindows): \(ltd(windowStartDate)) to \(ltd(windowEndDate))"
+            )
+          }
 
           self.rthk.getHealthKitDates(
             queryConfig: queryConfig, hkObjectType: hkObjectType as HKSampleType,
@@ -878,7 +925,7 @@ class voNumber: voState, UITextFieldDelegate {
 
         #if DEBUGLOG
             if let earliest = datesToCheck.min(), let latest = datesToCheck.max() {
-                DBGLog("  datesToCheck Date range: \(Date(timeIntervalSince1970: earliest)) to \(Date(timeIntervalSince1970: latest))")
+                DBGLog("  datesToCheck Date range: \(i2ltd(Int(earliest))) to \(i2ltd(Int(latest)))")
             }
         #endif
   
@@ -905,13 +952,15 @@ class voNumber: voState, UITextFieldDelegate {
           }
 
           #if DEBUGLOG
-          detailedLogging = newDates.count < 24 || matchedDates.count < 24
+          let dlim = 6
+          detailedLogging = (newDates.count < dlim || matchedDates.count < dlim) && (newDates.count + matchedDates.count < 2*dlim)
+
           if detailedLogging {
-            if newDates.count < 24 {
-              DBGLog("[\(srcName)] newDates (\(newDates.count)): \(newDates.map { Date(timeIntervalSince1970: $0) })")
+            if newDates.count < dlim {
+              DBGLog("[\(srcName)] newDates (\(newDates.count)): \(newDates.map { i2ltd(Int($0)) })")
             }
-            if matchedDates.count < 24 {
-              DBGLog("[\(srcName)] matchedDates (\(matchedDates.count)): \(matchedDates.map { Date(timeIntervalSince1970: $0) })")
+            if matchedDates.count < dlim {
+              DBGLog("[\(srcName)] matchedDates (\(matchedDates.count)): \(matchedDates.map { i2ltd(Int($0)) })")
             }
           }
           #endif
@@ -939,21 +988,21 @@ class voNumber: voState, UITextFieldDelegate {
               ///*
               #if DEBUGLOG
               if newDates.count < 6 {
-                DBGLog("New dates inserted: \(newDates.map { Date(timeIntervalSince1970: $0) })")
+                DBGLog("New dates inserted: \(newDates.map { i2ltd(Int($0)) })")
                 let now = Date()
                 for newDate in newDates {
                     let date = Date(timeIntervalSince1970: newDate)
                     let timeStatus = date > now ? "FUTURE" : "PAST"
-                    DBGLog("  Date \(date): \(timeStatus) (offset: \(date.timeIntervalSince(now)) seconds)")
+                    DBGLog("  Date \(i2ltd(Int(newDate))): \(timeStatus) (offset: \(date.timeIntervalSince(now)) seconds)")
                 }
               }
             if matchedDates.count < 6 {
-                DBGLog("matched dates : \(matchedDates.map { Date(timeIntervalSince1970: $0) })")
+                DBGLog("matched dates : \(matchedDates.map { i2ltd(Int($0)) })")
                 let now = Date()
                 for matchDate in matchedDates {
                     let date = Date(timeIntervalSince1970: matchDate)
                     let timeStatus = date > now ? "FUTURE" : "PAST"
-                    DBGLog("  Date \(date): \(timeStatus) (offset: \(date.timeIntervalSince(now)) seconds)")
+                    DBGLog("  Date \(i2ltd(Int(matchDate))): \(timeStatus) (offset: \(date.timeIntervalSince(now)) seconds)")
                 }
               }
               #endif
@@ -983,24 +1032,24 @@ class voNumber: voState, UITextFieldDelegate {
 
       if isAhPrevD {
         // newDates and matchedDates are the tracker dates for shifted hk dates, for ahPrevD we need to shift back to query the HK data for the day before
-        let unshiftedNewDates = newDates.compactMap { date in
+        let unshiftedNewDates = Set(newDates.compactMap { date in
           calendar.date(byAdding: .day, value: -1, to: Date(timeIntervalSince1970: date))?.timeIntervalSince1970
-        }
-        let unshiftedMatchedDates = matchedDates.compactMap { date in
+        })
+        let unshiftedMatchedDates = Set(matchedDates.compactMap { date in
           calendar.date(byAdding: .day, value: -1, to: Date(timeIntervalSince1970: date))?.timeIntervalSince1970
-        }
-        datesToProcess = unshiftedNewDates + unshiftedMatchedDates
+        })
+        datesToProcess = Array(unshiftedNewDates.union(unshiftedMatchedDates))
         DBGLog("ahPrevD enabled: shifted \(datesToProcess.count) dates back by -1 day for HealthKit queries")
       } else {
         // Normal mode: use dates as-is
-        datesToProcess = newDates + matchedDates
+        datesToProcess = Array(newDates.union(matchedDates))
       }
 
       DBGLog(
         "dates to process for \(srcName) (vid: \(vo.vid)): \(newDates.count) new + \(matchedDates.count) matched = \(datesToProcess.count) total"
       )
       if datesToProcess.count < 6 {
-        DBGLog("  dates to process: \(datesToProcess.map { Date(timeIntervalSince1970: $0) })")
+        DBGLog("  dates to process: \(datesToProcess.map { i2ltd(Int($0)) })")
       }
 
       // Progress bar threshold is 2x the effective window size to match the original 2:1 ratio
@@ -1081,7 +1130,7 @@ class voNumber: voState, UITextFieldDelegate {
                 #if DEBUGLOG
                 if detailedLogging {
                   DBGLog(
-                    "Stored HK data value \(result) for \(self.vo.valueName ?? "unknown") on \(Date(timeIntervalSince1970: TimeInterval(storageDate))) (vid: \(self.vo.vid))",
+                    "Stored HK data value \(result) for \(self.vo.valueName ?? "unknown") on \(i2ltd(storageDate)) (vid: \(self.vo.vid))",
                     color: .GREEN
                   )
                 }
@@ -1094,7 +1143,7 @@ class voNumber: voState, UITextFieldDelegate {
                 #if DEBUGLOG
                 if detailedLogging {
                   DBGLog(
-                    "No HK data for \(self.vo.valueName ?? "unknown") on \(Date(timeIntervalSince1970: TimeInterval(storageDate))) (vid: \(self.vo.vid))",
+                    "No HK data for \(self.vo.valueName ?? "unknown") on \(i2ltd(storageDate)) (vid: \(self.vo.vid))",
                     color: .ORANGE
                   )
                 }
@@ -1439,22 +1488,36 @@ class voNumber: voState, UITextFieldDelegate {
       return
     }
 
+    // Get timeFilter for special handling
+    let timeFilter = vo.optDict["ahTimeFilter"] ?? "all_day"
+
     // Calculate base start date from timestamp
     // Note: ahPrevD date shifting is now handled in loadHKdata by shifting storage dates forward
-    let startDate = Date(timeIntervalSince1970: TimeInterval(timestamp))
+    var startDate = Date(timeIntervalSince1970: TimeInterval(timestamp))
+
+    // Special handling for sleep_hours with daily frequency
+    // Adjust startDate to 23:00 previous day to match the sleep hours window
+    if timeFilter == "sleep_hours" && frequency == "daily" && queryConfig.aggregationType == .highFrequency {
+      let trackerDay = calendar.startOfDay(for: startDate)
+      let previousDay = calendar.date(byAdding: .day, value: -1, to: trackerDay)!
+      startDate = calendar.date(byAdding: .hour, value: 23, to: previousDay)!
+    }
 
     // Calculate endDate for high-frequency processing
     // IMPORTANT: For high-frequency data, calculateEndDate returns a "backwards" endDate
     // (earlier than startDate) to indicate we want the interval BEFORE the slot timestamp.
     // This makes a 3pm slot represent 2pm-3pm data instead of 3pm-4pm data.
     // performHealthQuery will detect endDate < startDate and swap them for the HealthKit query.
-    let endDate = calculateEndDate(from: startDate, frequency: frequency, queryConfig: queryConfig)
+    // EXCEPTION: sleep_hours with daily frequency returns proper forward endDate (06:00 tracker day)
+    let endDate = calculateEndDate(from: startDate, frequency: frequency, queryConfig: queryConfig, timeFilter: timeFilter)
 
     // Prepare unit
     var unit: HKUnit? = nil
     if let unitString = vo.optDict["ahUnit"] {
       unit = HKUnit(from: unitString)
     }
+
+    //DBGLog("Querying HealthKit for \(srcName) at \(ltd(startDate))" + (endDate != nil ? " to \(ltd(endDate!))" : "") + (unit != nil ? " unit: \(unit!)" : ""))
 
     // Make the query
     rthk.performHealthQuery(
@@ -1488,8 +1551,18 @@ class voNumber: voState, UITextFieldDelegate {
   }
 
   private func calculateEndDate(
-    from startDate: Date, frequency: String, queryConfig: HealthDataQuery
+    from startDate: Date, frequency: String, queryConfig: HealthDataQuery, timeFilter: String
   ) -> Date? {
+    let calendar = Calendar.current
+
+    // Special case: sleep_hours with daily frequency
+    // startDate is 23:00 previous day, we need to return 06:00 tracker day
+    if frequency == "daily" && timeFilter == "sleep_hours" && queryConfig.aggregationType == .highFrequency {
+      // startDate is already at 23:00 previous day (adjusted in processHealthQuery)
+      // Add 7 hours to get to 06:00 tracker day
+      return calendar.date(byAdding: .hour, value: 7, to: startDate)
+    }
+
     // Return nil for daily/.groupedByNight (single point queries)
     guard queryConfig.aggregationType == .highFrequency else { return nil }
 
@@ -1507,7 +1580,7 @@ class voNumber: voState, UITextFieldDelegate {
     // IMPORTANT: For high-frequency data, we want the interval BEFORE the slot timestamp
     // This makes a 3pm slot represent 2pm-3pm data instead of 3pm-4pm data
     // We return startDate - intervalHours, which will be detected and handled in performHealthQuery
-    return Calendar.current.date(byAdding: .hour, value: -intervalHours, to: startDate)
+    return calendar.date(byAdding: .hour, value: -intervalHours, to: startDate)
   }
 
   private func applyTimeFilter(results: [rtHealthKit.HealthQueryResult], timeFilter: String)
@@ -1516,7 +1589,7 @@ class voNumber: voState, UITextFieldDelegate {
     return results.filter { result in
       // Extract local hour directly from UTC date (Calendar handles timezone conversion)
       let localHour = Calendar.current.component(.hour, from: result.date)
-      //DBGLog("Filtering: \(result.date) -> local hour \(localHour) for filter '\(timeFilter)'")
+      //DBGLog("Filtering: \(ltd(result.date)) -> local hour \(localHour) for filter '\(timeFilter)'")
 
       switch timeFilter {
       case "morning": return localHour >= 6 && localHour < 10
