@@ -443,14 +443,14 @@ class trackerObj: tObjBase {
     ///   - set12: If true, adjusts newDates to 12:00 noon and caps future dates to current time (default: true).  False when called for loadOTdata.
     ///   - aggregationTime: Optional time when daily aggregation occurs (e.g., sleep data at 12:00 PM)
     /// - Returns: Tuple containing (newDates: dates needing new records, matchedDates: existing dates to refresh)
-    func mergeDates(inDates:[TimeInterval], set12: Bool = true, aggregationTime: DateComponents? = nil) -> (newDates: [TimeInterval], matchedDates: [TimeInterval]) {
+    func mergeDates(inDates:[TimeInterval], set12: Bool = true, aggregationTime: DateComponents? = nil) -> (newDates: Set<TimeInterval>, matchedDates: Set<TimeInterval>) {
         let existingDatesQuery = "SELECT date FROM trkrData order by date DESC"
-        
+
         let existingDatesArr = toQry2AryI(sql: existingDatesQuery)  // for debug to look at
-        
+
         let calendar = Calendar.current
-        var newDates: [TimeInterval] = []
-        var matchedDates: [TimeInterval] = []
+        var newDates: Set<TimeInterval> = []
+        var matchedDates: Set<TimeInterval> = []
         
         // Pre-compute existing dates by day components for O(1) lookups instead of O(n) nested loops
         var existingDatesByDay: [DateComponents: [TimeInterval]] = [:]
@@ -482,13 +482,15 @@ class trackerObj: tObjBase {
         let checkSql = "SELECT COUNT(*) FROM trkrData WHERE date >= \(Int(todayStart.timeIntervalSince1970)) AND date < \(Int(todayEnd.timeIntervalSince1970))"
         let hasRecordForToday = toQry2Int(sql: checkSql) > 0
         
+        //DBGLog("\(inDates.count) incoming dates, \(existingDatesArr.count) existing dates")
+
         for inDate in inDates {
             if inDate == mostRecentInDate {
-                DBGLog("mostRecentInDate = \(Date(timeIntervalSince1970: inDate))")
+                DBGLog("mostRecentInDate = \(i2ltd(Int(inDate)))")
             }
             // Skip only the most recent inDate if it is today or future AND we have no saved record for today
             if inDate == mostRecentInDate && inDate >= todayStart.timeIntervalSince1970 {
-                DBGLog(" and is today or later")
+                //DBGLog(" and is today or later")
 
                 let now = Date()
                 let inDateObj = Date(timeIntervalSince1970: inDate)
@@ -513,11 +515,11 @@ class trackerObj: tObjBase {
                     // After aggregation time - system would have auto-created records, so don't skip
                     // (This handles sleep data at 12:00 PM when current time is 2:00 PM)
                 } else {
-                    DBGLog(" but before aggregation time")
+                    //DBGLog(" but before aggregation time")
 
                     // Before aggregation time - use pre-calculated record check for today
                     if !hasRecordForToday {
-                        DBGLog("and no saved record for today so skipping")
+                        //DBGLog("and no saved record for today so skipping")
 
                         // No saved record for today yet - skip to avoid creating empty entry
                         continue
@@ -533,37 +535,35 @@ class trackerObj: tObjBase {
             if let matchingTimestamps = existingDatesByDay[inDateDayComponents] {
                 // Found match(es) - add all existing timestamps for this day to matchedDates
                 for existingTimestamp in matchingTimestamps {
-                    if !matchedDates.contains(existingTimestamp) {
-                        matchedDates.append(existingTimestamp)
-                    }
+                    matchedDates.insert(existingTimestamp)
                 }
             } else {
                 // No match found, this is a new date
-                newDates.append(inDate)
+                newDates.insert(inDate)
             }
         }
         
         if (set12) {
             // set all times to 12:00 noon
-            let adjustedDates = newDates.map { inDate in
+            let adjustedDates = Set(newDates.map { inDate in
                 var components = calendar.dateComponents([.year, .month, .day], from: Date(timeIntervalSince1970: inDate))
                 components.hour = 12
                 components.minute = 0
                 components.second = 0
                 return calendar.date(from: components)?.timeIntervalSince1970 ?? inDate
-            }
-            
-            
+            })
+
+
             // restrict any times in future to now
             let now = Date()
-            newDates = adjustedDates.map { timeInterval -> TimeInterval in
+            newDates = Set(adjustedDates.map { timeInterval -> TimeInterval in
                 let ndate = Date(timeIntervalSince1970: timeInterval)
                 if ndate > now {
                     return now.timeIntervalSince1970 // Change to the current time
                 }
                 // If not in the future, keep the original time
                 return timeInterval
-            }
+            })
         }
         
         return (newDates: newDates, matchedDates: matchedDates)
@@ -593,14 +593,14 @@ class trackerObj: tObjBase {
     ///   - frequency: Frequency string determining slot interval (e.g., "every_1h", "every_4h", "twice_daily")
     ///   - aggregationTime: Optional aggregation time (passed through if frequency doesn't match time slot pattern)
     /// - Returns: Tuple containing (newDates: slots needing new records, matchedDates: existing slots to refresh)
-    func generateTimeSlots(from hkDates: [TimeInterval], frequency: String, aggregationTime: DateComponents? = nil) -> (newDates: [TimeInterval], matchedDates: [TimeInterval]) {
+    func generateTimeSlots(from hkDates: [TimeInterval], frequency: String, aggregationTime: DateComponents? = nil) -> (newDates: Set<TimeInterval>, matchedDates: Set<TimeInterval>) {
         let existingDatesQuery = "SELECT date FROM trkrData order by date DESC"
         let existingDatesArr = toQry2AryI(sql: existingDatesQuery)
         let existingDates = Set(existingDatesArr.map { TimeInterval($0) })
-        
+
         let calendar = Calendar.current
-        var timeSlots: [TimeInterval] = []
-        var matchedDates: [TimeInterval] = []
+        var timeSlots: Set<TimeInterval> = []
+        var matchedDates: Set<TimeInterval> = []
         
         // Determine interval based on frequency
         let intervalHours: Int
@@ -660,19 +660,19 @@ class trackerObj: tObjBase {
                 
                 if existingDates.contains(slotTimeInterval) {
                     // This time slot already exists - add to matched dates
-                    matchedDates.append(slotTimeInterval)
+                    matchedDates.insert(slotTimeInterval)
                 } else {
                     // This time slot doesn't exist - add to new time slots
-                    timeSlots.append(slotTimeInterval)
+                    timeSlots.insert(slotTimeInterval)
                 }
             }
         }
-        
-        // Filter out future dates from both arrays
+
+        // Filter out future dates from both sets
         let now = Date()
-        let filteredTimeSlots = timeSlots.filter { Date(timeIntervalSince1970: $0) <= now }
-        let filteredMatchedDates = matchedDates.filter { Date(timeIntervalSince1970: $0) <= now }
-        
+        let filteredTimeSlots = Set(timeSlots.filter { Date(timeIntervalSince1970: $0) <= now })
+        let filteredMatchedDates = Set(matchedDates.filter { Date(timeIntervalSince1970: $0) <= now })
+
         return (newDates: filteredTimeSlots, matchedDates: filteredMatchedDates)
     }
     
