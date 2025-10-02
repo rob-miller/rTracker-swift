@@ -35,13 +35,28 @@ Main controller class for the charts view in rTracker. Provides a tabbed interfa
   - Distribution charts: Recent data indicator with cycle states (○●◑◐)
   - Time charts: Navigation button with arrow icon to jump to records
   - Scatter/Pie charts: Hidden
+- **Segmented Control Icons**: Lines 248-257 - Uses SF symbols for chart type tabs on iOS 26+, text labels on older iOS
+  - Distribution: chart.bar.xaxis
+  - Time: chart.xyaxis.line
+  - Scatter: chart.dots.scatter
+  - Pie: chart.pie
 - **Date Range Management**: Complex slider system with zoom, lock, and relative/absolute date display
 - **Chart Configuration**: Type-specific button layouts managed through `configContainer`
 - **Privacy Integration**: Respects `privacyValue` for data filtering
 - **Debounced Updates**: 100ms delay on chart updates during slider interaction
 
 ## Recent Development History
-**Current Session (2025-01-15) - Button System Modernization:**
+**Latest Changes (2025-10-02) - Chart Type Tab SF Symbols:**
+- **iOS 26+ Icon Support**: Segmented control now uses SF symbols for chart type tabs (lines 248-257)
+- **Conditional Display**: `#available(iOS 26.0, *)` check with fallback to text labels for older iOS
+- **Symbol Mapping**:
+  - Distribution → chart.bar.xaxis
+  - Time → chart.xyaxis.line
+  - Scatter → chart.dots.scatter
+  - Pie → chart.pie
+- **Maintains Compatibility**: Older iOS versions continue showing text labels ("Distribution", "Time", etc.)
+
+**Previous Session (2025-01-15) - Button System Modernization:**
 - **Toolbar done button**: Replaced system .done with yellow checkmark (createSaveButton) for markline text field
 - **Picker done button**: Replaced text "Done" with blue checkmark.circle (createDoneButton) - no oblong shape issues
 - **Picker cancel button**: Replaced text "Cancel" with X mark circle (createCancelButton) via .uiButton extension
@@ -58,12 +73,20 @@ Main controller class for the charts view in rTracker. Provides a tabbed interfa
 - **a287f4b**: Implemented ignore tracker record functionality for charts
 
 ## Current Issues & TODOs
+- **COMPLETED** (2025-10-02): Chart type tab SF symbol icons for iOS 26+
 - **COMPLETED**: Toolbar and picker button modernization with SF symbols
 - **COMPLETED**: Integration with unified button creation system
 - **COMPLETED**: .uiButton extension pattern implementation for picker buttons
 - **NOTE**: Action button overlap with pie chart arrows (time tab) - potential future positioning adjustment needed
 
 ## Last Updated
+2025-10-02 - Chart Type Tab SF Symbols:
+- **Modern UI Enhancement**: Added SF symbol icons to chart type segmented control for iOS 26+
+- **Backward Compatible**: Maintains text labels for older iOS versions via conditional compilation
+- **Code Location**: Lines 248-257 with UIImage array for icons vs String array for text
+- **Visual Consistency**: Aligns with app-wide SF symbol adoption strategy
+
+Previous update:
 2025-01-15 - Chart Button System Modernization:
 - **Toolbar modernization**: Markline text field now uses yellow checkmark save button
 - **Picker UI improvement**: Done/Cancel buttons now use SF symbols (blue checkmark.circle, X mark circle)

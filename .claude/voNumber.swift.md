@@ -38,6 +38,8 @@ Handles numeric input fields in trackers, supporting manual entry, HealthKit int
 - **Enhanced ahPrevD Support**: Proper date shifting logic - shifts trkrData dates forward for storage, shifts HealthKit query dates backward
 - **HealthKit Integration**: Uses `HealthDataQuery.makeSampleType()` for unified type creation, supports all sample types
 - **Date Management**: Complex dual-direction shifting for ahPrevD mode to handle "previous day" data attribution
+  - Date adjustments handled by mergeDates (for aggregationTime) and processHealthQuery (for sleep_hours)
+  - Previous redundant adjustment logic in loadHKdata has been removed (commented out)
 - **Debug Enhancements**: Added debug date limiting (3 months back) and improved logging with target dates
 - **Data Storage**: Values stored as text in voData table, with associated voHKstatus entries for HealthKit tracking
 - **Display Logic**: Shows "<no data>" for empty HealthKit fields, different placeholders for manual vs external data
@@ -45,7 +47,18 @@ Handles numeric input fields in trackers, supporting manual entry, HealthKit int
 - **Privacy**: Respects privacy levels for data access
 
 ## Recent Development History
-**Latest Changes (2025-10-02) - Major Deduplication and Helper Functions:**
+**Latest Changes (2025-10-02) - Date Adjustment Section Removed:**
+- **Commented Out Entire Section**: The 36-hour window guard and all date adjustment logic (aggregation boundary and sleep_hours) has been commented out in loadHKdata function
+- **Reason**: mergeDates already handles aggregationTime, processHealthQuery handles sleep_hours - adjustments were redundant
+- **Comment Note**: "think not needed because mergedates handles aggregationTime, processHealthWQuery handles sleep_hours"
+- **Code Preserved**: Entire block wrapped in /* */ for potential future reference
+- **Impact**: Simplified loadHKdata logic by removing duplicate date handling
+
+**Previous Changes (2025-10-02) - Date Adjustment Conditional (NOW REMOVED):**
+- **36-Hour Window Guard**: Added conditional check to only apply aggregation boundary and sleep_hours adjustments when both dates defined and window < 36 hours
+- **NOTE**: This entire section was subsequently commented out as redundant
+
+**Previous Changes (2025-10-02) - Major Deduplication and Helper Functions:**
 - **Set-Based Deduplication**: Converted `newDates` and `matchedDates` from Arrays to Sets to automatically eliminate duplicates
   - voNumber.swift lines 671-672: Changed declarations to `Set<TimeInterval>`
   - trackerObj.swift mergeDates/generateTimeSlots: Updated return types and implementations to use Sets
@@ -103,6 +116,17 @@ Handles numeric input fields in trackers, supporting manual entry, HealthKit int
 - **HealthKit Cross-Contamination Bug** (2025-08-26): Fixed issue where low-frequency HealthKit valueObjs would repeatedly reprocess dates where we already knew there was `noData`. The complex OR-based SQL query only excluded `stat = hkData` entries but allowed `stat = noData` entries to be reprocessed indefinitely. Simplified to exclude ANY existing voHKstatus entry for the specific valueObj, preventing unnecessary reprocessing of dates we've already attempted.
 
 ## Last Updated
+2025-10-02 - Date Adjustment Section Removed (Code Simplification):
+- **Removed Redundant Logic**: Commented out entire date adjustment section in loadHKdata (aggregation boundary and sleep_hours handling)
+- **Rationale**: mergeDates already handles aggregationTime, processHealthQuery already handles sleep_hours - adjustments were duplicative
+- **Code Preserved**: Entire block wrapped in /* */ comments for potential future reference
+- **Impact**: Cleaner, simpler loadHKdata logic without duplicate date handling
+
+Previous update (same day, now superseded):
+2025-10-02 - Date Adjustment Conditional (36-Hour Window Guard) - REMOVED:
+- **This change was reversed**: The conditional date adjustment logic was added then subsequently commented out as redundant
+
+Previous update:
 2025-10-02 - Major Deduplication, Helper Functions, and Sleep Hours Query Fix:
 - **Set-Based Deduplication**: Eliminated duplicate HealthKit queries by converting newDates/matchedDates to Sets
 - **Date Formatting Helpers**: Added ltd() and i2ltd() for cleaner debug logs with consistent formatting
