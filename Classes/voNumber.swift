@@ -692,12 +692,18 @@ class voNumber: voState, UITextFieldDelegate {
             let specifiedDate = date //min(date, lastDbDate) 
             // single refresh, if specifieddate is current update any missing db entries to now
             // XXXXXX not following spec here, should be bigger window?
-            specifiedStartDate = calendar.startOfDay(for:Date(timeIntervalSince1970: TimeInterval(specifiedDate)))
-            specifiedEndDate = calendar.date(byAdding: .day, value: 1, to: specifiedStartDate!)
+            //specifiedStartDate = calendar.startOfDay(for:Date(timeIntervalSince1970: TimeInterval(specifiedDate)))
+            //specifiedEndDate = calendar.date(byAdding: .day, value: 1, to: specifiedStartDate!)
             // XXXXXX
-            //if date < lastDbDate {  // specified date is historical, just do the 1 day
-            //    specifiedEndDate = calendar.date(byAdding: .day, value: 1, to: specifiedStartDate!)
-            //} // else leave end date nil to get all entries to now
+            if date >  lastDbDate {
+                specifiedStartDate = Date(timeIntervalSince1970: TimeInterval(lastDbDate))
+            } else {
+                specifiedStartDate = calendar.startOfDay(for:Date(timeIntervalSince1970: TimeInterval(specifiedDate)))
+            }
+
+            if date < lastDbDate {  // specified date is historical, just do the 1 day
+                specifiedEndDate = calendar.date(byAdding: .day, value: 1, to: specifiedStartDate!)
+            } // else leave end date nil to get all entries to now
 
             DBGLog(
                 "Single date refresh: querying from \(specifiedStartDate.map { ltd($0) } ?? "nil") to \(specifiedEndDate.map { ltd($0) } ?? "nil")"
@@ -711,60 +717,58 @@ class voNumber: voState, UITextFieldDelegate {
       "Using specified start date: \(specifiedStartDate.map { ltd($0) } ?? "nil") and end date: \(specifiedEndDate.map { ltd($0) } ?? "nil")"
     )
 
-    // Adjust start date for data types with aggregation boundaries (like sleep at 12:00 PM)
-    // so move start date back to previous boundary to ensure we get all data
-    // XXX end date is just plus 1 day from start date, probaly needs to be range based on nextdbdate or current date 
+    /*
+    // think not needed because mergedates handles aggregationTime, processHealthWQuery handles sleep_hours
 
-    if let queryConfig = healthDataQueries.first(where: { $0.displayName == srcName }),
-       let aggregationTime = queryConfig.aggregationTime,
-       let currentStartDate = specifiedStartDate {
-        let calendar = Calendar.current
-        // Calculate the aggregation boundary time for the current start date
-        let boundaryDate = calendar.date(bySettingHour: aggregationTime.hour ?? 12,
-                                       minute: aggregationTime.minute ?? 0,
-                                       second: 0,
-                                       of: currentStartDate) ?? currentStartDate
-        // Go back one day from boundary to ensure we capture data that gets aggregated to this boundary
-        specifiedStartDate = calendar.date(byAdding: .day, value: -1, to: boundaryDate)
-        specifiedEndDate = calendar.date(byAdding: .day, value: 1, to: specifiedStartDate!)
-        // start is yesterday's aggregation boundary, end is one day later
-        DBGLog("[\(srcName)] Adjusted dates for aggregation boundary to  start: \(specifiedStartDate.map { ltd($0) } ?? "nil") and end: \(specifiedEndDate.map { ltd($0) } ?? "nil")")
-    }
+    // Only apply date adjustments if both dates are specified and window is less than 36 hours
+    if let startDate = specifiedStartDate,
+       let endDate = specifiedEndDate,
+       endDate.timeIntervalSince(startDate) < (36 * 3600) {
 
-    // Adjust dates for high-frequency data with sleep_hours time filter
-    if queryConfig.aggregationType == .highFrequency,
-       let timeFilter = vo.optDict["ahTimeFilter"],
-       timeFilter == "sleep_hours",
-       vo.optDict["ahFrequency"] ?? "daily" == "daily",
-       let currentStartDate = specifiedStartDate {
+        // Adjust start date for data types with aggregation boundaries (like sleep at 12:00 PM)
+        // so move start date back to previous boundary to ensure we get all data
+        // XXX end date is just plus 1 day from start date, probaly needs to be range based on nextdbdate or current date
 
-        // sleep_hours = 23:00 local (night before) to 06:00 local (tracker date morning)
-        // Use .byAdding instead of .bySettingHour for correct timezone handling
-
-        // Debug: Log the original tracker date and timezone info
-        /*
-        if let dateValue = date {
-            DBGLog("[\(srcName)] Original tracker date: \(i2ltd(dateValue))", color: .CYAN)
-            DBGLog("[\(srcName)] Calendar timezone: \(calendar.timeZone.identifier) (GMT\(calendar.timeZone.secondsFromGMT()/3600))", color: .CYAN)
+        if let queryConfig = healthDataQueries.first(where: { $0.displayName == srcName }),
+           let aggregationTime = queryConfig.aggregationTime,
+           let currentStartDate = specifiedStartDate {
+            let calendar = Calendar.current
+            // Calculate the aggregation boundary time for the current start date
+            let boundaryDate = calendar.date(bySettingHour: aggregationTime.hour ?? 12,
+                                           minute: aggregationTime.minute ?? 0,
+                                           second: 0,
+                                           of: currentStartDate) ?? currentStartDate
+            // Go back one day from boundary to ensure we capture data that gets aggregated to this boundary
+            specifiedStartDate = calendar.date(byAdding: .day, value: -1, to: boundaryDate)
+            specifiedEndDate = calendar.date(byAdding: .day, value: 1, to: specifiedStartDate!)
+            // start is yesterday's aggregation boundary, end is one day later
+            DBGLog("[\(srcName)] Adjusted dates for aggregation boundary to  start: \(specifiedStartDate.map { ltd($0) } ?? "nil") and end: \(specifiedEndDate.map { ltd($0) } ?? "nil")")
         }
-        */
 
-        // Get start of tracker day in local time
-        let trackerDay = calendar.startOfDay(for: currentStartDate)
+        // Adjust dates for high-frequency data with sleep_hours time filter
+        if queryConfig.aggregationType == .highFrequency,
+           let timeFilter = vo.optDict["ahTimeFilter"],
+           timeFilter == "sleep_hours",
+           vo.optDict["ahFrequency"] ?? "daily" == "daily",
+           let currentStartDate = specifiedStartDate {
+            // Get start of tracker day in local time
+            let trackerDay = calendar.startOfDay(for: currentStartDate)
 
-        // Go back one day to get previous day at 00:00 local
-        let previousDay = calendar.date(byAdding: .day, value: -1, to: trackerDay)!
+            // Go back one day to get previous day at 00:00 local
+            let previousDay = calendar.date(byAdding: .day, value: -1, to: trackerDay)!
 
-        // Sleep starts at 23:00 previous day local (previous day + 23 hours)
-        let sleepStart = calendar.date(byAdding: .hour, value: 23, to: previousDay)!
+            // Sleep starts at 23:00 previous day local (previous day + 23 hours)
+            let sleepStart = calendar.date(byAdding: .hour, value: 23, to: previousDay)!
 
-        // Sleep ends at 06:00 tracker day local (tracker day + 6 hours)
-        let sleepEnd = calendar.date(byAdding: .hour, value: 6, to: trackerDay)!
+            // Sleep ends at 06:00 tracker day local (tracker day + 6 hours)
+            let sleepEnd = calendar.date(byAdding: .hour, value: 6, to: trackerDay)!
 
-        specifiedStartDate = sleepStart
-        specifiedEndDate = sleepEnd
-        DBGLog("[\(srcName)] Adjusted for sleep_hours time filter: \(ltd(sleepStart)) to \(ltd(sleepEnd))")
+            specifiedStartDate = sleepStart
+            specifiedEndDate = sleepEnd
+            DBGLog("[\(srcName)] Adjusted for sleep_hours time filter: \(ltd(sleepStart)) to \(ltd(sleepEnd))")
+        }
     }
+    */
 
     #if DEBUGLOG
     // Debug-only: Limit to recent data when no start date specified
