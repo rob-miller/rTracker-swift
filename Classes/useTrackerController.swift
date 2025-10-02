@@ -716,7 +716,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             navigationController?.setToolbarHidden(false, animated: false)
             
             navigationController?.toolbar.accessibilityIdentifier = "useT_toolbar"
-            
+
             // Defer toolbar update to next run loop to ensure proper view hierarchy
             DispatchQueue.main.async { [weak self] in
                 self?.updateToolBar()
@@ -1357,7 +1357,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         tbi.append(flexibleSpaceButtonItem)
         if postD != 0 || (lastD == currD) {
             tbi.append(skip2EndBtn)
-        } else if 10 < tracker?.toQry2Int(sql: "select count(*) from trkrData") ?? 0 {
+        } else if 3 < tracker?.toQry2Int(sql: "select count(*) from trkrData") ?? 0 {
             tbi.append(createChartBtn)
         } else {
             tbi.append(fixed1SpaceButtonItem)
