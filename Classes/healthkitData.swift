@@ -19,6 +19,17 @@ enum MenuTab: String, CaseIterable {
     case workouts = "Workouts"
 
     var title: String { self.rawValue }
+
+    var icon: String {
+        switch self {
+        case .metrics:
+            return "ruler"
+        case .sleep:
+            return "powersleep"
+        case .workouts:
+            return "figure.run"
+        }
+    }
 }
 
 struct HealthDataQuery {
@@ -952,6 +963,7 @@ private let workoutHealthDataQueries: [HealthDataQuery] = {
     return queries.sorted { $0.displayName < $1.displayName }
 }()
 
+/*
 private let rowingCombinedQueries: [HealthDataQuery] = [
     HealthDataQuery(
         identifier: "HKWorkoutActivityTypeRowingCombinedDuration",
@@ -1005,8 +1017,9 @@ private let rowingCombinedQueries: [HealthDataQuery] = [
         workoutCategory: .cardio
     )
 ]
+*/
 
-let healthDataQueries: [HealthDataQuery] = baseHealthDataQueries + workoutHealthDataQueries + rowingCombinedQueries
+let healthDataQueries: [HealthDataQuery] = baseHealthDataQueries + workoutHealthDataQueries // + rowingCombinedQueries
 
 enum enableStatus: Int {
     case enabled = 1
