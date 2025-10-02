@@ -10,7 +10,8 @@
       "Read(//Users/rob/Library/**)",
       "Bash(mkdir:*)",
       "Bash(swiftc:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(sort:*)"
     ],
     "deny": []
   }
