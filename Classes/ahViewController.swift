@@ -11,6 +11,9 @@ import HealthKit
 import UIKit
 
 struct ahViewController: View {
+    // Debug flag: Set to true to show all workout category designs
+    private let SHOW_ALL_WORKOUT_CATEGORIES = false
+
     let valueName: String
     var onDismiss: (String?, String?, Bool, String, String, String) -> Void
     @Environment(\.dismiss) var dismiss // For the Back/Exit button
@@ -458,7 +461,7 @@ struct ahViewController: View {
 extension ahViewController {
     private enum SampleFilter: String, CaseIterable, Identifiable {
         case metrics
-        case sleep     // renamed from 'categories'
+        case sleep
         case workouts
 
         var id: String { rawValue }
@@ -471,6 +474,17 @@ extension ahViewController {
                 return MenuTab.sleep.title
             case .workouts:
                 return MenuTab.workouts.title
+            }
+        }
+
+        var icon: String {
+            switch self {
+            case .metrics:
+                return MenuTab.metrics.icon
+            case .sleep:
+                return MenuTab.sleep.icon
+            case .workouts:
+                return MenuTab.workouts.icon
             }
         }
 
@@ -549,10 +563,36 @@ extension ahViewController {
         }
     }
 
+    private var availableWorkoutCategories: [WorkoutCategoryFilter] {
+        // Debug mode: show all categories to preview designs
+        if SHOW_ALL_WORKOUT_CATEGORIES {
+            return WorkoutCategoryFilter.allCases
+        }
+
+        // Production mode: only show categories with actual entries
+        var categories: Set<WorkoutCategoryFilter> = [.all]
+
+        let workoutConfigs = rthk.configurations.filter { effectiveMenuTab(for: $0) == .workouts }
+
+        for config in workoutConfigs {
+            if let category = config.workoutCategory {
+                let filter = WorkoutCategoryFilter(category: category)
+                categories.insert(filter)
+            }
+        }
+
+        // Return in original enum order for consistency
+        return WorkoutCategoryFilter.allCases.filter { categories.contains($0) }
+    }
+
     private var sampleTypeSelector: some View {
         Picker("Data Category", selection: $sampleFilter) {
             ForEach(SampleFilter.allCases) { filter in
-                Text(filter.title).tag(filter)
+                if #available(iOS 26.0, *) {
+                    Image(systemName: filter.icon).tag(filter)
+                } else {
+                    Text(filter.title).tag(filter)
+                }
             }
         }
         .pickerStyle(SegmentedPickerStyle())
@@ -562,20 +602,24 @@ extension ahViewController {
     private var workoutCategorySelector: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(WorkoutCategoryFilter.allCases) { filter in
+                ForEach(availableWorkoutCategories) { filter in
                     let isSelected = workoutFilter == filter
                     Button(action: {
                         withAnimation(.easeInOut(duration: 0.1)) {
                             workoutFilter = filter
                         }
                     }) {
-                        Text(filter.title)
-                            .font(.system(size: 14, weight: .semibold))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(isSelected ? Color.blue : Color(.secondarySystemFill))
-                            .foregroundColor(isSelected ? .white : .primary)
-                            .clipShape(Capsule())
+                        HStack(spacing: 4) {
+                            Image(systemName: filter.icon)
+                                .font(.system(size: 12))
+                            Text(filter.title)
+                        }
+                        .font(.system(size: 14, weight: .semibold))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(isSelected ? Color.blue : Color(.secondarySystemFill))
+                        .foregroundColor(isSelected ? .white : .primary)
+                        .clipShape(Capsule())
                     }
                     .accessibilityIdentifier("confighk_workout_category_\(filter.rawValue)")
                 }
@@ -632,6 +676,19 @@ extension ahViewController {
             case .outdoor: return "Outdoor"
             case .wheel: return "Wheel"
             case .other: return "Other"
+            }
+        }
+
+        var icon: String {
+            switch self {
+            case .all: return "list.bullet.circle.fill"
+            case .cardio: return "heart.circle.fill"
+            case .training: return "dumbbell.fill"
+            case .sports: return "sportscourt.fill"
+            case .mindAndBody: return "brain.fill"
+            case .outdoor: return "tree.fill"
+            case .wheel: return "figure.roll"
+            case .other: return "ellipsis.circle.fill"
             }
         }
 
