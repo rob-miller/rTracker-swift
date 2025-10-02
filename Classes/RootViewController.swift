@@ -135,11 +135,11 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         //DBGLog(@"refresh tool bar, noshow= %d",(PVNOSHOW == self.privacyObj.showing));
 #if TESTING
         setToolbarItems(
-            [out2inBtn, xprivBtn, tstBtn, flexibleSpaceButtonItem, helpBtn, privateBtn].compactMap { $0 },
+            [out2inBtn, xprivBtn, tstBtn, flexibleSpaceButtonItem, privateBtn].compactMap { $0 },
             animated: animated)
 #else
         setToolbarItems(
-            [flexibleSpaceButtonItem, helpBtn, privateBtn].compactMap { $0 },
+            [flexibleSpaceButtonItem, privateBtn].compactMap { $0 },
             animated: animated)
 #endif
     }
@@ -679,32 +679,6 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         return _privateBtn!
     }
 
-    var _helpBtn: UIBarButtonItem?
-    var helpBtn: UIBarButtonItem {
-        if _helpBtn == nil {
-            if #available(iOS 26.0, *) {
-                // iOS 26: Use glass effect button
-                let button = UIButton(type: .system)
-                button.setTitle("Help", for: .normal)
-                button.configuration = UIButton.Configuration.glass()
-                button.addTarget(self, action: #selector(btnHelp), for: .touchUpInside)
-                _helpBtn = UIBarButtonItem(customView: button)
-                _helpBtn!.hidesSharedBackground = true  // Remove white container background
-            } else {
-                // Pre-iOS 26: Use text button as before
-                _helpBtn = UIBarButtonItem(
-                    title: "Help",
-                    style: .plain,
-                    target: self,
-                    action: #selector(btnHelp))
-            }
-            
-            _helpBtn!.accessibilityLabel = "Help"
-            _helpBtn!.accessibilityHint = "tap visit rTracker help web pages"
-            _helpBtn!.accessibilityIdentifier = "help"
-        }
-        return _helpBtn!
-    }
 
     var _addBtn: UIBarButtonItem?
     var addBtn: UIBarButtonItem {
@@ -880,13 +854,6 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         }
     }
 
-    @objc func btnHelp() {
-
-        //[[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"http://rob-miller.github.io/rTracker/rTracker/iPhone/userGuide/"]];  // deprecated ios 9
-        if let url = URL(string: "http://rob-miller.github.io/rTracker/rTracker/iPhone/userGuide/") {
-            UIApplication.shared.open(url, options: [:])
-        }
-    }
 
     #if TESTING
     @objc func btnOut2inx() {}
