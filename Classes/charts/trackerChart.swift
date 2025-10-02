@@ -250,7 +250,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
                 UIImage(systemName: "chart.bar.xaxis")!,
                 UIImage(systemName: "chart.xyaxis.line")!,
                 UIImage(systemName: "chart.dots.scatter")!,
-                UIImage(systemName: "chart.pie")!
+                UIImage(systemName: "chart.pie.fill")!
             ])
         } else {
             segmentedControl = UISegmentedControl(items: ["Distribution", "Time", "Scatter", "Pie"])
