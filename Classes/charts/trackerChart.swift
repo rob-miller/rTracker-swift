@@ -245,7 +245,16 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         scrollView.addSubview(contentView)
         
         // Create a segmented control for different chart types
-        segmentedControl = UISegmentedControl(items: ["Distribution", "Time", "Scatter", "Pie"])
+        if #available(iOS 26.0, *) {
+            segmentedControl = UISegmentedControl(items: [
+                UIImage(systemName: "chart.bar.xaxis")!,
+                UIImage(systemName: "chart.xyaxis.line")!,
+                UIImage(systemName: "chart.dots.scatter")!,
+                UIImage(systemName: "chart.pie")!
+            ])
+        } else {
+            segmentedControl = UISegmentedControl(items: ["Distribution", "Time", "Scatter", "Pie"])
+        }
         segmentedControl.selectedSegmentIndex = CHART_TYPE_DISTRIBUTION
         segmentedControl.addTarget(self, action: #selector(chartTypeChanged), for: .valueChanged)
         segmentedControl.translatesAutoresizingMaskIntoConstraints = false
