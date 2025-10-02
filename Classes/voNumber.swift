@@ -774,22 +774,43 @@ class voNumber: voState, UITextFieldDelegate {
     // Debug-only: Limit to recent data when no start date specified
     let USE_DEBUG_DATE_LIMIT = false  // Easy toggle
     if USE_DEBUG_DATE_LIMIT && specifiedStartDate == nil {
-        // Use data from last N months/days only instead of querying from beginning of time
-        let debugMonthsBack = 0  // Set to 0 to use days instead
-        let debugDaysBack = 2    // Only used if debugMonthsBack = 0
+        // Use data from last N months/days/hours instead of querying from beginning of time
+        // Format: "<number><unit>" where unit is 'h' (hours), 'd' (days), or 'm' (months)
+        let debugPeriod = "2d"  // Examples: "3d", "2m", "36h"
         let calendar = Calendar.current
 
         let debugStartDate: Date?
-        if debugMonthsBack > 0 {
-            debugStartDate = calendar.date(byAdding: .month, value: -debugMonthsBack, to: Date())
+        let periodDisplay: String
+
+        // Parse the debug period string
+        if let lastChar = debugPeriod.last,
+           let valueStr = debugPeriod.dropLast().description as String?,
+           let value = Int(valueStr) {
+
+            switch lastChar {
+            case "h":
+                debugStartDate = calendar.date(byAdding: .hour, value: -value, to: Date())
+                periodDisplay = "\(value) hour\(value == 1 ? "" : "s")"
+            case "d":
+                debugStartDate = calendar.date(byAdding: .day, value: -value, to: Date())
+                periodDisplay = "\(value) day\(value == 1 ? "" : "s")"
+            case "m":
+                debugStartDate = calendar.date(byAdding: .month, value: -value, to: Date())
+                periodDisplay = "\(value) month\(value == 1 ? "" : "s")"
+            default:
+                debugStartDate = nil
+                periodDisplay = "invalid period"
+            }
         } else {
-            debugStartDate = calendar.date(byAdding: .day, value: -debugDaysBack, to: Date())
+            debugStartDate = nil
+            periodDisplay = "invalid format"
         }
 
         if let debugStartDate = debugStartDate {
             specifiedStartDate = debugStartDate
-            let period = debugMonthsBack > 0 ? "\(debugMonthsBack) months" : "\(debugDaysBack) days"
-            DBGLog("DEBUG OVERRIDE: No start date specified, limiting to \(period) ago: \(ltd(debugStartDate))", color: .RED)
+            DBGLog("DEBUG OVERRIDE: No start date specified, limiting to \(periodDisplay) ago: \(ltd(debugStartDate))", color: .RED)
+        } else {
+            DBGErr("DEBUG OVERRIDE: Invalid period format '\(debugPeriod)' - use format like '3d', '2m', '36h'")
         }
     }
     #endif
@@ -798,10 +819,6 @@ class voNumber: voState, UITextFieldDelegate {
         // remind standard HealthKit date window
         DBGLog("[\(srcName)] no startdate, full refresh, Using effective window size: \(hkDateWindow) days")
     }
-
-    #if DEBUGLOG
-      let startTime = CFAbsoluteTimeGetCurrent()
-    #endif
 
     // Adjust for ahPrevD if needed - shift both start and end dates back by 1 day for HK query
     if isAhPrevD {

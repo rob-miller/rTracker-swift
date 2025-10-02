@@ -716,14 +716,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             navigationController?.setToolbarHidden(false, animated: false)
             
             navigationController?.toolbar.accessibilityIdentifier = "useT_toolbar"
-
-            #if DEBUGLOG
-            // Add layout debugging to catch constraint conflicts
-            if let toolbar = navigationController?.toolbar {
-                //DBGLog("Updating toolbar with frame: \(toolbar.frame)")
-            }
-            #endif
-
+            
             // Defer toolbar update to next run loop to ensure proper view hierarchy
             DispatchQueue.main.async { [weak self] in
                 self?.updateToolBar()

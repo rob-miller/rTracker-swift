@@ -772,9 +772,8 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         }
 
         let baseUnit = specifiedUnit ?? queryConfig.unit?.first ?? HKUnit.count()
-        let calendar = Calendar.current
-        var queryStart = startDate
-        var queryEnd = endDate
+        let queryStart = startDate
+        let queryEnd = endDate
 
         let timePredicate = HKQuery.predicateForSamples(withStart: queryStart, end: queryEnd, options: [])
 

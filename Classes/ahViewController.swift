@@ -151,7 +151,7 @@ struct ahViewController: View {
     private var infoButtonRow: some View {
         HStack {
             Spacer()
-            if let info = selectedInfo {
+            if selectedInfo != nil {
                 HelpInfoButtonView {
                     showingConfigInfo = true
                 }
