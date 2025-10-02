@@ -141,7 +141,7 @@ func DBGLog(_ message: String, color: DBGColor? = nil, file: String = #file, fun
         fileName = String(fileName.dropLast(6))
     }
     let coloredFile = coloredFileName(fileName)
-    let tim = CFAbsoluteTimeGetCurrent()
+    let tim = String(format: "%.6f", CFAbsoluteTimeGetCurrent())
 
     let formattedMessage: String
     if let color = color {
@@ -158,7 +158,7 @@ func DBGWarn(_ message: String, file: String = #file, function: String = #functi
 #if DEBUGWARN
     //print("dbgwarn enabled")
     let fileName = file.components(separatedBy: "/").last ?? ""
-    let tim = CFAbsoluteTimeGetCurrent()
+    let tim = String(format: "%.6f", CFAbsoluteTimeGetCurrent())
     let formattedLine = "\(DBGColor.YELLOW.ansiCode)\(tim):**warning** [\(fileName):\(line)] \(function): \(message)\(DBGColor.reset)"
     print(formattedLine)
     //#define DBGWarn(args...) NSLog(@"%@",[NSString stringWithFormat: args])
@@ -169,11 +169,33 @@ func DBGWarn(_ message: String, file: String = #file, function: String = #functi
 func DBGErr(_ message: String, file: String = #file, function: String = #function, line: Int = #line) {
 #if DEBUGERR
     let fileName = file.components(separatedBy: "/").last ?? ""
-    let tim = CFAbsoluteTimeGetCurrent()
+    let tim = String(format: "%.6f", CFAbsoluteTimeGetCurrent())
     let formattedLine = "\(DBGColor.RED.ansiCode)\(tim):**error** [\(fileName):\(line)] \(function): \(message)\(DBGColor.reset)"
     print(formattedLine)
     //#define DBGErr(args...) NSLog(@"%s%d: **ERROR** %@",__PRETTY_FUNCTION__,__LINE__,[NSString stringWithFormat: args])
 #endif
+}
+
+/// Local Time Date - formats a Date object as local time string
+/// - Parameters:
+///   - date: The Date object to format
+///   - secs: Include seconds in output (default: false)
+/// - Returns: Formatted string as "hh:mm dd-mm-yy" or "hh:mm:ss dd-mm-yy" if secs=true
+func ltd(_ date: Date, secs: Bool = false) -> String {
+    let formatter = DateFormatter()
+    formatter.timeZone = Calendar.current.timeZone
+    formatter.dateFormat = secs ? "HH:mm:ss dd-MM-yy" : "HH:mm dd-MM-yy"
+    return formatter.string(from: date)
+}
+
+/// Int to Local Time Date - converts Unix timestamp to formatted local time string
+/// - Parameters:
+///   - timestamp: Unix timestamp (seconds since 1970)
+///   - secs: Include seconds in output (default: false)
+/// - Returns: Formatted string as "i:hh:mm dd-mm-yy" or "i:hh:mm:ss dd-mm-yy" if secs=true
+func i2ltd(_ timestamp: Int, secs: Bool = false) -> String {
+    let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
+    return "i:" + ltd(date, secs: secs)
 }
 
 func dbgNSAssert(_ x: Bool, _ y: String) {
