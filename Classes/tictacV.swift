@@ -234,16 +234,27 @@ class tictacV: UIView {
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .center
         let attributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 18.0), // font size
+            .font: UIFont.boldSystemFont(ofSize: 18.0), // font size - bold for better visibility
             .foregroundColor: UIColor.label,  // UIColor.black, // font color
             .paragraphStyle: paragraphStyle
         ]
 
         context?.saveGState()
-        
+
+        // Calculate text size for proper centering
+        let textSize = str!.size(withAttributes: attributes)
+
+        // Center the text both horizontally and vertically within currRect
+        let centeredRect = CGRect(
+            x: currRect.origin.x + (currRect.size.width - textSize.width) / 2.0,
+            y: currRect.origin.y + (currRect.size.height - textSize.height) / 2.0,
+            width: textSize.width,
+            height: textSize.height
+        )
+
         // draw the text
         UIGraphicsPushContext(context!)
-        str!.draw(in: currRect, withAttributes: attributes)
+        str!.draw(in: centeredRect, withAttributes: attributes)
         UIGraphicsPopContext()
 
     }
