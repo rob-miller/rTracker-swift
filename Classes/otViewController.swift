@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct otViewController: View {
+    let valueName: String
     var onDismiss: (String?, String?, Bool) -> Void
     @Environment(\.dismiss) var dismiss
     @State private var currentTracker: String?
@@ -15,10 +16,11 @@ struct otViewController: View {
     @State private var currentSwitch: Bool
     @State private var selectedSegment = 0
     @State private var showingInfoPopover = false
-    
+
     var callerTrackerName: String? // Add this to store the caller's tracker name
-    
-    init(selectedTracker: String?, selectedValue: String?, otCurrent: Bool, callerTrackerName: String?, onDismiss: @escaping (String?, String?, Bool) -> Void) {
+
+    init(valueName: String, selectedTracker: String?, selectedValue: String?, otCurrent: Bool, callerTrackerName: String?, onDismiss: @escaping (String?, String?, Bool) -> Void) {
+        self.valueName = valueName
         self.onDismiss = onDismiss
         self._currentTracker = State(initialValue: selectedTracker)
         self._currentValue = State(initialValue: selectedValue)
@@ -28,14 +30,17 @@ struct otViewController: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 20) {
+            VStack(spacing: 8) {
+                // Custom header with valueObj name
+                customHeader
+
                 // Segmented Control
                 Picker("Selection", selection: $selectedSegment) {
                     Text("Tracker").tag(0)
                     Text("Value").tag(1)
                 }
                 .pickerStyle(SegmentedPickerStyle())
-                .padding()
+                .padding(.horizontal)
                 .onChange(of: selectedSegment) { oldSegment, newSegment in
                     if newSegment == 1 && currentTracker == nil {
                         selectedSegment = 0
@@ -91,7 +96,10 @@ struct otViewController: View {
                 
                 Spacer()
             }
-            .navigationTitle("Select Data")
+            .padding(.horizontal)
+            .padding(.top, 4)
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .bottomBar) {
                     HStack {
@@ -120,7 +128,23 @@ struct otViewController: View {
             }
         }
     }
-    
+
+    private var customHeader: some View {
+        VStack(spacing: 4) {
+            Text(valueName)
+                .font(.title2)
+                .fontWeight(.semibold)
+                .foregroundColor(.primary)
+                .multilineTextAlignment(.center)
+
+            Text("Choose data source")
+                .font(.system(size: 18))
+                .foregroundColor(.secondary)
+        }
+        .padding(.top, 8)
+        .padding(.bottom, 4)
+    }
+
     var trackerPicker: some View {
         // Get all trackers
         let allTrackers = trackerList.shared.topLayoutNames

@@ -464,6 +464,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         
         let hostingController = UIHostingController(
             rootView: otViewController(
+                valueName: vo?.valueName ?? "",
                 selectedTracker: vo?.optDict["otTracker"],
                 selectedValue: vo?.optDict["otValue"],
                 otCurrent: vo?.optDict["otCurrent"] ?? (OTCURRDFLT ? "1" : "0") == "1",
