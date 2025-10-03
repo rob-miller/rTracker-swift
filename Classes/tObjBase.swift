@@ -602,6 +602,29 @@ class tObjBase: NSObject {
         }
     }
 
+    func toQry2AryII(sql: String) -> [(Int, Int)] {
+        tObjBase.performDatabaseOperation(toid: toid) { [self] in
+
+            SQLDbg(String("toQry2AryII: \(dbName!) => _\(sql)_"))
+
+            var stmt: OpaquePointer?
+            if sqlite3_prepare_v2(tDb, sql, -1, &stmt, nil) == SQLITE_OK {
+                var results: [(Int, Int)] = []
+                while sqlite3_step(stmt) == SQLITE_ROW {
+                    let i1 = Int(sqlite3_column_int(stmt, 0))
+                    let i2 = Int(sqlite3_column_int(stmt, 1))
+                    results.append((i1, i2))
+                    SQLDbg(String("  rslt: \(i1) \(i2)"))
+                }
+                sqlite3_finalize(stmt)
+                return results
+            } else {
+                tobPrepError(sql)
+                return []
+            }
+        }
+    }
+
     func toQry2Ary(sql: String) -> [(Any, Any)] {
         return tObjBase.performDatabaseOperation(toid: toid) { [self] in
             
