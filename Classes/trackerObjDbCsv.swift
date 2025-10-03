@@ -400,6 +400,7 @@ extension trackerObj {
     func insertTrackerVodata(vid: Int, date: Int, val: String, vo: valueObj? = nil) {
         var sql = "insert or replace into voData (id, date, val) values (\(vid),\(date),'\(val)');"
         toExecSql(sql:sql)
+        /*
         sql = ""
         if let vo = vo {
             if vo.vtype == VOT_FUNC {
@@ -413,10 +414,13 @@ extension trackerObj {
             } else if vo.optDict["ahksrc"] ?? "0" != "0" {
                 sql = "insert or replace into voHKstatus (id, date, stat) values (\(vid),\(date),\(hkStatus.hkData.rawValue));"
             }
+            
             if sql != "" {
                 toExecSql(sql:sql)
             }
+            
         }
+        */
     }
     
     //load reminder data into trackerObj array from db
@@ -1080,6 +1084,16 @@ extension trackerObj {
         var tData: [AnyHashable : Any] = [:]
 
         if withData {
+            // Build sets of (vid, date) pairs that have been sourced from HK/OT/FN
+            // This avoids repeated queries inside the loop
+            let hkStatusSet = Set(toQry2AryII(sql: "SELECT id, date FROM voHKstatus").map { "\($0.0)_\($0.1)" })
+            let otStatusSet = Set(toQry2AryII(sql: "SELECT id, date FROM voOTstatus").map { "\($0.0)_\($0.1)" })
+            let fnStatusSet = Set(toQry2AryII(sql: "SELECT id, date FROM voFNstatus").map { "\($0.0)_\($0.1)" })
+
+            let hasSourcedData = !hkStatusSet.isEmpty || !otStatusSet.isEmpty || !fnStatusSet.isEmpty
+            var includedCount = 0
+            var excludedCount = 0
+
             // save current trackerDate (NSDate->int)
             let currDate = Int(trackerDate?.timeIntervalSince1970 ?? 0)
             var nextDate = firstDate()
@@ -1091,7 +1105,29 @@ extension trackerObj {
                 _ = loadData(nextDate)
                 var vData: [AnyHashable : Any] = [:]
                 for vo in valObjTable {
-                    vData[String(format: "%ld", vo.vid)] = vo.value
+                    // Check if this value should be excluded because it came from HK/OT/FN source
+                    let dateKey = "\(vo.vid)_\(Int(trackerDate?.timeIntervalSince1970 ?? 0))"
+                    var shouldExclude = false
+
+                    // Check function type
+                    if vo.vtype == VOT_FUNC && fnStatusSet.contains(dateKey) {
+                        shouldExclude = true
+                    }
+                    // Check HealthKit source
+                    else if vo.optDict["ahksrc"] == "1" && hkStatusSet.contains(dateKey) {
+                        shouldExclude = true
+                    }
+                    // Check Other Tracker source
+                    else if vo.optDict["otsrc"] == "1" && otStatusSet.contains(dateKey) {
+                        shouldExclude = true
+                    }
+
+                    if shouldExclude {
+                        excludedCount += 1
+                    } else {
+                        vData[String(format: "%ld", vo.vid)] = vo.value
+                        includedCount += 1
+                    }
                     //DBGLog(@"genRtrk data: %@ for %@",vo.value,[NSString stringWithFormat:@"%d",vo.vid]);
                 }
                 tData["\(Int(trackerDate?.timeIntervalSinceReferenceDate ?? 0))"] = vData // copyItems: true
@@ -1105,6 +1141,11 @@ extension trackerObj {
 
             // restore current date
             _ = loadData(currDate)
+
+            // Report statistics if there were any HK/OT/FN sources
+            if hasSourcedData {
+                DBGLog("writeTmpRtrk: included \(includedCount) values, excluded \(excludedCount) HK/OT/FN sourced values")
+            }
         }
         // configDict not optional -- always need tid for load of data
         let rtrkDict: [String: Any] = [
