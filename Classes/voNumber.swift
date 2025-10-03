@@ -689,21 +689,21 @@ class voNumber: voState, UITextFieldDelegate {
 
     if lastDbDate > 0 {
         if let date = date {
-            let specifiedDate = date //min(date, lastDbDate) 
-            // single refresh, if specifieddate is current update any missing db entries to now
-            // XXXXXX not following spec here, should be bigger window?
-            //specifiedStartDate = calendar.startOfDay(for:Date(timeIntervalSince1970: TimeInterval(specifiedDate)))
-            //specifiedEndDate = calendar.date(byAdding: .day, value: 1, to: specifiedStartDate!)
-            // XXXXXX
-            if date >  lastDbDate {
+            if date >= lastDbDate {
+                // Future date: get all entries from last db date to now
                 specifiedStartDate = Date(timeIntervalSince1970: TimeInterval(lastDbDate))
+                specifiedEndDate = nil
             } else {
-                specifiedStartDate = calendar.startOfDay(for:Date(timeIntervalSince1970: TimeInterval(specifiedDate)))
-            }
+                // Historical date: find closest db dates before and after specified date
+                let sqlBefore = "SELECT max(date) FROM voHKstatus WHERE id = \(Int(vo.vid)) AND stat = \(hkStatus.hkData.rawValue) AND date < \(date)"
+                let sqlAfter = "SELECT min(date) FROM voHKstatus WHERE id = \(Int(vo.vid)) AND stat = \(hkStatus.hkData.rawValue) AND date > \(date)"
 
-            if date < lastDbDate {  // specified date is historical, just do the 1 day
-                specifiedEndDate = calendar.date(byAdding: .day, value: 1, to: specifiedStartDate!)
-            } // else leave end date nil to get all entries to now
+                let dateBefore = to.toQry2Int(sql: sqlBefore)
+                let dateAfter = to.toQry2Int(sql: sqlAfter)
+
+                specifiedStartDate = dateBefore > 0 ? Date(timeIntervalSince1970: TimeInterval(dateBefore)) : nil
+                specifiedEndDate = dateAfter > 0 ? Date(timeIntervalSince1970: TimeInterval(dateAfter)) : nil
+            }
 
             DBGLog(
                 "Single date refresh: querying from \(specifiedStartDate.map { ltd($0) } ?? "nil") to \(specifiedEndDate.map { ltd($0) } ?? "nil")"
