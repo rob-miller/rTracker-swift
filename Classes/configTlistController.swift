@@ -175,10 +175,10 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
             try? FileManager.default.createDirectory(atPath: fpatho, withIntermediateDirectories: false, attributes: nil)
             let zipFileName, fpattern: String
             if zipOption == .shareCsvZip {
-                zipFileName = "rTracker_exportAllCsv.zip"
+                zipFileName = "rTracker_exportAll_Csv.zip"
                 fpattern = "*.csv"
             } else {
-                zipFileName = "rTracker_exportAllRtrk.zip"
+                zipFileName = "rTracker_exportAll_Rtrk.zip"
                 fpattern = "*.rtrk"
             }
             
