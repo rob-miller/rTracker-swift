@@ -787,7 +787,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         // Show save button only if text has been modified
         if currentText != originalText {
             if devc?.navigationItem.rightBarButtonItem == nil {
-                let saveButton = rTracker_resource.createSaveButton(target: self, action: #selector(saveAction(_:)))
+                let saveButton = rTracker_resource.createDoneButton(target: self, action: #selector(saveAction(_:)))
                 devc?.navigationItem.rightBarButtonItem = saveButton
             }
         } else {

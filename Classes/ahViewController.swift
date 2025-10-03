@@ -116,19 +116,51 @@ struct ahViewController: View {
                     timeFilterContent
                     aggregationContent
                 }
-                
+
                 // Push everything to top
                 Spacer()
+
+                // Update HealthKit Choices button (fixed position above done button)
+                Button(action: {
+                    rthk.dbInitialised = false
+                    rthk.loadHealthKitConfigurations()
+                }) {
+                    Text("Update HealthKit Choices")
+                        .font(.system(size: 15, weight: .semibold))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .foregroundColor(.blue)
+                        .background(
+                            Capsule()
+                                .stroke(Color.blue, lineWidth: 1.5)
+                        )
+                }
+                .accessibilityIdentifier("confighk_refresh")
+                .padding(.bottom, 12)
+
+                // Centered done button at bottom (like configTVObjVC and otViewController)
+                HStack {
+                    Spacer()
+
+                    DoneButtonView {
+                        if currentSelection == nil {
+                            currentSelection = rthk.configurations.first?.displayName
+                        }
+                        onDismiss(currentSelection, currentUnit?.unitString, prevDateSwitch, ahFrequency, ahTimeFilter, ahAggregation)
+                        dismiss()
+                    }
+                    .accessibilityLabel("Done")
+                    .accessibilityIdentifier("confighk_done")
+
+                    Spacer()
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 8)
             }
             .padding(.horizontal)
             .padding(.top, 4)
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .bottomBar) {
-                    bottomToolbar
-                }
-            }
         }
     }
 
@@ -371,42 +403,6 @@ struct ahViewController: View {
         }
         .padding(.horizontal)
         .frame(minHeight: 45)
-    }
-    
-    private var bottomToolbar: some View {
-        HStack {
-            Button(action: {
-                if currentSelection == nil {
-                    currentSelection = rthk.configurations.first?.displayName
-                }
-                onDismiss(currentSelection, currentUnit?.unitString, prevDateSwitch, ahFrequency, ahTimeFilter, ahAggregation)
-                dismiss()
-            }) {
-                Text("\u{2611}")
-                    .font(.system(size: 28))
-                    .foregroundColor(.blue)
-            }
-            .accessibilityLabel("Done")
-            .accessibilityIdentifier("confighk_done")
-            
-            Spacer()
-
-            Button(action: {
-                rthk.dbInitialised = false
-                rthk.loadHealthKitConfigurations()
-            }) {
-                Text("Update HealthKit Choices")
-                    .font(.system(size: 15, weight: .semibold))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .foregroundColor(.blue)
-                    .background(
-                        Capsule()
-                            .stroke(Color.blue, lineWidth: 1.5)
-                    )
-            }
-            .accessibilityIdentifier("confighk_refresh")
-        }
     }
     
     // Helper function to find the selected configuration
@@ -758,6 +754,60 @@ struct UnitSegmentedControl: View {
 }
 
 // MARK: - UIKit helpers
+
+private struct DoneButtonView: UIViewRepresentable {
+    let action: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(action: action)
+    }
+
+    func makeUIView(context: Context) -> UIButton {
+        let barButton = rTracker_resource.createDoneButton(target: context.coordinator, action: #selector(Coordinator.tapped))
+        if let button = barButton.uiButton {
+            button.translatesAutoresizingMaskIntoConstraints = false
+            button.setContentHuggingPriority(.required, for: .horizontal)
+            button.setContentHuggingPriority(.required, for: .vertical)
+            button.setContentCompressionResistancePriority(.required, for: .horizontal)
+            button.setContentCompressionResistancePriority(.required, for: .vertical)
+            context.coordinator.button = button
+
+            // Use intrinsic content size to maintain circular shape
+            let intrinsicSize = button.intrinsicContentSize
+            NSLayoutConstraint.activate([
+                button.widthAnchor.constraint(equalToConstant: intrinsicSize.width),
+                button.heightAnchor.constraint(equalToConstant: intrinsicSize.height),
+                button.widthAnchor.constraint(equalTo: button.heightAnchor) // Maintain 1:1 aspect ratio
+            ])
+
+            return button
+        }
+
+        // Fallback for pre-iOS 26
+        let fallback = UIButton(type: .system)
+        fallback.setTitle("Done", for: .normal)
+        fallback.addTarget(context.coordinator, action: #selector(Coordinator.tapped), for: .touchUpInside)
+        context.coordinator.button = fallback
+        return fallback
+    }
+
+    func updateUIView(_ uiView: UIButton, context: Context) {
+        uiView.isUserInteractionEnabled = true
+    }
+
+    final class Coordinator: NSObject {
+        let action: () -> Void
+        weak var button: UIButton?
+
+        init(action: @escaping () -> Void) {
+            self.action = action
+        }
+
+        @objc func tapped() {
+            action()
+        }
+    }
+}
 
 private struct HelpInfoButtonView: UIViewRepresentable {
     let action: () -> Void

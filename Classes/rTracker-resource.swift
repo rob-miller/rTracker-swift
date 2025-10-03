@@ -1373,24 +1373,6 @@ class rTracker_resource: NSObject {
     }
   }
 
-  /// Creates a modern iOS 26 save button with yellow checkmark circle
-  class func createSaveButton(target: Any?, action: Selector) -> UIBarButtonItem {
-    let burntYellow = UIColor(red: 0.85, green: 0.7, blue: 0.05, alpha: 1.0)
-    let yellowTintedWhite = UIColor(red: 1.0, green: 1.0, blue: 0.2, alpha: 1.0)
-
-    return createStyledButton(
-      symbolName: "checkmark",
-      target: target,
-      action: action,
-      backgroundColor: burntYellow,
-      symbolColor: yellowTintedWhite,
-      borderColor: yellowTintedWhite,
-      borderWidth: 1.0,
-      fallbackSystemItem: .save
-    )
-  }
-
-
   // MARK: - Privacy Screen Button Functions (consolidated)
   // Note: Privacy buttons now use createActionButton or createNavigationButton
 

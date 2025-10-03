@@ -68,7 +68,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         navigationItem.leftBarButtonItem = cancelBtn
         navigationItem.leftBarButtonItem?.accessibilityIdentifier = "addTrkrCancel"
 
-        let saveBtn = rTracker_resource.createSaveButton(target: self, action: #selector(btnSave))
+        let saveBtn = rTracker_resource.createDoneButton(target: self, action: #selector(btnSave))
         navigationItem.rightBarButtonItem = saveBtn
         navigationItem.rightBarButtonItem?.accessibilityIdentifier = "addTrkrSave"
 

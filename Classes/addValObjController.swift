@@ -104,7 +104,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
         cancelBtn.accessibilityIdentifier = "avoCancel"
         navigationItem.leftBarButtonItem = cancelBtn
 
-        let saveBtn = rTracker_resource.createSaveButton(target: self, action: #selector(addTrackerController.btnSave))
+        let saveBtn = rTracker_resource.createDoneButton(target: self, action: #selector(addTrackerController.btnSave))
         saveBtn.accessibilityIdentifier = "avoSave"
         navigationItem.rightBarButtonItem = saveBtn
 

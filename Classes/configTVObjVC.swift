@@ -230,7 +230,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         scroll.contentSize = CGSize(width: svsize.width, height: lasty + (3 * MARGIN))
         //[self.view addSubview:self.scroll];
 
-        let doneBtn = rTracker_resource.createSaveButton(target: self, action: #selector(btnDone(_:)))
+        let doneBtn = rTracker_resource.createDoneButton(target: self, action: #selector(btnDone(_:)))
         doneBtn.accessibilityLabel = "Done"
         doneBtn.accessibilityIdentifier = "configtvo_done"
 

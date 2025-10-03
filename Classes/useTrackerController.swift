@@ -1226,7 +1226,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     var _saveBtn: UIBarButtonItem?
     var saveBtn: UIBarButtonItem {
         if _saveBtn == nil {
-            _saveBtn = rTracker_resource.createSaveButton(target: self, action: #selector(addTrackerController.btnSave))
+            _saveBtn = rTracker_resource.createDoneButton(target: self, action: #selector(addTrackerController.btnSave))
 
             _saveBtn!.accessibilityLabel = "Save"
             _saveBtn!.accessibilityHint = "tap to save this entry"
