@@ -99,6 +99,11 @@ let LCKEY = "fdlc"
 let CTFKEY = "fdcTF"
 let CLKEY = "fdcLab"
 
+// strings to access date/time picker for setting before/after timestamp
+let DTKEY = "fddt"        // datetime timestamp storage key
+let DTBKEY = "fddtBtn"    // datetime button key
+let DTLKEY = "fddtLab"    // datetime label key
+
 
 // add to x and y axes to improve visibility of endpoints
 let GRAPHSCALE = d(0.05)

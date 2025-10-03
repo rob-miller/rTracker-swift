@@ -124,7 +124,14 @@ func isFnTimeOp(_ i: Int) -> Bool {
     ((i <= FNTIMEFIRST) && (i >= FNTIMELAST)) || ((i <= FNNEWTIMEFIRST) && (i >= FNNEWTIMELAST))
 }
 
-let FNFIN = FNNEWTIMELAST
+let FNNEWOTHERFIRST = FNNEWTIMELAST - 10
+
+let FNBEFORE = FNNEWOTHERFIRST - 1
+let FNAFTER = FNBEFORE - 1
+
+let FNNEWOTHERLAST = FNNEWOTHERFIRST - 100
+
+let FNFIN = FNNEWOTHERLAST
 
 func isFn(_ i: Int) -> Bool {
     (i <= FNSTART) && (i >= FNFIN)
@@ -149,8 +156,8 @@ let TIMEFNS = [FNTIMEWEEKS,FNTIMEDAYS,FNTIMEHRS,FNTIMEMINS,FNTIMESECS]
 let TIMESTRS = ["weeks","days","hours","minutes","seconds"]
 let TIMECNT = TIMEFNS.count
 
-let OTHERFNS = [FNCONSTANT]
-let OTHERSTRS = [FNCONSTANT_TITLE]
+let OTHERFNS = [FNCONSTANT, FNBEFORE, FNAFTER]
+let OTHERSTRS = [FNCONSTANT_TITLE, "before", "after"]
 let OTHERCNT = OTHERFNS.count
 
 let TOTFNCNT = ARG1CNT + ARG2CNT + PARENCNT + TIMECNT + OTHERCNT
@@ -226,7 +233,6 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
     private var _fnStrDict: [NSNumber : String]?
     var fnStrDict: [NSNumber : String] {
         if nil == _fnStrDict {
-            let fnTokArr = PARENFNS + OTHERFNS
             let fnStrArr = ARG1STRS + ARG2STRS + TIMESTRS + PARENSTRS + OTHERSTRS
             var fnTokNSNarr: [NSNumber] = []
 
@@ -239,7 +245,10 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             for tmop in fnTimeOps {
                 fnTokNSNarr.append(NSNumber(value:tmop))
             }
-            for tok in fnTokArr {
+            for tok in PARENFNS {
+                fnTokNSNarr.append(NSNumber(value:tok))
+            }
+            for tok in fnOtherOps {
                 fnTokNSNarr.append(NSNumber(value:tok))
             }
             _fnStrDict = Dictionary(uniqueKeysWithValues: zip(fnTokNSNarr, fnStrArr))
@@ -271,6 +280,15 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         }
         return _fnTimeOps!
     }
+
+    private var _fnOtherOps: [Int]?
+    var fnOtherOps: [Int] {
+        if nil == _fnOtherOps {
+            _fnOtherOps = Array(OTHERFNS[..<OTHERCNT]) // copyItems: true
+        }
+        return _fnOtherOps!
+    }
+
     var ctvovcp: configTVObjVC?
     var fnSegNdx = 0
 
@@ -1139,6 +1157,20 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                 currFnNdx += 1 // skip the bounding constant tok
                 #if FUNCTIONDBG
                 DBGLog(String("paren open: result= \(String(describing: result))"))
+                #endif
+            } else if FNBEFORE == currTok || FNAFTER == currTok {
+                if currFnNdx >= maxc {
+                    FnErr = true
+                    return result != nil ? NSNumber(value: result!) : nil
+                }
+                let timestamp = fnArray[currFnNdx].intValue
+                currFnNdx += 1  // skip timestamp value
+                currFnNdx += 1  // skip closing token
+
+                result = (FNBEFORE == currTok) ? (epd1 < timestamp ? 1.0 : nil) : (epd1 > timestamp ? 1.0 : nil)
+
+                #if FUNCTIONDBG
+                DBGLog(String("\(currTok == FNBEFORE ? "before" : "after"): epd1=\(epd1) ts=\(timestamp) result=\(String(describing: result))"))
                 #endif
             } else if isFnTimeOp(currTok) {
                 if 0 == epd0 {

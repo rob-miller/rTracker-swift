@@ -778,8 +778,8 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
             vo!.optDict[okey!] = tf?.text
         }
 
-        if let nkey {
-            (wDict[nkey] as! UITextField).becomeFirstResponder()
+        if let nkey, let nextField = wDict[nkey] as? UITextField {
+            nextField.becomeFirstResponder()
         } else {
             tf?.resignFirstResponder()
         }

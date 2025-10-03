@@ -238,7 +238,22 @@ extension voFunction {
             }
             //DBGLog(@"loop start: closePend=%d constantPend=%d constantClosePend=%d arg2Pend=%d openParen=%d fstr=%@",closePending,constantPending,constantClosePending,arg2Pending, openParenCount, fstr);
             if constantPending {
-                fstr += n.stringValue
+                // Check if previous token was before/after for timestamp formatting
+                let prevToken = ndx > 0 ? fnArray[ndx-1].intValue : 0
+                if prevToken == FNBEFORE || prevToken == FNAFTER {
+                    // Format timestamp as date only
+                    let timestamp = n.intValue
+                    let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
+                    fstr += DateFormatter.localizedString(from: date, dateStyle: .short, timeStyle: .none)
+                    // Close bracket for before[date]/after[date] - will be followed by closing token
+                    if closePending {
+                        fstr += "]"
+                        closePending = false
+                    }
+                } else {
+                    // Regular constant number
+                    fstr += n.stringValue
+                }
                 constantPending = false
                 constantClosePending = true
             } else if isFn(i) {
@@ -247,7 +262,17 @@ extension voFunction {
                 } else {
                     arg2Pending = false
                 }
-                if FNCONSTANT == i {
+                if FNBEFORE == i || FNAFTER == i {
+                    // before/after display as "before[date]" or "after[date]"
+                    if constantClosePending {
+                        constantClosePending = false
+                    } else {
+                        fstr += "\(fnStrDict[NSNumber(value:i)]!)"
+                        fstr += "["
+                        constantPending = true
+                        closePending = true
+                    }
+                } else if FNCONSTANT == i {
                     if constantClosePending {
                         constantClosePending = false
                     } else {
@@ -343,6 +368,26 @@ extension voFunction {
                 rTracker_resource.alert("Need Value", msg: "Please set a value for the constant.", vc: nil)
                 return
             }
+        } else if FNBEFORE == ntok.intValue || FNAFTER == ntok.intValue {
+            // before/after have timestamp on both sides to help removal
+            var timestamp: Int
+
+            if let stored = vo.optDict[DTKEY], let ts = Int(stored) {
+                timestamp = ts
+            } else {
+                // Default: today 12:00 PM
+                var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+                components.hour = 12
+                components.minute = 0
+                components.second = 0
+                timestamp = Int(Calendar.current.date(from: components)?.timeIntervalSince1970 ?? Date().timeIntervalSince1970)
+                vo.optDict[DTKEY] = String(timestamp)
+            }
+
+            _fnArray!.append(ntok)
+            _fnArray!.append(NSNumber(value: timestamp))
+            _fnArray!.append(ntok)
+            ctvovcp?.tfDone(nil)
         } else if FN1ARGCLASSIFY == ntok.intValue {
             // Get values from text fields
             for i in 1...7 {
@@ -383,6 +428,10 @@ extension voFunction {
                 _fnArray!.removeLast() // remove bounding token after
                 _fnArray!.removeLast() // remove constant value
                 _fnArray!.removeLast() // remove start (normal) token
+            } else if FNBEFORE == fnArray.last!.intValue || FNAFTER == fnArray.last!.intValue {
+                _fnArray!.removeLast() // remove bounding token after
+                _fnArray!.removeLast() // remove timestamp value
+                _fnArray!.removeLast() // remove start token
             } else {
                 _fnArray!.removeLast() // remove normal token
             }
@@ -460,9 +509,38 @@ extension voFunction {
             text: nil,
             addsv: false)
 
-        
+        // Date/time picker button - hidden by default, shown for before/after
+        frame.origin.y = startY
+        frame.origin.x = 3 * MARGIN
+        frame.size.height = minLabelHeight(ctvovcp.lfHeight)
+
+        frame = ctvovcp.configLabel(
+            "Date/time value:",
+            frame: frame,
+            key: DTLKEY,
+            addsv: false)
+
+        frame.origin.x += frame.size.width + 2*SPACE
+        let labelHeight = frame.size.height  // Save label height for alignment
+        _ = ctvovcp.configActionBtn(
+            frame,
+            key: DTBKEY,
+            label: "Set Date/Time",
+            target: self,
+            action: #selector(dateTimeButtonTapped))
+
+        // Manually adjust button frame to align with label, and hide it initially
+        if let btn = ctvovcp.wDict[DTBKEY] as? UIButton {
+            var btnFrame = btn.frame
+            btnFrame.origin.y = frame.origin.y  // Match label's Y position
+            btnFrame.size.height = labelHeight  // Match label's height
+            btn.frame = btnFrame
+            btn.removeFromSuperview()  // Hide initially - will be shown when before/after selected
+        }
+
+
         // classify fixed values and labels
-        
+
         frame.origin.x = MARGIN
         
         // Screen width to calculate column positions
@@ -739,6 +817,8 @@ extension voFunction {
         case "round": return "op_round"
         case "classify": return "op_classify"
         case "¬": return "op_not"
+        case "before": return "op_before"
+        case "after": return "op_after"
 
         // Arithmetic operators
         case "+": return "op_plus"
@@ -963,7 +1043,6 @@ extension voFunction {
             let aFn1args = NSNumber(value:fn1args[i])
             fnTitles.append(aFn1args)
         }
-        fnTitles.append(NSNumber(value:FNCONSTANT))  // String("\(FNCONSTANT)"))
     }
 
     func ftAddTimeSet() {
@@ -975,6 +1054,13 @@ extension voFunction {
         //for (i=FNTIMEFIRST;i>=FNTIMELAST;i--) {
         //    [self.fnTitles addObject:[NSNumber numberWithInt:i]];   xxx
         //}
+    }
+
+    func ftAddOtherSet() {
+        for i in 0..<OTHERCNT {
+            let aFnOther = NSNumber(value:fnOtherOps[i])
+            fnTitles.append(aFnOther)
+        }
     }
 
     func ftAdd2OpSet() {
@@ -1018,6 +1104,7 @@ extension voFunction {
     func ftStartSet() {
         ftAddFnSet()
         ftAddTimeSet()
+        ftAddOtherSet()
         fnTitles.append(NSNumber(value:FNPARENOPEN))  // String(utf8String: FNPARENOPEN) ?? "")
         ftAddVOs()
     }
@@ -1033,7 +1120,7 @@ extension voFunction {
             ftStartSet()
         } else {
             let last = fnArray.last!.intValue
-            if last >= 0 || last <= -TMPUNIQSTART || isFnTimeOp(last) || FNCONSTANT == last {
+            if last >= 0 || last <= -TMPUNIQSTART || isFnTimeOp(last) || FNCONSTANT == last || FNBEFORE == last || FNAFTER == last {
                 // state = after valObj
                 ftAdd2OpSet()
                 ftAddCloseParen()
@@ -1177,6 +1264,96 @@ extension voFunction {
         // hide constant box
         ((ctvovcp?.wDict)?[CTFKEY] as? UIView)?.removeFromSuperview()
         ((ctvovcp?.wDict)?[CLKEY] as? UIView)?.removeFromSuperview()
+        hideDateTimeTF()
+    }
+
+    @objc func dateTimeButtonTapped() {
+        // Create modal view controller for date/time picker
+        let pickerVC = UIViewController()
+        pickerVC.modalPresentationStyle = .pageSheet
+
+        if let sheet = pickerVC.sheetPresentationController {
+            sheet.detents = [.medium()]
+            sheet.prefersGrabberVisible = true
+        }
+
+        // Create date picker
+        let datePicker = UIDatePicker()
+        datePicker.datePickerMode = .dateAndTime
+        datePicker.preferredDatePickerStyle = .wheels
+        datePicker.translatesAutoresizingMaskIntoConstraints = false
+
+        // Load existing value or default to today 12:00 PM
+        if let stored = vo.optDict[DTKEY], let ts = Int(stored) {
+            datePicker.date = Date(timeIntervalSince1970: TimeInterval(ts))
+        } else {
+            var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+            components.hour = 12
+            components.minute = 0
+            datePicker.date = Calendar.current.date(from: components) ?? Date()
+        }
+
+        // Create done button with closure-based action
+        let doneButton = UIButton(type: .system)
+        doneButton.setTitle("Done", for: .normal)
+        doneButton.titleLabel?.font = UIFont.systemFont(ofSize: 18, weight: .semibold)
+        doneButton.translatesAutoresizingMaskIntoConstraints = false
+
+        // Use UIAction (iOS 14+) to capture context
+        let doneAction = UIAction { [weak self, weak pickerVC] _ in
+            guard let self = self, let pickerVC = pickerVC else { return }
+
+            // Store selected date
+            let timestamp = Int(datePicker.date.timeIntervalSince1970)
+            self.vo.optDict[DTKEY] = String(timestamp)
+
+            // Update button label
+            let dateStr = DateFormatter.localizedString(from: datePicker.date, dateStyle: .short, timeStyle: .none)
+            (self.ctvovcp?.wDict[DTBKEY] as? UIButton)?.setTitle(dateStr, for: .normal)
+
+            // Dismiss modal
+            pickerVC.dismiss(animated: true)
+        }
+        doneButton.addAction(doneAction, for: .touchUpInside)
+
+        // Add views
+        pickerVC.view.addSubview(datePicker)
+        pickerVC.view.addSubview(doneButton)
+
+        // Layout constraints
+        NSLayoutConstraint.activate([
+            datePicker.centerXAnchor.constraint(equalTo: pickerVC.view.centerXAnchor),
+            datePicker.centerYAnchor.constraint(equalTo: pickerVC.view.centerYAnchor),
+
+            doneButton.topAnchor.constraint(equalTo: pickerVC.view.safeAreaLayoutGuide.topAnchor, constant: 16),
+            doneButton.trailingAnchor.constraint(equalTo: pickerVC.view.safeAreaLayoutGuide.trailingAnchor, constant: -16)
+        ])
+
+        // Present the modal
+        ctvovcp?.present(pickerVC, animated: true)
+    }
+
+    func showDateTimeTF() {
+        let btn = (ctvovcp?.wDict)?[DTBKEY] as? UIButton
+        if let stored = vo.optDict[DTKEY], let ts = Int(stored) {
+            let date = Date(timeIntervalSince1970: TimeInterval(ts))
+            let dateStr = DateFormatter.localizedString(from: date, dateStyle: .short, timeStyle: .none)
+            btn?.setTitle(dateStr, for: .normal)
+        } else {
+            btn?.setTitle("Set Date/Time", for: .normal)
+        }
+
+        if let label = (ctvovcp?.wDict)?[DTLKEY] as? UIView {
+            ctvovcp?.scroll.addSubview(label)
+        }
+        if let btn = btn {
+            ctvovcp?.scroll.addSubview(btn)
+        }
+    }
+
+    func hideDateTimeTF() {
+        ((ctvovcp?.wDict)?[DTBKEY] as? UIView)?.removeFromSuperview()
+        ((ctvovcp?.wDict)?[DTLKEY] as? UIView)?.removeFromSuperview()
     }
 
     func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
@@ -1208,10 +1385,12 @@ extension voFunction {
             // Hide all UI elements first
             hideConstTF()
             hideClassifyTF()
-            
+
             // Show appropriate UI based on selection
             if FNCONSTANT_TITLE == fndRowTitle(row) {
                 showConstTF()
+            } else if "before" == fndRowTitle(row) || "after" == fndRowTitle(row) {
+                showDateTimeTF()
             } else if "classify" == fndRowTitle(row) {
                 // Show the UI and load any existing values
                 showClassifyTF()

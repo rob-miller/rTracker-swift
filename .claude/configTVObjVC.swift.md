@@ -28,9 +28,15 @@ Configuration view controller for editing valueObj properties - manages UI for c
 - ✅ RESOLVED: XIB dependency removed - now uses programmatic UI creation
 - ✅ RESOLVED: Navigation bar, toolbar, and scroll view created programmatically
 - ✅ RESOLVED: Auto Layout constraints properly configured
+- ✅ RESOLVED: Fixed text field navigation crash with safe optional unwrapping
 - Code now fully independent of XIB files
 
 ## Recent Development History
+- 2025-10-03: **Bug fix in text field navigation**
+  - Fixed crash in `tfDone()` when navigating to next text field
+  - Changed force unwrap `as!` to safe optional binding `as?` for next field lookup
+  - Issue occurred when mapping expected next field (e.g., "nmaxTF") didn't exist in wDict
+  - Now safely falls back to resigning first responder if next field unavailable
 - 2025-09-26: **MAJOR REFACTOR** - Removed XIB dependency completely
   - Removed @IBOutlet annotations from navBar, toolBar, scroll properties
   - Added setupViews() method for programmatic UI creation
@@ -43,4 +49,4 @@ Configuration view controller for editing valueObj properties - manages UI for c
 - Various configuration improvements for value object types
 
 ## Last Updated
-2025-09-26 - XIB removal completed successfully - now fully programmatic UI
+2025-10-03 - Fixed text field navigation crash with safe optional unwrapping in tfDone() method

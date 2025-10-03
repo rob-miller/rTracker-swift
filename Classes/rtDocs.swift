@@ -176,6 +176,16 @@ class rtDocs {
             title: "¬",
             description: "Logical NOT operator. Returns the opposite boolean value. Example: ¬[condition] returns false when condition is true.",
         ),
+        rtDocEntry(
+            identifier: "op_before",
+            title: "before",
+            description: "Returns true (1) if the tracker record date/time is before the configured date/time, otherwise returns false (empty). Select 'before' from picker, tap 'Set Date/Time' to configure. Function string shows date only."
+        ),
+        rtDocEntry(
+            identifier: "op_after",
+            title: "after",
+            description: "Returns true (1) if the tracker record date/time is after the configured date/time, otherwise returns false (empty). Select 'after' from picker, tap 'Set Date/Time' to configure. Function string shows date only."
+        ),
 
         // Arithmetic operators
         rtDocEntry(
