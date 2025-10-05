@@ -82,6 +82,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
     var toolBar: UIToolbar!
     var scroll: UIScrollView!
     var activeField: UITextField? //just a pointer, no retain
+    var targetTextField: UITextField? = nil  // override for scroll target, default nil
     var processingTfDone = false
     var rDates: [AnyHashable]?
 
@@ -421,7 +422,9 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
     // MARK: keyboard notifications
 
     @objc func keyboardWillShow(_ n: Notification?) {
-        rTracker_resource.willShowKeyboard(n, vwTarg: activeField, vwScroll: scroll)
+        // Use targetTextField if set, otherwise fall back to activeField
+        let scrollTarget = targetTextField ?? activeField
+        rTracker_resource.willShowKeyboard(n, vwTarg: scrollTarget, vwScroll: scroll)
     }
 
     @objc func keyboardWillHide(_ n: Notification?) {

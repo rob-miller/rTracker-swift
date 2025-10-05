@@ -1418,6 +1418,8 @@ extension voFunction {
                 }
             }
         }
+        // Set targetTextField to bottom field so keyboard scrolls to show all fields
+        ctvovcp?.targetTextField = (ctvovcp?.wDict)?["classifyTF7"] as? UITextField
     }
     
     // Remove the classify UI elements
@@ -1429,6 +1431,8 @@ extension voFunction {
                 ((ctvovcp?.wDict)?["classifyTF\(i)"] as? UIView)?.removeFromSuperview()
             }
         }
+        // Clear targetTextField when hiding classify fields
+        ctvovcp?.targetTextField = nil
     }
     
     // Load classify values from fnArray to UI
