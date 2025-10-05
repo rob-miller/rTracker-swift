@@ -75,8 +75,16 @@ Two-tier storage approach:
 ✅ Fixed voFnDefnStr() to display before/after as `before[date]` format with proper bracket closure
 ✅ Fixed date/time picker button alignment with label
 ✅ Fixed date/time picker button visibility (hidden by default, shown on selection)
+✅ Added special keyboard scrolling for classify text fields via targetTextField mechanism
 
 ## Recent Development History
+- 2025-10-05: **Special keyboard scrolling for classify text fields**
+  - Modified `showClassifyTF()` to set `ctvovcp?.targetTextField` to classifyTF7 (bottommost field)
+  - Modified `hideClassifyTF()` to clear `ctvovcp?.targetTextField = nil`
+  - Works with new targetTextField property in configTVObjVC
+  - When ANY classify field tapped, keyboard appears and view scrolls to show classifyTF7
+  - This ensures all 7 classify text fields are visible above keyboard
+  - User can now fill any field (e.g., just field 3) without sequential tapping
 - 2025-10-03: **Before/after function UI implementation**
   - Created `ftAddOtherSet()` function to add OTHERFNS to picker (mirrors ftAddFnSet/ftAddTimeSet pattern)
   - Called `ftAddOtherSet()` from `ftStartSet()` to make before/after appear in picker
@@ -95,4 +103,4 @@ Two-tier storage approach:
 - c8c33d3: min2, max2, display as hrs:mins added to voFn; configTVObj more table driven; comment sleep other 0 values
 
 ## Last Updated
-2025-10-03: Completed before/after function UI implementation with picker integration, proper display formatting (`before[date]`), modal date picker, and button alignment fixes. Added ftAddOtherSet() following established picker population pattern.
+2025-10-05: Added special keyboard scrolling for classify text fields. When any classify field is tapped, view scrolls to show bottommost field (classifyTF7), ensuring all 7 fields are visible above keyboard. Implemented via targetTextField mechanism in configTVObjVC.

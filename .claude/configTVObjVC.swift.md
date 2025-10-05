@@ -30,9 +30,17 @@ Configuration view controller for editing valueObj properties - manages UI for c
 - ✅ RESOLVED: Auto Layout constraints properly configured
 - ✅ RESOLVED: Fixed text field navigation crash with safe optional unwrapping
 - ✅ RESOLVED: Fixed classify text field crash - added mappings to tfMappings table
+- ✅ RESOLVED: Added targetTextField for special keyboard scroll behavior (classify fields)
 - Code now fully independent of XIB files
 
 ## Recent Development History
+- 2025-10-05: **Feature: Special keyboard scrolling for FNCLASSIFY fields**
+  - Added `targetTextField` property (line 85) to override `activeField` for scroll calculations
+  - Modified `keyboardWillShow()` to use `targetTextField ?? activeField` as scroll target
+  - When classify fields shown, scroll to bottommost field (classifyTF7) regardless of which field tapped
+  - This ensures all 7 classify text fields are visible above keyboard
+  - voFunctionConfig sets/clears targetTextField in showClassifyTF()/hideClassifyTF()
+  - Normal text fields unaffected (targetTextField = nil, falls back to activeField)
 - 2025-10-05: **Bug fix: Classify text field crash**
   - Root cause: Commit c8c33d3 (Aug 22, 2025) refactored tfDone() to use table-driven approach
   - Classify operator added earlier (359bc81, Apr 25, 2025) but never added to new mapping table
@@ -57,4 +65,4 @@ Configuration view controller for editing valueObj properties - manages UI for c
 - Various configuration improvements for value object types
 
 ## Last Updated
-2025-10-05 - Fixed classify text field crash by adding classify field mappings to tfMappings table in tfDone() method. Issue introduced when c8c33d3 refactored tfDone to table-driven approach but didn't include classify fields added in earlier commit 359bc81.
+2025-10-05 - Added targetTextField property to enable special keyboard scrolling behavior for FNCLASSIFY fields. When any classify field is tapped, view scrolls to show bottommost field (classifyTF7), ensuring all 7 fields are visible above keyboard. Also fixed classify text field crash by adding classify field mappings to tfMappings table.
