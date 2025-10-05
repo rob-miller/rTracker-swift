@@ -751,7 +751,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                 case FN1ARGCLASSIFY:
                     // only 1 classify, match values stored in vo.optDict
                     // Start with result = 0 (no match)
-                    result = 0.0
+                    result = nil
                     for i in (1...7).reversed() {
                         if let sv1 = sv1, let matchVal = vo.optDict["classify_\(i)"] {
                             if let matchDbl = Double(matchVal) {
