@@ -945,8 +945,11 @@ class voNumber: voState, UITextFieldDelegate {
         }
 
         #if DEBUGLOG
-            if let earliest = datesToCheck.min(), let latest = datesToCheck.max() {
-                DBGLog("  datesToCheck Date range: \(i2ltd(Int(earliest))) to \(i2ltd(Int(latest)))")
+            if datesToCheck.count > 0 {
+                DBGLog("  datesToCheck has \(datesToCheck.count) dates:")
+                for (index, date) in datesToCheck.sorted().enumerated() {
+                    DBGLog("    [\(index)]: \(i2ltd(Int(date)))")
+                }
             }
         #endif
   
@@ -955,14 +958,36 @@ class voNumber: voState, UITextFieldDelegate {
         // Move heavy processing to background thread to avoid UI freeze
         DispatchQueue.global(qos: .userInitiated).async { [self] in
           let frequency = self.vo.optDict["ahFrequency"] ?? "daily"
+          let timeFilter = self.vo.optDict["ahTimeFilter"]
 
           //***** map HK dates to where they should be in tracker database, generating new dates and matched dates.
           //** mergeResult and timeSlotResult both filter today/now entries for current tracker view.
           //***** here we may insert trackerDates even if just refreshing current day
 
+          var datesToMerge = datesToCheck
+
+          // For high-frequency daily data, collapse timestamps within timeFilter windows
+          if frequency == "daily" && queryConfig.aggregationType == .highFrequency {
+            datesToMerge = self.collapseTimeFilterWindow(
+              timestamps: datesToCheck,
+              timeFilter: timeFilter
+            )
+
+            #if DEBUGLOG
+            if datesToMerge.count != datesToCheck.count {
+              DBGLog(
+                "[\(srcName)] highFrequency+daily: collapsed \(datesToCheck.count) timestamps to \(datesToMerge.count) using timeFilter '\(timeFilter ?? "all_day")'"
+              )
+              for (index, ts) in datesToMerge.sorted().enumerated() {
+                DBGLog("  [\(index)]: \(i2ltd(Int(ts)))")
+              }
+            }
+            #endif
+          }
+
           // ignore ahPrevD here.  these are the tracker dates to be in the database for the values whether specified day or previous day
           if frequency == "daily" {
-            let mergeResult = to.mergeDates(inDates: datesToCheck, aggregationTime: queryConfig.aggregationTime)
+            let mergeResult = to.mergeDates(inDates: datesToMerge, aggregationTime: queryConfig.aggregationTime)
             newDates = mergeResult.newDates
             matchedDates = mergeResult.matchedDates
           } else {
@@ -1621,6 +1646,72 @@ class voNumber: voState, UITextFieldDelegate {
       default: return true  // "all_day"
       }
     }
+  }
+
+  private func collapseTimeFilterWindow(
+    timestamps: [TimeInterval],
+    timeFilter: String?
+  ) -> [TimeInterval] {
+    // If no timeFilter specified, return input unchanged
+    guard let timeFilter = timeFilter, timeFilter != "all_day" else {
+      return timestamps
+    }
+
+    // Determine window bounds once
+    let (windowStart, windowEnd): (Int, Int)
+    switch timeFilter {
+    case "morning":
+      (windowStart, windowEnd) = (6, 10)
+    case "daytime":
+      (windowStart, windowEnd) = (10, 18)
+    case "evening":
+      (windowStart, windowEnd) = (18, 23)
+    case "sleep_hours":
+      (windowStart, windowEnd) = (23, 6)  // wraps midnight
+    case "wake_hours":
+      (windowStart, windowEnd) = (6, 23)
+    default:
+      return timestamps  // unknown filter - no change
+    }
+
+    let calendar = Calendar.current
+    var result: [TimeInterval] = []
+    var lastEntry: TimeInterval? = nil
+
+    // Helper to check if hour is in window (handles midnight wrap)
+    let isHourInWindow: (Int) -> Bool = { hour in
+      if windowEnd > windowStart {
+        // Same day window (e.g., 10-18)
+        return hour >= windowStart && hour < windowEnd
+      } else {
+        // Crosses midnight (e.g., 23-6)
+        return hour >= windowStart || hour < windowEnd
+      }
+    }
+
+    // Process timestamps in order
+    for timestamp in timestamps.sorted() {
+      let date = Date(timeIntervalSince1970: timestamp)
+      let localHour = calendar.component(.hour, from: date)
+
+      if isHourInWindow(localHour) {
+        // Store as last entry (overwrite any previous)
+        lastEntry = timestamp
+      } else {
+        // Not in window - save the last entry if we have one
+        if let entry = lastEntry {
+          result.append(entry)
+          lastEntry = nil  // Reset for next window
+        }
+      }
+    }
+
+    // Add final last entry if exists (for window that extends to end)
+    if let entry = lastEntry {
+      result.append(entry)
+    }
+
+    return result
   }
 
   private func applyAggregation(results: [rtHealthKit.HealthQueryResult], aggregation: String)
