@@ -733,7 +733,14 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
             ("bvalTF", "boolval", nil),
             ("ivalTF", "infoval", nil),
             ("iurlTF", "infourl", nil),
-            (CTFKEY, LCKEY, nil)
+            (CTFKEY, LCKEY, nil),
+            ("classifyTF1", "classify_1", "classifyTF2"),
+            ("classifyTF2", "classify_2", "classifyTF3"),
+            ("classifyTF3", "classify_3", "classifyTF4"),
+            ("classifyTF4", "classify_4", "classifyTF5"),
+            ("classifyTF5", "classify_5", "classifyTF6"),
+            ("classifyTF6", "classify_6", "classifyTF7"),
+            ("classifyTF7", "classify_7", nil)
         ]
 
         var okey: String? = nil

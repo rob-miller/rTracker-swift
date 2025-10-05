@@ -29,9 +29,17 @@ Configuration view controller for editing valueObj properties - manages UI for c
 - ✅ RESOLVED: Navigation bar, toolbar, and scroll view created programmatically
 - ✅ RESOLVED: Auto Layout constraints properly configured
 - ✅ RESOLVED: Fixed text field navigation crash with safe optional unwrapping
+- ✅ RESOLVED: Fixed classify text field crash - added mappings to tfMappings table
 - Code now fully independent of XIB files
 
 ## Recent Development History
+- 2025-10-05: **Bug fix: Classify text field crash**
+  - Root cause: Commit c8c33d3 (Aug 22, 2025) refactored tfDone() to use table-driven approach
+  - Classify operator added earlier (359bc81, Apr 25, 2025) but never added to new mapping table
+  - Crash occurred when user tapped "Done" on classifyTF1-7 fields
+  - tfDone() couldn't find text field in tfMappings → okey stayed nil → crash on force unwrap
+  - Fixed by adding all 7 classify text fields to tfMappings array (lines 737-743)
+  - Each maps to optDict keys "classify_1" through "classify_7" with proper navigation chain
 - 2025-10-03: **Bug fix in text field navigation**
   - Fixed crash in `tfDone()` when navigating to next text field
   - Changed force unwrap `as!` to safe optional binding `as?` for next field lookup
@@ -49,4 +57,4 @@ Configuration view controller for editing valueObj properties - manages UI for c
 - Various configuration improvements for value object types
 
 ## Last Updated
-2025-10-03 - Fixed text field navigation crash with safe optional unwrapping in tfDone() method
+2025-10-05 - Fixed classify text field crash by adding classify field mappings to tfMappings table in tfDone() method. Issue introduced when c8c33d3 refactored tfDone to table-driven approach but didn't include classify fields added in earlier commit 359bc81.
