@@ -68,12 +68,91 @@ rTracker is an iOS app for creating local databases ("trackers") to log timestam
 - Test configuration uses "Debug no-log" build configuration
 
 ## Key Components
-- **TimesSquare**: Modified calendar component for date selection
-- **CSV Support**: Import/export functionality via CSVParser
+- **TimesSquare**: Modified calendar component for date selection (included with modifications for iOS updates and date coloring)
+- **CSV Support**: Import/export functionality via CSVParser (Matt Gallagher's CSV parser)
 - **HealthKit Integration**: Data sharing with Apple Health
-- **Local Notifications**: Reminder system for tracking
+- **Local Notifications**: Reminder system for tracking with sound effects (.caf files)
 - **Privacy**: Optional graphical password protection
 - **URL Schemes**: Support for rTracker:// and rTracker://tid=N URLs
+
+## Development Environment
+
+### Build Targets
+- **rTracker**: Main production build
+- **rTracker-devel**: Development build with debugging enabled
+- **rTracker-test**: Fabric/TestFlight distribution build (legacy)
+
+### Build Configurations
+Available in Xcode with different debug settings:
+- **Debug**: Development build with full logging (use this for testing)
+- **Debug no-log**: Development build without logging
+- **Debug reminder**: Development build with reminder debugging
+- Other configurations control DEBUGLOG, FUNCTIONDBG, and other conditional compilation flags
+
+### Project Structure
+```
+rTracker.xcodeproj/          # Main Xcode project
+├── Classes/                  # Core application code
+│   ├── charts/              # Modern iOS Charts implementation
+│   ├── TimesSquare-swift/   # Swift calendar component
+│   └── voState subclasses   # UI state implementations (voNumber, voText, etc.)
+├── .claude/                 # Analysis notes for all Swift files
+└── Info.plist              # App configuration
+```
+
+### Building and Testing
+```bash
+# Open in Xcode
+open rTracker.xcodeproj
+
+# Build for testing (with full logging)
+xcodebuild -scheme rTracker-devel -configuration "Debug"
+
+# Syntax check a specific file
+swiftc -parse "Classes/[filename].swift" 2>&1 | head -20
+```
+
+## Database Architecture
+
+### Storage Structure
+- Each tracker = 1 SQLite3 database
+- Tracker list = Separate master SQLite3 database
+- Example: 5 trackers = 6 total databases (5 tracker DBs + 1 master list)
+
+### Key Tables
+- **voData**: Stores value object data with timestamps
+- **voFNstatus**: Tracks function calculation status (for voFunction types)
+- **trkrData**: Stores tracker entry data
+- **ignoreRecords**: Tracks records to exclude from queries and graphs
+
+### Data Flow
+1. User creates/opens tracker → SQLite3 database created/opened
+2. Data entry through voState UI → Stored in voData table
+3. Functions (voFunction) → Calculate from voData, store results with status tracking
+4. Graphs → Query voData with ignoreRecords filtering
+5. Export → CSV generation from database queries
+
+## Special UI Patterns
+
+### Keyboard Handling
+The app uses a special `targetTextField` mechanism for complex forms:
+- `activeField`: Currently focused text field
+- `targetTextField`: Optional override for scroll target (used by FNCLASSIFY)
+- When `targetTextField` is set, keyboard appears and scrolls to that field instead of `activeField`
+- This allows showing all related fields (e.g., classify's 7 text fields) when any one is tapped
+
+### Configuration View Controllers
+- **configTVObjVC**: Main configuration VC for value objects
+  - Uses programmatic UI (XIB dependency removed)
+  - Keyboard notifications handled via `willShowKeyboard()`/`willHideKeyboard()`
+  - Table-driven text field navigation via `tfMappings`
+
+### Function Configuration (voFunction)
+- Three-page interface: Overview, Range, Definition
+- Picker-based token selection with context-sensitive UI
+- State machine in `updateFnTitles()` enforces valid syntax
+- Sandwich token structure for constants: `[TOKEN, value, TOKEN]`
+- Special UI for classify: 7 text fields with custom keyboard scrolling
 
 ## 🚨 MANDATORY SOURCE CODE ANALYSIS WORKFLOW 🚨
 
@@ -234,23 +313,4 @@ ls -la .claude/
 - 🔄 **New session**: Re-read existing notes file first
 
 **NO EXCEPTIONS FOR FIRST-TIME ANALYSIS. STREAMLINED FOR SUBSEQUENT EDITS.**
-
-# 🚫 BUILD AND TEST RESTRICTIONS 🚫
-
-**Instead of building to save tokens and time:**
-- ✅ **Review code for syntax errors** - Look for missing semicolons, brackets, type mismatches
-- ✅ **Check method signatures** - Ensure protocol conformance and parameter types match
-- ✅ **Verify imports and dependencies** - Make sure all required modules are imported
-- ✅ **Logic review** - Check for potential runtime issues and edge cases
-
-## 🚫 Swift Syntax Checking - USER PERMISSION REQUIRED
-```bash
-cd "/Users/rob/Library/Mobile Documents/com~apple~CloudDocs/sync/proj/rTracker-swift"
-swiftc -parse "Classes/[filename].swift" 2>&1 | head -20
-```
-
-## Testing Guidelines
-- **NEVER assume test frameworks** - Always check README or search codebase for testing approach
-- **No automatic test runs** - Ask user for specific test commands if needed
-- **Manual verification preferred** - Use code review instead of compilation to catch errors
 
