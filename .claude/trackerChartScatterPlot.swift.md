@@ -36,10 +36,15 @@ Extension of TrackerChart that implements scatter plot functionality. Creates X-
 - **Point Interaction**: Associated objects store point data for tooltip display
 - **Privacy Integration**: Respects privacy settings when fetching data
 - **Action Button**: Hidden for scatter plots - no specific action button functionality
+- **Dynamic Point Sizing**: Point size scales logarithmically from 3px (1000+ points) to 10px (1-10 points) to prevent overlapping in dense data regions
 
 ## Recent Development History
+- **Current**: Added dynamic point sizing that scales from 3-10px based on data density to prevent point overlap
 - **03e9c0f**: Fixed chart date range slider height constraint issues when magnifying glass enabled
 - **11fc207**: Resolved constraint complaints on chart date sliders
 - **848f8d8**: Major refactoring to separate chart functionality into individual files
 - **8ae0246**: Initial refactoring to file-based chart organization
 - **9fc06b5**: Added Y-axis labels and enhanced data loading capabilities
+
+## Last Updated
+2025-10-05: Added dynamic point sizing based on data density - point size now scales logarithmically from 3px (dense) to 10px (sparse)

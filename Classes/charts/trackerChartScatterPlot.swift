@@ -431,10 +431,16 @@ extension TrackerChart {
         // Create points container
         let pointsContainerView = UIView(frame: chartView.bounds)
         chartView.addSubview(pointsContainerView)
-        
+
         // Calculate color range
         let colorRange = max(0.001, maxColor - minColor)
-        
+
+        // Calculate dynamic point size based on number of points
+        // More points = smaller size to prevent overlapping
+        // Formula: Size scales from 3px (dense) to 10px (sparse) using logarithmic scale
+        let pointCount = max(1, points.count)
+        let pointSize: CGFloat = max(3, min(10, 10 - log10(Double(pointCount)) * 2))
+
         for point in points {
             guard let x = point["x"] as? Double,
                   let y = point["y"] as? Double else { continue }
@@ -475,8 +481,7 @@ extension TrackerChart {
                     }
                 }
             }
-            // Create point view
-            let pointSize: CGFloat = 8
+            // Create point view (pointSize calculated above based on total point count)
             let pointView = UIView(frame: CGRect(x: xPos - pointSize/2, y: yPos - pointSize/2, width: pointSize, height: pointSize))
             pointView.backgroundColor = pointColor
             pointView.layer.cornerRadius = pointSize / 2
