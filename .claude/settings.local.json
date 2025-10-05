@@ -11,7 +11,9 @@
       "Bash(mkdir:*)",
       "Bash(swiftc:*)",
       "Bash(git log:*)",
-      "Bash(sort:*)"
+      "Bash(sort:*)",
+      "SlashCommand(/save diagnostic logging for unwanted database entries bug)",
+      "SlashCommand(/save:*)"
     ],
     "deny": []
   }
