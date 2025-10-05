@@ -1,11 +1,11 @@
-# save Command
+# rsave Command
 
 ## Purpose
 Create a versioned save file documenting the current work session's main focus and most recent developments
 
 ## Usage
 ```
-/save [focus text]
+/rsave [focus text]
 ```
 
 When you want to save your current progress and context for future sessions, this command will:
@@ -18,7 +18,7 @@ When you want to save your current progress and context for future sessions, thi
 - **Highlight or focus on specific content when focus text is provided**
 
 ## Parameters
-- **focus text** (optional): Any text after 'save' to specify what should be highlighted or focused on in the save file. This text will be used to:
+- **focus text** (optional): Any text after 'rsave' to specify what should be highlighted or focused on in the save file. This text will be used to:
   - Override automatic theme detection with user-specified focus
   - Emphasize particular aspects of the current work
   - Guide what content gets prioritized in the save file
@@ -65,10 +65,10 @@ When you want to save your current progress and context for future sessions, thi
 
 ## Examples
 ```bash
-/save                              # Auto-detect theme and create standard save
-/save XIB removal progress         # Focus on XIB-related changes and progress
-/save button styling patterns      # Emphasize button implementation work
-/save HealthKit integration issues # Highlight HealthKit-specific problems
+/rsave                              # Auto-detect theme and create standard save
+/rsave XIB removal progress         # Focus on XIB-related changes and progress
+/rsave button styling patterns      # Emphasize button implementation work
+/rsave HealthKit integration issues # Highlight HealthKit-specific problems
 ```
 
 ## When to Use
