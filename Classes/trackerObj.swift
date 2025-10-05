@@ -473,28 +473,31 @@ class trackerObj: tObjBase {
         // Skip only the most recent inDate if it matches today (because today's data shown live via processHealthQuery)
         // but do show if after aggregation time or if we already have a saved record for today
 
-        // this doesn't skip last date for loadOTdata because HK 
+        // this doesn't skip last date for loadOTdata because HK
         let mostRecentInDate = inDates.max()
-        
+
         // Pre-calculate today's record check once to avoid repeated database queries
         let todayStart = calendar.startOfDay(for: Date())
         let todayEnd = calendar.date(byAdding: .day, value: 1, to: todayStart)!
         let checkSql = "SELECT COUNT(*) FROM trkrData WHERE date >= \(Int(todayStart.timeIntervalSince1970)) AND date < \(Int(todayEnd.timeIntervalSince1970))"
         let hasRecordForToday = toQry2Int(sql: checkSql) > 0
-        
-        //DBGLog("\(inDates.count) incoming dates, \(existingDatesArr.count) existing dates")
+
+        DBGLog("mergeDates: processing \(inDates.count) inDates, mostRecent=\(mostRecentInDate.map { i2ltd(Int($0)) } ?? "nil"), hasRecordForToday=\(hasRecordForToday)")
 
         for inDate in inDates {
+            let inDateObj = Date(timeIntervalSince1970: inDate)
+            let isToday = inDate >= todayStart.timeIntervalSince1970 && inDate < todayEnd.timeIntervalSince1970
+            DBGLog("  Processing inDate: \(i2ltd(Int(inDate))) isToday=\(isToday) isMostRecent=\(inDate == mostRecentInDate)")
+
             if inDate == mostRecentInDate {
                 DBGLog("mostRecentInDate = \(i2ltd(Int(inDate)))")
             }
             // Skip only the most recent inDate if it is today or future AND we have no saved record for today
             if inDate == mostRecentInDate && inDate >= todayStart.timeIntervalSince1970 {
-                //DBGLog(" and is today or later")
+                DBGLog("    → This IS mostRecentInDate and is today/future - checking aggregation time")
 
                 let now = Date()
-                let inDateObj = Date(timeIntervalSince1970: inDate)
-                
+
                 // Check if current time is after the aggregation time
                 let isAfterAggregationTime: Bool
                 if let aggregationTime = aggregationTime,
@@ -519,8 +522,7 @@ class trackerObj: tObjBase {
 
                     // Before aggregation time - use pre-calculated record check for today
                     if !hasRecordForToday {
-                        //DBGLog("and no saved record for today so skipping")
-
+                        DBGLog("    → SKIPPED (before aggregation, no saved record)")
                         // No saved record for today yet - skip to avoid creating empty entry
                         continue
                     }
@@ -529,7 +531,6 @@ class trackerObj: tObjBase {
             }
             
             // Check if this inDate matches any existing date using O(1) lookup
-            let inDateObj = Date(timeIntervalSince1970: inDate)
             let inDateDayComponents = calendar.dateComponents([.year, .month, .day], from: inDateObj)
             
             if let matchingTimestamps = existingDatesByDay[inDateDayComponents] {
@@ -539,11 +540,14 @@ class trackerObj: tObjBase {
                 }
             } else {
                 // No match found, this is a new date
+                DBGLog("    → Adding to newDates (no existing match in trkrData)")
                 newDates.insert(inDate)
             }
         }
         
         if (set12) {
+            DBGLog("Before 12:00 adjustment: newDates = \(newDates.map { i2ltd(Int($0)) })")
+
             // set all times to 12:00 noon
             let adjustedDates = Set(newDates.map { inDate in
                 var components = calendar.dateComponents([.year, .month, .day], from: Date(timeIntervalSince1970: inDate))
@@ -553,17 +557,21 @@ class trackerObj: tObjBase {
                 return calendar.date(from: components)?.timeIntervalSince1970 ?? inDate
             })
 
+            DBGLog("After 12:00 adjustment: adjustedDates = \(adjustedDates.map { i2ltd(Int($0)) })")
 
             // restrict any times in future to now
             let now = Date()
             newDates = Set(adjustedDates.map { timeInterval -> TimeInterval in
                 let ndate = Date(timeIntervalSince1970: timeInterval)
                 if ndate > now {
+                    DBGLog("  Date \(i2ltd(Int(timeInterval))) is FUTURE, changing to now \(i2ltd(Int(now.timeIntervalSince1970)))")
                     return now.timeIntervalSince1970 // Change to the current time
                 }
                 // If not in the future, keep the original time
                 return timeInterval
             })
+
+            DBGLog("After future restriction: newDates = \(newDates.map { i2ltd(Int($0)) })")
         }
         
         return (newDates: newDates, matchedDates: matchedDates)
