@@ -969,9 +969,21 @@ extension trackerObj {
         vo?.vid = newVID
     }
 
-    func voHasData(_ vid: Int) -> Bool {
-        let sql = "select count(*) from voData where id=\(vid);"
-        let rslt = toQry2Int(sql:sql)
+    func voHasData(_ vid: Int, notDerived: Bool = false) -> Bool {
+        let sql: String
+        if notDerived {
+            // Check if valueObj has manually-entered data (not derived from HK/OT/FN)
+            sql = """
+            SELECT COUNT(*) FROM voData
+            WHERE id = \(vid)
+            AND NOT EXISTS (SELECT 1 FROM voHKstatus WHERE voHKstatus.id = \(vid) AND voHKstatus.date = voData.date)
+            AND NOT EXISTS (SELECT 1 FROM voOTstatus WHERE voOTstatus.id = \(vid) AND voOTstatus.date = voData.date)
+            AND NOT EXISTS (SELECT 1 FROM voFNstatus WHERE voFNstatus.id = \(vid) AND voFNstatus.date = voData.date)
+            """
+        } else {
+            sql = "select count(*) from voData where id=\(vid);"
+        }
+        let rslt = toQry2Int(sql: sql)
         return rslt != 0
     }
 
@@ -993,8 +1005,24 @@ extension trackerObj {
         return r != 0
     }
 
-    func countEntries() -> Int {
-        let sql = "select count(*) from trkrData;"
+    func countEntries(notDerived: Bool = false) -> Int {
+        let sql: String
+        if notDerived {
+            // Count only entries with manually-entered data (not derived from HK/OT/FN)
+            sql = """
+            SELECT COUNT(DISTINCT trkrData.date)
+            FROM trkrData
+            WHERE EXISTS (
+              SELECT 1 FROM voData
+              WHERE voData.date = trkrData.date
+              AND NOT EXISTS (SELECT 1 FROM voHKstatus WHERE voHKstatus.id = voData.id AND voHKstatus.date = voData.date)
+              AND NOT EXISTS (SELECT 1 FROM voOTstatus WHERE voOTstatus.id = voData.id AND voOTstatus.date = voData.date)
+              AND NOT EXISTS (SELECT 1 FROM voFNstatus WHERE voFNstatus.id = voData.id AND voFNstatus.date = voData.date)
+            )
+            """
+        } else {
+            sql = "select count(*) from trkrData;"
+        }
         let r = toQry2Int(sql:sql)
 
         return r

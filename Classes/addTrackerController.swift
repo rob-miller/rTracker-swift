@@ -617,7 +617,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             let vo = (tempTrackerObj?.valObjTable)?[row] as? valueObj
             if (tempTrackerObj?.tDb == nil) || (tempTrackerObj?.toid == nil) {
                 delVOlocal(row)
-            } else if !(tempTrackerObj?.voHasData(vo?.vid ?? 0) ?? false) {
+            } else if !(tempTrackerObj?.voHasData(vo?.vid ?? 0, notDerived: true) ?? false) {
                 addDelVO(vo)
                 delVOlocal(row)
             } else {

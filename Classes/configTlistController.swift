@@ -683,13 +683,13 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
             let toid = tlist?.getTIDfromIndex(indexPath.row) ?? 0
             let to = trackerObj(toid)
             let entries = to.countEntries()
-            
+
             let title = "Delete tracker \(tname ?? "")"
             var msg: String?
             let btn0 = "Cancel"
             let btn1 = "Delete tracker"
             var btn2: String?
-            
+
             if entries == 0 {
                 msg = "Tracker \(tname ?? "") has no records."
                 btn2 = nil
@@ -701,12 +701,12 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
                     msg = "Tracker \(tname ?? "") has \(entries) records."
                 }
             }
-            
+
             let alert = UIAlertController(
                 title: title,
                 message: msg,
                 preferredStyle: .alert)
-            
+
             let cancelAction = UIAlertAction(title: btn0, style: .default, handler: { [self] action in
                 handleCheckTrackerDelete(0)
             })
@@ -715,7 +715,7 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
             })
             alert.addAction(cancelAction)
             alert.addAction(deleteAction)
-            
+
             if let btn2 {
                 let deleteRecordsAction = UIAlertAction(title: btn2, style: .default, handler: { [self] action in
                     handleCheckTrackerDelete(2)
