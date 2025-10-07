@@ -1256,6 +1256,8 @@ extension trackerObj {
     func loadDataDict(_ dataDict: [String : [String : String]]) {
         rTracker_resource.stashProgressBarMax(dataDict.count)
 
+        toExecSql(sql:"BEGIN TRANSACTION")  // trackerObjDbCsv loadDataDict
+
         for dateIntStr in dataDict.keys {
             let tdate = Date(timeIntervalSinceReferenceDate: TimeInterval(Double(dateIntStr)!))
             let tdi = Int(tdate.timeIntervalSince1970)
@@ -1275,28 +1277,33 @@ extension trackerObj {
 
             let sql = String(format: "insert or replace into trkrData (date, minpriv) values (%d,%ld);", tdi, mp)
             toExecSql(sql:sql)
-            
+
             rTracker_resource.bumpProgressBar()
         }
+
+        toExecSql(sql:"COMMIT")  // trackerObjDbCsv loadDataDict
     }
     
     // Asynchronous version that prevents UI blocking for large datasets
     func loadDataDictAsync(_ dataDict: [String : [String : String]], completion: @escaping () -> Void) {
-        let batchSize = 10 // Smaller batches for better UI responsiveness
+        let batchSize = 50 // Balance between UI responsiveness and transaction efficiency
         let dateKeys = Array(dataDict.keys)
         let totalCount = dateKeys.count
-        
+
         DispatchQueue.main.async {
             rTracker_resource.stashProgressBarMax(totalCount)
         }
-        
+
         // Process data in background queue in batches
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else {
                 DispatchQueue.main.async { completion() }
                 return
             }
-            
+
+            // Begin transaction for entire async load
+            self.toExecSql(sql:"BEGIN TRANSACTION")  // trackerObjDbCsv loadDataDictAsync
+
             self.processDataBatch(dateKeys: dateKeys, dataDict: dataDict, startIndex: 0, batchSize: batchSize, completion: completion)
         }
     }
@@ -1335,10 +1342,16 @@ extension trackerObj {
             for _ in startIndex..<endIndex {
                 rTracker_resource.bumpProgressBar()
             }
-            
+
             // Check if we're done
             if endIndex >= dateKeys.count {
-                completion()
+                // Commit transaction on background thread before calling completion
+                DispatchQueue.global(qos: .userInitiated).async {
+                    self?.toExecSql(sql:"COMMIT")  // trackerObjDbCsv loadDataDictAsync
+                    DispatchQueue.main.async {
+                        completion()
+                    }
+                }
             } else {
                 // Continue with next batch after allowing UI to update
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {

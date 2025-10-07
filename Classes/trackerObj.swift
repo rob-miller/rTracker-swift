@@ -487,7 +487,9 @@ class trackerObj: tObjBase {
         for inDate in inDates {
             let inDateObj = Date(timeIntervalSince1970: inDate)
             let isToday = inDate >= todayStart.timeIntervalSince1970 && inDate < todayEnd.timeIntervalSince1970
+            #if HKDEBUG
             DBGLog("  Processing inDate: \(i2ltd(Int(inDate))) isToday=\(isToday) isMostRecent=\(inDate == mostRecentInDate)")
+            #endif
 
             if inDate == mostRecentInDate {
                 DBGLog("mostRecentInDate = \(i2ltd(Int(inDate)))")
@@ -1127,6 +1129,8 @@ class trackerObj: tObjBase {
         } catch {
         }
 
+        toExecSql(sql:"BEGIN TRANSACTION")  // trackerObj confirmTOdict
+
         for voDict in newValObjs ?? [] {
             guard let voDict = voDict as? [AnyHashable : Any] else {
                 continue
@@ -1206,6 +1210,8 @@ class trackerObj: tObjBase {
 
             rTracker_resource.bumpProgressBar()
         }
+
+        toExecSql(sql:"COMMIT")  // trackerObj confirmTOdict
 
         sortVoTable(byArray: newVOs)
 
@@ -1773,6 +1779,8 @@ class trackerObj: tObjBase {
         }
 
         // remove previous data - input rtrk may renumber and then some vids become obsolete -- if reading rtrk have done jumpMaxPriv
+        toExecSql(sql:"BEGIN TRANSACTION")  // trackerObj saveConfig
+
         var sql = "delete from voConfig where priv <=\(privacyValue) and id not in (\(vids.joined(separator: ",")))" // 18.i.2014 don't wipe all in case user quits before we finish
 
         toExecSql(sql:sql)
@@ -1793,13 +1801,15 @@ class trackerObj: tObjBase {
                 saveVoOptdict(vo)
                 i += 1
             }
-            
+
 
             reminders2db()
             setReminders()
 
             UIApplication.shared.isIdleTimerDisabled = false
         })
+
+        toExecSql(sql:"COMMIT")  // trackerObj saveConfig
     }
 
     func saveChoiceConfigs() {

@@ -944,6 +944,7 @@ class voNumber: voState, UITextFieldDelegate {
             DBGLog("ahPrevD enabled: checking \(datesToCheck.count) shifted dates against trkrData dates (future dates filtered)")
         }
 
+        #if HKDEBUG
         #if DEBUGLOG
             if datesToCheck.count > 0 {
                 DBGLog("  datesToCheck has \(datesToCheck.count) dates:")
@@ -952,7 +953,9 @@ class voNumber: voState, UITextFieldDelegate {
                 }
             }
         #endif
-  
+        #endif
+        
+
         //***** now have HK entry dates for the specified time range as they will be entered in db.
 
         // Move heavy processing to background thread to avoid UI freeze
@@ -973,6 +976,7 @@ class voNumber: voState, UITextFieldDelegate {
               timeFilter: timeFilter
             )
 
+            #if HKDEBUG
             #if DEBUGLOG
             if datesToMerge.count != datesToCheck.count {
               DBGLog(
@@ -983,6 +987,8 @@ class voNumber: voState, UITextFieldDelegate {
               }
             }
             #endif
+            #endif
+
           }
 
           // ignore ahPrevD here.  these are the tracker dates to be in the database for the values whether specified day or previous day

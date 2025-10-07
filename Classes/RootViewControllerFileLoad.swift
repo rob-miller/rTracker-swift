@@ -27,7 +27,9 @@ extension RootViewController {
         let parser = CSVParser(string: csvString, separator: ",", hasHeader: true, fieldNames: nil)
         to?.csvProblem = nil
         to?.csvReadFlags = 0
+        to?.toExecSql(sql:"BEGIN TRANSACTION")  // RootViewControllerFileLoad doCSVLoad
         parser.parseRows(forReceiver: to, selector: #selector(trackerObj.receiveRecord(_:))) // receiveRecord in trackerObj.m
+        to?.toExecSql(sql:"COMMIT")  // RootViewControllerFileLoad doCSVLoad
         DBGLog(String("csv parser done \(to!.trackerName) to-toid: \(to!.toid)"))
 
         to?.loadConfig()

@@ -805,11 +805,14 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                 return self.convertCategoryValue(value, unit: baseUnit, config: queryConfig)
             }
 
+            #if HKDEBUG
             if queryConfig.identifier == "HKCategoryTypeIdentifierMindfulSession" {
                 DBGLog("Mindful Minutes fetched \(categorySamples.count) samples")
                 let totalMinutes = processedSamples.reduce(0, +)
                 DBGLog("Mindful Minutes total (\(baseUnit.unitString)): \(totalMinutes)")
             }
+            #endif
+
 
             let results: [HealthQueryResult]
             switch queryConfig.aggregationStyle {
