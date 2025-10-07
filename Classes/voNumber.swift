@@ -670,6 +670,8 @@ class voNumber: voState, UITextFieldDelegate {
     // Declare newDates and matchedDates at method level so they're accessible throughout the method
     var newDates: Set<TimeInterval> = []
     var matchedDates: Set<TimeInterval> = []
+    var transactionStarted = false
+    var dataTransactionStarted = false
     #if DEBUGLOG
     var detailedLogging = false
     #endif
@@ -1024,6 +1026,7 @@ class voNumber: voState, UITextFieldDelegate {
 
           // Start transaction for all database operations in this function
           to.toExecSql(sql: "BEGIN TRANSACTION")  // voNumber loadHKdata
+          transactionStarted = true
 
           if newDates.count > 0 {
               // Build single INSERT statement on background thread
@@ -1059,6 +1062,13 @@ class voNumber: voState, UITextFieldDelegate {
               }
               #endif
               //*/
+          }
+
+          // Commit transaction immediately after synchronous trkrData inserts
+          // This ensures the transaction closes before async HealthKit queries begin
+          // and prevents "transaction within transaction" errors when processing multiple valueObjs sequentially
+          if transactionStarted {
+            to.toExecSql(sql: "COMMIT")  // voNumber loadHKdata - early commit after trkrData inserts
           }
 
           hkDispatchGroup.leave()  // Thread-safe, can be called from background thread
@@ -1124,6 +1134,14 @@ class voNumber: voState, UITextFieldDelegate {
       for _ in datesToProcess {
         secondHKDispatchGroup.enter()  // Enter the group for each query
       }
+
+      // Start transaction for voData/voHKstatus inserts if we have dates to process
+      // This transaction wraps all the INSERT operations that happen in processHealthQuery callbacks
+      if datesToProcess.count > 0 {
+        to.toExecSql(sql: "BEGIN TRANSACTION")  // voNumber loadHKdata - data inserts transaction
+        dataTransactionStarted = true
+      }
+
       // Process all dates asynchronously on background queue to prevent UI blocking
       DispatchQueue.global(qos: .userInitiated).async {
         // Process queries with rate limiting to prevent overwhelming HealthKit APIs
@@ -1229,8 +1247,17 @@ class voNumber: voState, UITextFieldDelegate {
 
       // wait on all processHealthQuery's to complete
       secondHKDispatchGroup.notify(queue: .main) { [self] in
+        // Commit data insert transaction now that all async HealthKit queries completed
+        if dataTransactionStarted {
+          to.toExecSql(sql: "COMMIT")  // voNumber loadHKdata - data inserts transaction
+        }
+
         // Move heavy database operations to background thread to avoid UI freeze
         DispatchQueue.global(qos: .userInitiated).async { [self] in
+          // Start a new transaction for final cleanup operations
+          // This is separate from the earlier transactions that already committed
+          to.toExecSql(sql: "BEGIN TRANSACTION")  // voNumber loadHKdata - cleanup transaction
+
           // ensure trkrData has lowest priv if just added a lower privacy valuObj to a trkrData entry
           let priv = max(MINPRIV, self.vo.vpriv)  // priv needs to be at least minpriv if vpriv = 0
           let sql = """
@@ -1245,7 +1272,7 @@ class voNumber: voState, UITextFieldDelegate {
               );
             """
           to.toExecSql(sql: sql)
-          
+
           // Insert noData entries only for dates that were processed in this HealthKit session
           // This prevents historical manual data from being marked in voHKstatus
           let noDataSql = """
@@ -1260,8 +1287,9 @@ class voNumber: voState, UITextFieldDelegate {
             );
             """
           to.toExecSql(sql: noDataSql)
-          
-          to.toExecSql(sql: "COMMIT")  // voNumber loadHKdata
+
+          // Commit the cleanup transaction
+          to.toExecSql(sql: "COMMIT")  // voNumber loadHKdata - cleanup transaction
           #if DEBUGLOG
             let totalElapsed = CFAbsoluteTimeGetCurrent() - dataProcessingStartTime
             let avgRate = totalElapsed > 0 ? Double(datesToProcess.count) / totalElapsed : 0

@@ -101,6 +101,7 @@ Handles numeric input fields in trackers, supporting manual entry, HealthKit int
 - **Cache Improvements**: Enhanced HealthKit caching with unit-specific keys
 
 ## Current Issues & TODOs
+- **COMPLETED** (2025-10-07): Transaction handling bug fix - prevent "no transaction in progress" error
 - **COMPLETED** (2025-10-02): Set-based deduplication to eliminate duplicate HealthKit queries
 - **COMPLETED** (2025-10-02): Date formatting helper functions (ltd/i2ltd) for cleaner debug logs
 - **COMPLETED** (2025-10-02): Sleep hours query fix in processHealthQuery
@@ -111,11 +112,23 @@ Handles numeric input fields in trackers, supporting manual entry, HealthKit int
 - **COMPLETED**: Keyboard accessory button modernization with SF symbols
 
 ## Issues Fixed
+- **Transaction Overlap Error** (2025-10-07): Fixed "cannot start a transaction within a transaction" and "no transaction in progress" errors when opening trackers with HealthKit data. Root cause: When processing multiple HealthKit valueObjs sequentially, a single long transaction with async operations caused the COMMIT to execute too late - the second valueObj's BEGIN would run before the first's COMMIT completed. Solution: Restructured into three separate transactions that each commit synchronously before control returns to caller, preventing overlap between sequential valueObj processing.
 - **HRV Sleep Hours Inconsistent Values Bug** (2025-10-01): Fixed issue where HRV with sleep_hours time filter returned different values for the same date when refreshed at different times. Root cause was rolling 24-hour query window that varied based on refresh time. Solution: Added fixed time window adjustment (23:00 previous day to 06:00 tracker day, local time) for high-frequency data with sleep_hours filter at lines 735-761. Initial implementation using `.bySettingHour` had timezone bugs (offset applied incorrectly); corrected to use `.byAdding .hour` for accurate time arithmetic. Implements the XXX comment at line 763 that identified this missing feature.
 - **HealthKit Data Clearing Bug**: The loadHKdata query was incorrectly processing dates with manually-entered data, creating voHKstatus entries that caused manual data to be deleted when HealthKit was disabled. Fixed by modifying the SQL query to exclude dates that already have manually-entered voData.
 - **HealthKit Cross-Contamination Bug** (2025-08-26): Fixed issue where low-frequency HealthKit valueObjs would repeatedly reprocess dates where we already knew there was `noData`. The complex OR-based SQL query only excluded `stat = hkData` entries but allowed `stat = noData` entries to be reprocessed indefinitely. Simplified to exclude ANY existing voHKstatus entry for the specific valueObj, preventing unnecessary reprocessing of dates we've already attempted.
 
 ## Last Updated
+2025-10-07 - Transaction Overlap Bug Fix:
+- **Fixed Transaction Overlap Errors**: Restructured loadHKdata to use three separate, non-overlapping transactions
+- **Implementation**:
+  - **Transaction 1** (trkrData INSERTs): Lines 1027-1070, commits before async work begins
+  - **Transaction 2** (voData/voHKstatus INSERTs): Lines 1141-1252, wraps async HealthKit query callbacks
+  - **Transaction 3** (cleanup operations): Lines 1259-1291, final UPDATE and INSERT
+- **Key Changes**: Added `transactionStarted` and `dataTransactionStarted` flags (lines 673-674), moved commits to execute synchronously before control returns
+- **Performance**: All database operations remain within transactions for batching benefits
+- **Safety**: Prevents transaction overlap when processing multiple HealthKit valueObjs sequentially
+
+Previous update:
 2025-10-02 - Date Adjustment Section Removed (Code Simplification):
 - **Removed Redundant Logic**: Commented out entire date adjustment section in loadHKdata (aggregation boundary and sleep_hours handling)
 - **Rationale**: mergeDates already handles aggregationTime, processHealthQuery already handles sleep_hours - adjustments were duplicative
