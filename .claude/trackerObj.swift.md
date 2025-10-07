@@ -42,7 +42,16 @@ Refactored to eliminate code duplication using helper functions
 ✅ Added transaction wrapping for Phase 2 future dates processing loop
 
 ## Recent Development History
-**Latest Changes (2025-10-02) - Set-Based Deduplication:**
+**Latest Changes (2025-10-07) - Transaction Wrapping for Performance:**
+- **saveConfig()**: Added BEGIN/COMMIT transaction wrapper (lines 1776, 1806)
+  - Wraps DELETE operations + INSERT loop for all valueObjs
+  - Expected 5-20x speedup, especially during .rtrk import
+- **confirmTOdict()**: Added BEGIN/COMMIT transaction wrapper (lines 1130, 1212)
+  - Wraps entire value object merge/creation loop
+  - Prevents individual disk writes for each valueObj during .rtrk merge
+  - Expected 5-20x speedup for merge operations
+
+**Previous Changes (2025-10-02) - Set-Based Deduplication:**
 - **mergeDates Return Type**: Changed from `(newDates: [TimeInterval], matchedDates: [TimeInterval])` to `(newDates: Set<TimeInterval>, matchedDates: Set<TimeInterval>)` (line 446)
 - **generateTimeSlots Return Type**: Changed from Arrays to Sets (line 596)
 - **Internal Variables**: Changed `var newDates/matchedDates: [TimeInterval]` to `Set<TimeInterval>` (lines 452-453, 602-603)

@@ -36,8 +36,13 @@ Extension of trackerObj class that handles database operations and CSV import/ex
 - Progress tracking maintained throughout async operations
 
 ## Recent Development History
+- **2025-10-07**: Added transaction wrapping for massive performance improvement
+  - `loadDataDict()`: Wrapped entire loop in BEGIN/COMMIT transaction
+  - `loadDataDictAsync()`: Transaction wraps all batches from start to completion
+  - Increased batch size from 10 to 50 for better transaction efficiency
+  - Expected 10-100x speedup for large datasets (SQLite transaction optimization)
 - Added async processing capabilities for large dataset imports
-- Improved UI responsiveness during .rtrk file loading with smaller batch sizes (10 items)
+- Improved UI responsiveness during .rtrk file loading with batch processing
 - Added autoreleasepool and proper thread management for better memory handling
 - Enhanced progress updates with main thread scheduling between batches
 - Fixed UI blocking issues by implementing proper background queue processing

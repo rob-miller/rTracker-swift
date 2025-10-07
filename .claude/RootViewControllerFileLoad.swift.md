@@ -36,9 +36,74 @@ Extension of RootViewController that handles file loading operations including .
 - Proper error handling and file cleanup after processing
 - Thread-safe UI updates with DispatchQueue coordination
 
+### .rtrk File Format
+- **XML-based property list** containing two main components:
+  1. **`configDict`**: Tracker configuration (plist dictionary format)
+     - `optDict`: Tracker metadata (name, privacy, version, dimensions)
+     - `valObjTable`: Array of value object definitions (fields to track)
+     - `reminders`: Reminder configurations
+     - `tid`: Tracker ID
+  2. **`dataDict`**: Actual tracking data (dictionary, NOT CSV)
+     - Key-value pairs mapping timestamps to data records
+     - Loaded via `trackerObj.loadDataDictAsync()`
+
+### CSV File Support
+Three types of CSV files are supported:
+1. **rtCSV format** (`.rtcsv` extension):
+   - Self-describing CSV with metadata in second line
+   - Second line format: `,"type:subtype:id","type:subtype:id",...`
+   - Can automatically create new trackers without existing definition
+   - Validated via `is_rtcsv()` regex check (lines 69-101)
+
+2. **Standard CSV with `_in` suffix** (`trackername_in.csv`):
+   - Must match existing tracker by name
+   - Requires `TIMESTAMP_LABEL` as first column
+   - Parsed via Matt Gallagher's CSVParser
+
+3. **Inbox CSV files** (`.csv` or `.rtcsv` in Inbox directory):
+   - Same rules as above but loaded from Inbox location
+   - Files deleted after successful import
+
+### Three-Stage Loading Pipeline
+1. **Stage 1** (lines 677-706): Load tracker definitions
+   - Process `_in.plist` files (config only)
+   - Process `.rtrk` files (config + prepare data)
+
+2. **Stage 2** (lines 375-482): Load .rtrk data
+   - Extract `dataDict` from .rtrk files
+   - Import via `loadDataDictAsync()` with progress updates
+   - Recalculate functions after data import
+   - Present merge vs. create choice if tracker name exists
+
+3. **Stage 3** (lines 103-272): Load CSV data
+   - Process `_in.csv`, `_in.rtcsv` files
+   - Process Inbox `.csv` and `.rtcsv` files
+   - Create new trackers for valid rtCSV files
+   - Alert user if CSV has no matching tracker
+
+### Merge vs. Create Logic
+When importing .rtrk with existing tracker name (lines 289-328):
+- **Merge option**: Updates existing tracker config, changes TID to match import
+  - Stashes original for potential rejection
+  - Merges value objects via `confirmTOdict()`
+- **Create New option**: Appends "-new" to tracker name
+  - Assigns new TID via `fixDictTID()`
+  - Adds to tracker list as separate tracker
+- Demos auto-merge without prompting (line 291)
+
+## Current Issues & TODOs
+- No known issues
+
 ## Recent Development History
+- **2025-10-07**: Added transaction wrapping to CSV parsing for massive performance improvement
+  - Wrapped `parseRows()` call in `doCSVLoad()` with BEGIN/COMMIT transaction
+  - All `receiveRecord()` callbacks now execute within single transaction
+  - Expected 10-50x speedup for large CSV files
 - Implemented fully asynchronous .rtrk import process to prevent UI blocking
 - Added proper loading indicators and progress feedback
 - Fixed compile errors with weak self capture in completion handlers
 - Enhanced progress bar positioning for modern iPhone compatibility
 - Disabled UI interaction blocking during progress operations to allow scrolling
+
+## Last Updated
+2025-10-07: Added transaction wrapping to CSV loading. Added comprehensive documentation of .rtrk file format (XML plist with configDict and dataDict), CSV file support (rtCSV, _in.csv, Inbox CSV), three-stage loading pipeline, and merge vs. create logic
