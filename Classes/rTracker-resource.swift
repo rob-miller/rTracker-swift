@@ -1331,7 +1331,7 @@ class rTracker_resource: NSObject {
     symbolColor: UIColor = .label,
     borderColor: UIColor? = nil,
     borderWidth: CGFloat = 0,
-    symbolSize: CGFloat = 18,
+    symbolSize: CGFloat = 22,
     fallbackSystemItem: UIBarButtonItem.SystemItem? = nil,
     fallbackTitle: String? = nil
   ) -> UIBarButtonItem {
@@ -1390,7 +1390,7 @@ class rTracker_resource: NSObject {
   // Note: UseTracker buttons now use createActionButton with specific symbols and colors
 
   /// Creates a modern iOS 26 done button - yellow checkmark for primary saves, blue for secondary
-  class func createDoneButton(target: Any?, action: Selector, preferYellow: Bool = true, symbolSize: CGFloat = 18) -> UIBarButtonItem {
+  class func createDoneButton(target: Any?, action: Selector, preferYellow: Bool = true, symbolSize: CGFloat = 22) -> UIBarButtonItem {
     if preferYellow {
       // Primary save action - use yellow checkmark like createSaveButton
       let burntYellow = UIColor(red: 0.85, green: 0.7, blue: 0.05, alpha: 1.0)
@@ -1410,7 +1410,7 @@ class rTracker_resource: NSObject {
     } else {
       // Secondary done action - blue checkmark circle
       return createStyledButton(
-        symbolName: "checkmark.circle",
+        symbolName: "checkmark.circle.fill",
         target: target,
         action: action,
         symbolColor: .systemBlue,
@@ -1431,7 +1431,7 @@ class rTracker_resource: NSObject {
     action: Selector,
     symbolName: String,
     tintColor: UIColor = .label,
-    symbolSize: CGFloat = 18,
+    symbolSize: CGFloat = 22,
     fallbackSystemItem: UIBarButtonItem.SystemItem? = nil,
     fallbackTitle: String? = nil
   ) -> UIBarButtonItem {
