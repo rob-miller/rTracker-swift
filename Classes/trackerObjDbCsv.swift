@@ -398,7 +398,7 @@ extension trackerObj {
     }
 
     func insertTrackerVodata(vid: Int, date: Int, val: String, vo: valueObj? = nil) {
-        var sql = "insert or replace into voData (id, date, val) values (\(vid),\(date),'\(val)');"
+        let sql = "insert or replace into voData (id, date, val) values (\(vid),\(date),'\(val)');"
         toExecSql(sql:sql)
         /*
         sql = ""
@@ -1368,7 +1368,7 @@ extension trackerObj {
     // MARK: read in from export
 
     @objc func receiveRecord(_ aRecord: [String : String]) {
-        DBGLog(String("input csv: \(aRecord)"))
+        //DBGLog(String("input csv: \(aRecord)"))
         guard let tsStr = aRecord[TIMESTAMP_KEY] else {
             csvReadFlags |= CSVNOTIMESTAMP
             return
@@ -1393,14 +1393,14 @@ extension trackerObj {
                 return
             }
             trackerDate = ts
-            DBGLog(String("ts str: \(aRecord[TIMESTAMP_KEY]!)   ts read: \(ts!)"))
+            //DBGLog(String("ts str: \(aRecord[TIMESTAMP_KEY]!)   ts read: \(ts!)"))
             its = Int(ts?.timeIntervalSince1970 ?? 0)
         }
 
         var gotData = false
         var mp = BIGPRIV
         for (key, val) in aRecord {
-            DBGLog(String("processing csv record: key= \(key) value= \(val)"))
+            //DBGLog(String("processing csv record: key= \(key) value= \(val)"))
             if key != TIMESTAMP_KEY {
                 // not timestamp
 
@@ -1437,7 +1437,7 @@ extension trackerObj {
                     valobjType = Int(csvha![4])!
                 }
 
-                DBGLog(String("name=\(voName) rank=\(voRank) val/config=\(val) id=\(valobjID) priv=\(valobjPriv) type=\(valobjType)"))
+                //DBGLog(String("name=\(voName) rank=\(voRank) val/config=\(val) id=\(valobjID) priv=\(valobjPriv) type=\(valobjType)"))
 
                 var configuredValObj = false
                 if 0 == its {

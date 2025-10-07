@@ -103,35 +103,43 @@ extension RootViewController {
     }
     
     func loadTrackerCsvFiles(completion: @escaping () -> Void) {
+        DBGLog("loadTrackerCsvFiles called")
         if loadingCsvFiles {
-            //completion()
+            DBGLog("loadTrackerCsvFiles already loading, calling completion and returning")
+            completion()
             return
         }
-        
+
         loadingCsvFiles = true
         let localFileManager = FileManager.default
         //var newRtcsvTracker = false
-        
+
         // Collect all files to process
         var filesToProcess: [URL] = []
-        
+
         // Check main Documents directory
         var docsDir = rTracker_resource.ioFilePath(nil, access: true)
+        DBGLog("Checking Documents directory for CSV files: \(docsDir)")
         var directoryURL = URL(fileURLWithPath: docsDir)
         if let enumerator = localFileManager.enumerator(at: directoryURL, includingPropertiesForKeys: [.isDirectoryKey], options: []) {
             while let url = enumerator.nextObject() as? URL {
                 filesToProcess.append(url)
+                DBGLog("Found file in Documents: \(url.lastPathComponent)")
             }
         }
-        
+
         // Check Inbox directory
         docsDir = rTracker_resource.ioFilePath("Inbox", access: true)
+        DBGLog("Checking Inbox directory for CSV files: \(docsDir)")
         directoryURL = URL(fileURLWithPath: docsDir)
         if let enumerator = localFileManager.enumerator(at: directoryURL, includingPropertiesForKeys: [.isDirectoryKey], options: []) {
             while let url = enumerator.nextObject() as? URL {
                 filesToProcess.append(url)
+                DBGLog("Found file in Inbox: \(url.lastPathComponent)")
             }
         }
+
+        DBGLog("Total files to process: \(filesToProcess.count)")
         
         safeDispatchSync { [self] in
             jumpMaxPriv()
@@ -140,17 +148,19 @@ extension RootViewController {
             // Process files sequentially with completion handlers
             processNextCsvFile(files: filesToProcess, index: 0, createdNewTracker: false) { createdNewTracker in
                 // All files processed
+                DBGLog("processNextCsvFile completed, createdNewTracker=\(createdNewTracker)")
                 restorePriv()
                 self.tlist.loadTopLayoutTable()
-                
+
                 DispatchQueue.main.async {
                     self.refreshToolBar(true)
-                    
+
                     if createdNewTracker {
                         self.refreshViewPart2()
                     }
-                    
+
                     // Signal completion
+                    DBGLog("loadTrackerCsvFiles calling completion handler")
                     completion()
                 }
             }
@@ -179,9 +189,28 @@ extension RootViewController {
             if fname.hasSuffix("_in.csv") {
                 loadObj = "_in.csv"
                 validMatch = true
+                DBGLog("CSV file matches _in.csv pattern: \(fname)")
             } else if fileUrl.pathComponents.contains("Inbox") {
                 loadObj = ".csv"
                 validMatch = true
+                DBGLog("CSV file in Inbox: \(fname)")
+            } else if !fname.hasSuffix("_out.csv") {
+                // Check if we have a tracker matching this filename
+                // This allows SceneDelegate-saved CSV files to load (like .rtrk files)
+                // But excludes app-generated _out.csv exports
+                let potentialName = String(fname.dropLast(4)) // Remove .csv extension
+                DBGLog("Checking for tracker matching CSV filename: '\(potentialName)'")
+                let tid = tlist.getTIDfromName(potentialName)
+                DBGLog("getTIDfromName returned tid: \(tid)")
+                if tid != 0 {
+                    loadObj = ".csv"
+                    validMatch = true
+                    DBGLog("CSV file matched tracker: \(potentialName) tid=\(tid)")
+                } else {
+                    DBGLog("No matching tracker found for CSV file: \(potentialName)")
+                }
+            } else {
+                DBGLog("Skipping _out.csv file: \(fname)")
             }
         case "rtcsv":
             if fname.hasSuffix("_in.rtcsv") {
@@ -491,20 +520,30 @@ extension RootViewController {
         var retval = 0
         let docsDir = inbox ? rTracker_resource.ioFilePath("Inbox", access: true) : rTracker_resource.ioFilePath(nil, access: true)
         let directoryURL = URL(fileURLWithPath: docsDir)
-        
+
         guard let enumerator = FileManager.default.enumerator(at: directoryURL, includingPropertiesForKeys: [.isDirectoryKey], options: []) else {
             return 0
         }
-        
+
         while let url = enumerator.nextObject() as? URL {
-            if url.lastPathComponent.hasSuffix(targ_ext ?? "") {
-                DBGLog("countInputFiles: match on \(url.lastPathComponent) url is \(url)")
+            let fname = url.lastPathComponent
+            if fname.hasSuffix(targ_ext ?? "") {
+                DBGLog("countInputFiles: match on \(fname) url is \(url)")
                 retval += 1
-            //} else {
-            //    DBGLog("cif: url \(url.lastPathComponent) no match for \(targ_ext ?? "")")
+            } else if !inbox && targ_ext == "_in.csv" && url.pathExtension == "csv" {
+                // Also count CSV files that match tracker names (excluding _out.csv)
+                // This is for files imported via SceneDelegate
+                if !fname.hasSuffix("_out.csv") && !fname.hasSuffix("_in.csv") {
+                    let potentialName = String(fname.dropLast(4)) // Remove .csv
+                    let tid = tlist.getTIDfromName(potentialName)
+                    if tid != 0 {
+                        DBGLog("countInputFiles: match on tracker-named CSV \(fname)")
+                        retval += 1
+                    }
+                }
             }
         }
-        
+
         return retval
     }
 
@@ -624,21 +663,23 @@ extension RootViewController {
                     // All loading completed
                     DispatchQueue.main.async {
                         // Clean up UI
+                        DBGLog("Finishing progress bar and activity indicator")
                         rTracker_resource.finishProgressBar(self.view, navItem: self.navigationItem, disable: true)
                         rTracker_resource.finishActivityIndicator(self.view, navItem: self.navigationItem, disable: false)
-                        
+                        DBGLog("Progress bar and activity indicator finished")
+
                         // Release lock
                         _ = self.loadFilesLock.testAndSet(newValue: false)
                         self.loadingCsvFiles = false
-                        
+
                         // Final UI refresh
                         self.refreshToolBar(true)
-                        
+
                         // Handle any rejectable trackers
                         if self.stashedTIDs.count > 0 {
                             self.doRejectableTracker()
                         }
-                        
+
                         DBGLog("All files loaded - loading complete, lock released")
                     }
                 }

@@ -48,7 +48,7 @@ Extension of RootViewController that handles file loading operations including .
      - Loaded via `trackerObj.loadDataDictAsync()`
 
 ### CSV File Support
-Three types of CSV files are supported:
+Four types of CSV files are supported:
 1. **rtCSV format** (`.rtcsv` extension):
    - Self-describing CSV with metadata in second line
    - Second line format: `,"type:subtype:id","type:subtype:id",...`
@@ -62,6 +62,13 @@ Three types of CSV files are supported:
 
 3. **Inbox CSV files** (`.csv` or `.rtcsv` in Inbox directory):
    - Same rules as above but loaded from Inbox location
+   - Files deleted after successful import
+
+4. **SceneDelegate-imported CSV files** (`trackername.csv` in Documents):
+   - Added 2025-10-07 for consistency with .rtrk handling
+   - Must match existing tracker name exactly
+   - Excludes `_out.csv` files (app-generated exports)
+   - Allows users to share CSV files to app via iOS share sheet
    - Files deleted after successful import
 
 ### Three-Stage Loading Pipeline
@@ -95,10 +102,15 @@ When importing .rtrk with existing tracker name (lines 289-328):
 - No known issues
 
 ## Recent Development History
-- **2025-10-07**: Added transaction wrapping to CSV parsing for massive performance improvement
-  - Wrapped `parseRows()` call in `doCSVLoad()` with BEGIN/COMMIT transaction
-  - All `receiveRecord()` callbacks now execute within single transaction
-  - Expected 10-50x speedup for large CSV files
+- **2025-10-07**: Fixed CSV file loading from SceneDelegate + performance improvements
+  - **Bug Fix**: Added tracker name matching for CSV files in Documents (lines 185-195)
+    - Allows SceneDelegate-saved CSV files to load (consistent with .rtrk behavior)
+    - Safely excludes `_out.csv` app-generated exports
+    - Validates tracker exists before attempting load
+  - **Performance**: Added transaction wrapping to CSV parsing
+    - Wrapped `parseRows()` call in `doCSVLoad()` with BEGIN/COMMIT transaction
+    - All `receiveRecord()` callbacks now execute within single transaction
+    - Expected 10-50x speedup for large CSV files
 - Implemented fully asynchronous .rtrk import process to prevent UI blocking
 - Added proper loading indicators and progress feedback
 - Fixed compile errors with weak self capture in completion handlers
@@ -106,4 +118,4 @@ When importing .rtrk with existing tracker name (lines 289-328):
 - Disabled UI interaction blocking during progress operations to allow scrolling
 
 ## Last Updated
-2025-10-07: Added transaction wrapping to CSV loading. Added comprehensive documentation of .rtrk file format (XML plist with configDict and dataDict), CSV file support (rtCSV, _in.csv, Inbox CSV), three-stage loading pipeline, and merge vs. create logic
+2025-10-07: Fixed CSV file loading bug - CSV files shared via SceneDelegate now load correctly by matching tracker names (excluding _out.csv exports). Added transaction wrapping for 10-50x CSV loading speedup. Added comprehensive documentation of file formats and loading pipeline.
