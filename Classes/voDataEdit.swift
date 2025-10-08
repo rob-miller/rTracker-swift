@@ -71,7 +71,7 @@ class voDataEdit: UIViewController, UITextViewDelegate {
 
         if let vo {
             // valueObj data edit - voTextBox, voImage
-            DBGLog("vde view did load")
+            //DBGLog("vde view did load")
             title = vo.valueName
             vo.vos?.dataEditVDidLoad(self)
             textView = (vo.vos as? voTextBox)?.textView
@@ -176,19 +176,19 @@ class voDataEdit: UIViewController, UITextViewDelegate {
         var frame = vc.view.frame
 
         let frame2 = vc.navigationController!.navigationBar.frame
-        DBGLog(String("nvb rect: \(frame2)"))
+        //DBGLog(String("nvb rect: \(frame2)"))
         let frame3 = vc.navigationController!.toolbar.frame
-        DBGLog(String("tb rect: \(frame3))"))
+        //DBGLog(String("tb rect: \(frame3))"))
 
         // Use safe area insets for more reliable layout
         let safeArea = vc.view.safeAreaInsets
-        DBGLog(String("safe area: top=\(safeArea.top) bottom=\(safeArea.bottom)"))
+        //DBGLog(String("safe area: top=\(safeArea.top) bottom=\(safeArea.bottom)"))
 
         // Calculate frame based on safe area and navigation bar
         frame.origin.y = safeArea.top
         frame.size.height = vc.view.frame.height - safeArea.top - safeArea.bottom
 
-        DBGLog(String("initTVF rect: \(frame.origin.x) \(frame.origin.y) \(frame.size.width) \(frame.size.height)"))
+        //DBGLog(String("initTVF rect: \(frame.origin.x) \(frame.origin.y) \(frame.size.width) \(frame.size.height)"))
         return frame
     }
 
@@ -197,7 +197,7 @@ class voDataEdit: UIViewController, UITextViewDelegate {
 
         let userInfo = aNotification?.userInfo
         let keyboardRect = userInfo![UIResponder.keyboardFrameEndUserInfoKey] as! CGRect // ?.cgRectValue
-        DBGLog(String("keyboard rect: \(keyboardRect.origin.x) \(keyboardRect.origin.y) \(keyboardRect.size.width) \(keyboardRect.size.height)"))
+        //DBGLog(String("keyboard rect: \(keyboardRect.origin.x) \(keyboardRect.origin.y) \(keyboardRect.size.width) \(keyboardRect.size.height)"))
 
         // Calculate new frame for text view
         var frame = voDataEdit.getInitTVF(self)
@@ -205,11 +205,11 @@ class voDataEdit: UIViewController, UITextViewDelegate {
 
         // Add back accessory view height if present
         if let avframe = textView?.inputAccessoryView?.frame {
-            DBGLog(String("acc view frame rect: \(avframe.origin.x) \(avframe.origin.y) \(avframe.size.width) \(avframe.size.height)"))
+            //DBGLog(String("acc view frame rect: \(avframe.origin.x) \(avframe.origin.y) \(avframe.size.width) \(avframe.size.height)"))
             frame.size.height += avframe.size.height
         }
 
-        DBGLog(String("keyboard TVF: \(frame.origin.x) \(frame.origin.y) \(frame.size.width) \(frame.size.height)"))
+        //DBGLog(String("keyboard TVF: \(frame.origin.x) \(frame.origin.y) \(frame.size.width) \(frame.size.height)"))
 
         // Only animate if frame actually changes to avoid conflicts during rapid transitions
         if !frame.equalTo(textView?.frame ?? .zero) {
@@ -225,7 +225,7 @@ class voDataEdit: UIViewController, UITextViewDelegate {
     }
 
     @objc func keyboardWillHide(_ aNotification: Notification?) {
-        DBGLog("votb keyboardwillhide")
+        //DBGLog("votb keyboardwillhide")
 
         let fullFrame = voDataEdit.getInitTVF(self)
 
@@ -240,7 +240,7 @@ class voDataEdit: UIViewController, UITextViewDelegate {
     }
 
     @objc func saveAction(_ sender: Any?) {
-        DBGLog("save me")
+        //DBGLog("save me")
 
         if self.vo?.optDict["otsrc"] ?? "0" != "1" {
             saveClass!.perform(saveSelector!, with: textView?.text, afterDelay: TimeInterval(0))
