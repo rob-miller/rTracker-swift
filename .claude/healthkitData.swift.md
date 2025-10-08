@@ -66,11 +66,20 @@ Defines HealthKit data query configurations for health metrics, workouts, and ca
 - **Sleep Display Names**: Improved sleep analysis display names for better clarity
 
 ## Current Issues & TODOs
+- **COMPLETED (2025-10-08)**: Added Awake Segments query for counting nighttime awakenings
 - **COMPLETED (2025-10-02)**: Rowing combined queries commented out (not in use)
 - **COMPLETED (2025-10-02)**: Added SF symbol icons to MenuTab enum
 - **COMPLETED (2025-09-29)**: Fixed sleeping wrist temperature date attribution by adding `useEndDate` flag
 
 ## Last Updated
+2025-10-08 - **Awake Segments Added**:
+- **New Query**: Added "Awake Segments" HealthDataQuery to count nighttime awakenings
+- **Location**: Inserted after "REM Sleep Segments" (line 395-415)
+- **Configuration**: Uses same pattern as Deep/REM segments with 2-minute minimum duration
+- **Info**: "Counts the number of awake segments during the night. Only awake periods of at least 2 minutes are counted as segments."
+- **Consistency**: Matches the awake segment logic already used in Sleep Cycles calculation
+
+Previous update:
 2025-10-02 - Rowing Combined Queries Disabled:
 - **Code Cleanup**: Commented out three rowing combined workout queries (Duration/Energy/Distance)
 - **Rationale**: Not currently in use, but preserved for potential future implementation

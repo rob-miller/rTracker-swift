@@ -392,6 +392,28 @@ private let baseHealthDataQueries: [HealthDataQuery] = [
         sampleType: .category
     ),
 
+    // For counting Awake segments
+    HealthDataQuery(
+        identifier: "HKCategoryTypeIdentifierSleepAnalysis",
+        displayName: "Awake Segments",
+        categories: [HKCategoryValueSleepAnalysis.awake.rawValue],
+        unit: [HKUnit.count()],
+        needUnit: true,
+        aggregationStyle: .cumulative,
+        customProcessor: { sample in
+            guard let categorySample = sample as? HKCategorySample,
+                  categorySample.value == HKCategoryValueSleepAnalysis.awake.rawValue else {
+                return 0
+            }
+            // The actual segment calculation will happen in a specialized processor
+            return 1 // Return 1 to collect all awake samples for processing
+        },
+        aggregationType: .groupedByNight,
+        aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
+        info: "Counts the number of awake segments during the night. Only awake periods of at least 2 minutes are counted as segments.",
+        sampleType: .category
+    ),
+
     // For counting sleep cycles (Deep followed by REM)
     HealthDataQuery(
         identifier: "HKCategoryTypeIdentifierSleepAnalysis",

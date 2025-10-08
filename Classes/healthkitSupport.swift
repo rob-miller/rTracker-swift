@@ -681,6 +681,22 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                     ))
                 }
 
+            case "Awake Segments":
+                let segmentCount = self.countSleepSegments(
+                    samples: categorySamples,
+                    targetValue: HKCategoryValueSleepAnalysis.awake.rawValue,
+                    allowedGapValues: [:], // No gaps allowed in awake segments
+                    maxGapMinutes: 0,
+                    minDurationMinutes: 2  // Only consider awake periods of 2+ minutes
+                )
+                if segmentCount > 0 {
+                    results.append(HealthQueryResult(
+                        date: startDate,
+                        value: Double(segmentCount),
+                        unit: specifiedUnit
+                    ))
+                }
+
             case "Sleep Cycles":
                 let cycleCount = self.countSleepCycles(
                     samples: categorySamples,
