@@ -1672,11 +1672,14 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
             let filteredValues = searchSet.filter { $0 <= targD }
             targD = filteredValues.max() ?? -1  // no more values
         }
-        loadTrackerDate(targD)
-        
-        if targD > 0 {
-            tableView!.reloadSections(NSIndexSet(index: 0) as IndexSet, with: .right)
+
+        // Don't navigate if there's no previous date to load
+        if targD == -1 {
+            return
         }
+
+        loadTrackerDate(targD)
+        tableView!.reloadSections(NSIndexSet(index: 0) as IndexSet, with: .right)
     }
     
     @objc func handleViewSwipeLeft(_ gesture: UISwipeGestureRecognizer?) {
