@@ -81,6 +81,7 @@ Main view controller for data entry in trackers. Displays value objects in a tab
 - **Navigation**: Complex date navigation with search set support and swipe gestures
 
 ## Current Issues & TODOs
+- ✅ **COMPLETED (2025-10-08)**: Fixed swipe right looping behavior at oldest record
 - ✅ **COMPLETED**: DatePickerResult modernization with enum-based actions
 - ✅ **COMPLETED**: Save conflict handling for new entries via createNewEntry()
 - ✅ **COMPLETED**: Cancel behavior fixed - restores original tracker date
@@ -90,4 +91,7 @@ Main view controller for data entry in trackers. Displays value objects in a tab
 - ✅ **COMPLETED**: Accept/reject mode visual clarity with red/green color coding
 
 ## Last Updated
+2025-10-08 - **Swipe Right Boundary Fix**: Fixed `handleViewSwipeRight()` to prevent looping back to current record when reaching the oldest entry. Added early return when `targD == -1` (no previous date available) at line 1677-1679. Previously, swiping right at the oldest record would call `loadTrackerDate(-1)` which triggered `resetData()` and created a blank entry with current date, appearing to loop. Now the swipe gesture simply does nothing at the history boundary, matching user expectations.
+
+Previous update:
 2025-09-26 - Date Picker Modernization: Enhanced save conflict handling and UI consistency fixes
