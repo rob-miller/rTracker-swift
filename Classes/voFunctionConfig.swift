@@ -816,7 +816,7 @@ extension voFunction {
         case "delay": return "op_delay"
         case "round": return "op_round"
         case "classify": return "op_classify"
-        case "¬": return "op_not"
+        case "!": return "op_not"
         case "before": return "op_before"
         case "after": return "op_after"
 
@@ -827,9 +827,9 @@ extension voFunction {
         case "/": return "op_divide"
 
         // Logical operators
-        case "∧": return "op_and"
-        case "∨": return "op_or"
-        case "⊕": return "op_xor"
+        case "&": return "op_and"
+        case "|": return "op_or"
+        case "^": return "op_xor"
 
         // Comparison operators
         case "==": return "op_equal"
@@ -842,6 +842,10 @@ extension voFunction {
         // Floor/ceiling
         case "⌊": return "op_floor"
         case "⌈": return "op_ceiling"
+
+        // Min2/max2
+        case "><": return "op_min2"
+        case "<>": return "op_max2"
 
         default: return "op_unknown"
         }

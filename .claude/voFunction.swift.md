@@ -140,6 +140,10 @@ Functions with configurable parameters (like `constant`, `before`, `after`) use 
 - Reuses `constantPending`/`constantClosePending` flags in display logic
 
 ## Current Issues & TODOs
+✅ **COMPLETED (2025-10-08)**: Implemented floor and ceiling as 1-arg functions
+✅ **COMPLETED (2025-10-08)**: Fixed min2/max2 display from symbols to text
+✅ **COMPLETED (2025-10-08)**: Fixed stale function display by removing early return cache
+✅ **COMPLETED (2025-10-08)**: Fixed fnDirty flag not being reset after calculation
 ✅ Fixed caching logic bug where setFNrecalc() didn't prevent cached value usage
 ✅ Added fnDirty flag check to caching condition in update() method
 ✅ Reset lastEpd0 in setFNrecalc() to ensure proper cache invalidation
@@ -149,6 +153,64 @@ Functions with configurable parameters (like `constant`, `before`, `after`) use 
 ✅ Updated fnStrDict initialization to include fnOtherOps array
 
 ## Recent Development History
+- 2025-10-08: **Changed Logical Operators to Programming Style**
+  - **NOT operator**: Changed from `¬` to `!` (line 146 in ARG1STRS)
+  - **AND operator**: Changed from `∧` to `&` (line 150 in ARG2STRS)
+  - **OR operator**: Changed from `∨` to `|` (line 150 in ARG2STRS)
+  - **XOR operator**: Changed from `⊕` to `^` (line 150 in ARG2STRS)
+  - **Config updates**: Updated voFunctionConfig.swift doc mappings (lines 819, 830-832)
+  - **Documentation**: Updated rtDocs.swift titles and examples (lines 176-177, 215, 220, 225)
+  - **Rationale**: Programming-style operators are more familiar, easier to type (ASCII-only), and match user preference
+  - **Compatibility**: No backward compatibility issues - stored functions use numeric tokens, not display strings
+- 2025-10-08: **Implemented Floor and Ceiling Functions**
+  - **New Functions**: Added FN1ARGFLOOR and FN1ARGCEILING as 1-arg functions (lines 86-87)
+  - **Array Updates**: Added to ARG1FNS and ARG1STRS with "⌊" and "⌈" symbols (lines 145-146)
+  - **Evaluation Logic**: Implemented in calcFunctionValue() switch (lines 883-897)
+    - FN1ARGFLOOR: Uses Swift's floor() function to round down to nearest integer
+    - FN1ARGCEILING: Uses Swift's ceil() function to round up to nearest integer
+    - Both return nil when input is nil (nullV1 handling)
+  - **Fixed min2/max2 Display**: Changed ARG2STRS from "⌊⌈" symbols to "><"/"<>" symbols (line 150)
+  - **Rationale**: Floor/ceiling are 1-arg rounding functions, min2/max2 are 2-arg binary operators
+  - **Documentation**: Floor/ceiling docs already existed, added new min2/max2 docs in rtDocs.swift
+  - **Config Updates**: Added min2/max2 doc mappings in voFunctionConfig.swift (lines 847-848)
+- 2025-10-08: **Fixed Numeric Conversion and Threshold Comparison in Classify**
+  - **Problem**: Textbox value "10\n" failed to match numeric threshold "10"
+  - **Bug 1 (Line 660)**: `Double(sv1 ?? "")` failed on "10\n" due to newline, returned 0.0
+    - Fixed: Added `trimmedSv1 = sv1?.trimmingCharacters(in: .whitespacesAndNewlines)` before conversion
+    - Now "10\n" → "10" → 10.0 correctly
+  - **Bug 2 (Line 763)**: Used `v1 > matchDbl` comparison, so 10.0 NOT > 10.0 = false
+    - Fixed: Changed to `v1 >= matchDbl` for inclusive threshold matching
+    - Now value exactly matching threshold triggers classification
+  - **Impact**:
+    - Numeric classifications now work with textbox input (handles newlines/spaces)
+    - Threshold values are inclusive (>= instead of >)
+    - "10" matches threshold "10", "20" matches threshold "20", etc.
+- 2025-10-08: **Fixed Nil Return Bug + FUNCTIONDBG Control Flow**
+  - **Root Cause**: When classify returned nil (no match), function still displayed old value
+  - **Bug 1 (Line 1324)**: When calculation returned nil, code executed:
+    ```swift
+    } else {
+        lastCalcValue = ""  // Set to empty
+        fnDirty = false
+    }
+    return instr ?? ""  // ❌ Returned OLD value from instr instead of ""!
+    ```
+  - **Bug 2 (Lines 1291)**: FUNCTIONDBG code had early return, altering control flow in debug builds
+  - **The Fix**:
+    1. Line 1324: Changed `return instr ?? ""` to `return lastCalcValue` (returns empty string for nil)
+    2. Lines 1288-1299: Moved cache logic outside FUNCTIONDBG block, debug now only logs
+  - **Why This Works**:
+    - Nil results now correctly return empty string
+    - Debug and release builds follow same control flow
+    - Proper endpoint-based caching preserved (line 1297-1299)
+  - **Impact**: Classify correctly clears when text doesn't match, all functions handle nil properly
+- 2025-10-08: **Removed Broken Early Return Cache (Line 1288-1290)**
+  - Removed `if instr?.isEmpty == false && !fnDirty` early return
+  - `fnDirty` only set during batch operations, not interactive editing
+  - Functions now recalculate during editing (correct), cached via endpoint comparison
+- 2025-10-08: **fnDirty Flag Reset Fix** (lines 1313, 1318)
+  - Added `fnDirty = false` after successful/nil calculations
+  - Ensures flag works correctly during batch operations: true = needs recalc, false = current
 - 2025-10-03: **Complete before/after function implementation**
   - Added FNBEFORE and FNAFTER tokens in FNNEWOTHER allocation space
   - Created fnOtherOps computed property following fn1args/fn2args/fnTimeOps pattern
@@ -163,4 +225,4 @@ Functions with configurable parameters (like `constant`, `before`, `after`) use 
 - Performance improvements with pull-to-refresh mechanisms (b4966ac)
 
 ## Last Updated
-2025-10-03 - Completed before/after function implementation with fnOtherOps property and updated fnStrDict. Documented complete checklist for adding new functions to picker system.
+2025-10-08 - Changed logical operators to programming style: NOT `¬`→`!`, AND `∧`→`&`, OR `∨`→`|`, XOR `⊕`→`^`. Also implemented floor/ceiling as 1-arg functions and changed min2/max2 to use "><" and "<>" symbols. All operators now use ASCII characters (no Unicode), making them more familiar to programmers and easier to type. No backward compatibility issues since stored functions use numeric tokens, not display strings.

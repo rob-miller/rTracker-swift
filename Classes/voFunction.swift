@@ -83,6 +83,8 @@ let FN1ARGDELAY = FN1ARGELAPSEDSECS - 1
 let FN1ARGROUND = FN1ARGDELAY - 1
 let FN1ARGCLASSIFY = FN1ARGROUND - 1
 let FN1ARGNOT = FN1ARGCLASSIFY - 1
+let FN1ARGFLOOR = FN1ARGNOT - 1
+let FN1ARGCEILING = FN1ARGFLOOR - 1
 
 let FNNEW1ARGLAST = FNNEW1ARGFIRST - 100
 
@@ -140,12 +142,12 @@ func isFn(_ i: Int) -> Bool {
 let FNCONSTANT_TITLE = "constant"
 
 
-let ARG1FNS = [FN1ARGDELTA,FN1ARGSUM,FN1ARGPOSTSUM,FN1ARGPRESUM,FN1ARGAVG,FN1ARGMIN,FN1ARGMAX,FN1ARGCOUNT,FN1ARGONRATIO,FN1ARGNORATIO,FN1ARGELAPSEDWEEKS,FN1ARGELAPSEDDAYS,FN1ARGELAPSEDHOURS,FN1ARGELAPSEDMINS,FN1ARGELAPSEDSECS,FN1ARGDELAY, FN1ARGROUND, FN1ARGCLASSIFY, FN1ARGNOT]
-let ARG1STRS = ["change_in","sum","post-sum","pre-sum","avg","min","max","count","old/new","new/old","elapsed_weeks","elapsed_days","elapsed_hrs","elapsed_mins","elapsed_secs", "delay", "round", "classify", "¬"]
+let ARG1FNS = [FN1ARGDELTA,FN1ARGSUM,FN1ARGPOSTSUM,FN1ARGPRESUM,FN1ARGAVG,FN1ARGMIN,FN1ARGMAX,FN1ARGCOUNT,FN1ARGONRATIO,FN1ARGNORATIO,FN1ARGELAPSEDWEEKS,FN1ARGELAPSEDDAYS,FN1ARGELAPSEDHOURS,FN1ARGELAPSEDMINS,FN1ARGELAPSEDSECS,FN1ARGDELAY, FN1ARGROUND, FN1ARGCLASSIFY, FN1ARGNOT, FN1ARGFLOOR, FN1ARGCEILING]
+let ARG1STRS = ["change_in","sum","post-sum","pre-sum","avg","min","max","count","old/new","new/old","elapsed_weeks","elapsed_days","elapsed_hrs","elapsed_mins","elapsed_secs", "delay", "round", "classify", "!", "⌊", "⌈"]
 let ARG1CNT = ARG1FNS.count
 
 let ARG2FNS = [FN2ARGPLUS,FN2ARGMINUS,FN2ARGTIMES,FN2ARGDIVIDE, FN2ARGAND, FN2ARGOR, FN2ARGXOR, FN2ARGEQUALTO, FN2ARGNOTEQUAL, FN2ARGGREATER, FN2ARGLESS, FN2ARGGREATEREQUAL, FN2ARGLESSEQUAL, FN2ARGMIN2, FN2ARGMAX2]
-let ARG2STRS = ["+","-","*","/", "∧", "∨", "⊕", "==", "!=", ">", "<", ">=", "<=", "⌊", "⌈"]
+let ARG2STRS = ["+","-","*","/", "&", "|", "^", "==", "!=", ">", "<", ">=", "<=", "><", "<>"]
 let ARG2CNT = ARG2FNS.count
 
 let PARENFNS = [FNPARENOPEN, FNPARENCLOSE]
@@ -657,7 +659,8 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                 //valueObj *valo = [to getValObj:vid];
                 let sv1 = to.getValObj(vid)?.value
                 let nullV1 = (nil == sv1 || ("" == sv1))
-                let v1 = Double(sv1 ?? "") ?? 0.0
+                let trimmedSv1 = sv1?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                let v1 = Double(trimmedSv1) ?? 0.0
                 sql = """
                 SELECT count(val) FROM voData 
                 WHERE id = \(vid) AND date >= \(epd0) AND date < \(epd1)
@@ -666,6 +669,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                 var ci = to.toQry2Int(sql:sql)
                 #if FUNCTIONDBG
                 DBGLog(String("v1= \(v1) nullV1=\(nullV1) vid=\(vid) \(vo.parentTracker.trackerName):\(vo.valueName)"))
+                DBGLog(String("sv1= '\(sv1 ?? "nil")'"))
                 #endif
                 // v1 is value for current tracker entry (epd1) for our arg
                 switch currTok {
@@ -752,14 +756,23 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                     // only 1 classify, match values stored in vo.optDict
                     // Start with result = 0 (no match)
                     result = nil
+                    #if FUNCTIONDBG
+                    DBGLog(String("CLASSIFY thresholds: 1='\(vo.optDict["classify_1"] ?? "nil")' 2='\(vo.optDict["classify_2"] ?? "nil")' 3='\(vo.optDict["classify_3"] ?? "nil")' 4='\(vo.optDict["classify_4"] ?? "nil")' 5='\(vo.optDict["classify_5"] ?? "nil")' 6='\(vo.optDict["classify_6"] ?? "nil")' 7='\(vo.optDict["classify_7"] ?? "nil")'"))
+                    #endif
                     for i in (1...7).reversed() {
                         if let sv1 = sv1, let matchVal = vo.optDict["classify_\(i)"] {
                             if let matchDbl = Double(matchVal) {
-                                if v1 > matchDbl {
+                                if v1 >= matchDbl {
+                                    #if FUNCTIONDBG
+                                    DBGLog(String("CLASSIFY numeric match: \(v1) >= \(matchDbl) -> classification \(i)"))
+                                    #endif
                                     result = Double(i)
                                     break
                                 }
                             } else if sv1.contains(matchVal) {
+                                #if FUNCTIONDBG
+                                DBGLog(String("CLASSIFY string match: '\(sv1)' contains '\(matchVal)' -> classification \(i)"))
+                                #endif
                                 result = Double(i)
                                 break
                             }
@@ -865,6 +878,22 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
 
                         #if FUNCTIONDBG
                         DBGLog(String("not: result= \(String(describing: result))"))
+                        #endif
+
+                    case FN1ARGFLOOR:
+                        // Floor function - round down to nearest integer
+                        result = nullV1 ? nil : floor(v1)
+
+                        #if FUNCTIONDBG
+                        DBGLog(String("floor: v1= \(v1) result= \(String(describing: result))"))
+                        #endif
+
+                    case FN1ARGCEILING:
+                        // Ceiling function - round up to nearest integer
+                        result = nullV1 ? nil : ceil(v1)
+
+                        #if FUNCTIONDBG
+                        DBGLog(String("ceiling: v1= \(v1) result= \(String(describing: result))"))
                         #endif
                 default:
                     // remaining options for fn w/ 1 arg are pre/post/all sum
@@ -1285,18 +1314,18 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             }
         }
 
-        if instr?.isEmpty == false && !fnDirty {
-            return instr ?? ""
-        }
-
         #if FUNCTIONDBG
         if ep0date == lastEpd0 && !lastCalcValue.isEmpty && !fnDirty {
-            DBGLog("fn \(vo.valueName!) update using cached value \(lastCalcValue) ep0date \(Date(timeIntervalSince1970: TimeInterval(ep0date))) [fnDirty=\(fnDirty), lastCalcValue.isEmpty=\(lastCalcValue.isEmpty)]")
-            return lastCalcValue
+            DBGLog("fn \(vo.valueName!) update would use cached value \(lastCalcValue) ep0date \(Date(timeIntervalSince1970: TimeInterval(ep0date))) [fnDirty=\(fnDirty), lastCalcValue.isEmpty=\(lastCalcValue.isEmpty)]")
         } else {
             DBGLog("fn \(vo.valueName!) update RECALCULATING [ep0date=\(ep0date) vs lastEpd0=\(lastEpd0), fnDirty=\(fnDirty), lastCalcValue.isEmpty=\(lastCalcValue.isEmpty)]")
         }
         #endif
+
+        // Use cached value if endpoints match and we have a non-empty cached result
+        if ep0date == lastEpd0 && !lastCalcValue.isEmpty && !fnDirty {
+            return lastCalcValue
+        }
 
         currFnNdx = 0
 
@@ -1310,16 +1339,18 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             let ddp = (nddp == nil ? FDDPDFLT : Int(nddp!))
             lastCalcValue = String(format: String(format: "%%0.%df", ddp!), val.floatValue)
             lastEpd0 = ep0date
+            fnDirty = false  // Calculation complete, reset dirty flag
             return lastCalcValue
         } else {
             lastEpd0 = -1
             lastCalcValue = ""  // empty
+            fnDirty = false  // Calculation complete (nil result), reset dirty flag
         }
-        
+
         #if FUNCTIONDBG
-        DBGLog(String("fndbg fn update returning: \(instr)"))
+        DBGLog(String("fndbg fn update returning: \(lastCalcValue)"))
         #endif
-        return instr ?? ""
+        return lastCalcValue
     }
     
     override func voDisplay(_ bounds: CGRect) -> UIView {
