@@ -32,6 +32,25 @@ class voNumber: voState, UITextFieldDelegate {
   private static var healthKitCache: [String: String] = [:]  // Cache by "sourceName-date"
   let noHKdataMsg = "No HealthKit data available"
 
+  private func shouldShowZeroForNoData(unit: HKUnit?) -> Bool {
+    guard let unit = unit else { return false }
+
+    let unitString = unit.unitString
+
+    // Time duration units (minutes, hours - for sleep, workouts, mindful minutes)
+    if unitString == "min" || unitString == "hr" {
+      return true
+    }
+
+    // Pure count units (for sleep cycles, segments, awakenings)
+    if unitString == "count" {
+      return true
+    }
+
+    // All other units (HRV milliseconds, heart rate bpm, blood pressure, etc.)
+    return false
+  }
+
   var dtf: UITextField {
     if _dtf?.frame.size.width != vosFrame.size.width {
       _dtf = nil  // first time around thinks size is 320, handle larger devices
@@ -234,7 +253,14 @@ class voNumber: voState, UITextFieldDelegate {
             healthKitResult = self?.formatValueForDisplay(result) ?? result
             Self.healthKitCache[cacheKey] = healthKitResult!
           } else {
-            healthKitResult = self?.noHKdataMsg
+            // Determine appropriate no-data display based on unit type
+            let currentUnit = self?.vo.optDict["ahUnit"]
+            let hkUnit: HKUnit? = {
+              guard let unitStr = currentUnit, !unitStr.isEmpty else { return nil }
+              return HKUnit(from: unitStr)
+            }()
+
+            healthKitResult = (self?.shouldShowZeroForNoData(unit: hkUnit) ?? false) ? "0" : self?.noHKdataMsg
           }
           semaphore.signal()
         }

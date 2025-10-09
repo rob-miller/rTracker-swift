@@ -187,47 +187,21 @@ class CustomAccessoryView: UIView {
 
         // Set up accessibility for main segmented control
         segControl.accessibilityIdentifier = "tbox-seg-control"
-        if segControl.subviews.indices.contains(0) {
-            segControl.subviews[0].accessibilityLabel = "Contacts"
-            segControl.subviews[0].accessibilityHint = "select to choose from Contacts"
-            segControl.subviews[0].accessibilityIdentifier = "tbox-seg-contacts"
-        }
-        if segControl.subviews.indices.contains(1) {
-            segControl.subviews[1].accessibilityLabel = "History"
-            segControl.subviews[1].accessibilityHint = "select to choose lines from previous entries"
-            segControl.subviews[1].accessibilityIdentifier = "tbox-seg-history"
-        }
-        if segControl.subviews.indices.contains(2) {
-            segControl.subviews[2].accessibilityLabel = "Keyboard"
-            segControl.subviews[2].accessibilityHint = "select to use keyboard"
-            segControl.subviews[2].accessibilityIdentifier = "tbox-seg-keyboard"
-        }
+        
+        // For UI testing, we need to access segments by their titles or position
+        // The segments can be accessed in tests using their labels or indices
+        segControl.accessibilityLabel = "Text input mode selection"
+        segControl.accessibilityHint = "Choose between contacts, history, or keyboard input"
 
         // Set up accessibility for search segmented control
         searchSeg.accessibilityIdentifier = "tbox-seg-search"
-        if searchSeg.subviews.indices.contains(0) {
-            searchSeg.subviews[0].accessibilityLabel = "Use"
-            searchSeg.subviews[0].accessibilityHint = "select to use text for this entry"
-            searchSeg.subviews[0].accessibilityIdentifier = "tbox-mode-use"
-        }
-        if searchSeg.subviews.indices.contains(1) {
-            searchSeg.subviews[1].accessibilityLabel = "Search"
-            searchSeg.subviews[1].accessibilityHint = "select to use text for searching previous entries"
-            searchSeg.subviews[1].accessibilityIdentifier = "tbox-mode-srch"
-        }
+        searchSeg.accessibilityLabel = "Text usage mode"
+        searchSeg.accessibilityHint = "Choose whether to use text for entry or search"
 
         // Set up accessibility for or/and segmented control
         orAndSeg.accessibilityIdentifier = "tbox-seg-search-mode"
-        if orAndSeg.subviews.indices.contains(0) {
-            orAndSeg.subviews[0].accessibilityLabel = "And"
-            orAndSeg.subviews[0].accessibilityHint = "search for entries with all lines"
-            orAndSeg.subviews[0].accessibilityIdentifier = "tbox-srch-and"
-        }
-        if orAndSeg.subviews.indices.contains(1) {
-            orAndSeg.subviews[1].accessibilityLabel = "Or"
-            orAndSeg.subviews[1].accessibilityHint = "search for entries with any of lines"
-            orAndSeg.subviews[1].accessibilityIdentifier = "tbox-srch-or"
-        }
+        orAndSeg.accessibilityLabel = "Search mode"
+        orAndSeg.accessibilityHint = "Choose between AND or OR search"
 
         // Set up button accessibility
         addButton.accessibilityLabel = "add line"

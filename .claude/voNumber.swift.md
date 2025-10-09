@@ -101,6 +101,7 @@ Handles numeric input fields in trackers, supporting manual entry, HealthKit int
 - **Cache Improvements**: Enhanced HealthKit caching with unit-specific keys
 
 ## Current Issues & TODOs
+- **COMPLETED** (2025-10-09): Unit-based zero display for no-data HealthKit values
 - **COMPLETED** (2025-10-07): Transaction handling bug fix - prevent "no transaction in progress" error
 - **COMPLETED** (2025-10-02): Set-based deduplication to eliminate duplicate HealthKit queries
 - **COMPLETED** (2025-10-02): Date formatting helper functions (ltd/i2ltd) for cleaner debug logs
@@ -118,6 +119,20 @@ Handles numeric input fields in trackers, supporting manual entry, HealthKit int
 - **HealthKit Cross-Contamination Bug** (2025-08-26): Fixed issue where low-frequency HealthKit valueObjs would repeatedly reprocess dates where we already knew there was `noData`. The complex OR-based SQL query only excluded `stat = hkData` entries but allowed `stat = noData` entries to be reprocessed indefinitely. Simplified to exclude ANY existing voHKstatus entry for the specific valueObj, preventing unnecessary reprocessing of dates we've already attempted.
 
 ## Last Updated
+2025-10-09 - Unit-Based Zero Display for No-Data HealthKit Values:
+- **Feature**: Added intelligent no-data display based on unit type
+- **Implementation**:
+  - **Helper Method** (lines 35-52): `shouldShowZeroForNoData(unit:)` checks if unit is time (min/hr) or count
+  - **Display Logic** (lines 255-263): Conditionally shows "0" for time/count units, message for physiological metrics
+- **Behavior**:
+  - **Time/Count Units** (minutes, hours, count): Display "0", process as "0" in functions
+    - Examples: Sleep duration, mindful minutes, sleep segments, awakenings
+  - **Physiological Units** (milliseconds, bpm, mmHg, percent, etc.): Display message, process as empty
+    - Examples: HRV, heart rate, blood pressure, oxygen saturation
+- **Rationale**: Zero is meaningful for time/count accumulations (0 minutes of deep sleep = valid data), but misleading for physiological measurements (0 bpm ≠ no data)
+- **Function Processing**: Time/count zeros pass through `update()` as "0" for correct aggregation in functions
+
+Previous update:
 2025-10-07 - Transaction Overlap Bug Fix:
 - **Fixed Transaction Overlap Errors**: Restructured loadHKdata to use three separate, non-overlapping transactions
 - **Implementation**:
