@@ -104,7 +104,7 @@ final class rTrackerUITests: XCTestCase {
         sleep(2)
         
         // Look for delete button variations
-        let deleteButtonTexts = ["Delete", "Remove", "🗑️"]
+        let deleteButtonTexts = ["Delete", "Remove", "🗑️", "trkrDel"]
         for buttonText in deleteButtonTexts {
             if app.buttons[buttonText].exists && app.buttons[buttonText].isHittable {
                 app.buttons[buttonText].tap()
@@ -132,8 +132,22 @@ final class rTrackerUITests: XCTestCase {
             }
         }
         
+        if app.buttons["trkrDel"].exists {
+            app.buttons["trkrDel"].tap()
+            if app.alerts[expectedAlertTitle].waitForExistence(timeout: 3) {
+                return true
+            }
+        }
+        
         if app.menuItems["Delete"].exists {
             app.menuItems["Delete"].tap()
+            if app.alerts[expectedAlertTitle].waitForExistence(timeout: 3) {
+                return true
+            }
+        }
+        
+        if app.menuItems["trkrDel"].exists {
+            app.menuItems["trkrDel"].tap()
             if app.alerts[expectedAlertTitle].waitForExistence(timeout: 3) {
                 return true
             }
@@ -268,7 +282,7 @@ final class rTrackerUITests: XCTestCase {
             XCTAssertEqual(fnTotalLabel.label, "22.00")
         }
         
-        app.buttons["Back"].tap()
+        app.buttons["trkrBack"].tap()
     }
     
     func testTapGraphTap() throws {
@@ -293,7 +307,7 @@ final class rTrackerUITests: XCTestCase {
         let tdate = app.buttons["trkrDate"]
         //print(tdate.label)
         XCTAssertEqual(tdate.label, "12/18/14, 1:16 AM")
-        app.buttons["Back"].tap()
+        app.buttons["trkrBack"].tap()
     }
     
     func testTapGraphTap2() throws {
@@ -317,7 +331,7 @@ final class rTrackerUITests: XCTestCase {
         }
         XCUIDevice.shared.orientation = .portrait
         sleep(1)
-        app.buttons["Back"].tap()
+        app.buttons["trkrBack"].tap()
         sleep(1)
     }
     
@@ -630,7 +644,7 @@ final class rTrackerUITests: XCTestCase {
         XCTAssertEqual(odFld.value as! String, "1", "odometer field not third result 1")
         ffBtn.tap()
         
-        app.buttons["Back"].tap()
+        app.buttons["trkrBack"].tap()
     }
     
     func testSearchClear() throws {
@@ -671,7 +685,7 @@ final class rTrackerUITests: XCTestCase {
         
         // enter demo tracker, if old data then discard, exit and re-enter
         rTdemoCell.tap()
-        let exitTrkrBtn = app.buttons["Back"]
+        let exitTrkrBtn = app.buttons["trkrBack"]
         exitTrkrBtn.tap()
         let modAlert = app.alerts["👣rTracker demo modified"]
         if modAlert.exists {
@@ -684,7 +698,7 @@ final class rTrackerUITests: XCTestCase {
         let nField = app.textFields["👣rTracker demo_Number_numberfield"]
         nField.tap()
         nField.typeText("13.22")
-        app.buttons["Done"].tap()
+        app.buttons["number_done"].tap()
         
         // activate Yes! switch and verify
         let ySwitch = app.switches["👣rTracker demo_Yes!_switch"]
@@ -704,7 +718,8 @@ final class rTrackerUITests: XCTestCase {
         
         // test slider action enables and function counts result
         let slider = app.sliders["👣rTracker demo_Low|High_slider"]
-        slider.adjust(toNormalizedSliderPosition: 0.24)  // sets to 24 slider value
+        slider.adjust(toNormalizedSliderPosition: 0.30)  // value 23
+        sleep(1)  // Allow slider to settle
         XCTAssertEqual(sliderEnable.value as! String, "1", "The sliderEnable switch should be On")
         XCTAssertEqual(fnTotalLabel.label, "25.00", "function total is incorrect (slider) before save")
         
@@ -738,7 +753,7 @@ final class rTrackerUITests: XCTestCase {
             histWheel.swipeUp()  // or .swipeDown() depending on the direction needed
         }
         
-        let tbAdd = app.buttons["textBox_add"]
+        let tbAdd = app.buttons["tbox-add-sel-line"]
         tbAdd.tap()
         
         // add first contact
@@ -842,7 +857,7 @@ Kate Bell
         app.buttons["trkrMenu"].tap()
         app.buttons["Duplicate Entry to Now"].tap()  // make testTrackerDemoInstall() pass
         
-        app.buttons["Back"].tap()
+        app.buttons["trkrBack"].tap()
         modAlert.buttons["Save"].tap()
         sleep(1)
         
@@ -857,7 +872,7 @@ Kate Bell
         // enter demo tracker, if old data then discard, exit and re-enter
         rTdemoCell.tap()
         sleep(2)
-        let exitTrkrBtn = app.buttons["Back"]
+        let exitTrkrBtn = app.buttons["trkrBack"]
         exitTrkrBtn.tap()
         let modAlert = app.alerts["👣rTracker demo modified"]
         if modAlert.exists {
@@ -867,7 +882,7 @@ Kate Bell
         rTdemoCell.tap()
         sleep(1)
         app.swipeRight()
-        app.buttons["Delete"].tap()
+        app.buttons["trkrDel"].tap()
         app.alerts["Delete entry"].buttons["Yes, delete"].tap()
         exitTrkrBtn.tap()
     }
@@ -1403,7 +1418,7 @@ Kate Bell
             
             app.buttons["trkrSave"].tap()
         }
-        app.buttons["Back"].tap()
+        app.buttons["trkrBack"].tap()
     }
     
     func testNewTrackerGo() throws {
@@ -1440,7 +1455,7 @@ Kate Bell
         XCTAssertEqual(vfuncLabel.label, "34.54")
         app.swipeRight()
         XCTAssertEqual(vfuncLabel.label, "16.21")
-        app.buttons["Back"].tap()
+        app.buttons["trkrBack"].tap()
     }
     
     
@@ -1740,7 +1755,7 @@ Kate Bell
         secFld.tap()
         secFld.typeText("99\n")
         app.buttons["trkrSave"].tap()
-        app.buttons["Back"].tap()
+        app.buttons["trkrBack"].tap()
     }
     
     func testSavePrivate() throws {
@@ -1760,7 +1775,7 @@ Kate Bell
         let savAlert = app.alerts["Tracker saved"]
         savAlert.buttons["OK"].tap()
         
-        app.buttons["Back"].tap()
+        app.buttons["trkrBack"].tap()
         
         priv.tap()
         clr.tap()
@@ -1798,7 +1813,7 @@ Kate Bell
         let secFld = app.textFields["testTracker_secret_numberfield"]
         XCTAssertEqual(secFld.value as? String , "99")
         
-        app.buttons["Back"].tap()
+        app.buttons["trkrBack"].tap()
     }
     
     func testReminders() throws {
@@ -1985,13 +2000,13 @@ Kate Bell
         let etrkrCell1 = app.tables.cells[testr1]
         etrkrCell0.tap()
         sleep(1)
-        app.buttons["Back"].tap()
+        app.buttons["trkrBack"].tap()
         XCTAssert(etrkrCell0.exists)
         sleep(71)
         //etrkrCell = app.tables.cells[testr1]
         etrkrCell1.tap()
         sleep(1)
-        app.buttons["Back"].tap()
+        app.buttons["trkrBack"].tap()
         //etrkrCell = app.tables.cells[testr0]
         XCTAssert(etrkrCell0.exists)
         
@@ -2041,9 +2056,9 @@ Kate Bell
         vinfo.tap()
         let ihrcell = app.tables.cells["useT_🚴 Exercise_distance"]
         XCTAssert(ihrcell.exists)
-        app.buttons["Back"].tap()
+        app.buttons["trkrBack"].tap()
         XCTAssert(vinfo.exists)
-        app.buttons["Back"].tap()
+        app.buttons["trkrBack"].tap()
     }
 
     func testURLSchemeGo() throws {
@@ -2054,8 +2069,8 @@ Kate Bell
     func testShareAndOpenDemoTracker() throws {
         let rTdemoCell = app.tables.cells["trkr_👣rTracker demo"]
         rTdemoCell.tap()
-        let exitTrkrBtn = app.buttons["Back"]
-        let saveBtn = app.buttons["Save"]
+        let exitTrkrBtn = app.buttons["trkrBack"]
+        let saveBtn = app.buttons["trkrSave"]
         let ySwitch = app.switches["👣rTracker demo_Yes!_switch"]
         let trkrMenu = app.buttons["trkrMenu"]
         ySwitch.tap()
