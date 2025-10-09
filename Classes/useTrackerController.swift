@@ -1969,9 +1969,9 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         case shareDatabase = "Share Database (.sqlite3)"
         case saveToPC = "Save to app directory"
         case saveRecord = "Save unchanged record"
-        case duplicateEntry = "Duplicate entry to Now"
-        case ignoreRecord = "ignore record"
-        case restoreRecord = "restore record for charts"
+        case duplicateEntry = "Duplicate Entry to Now"
+        case ignoreRecord = "Ignore Record"
+        case restoreRecord = "Restore Record for Charts"
         case cancel = "Cancel"
     }
     
