@@ -126,7 +126,7 @@ class ppwV: UIView, UITextFieldDelegate {
     private var _cancelBtn: UIButton?
     var cancelBtn: UIButton? {
         if nil == _cancelBtn {
-            _cancelBtn = rTracker_resource.createCancelButton(target: self, action: #selector(cancelp)).uiButton
+            _cancelBtn = rTracker_resource.createCancelButton(target: self, action: #selector(cancelp), accId: "ppwv_cancel").uiButton
 
             // Use button's intrinsic content size and position properly
             let buttonSize = _cancelBtn?.intrinsicContentSize ?? CGSize.zero
@@ -150,7 +150,7 @@ class ppwV: UIView, UITextFieldDelegate {
     private var _confirmBtn: UIButton?
     var confirmBtn: UIButton? {
         if nil == _confirmBtn {
-            _confirmBtn = rTracker_resource.createDoneButton(target: self, action: #selector(confirmChangePassword)).uiButton
+            _confirmBtn = rTracker_resource.createDoneButton(target: self, action: #selector(confirmChangePassword), accId: "ppwv_confirm").uiButton
 
             // Use button's intrinsic content size and position properly
             let buttonSize = _confirmBtn?.intrinsicContentSize ?? CGSize.zero

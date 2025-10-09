@@ -1302,11 +1302,13 @@ class rTracker_resource: NSObject {
   // MARK: - Help System Functions
 
   /// Creates a modern info button for help
-  class func createHelpInfoButton(target: Any?, action: Selector) -> UIBarButtonItem {
+  class func createHelpInfoButton(target: Any?, action: Selector, accId: String) -> UIBarButtonItem {
     let button = UIButton(type: .infoDark)
     button.addTarget(target, action: action, for: .touchUpInside)
+    button.accessibilityIdentifier = accId
 
     let buttonItem = UIBarButtonItem(customView: button)
+    buttonItem.accessibilityIdentifier = accId
     if #available(iOS 26.0, *) {
       buttonItem.hidesSharedBackground = true
     }
@@ -1314,8 +1316,9 @@ class rTracker_resource: NSObject {
   }
 
   /// Creates a help button with custom text
-  class func createHelpButton(title: String, target: Any?, action: Selector) -> UIBarButtonItem {
+  class func createHelpButton(title: String, target: Any?, action: Selector, accId: String) -> UIBarButtonItem {
     let buttonItem = UIBarButtonItem(title: title, style: .plain, target: target, action: action)
+    buttonItem.accessibilityIdentifier = accId
     if #available(iOS 26.0, *) {
       buttonItem.hidesSharedBackground = true
     }
@@ -1327,6 +1330,7 @@ class rTracker_resource: NSObject {
     symbolName: String,
     target: Any?,
     action: Selector,
+    accId: String,
     backgroundColor: UIColor = .systemBackground,
     symbolColor: UIColor = .label,
     borderColor: UIColor? = nil,
@@ -1356,20 +1360,25 @@ class rTracker_resource: NSObject {
       }
 
       button.addTarget(target, action: action, for: .touchUpInside)
+      button.accessibilityIdentifier = accId
 
       let buttonItem = UIBarButtonItem(customView: button)
+      buttonItem.accessibilityIdentifier = accId
       buttonItem.hidesSharedBackground = true
       return buttonItem
     } else {
       // Pre-iOS 26: Use fallbacks
+      let buttonItem: UIBarButtonItem
       if let systemItem = fallbackSystemItem {
-        return UIBarButtonItem(barButtonSystemItem: systemItem, target: target, action: action)
+        buttonItem = UIBarButtonItem(barButtonSystemItem: systemItem, target: target, action: action)
       } else if let title = fallbackTitle {
-        return UIBarButtonItem(title: title, style: .plain, target: target, action: action)
+        buttonItem = UIBarButtonItem(title: title, style: .plain, target: target, action: action)
       } else {
         // Default fallback
-        return UIBarButtonItem(barButtonSystemItem: .done, target: target, action: action)
+        buttonItem = UIBarButtonItem(barButtonSystemItem: .done, target: target, action: action)
       }
+      buttonItem.accessibilityIdentifier = accId
+      return buttonItem
     }
   }
 
@@ -1377,11 +1386,12 @@ class rTracker_resource: NSObject {
   // Note: Privacy buttons now use createActionButton or createNavigationButton
 
   /// Creates a modern iOS 26 cancel button with X circle
-  class func createCancelButton(target: Any?, action: Selector) -> UIBarButtonItem {
+  class func createCancelButton(target: Any?, action: Selector, accId: String) -> UIBarButtonItem {
     return createStyledButton(
       symbolName: "xmark.circle",
       target: target,
       action: action,
+      accId: accId,
       fallbackTitle: "Cancel"
     )
   }
@@ -1390,7 +1400,7 @@ class rTracker_resource: NSObject {
   // Note: UseTracker buttons now use createActionButton with specific symbols and colors
 
   /// Creates a modern iOS 26 done button - yellow checkmark for primary saves, blue for secondary
-  class func createDoneButton(target: Any?, action: Selector, preferYellow: Bool = true, symbolSize: CGFloat = 22) -> UIBarButtonItem {
+  class func createDoneButton(target: Any?, action: Selector, accId: String, preferYellow: Bool = true, symbolSize: CGFloat = 22) -> UIBarButtonItem {
     if preferYellow {
       // Primary save action - use yellow checkmark like createSaveButton
       let burntYellow = UIColor(red: 0.85, green: 0.7, blue: 0.05, alpha: 1.0)
@@ -1400,6 +1410,7 @@ class rTracker_resource: NSObject {
         symbolName: "checkmark",
         target: target,
         action: action,
+        accId: accId,
         backgroundColor: burntYellow,
         symbolColor: yellowTintedWhite,
         borderColor: yellowTintedWhite,
@@ -1413,6 +1424,7 @@ class rTracker_resource: NSObject {
         symbolName: "checkmark.circle.fill",
         target: target,
         action: action,
+        accId: accId,
         symbolColor: .systemBlue,
         symbolSize: symbolSize,
         fallbackSystemItem: .done
@@ -1430,6 +1442,7 @@ class rTracker_resource: NSObject {
     target: Any?,
     action: Selector,
     symbolName: String,
+    accId: String,
     tintColor: UIColor = .label,
     symbolSize: CGFloat = 22,
     fallbackSystemItem: UIBarButtonItem.SystemItem? = nil,
@@ -1439,6 +1452,7 @@ class rTracker_resource: NSObject {
       symbolName: symbolName,
       target: target,
       action: action,
+      accId: accId,
       symbolColor: tintColor,
       symbolSize: symbolSize,
       fallbackSystemItem: fallbackSystemItem,
@@ -1451,6 +1465,7 @@ class rTracker_resource: NSObject {
     target: Any?,
     action: Selector,
     direction: NavigationDirection,
+    accId: String,
     style: NavigationStyle = .plain
   ) -> UIBarButtonItem {
     let symbolName: String
@@ -1475,6 +1490,7 @@ class rTracker_resource: NSObject {
       symbolName: symbolName,
       target: target,
       action: action,
+      accId: accId,
       fallbackTitle: fallbackTitle
     )
   }

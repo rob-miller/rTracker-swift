@@ -76,6 +76,7 @@ class CustomAccessoryView: UIView {
             target: self,
             action: #selector(addButtonPressed),
             symbolName: "plus.circle",
+            accId: "textBox_add",
             symbolSize: 24,
             fallbackTitle: "Add"
         ).uiButton!
@@ -101,6 +102,7 @@ class CustomAccessoryView: UIView {
             symbolName: "xmark.circle",
             target: self,
             action: #selector(clearButtonPressed),
+            accId: "textBox_clear",
             backgroundColor: .clear,
             symbolColor: .systemRed,
             symbolSize: 24,
@@ -761,7 +763,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         // Show save button only if text has been modified
         if currentText != originalText {
             if devc?.navigationItem.rightBarButtonItem == nil {
-                let saveButton = rTracker_resource.createDoneButton(target: self, action: #selector(saveAction(_:)))
+                let saveButton = rTracker_resource.createDoneButton(target: self, action: #selector(saveAction(_:)), accId: "textBox_save")
                 devc?.navigationItem.rightBarButtonItem = saveButton
             }
         } else {

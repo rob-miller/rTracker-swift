@@ -64,13 +64,11 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
 
         // cancel / save buttons on top nav bar -- can't seem to do in IB
 
-        let cancelBtn = rTracker_resource.createNavigationButton(target: self, action: #selector(btnCancel), direction: .left)
+        let cancelBtn = rTracker_resource.createNavigationButton(target: self, action: #selector(btnCancel), direction: .left, accId: "addTrkrCancel")
         navigationItem.leftBarButtonItem = cancelBtn
-        navigationItem.leftBarButtonItem?.accessibilityIdentifier = "addTrkrCancel"
 
-        let saveBtn = rTracker_resource.createDoneButton(target: self, action: #selector(btnSave))
+        let saveBtn = rTracker_resource.createDoneButton(target: self, action: #selector(btnSave), accId: "addTrkrSave")
         navigationItem.rightBarButtonItem = saveBtn
-        navigationItem.rightBarButtonItem?.accessibilityIdentifier = "addTrkrSave"
 
         // MARK: - UI Setup: Table View
         tableView = UITableView(frame: .zero, style: .plain)
@@ -90,15 +88,13 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         view.addSubview(toolbar)
 
         // Setup button
-        setupButton = rTracker_resource.createActionButton(target: self, action: #selector(btnSetup(_:)), symbolName: "slider.horizontal.3", fallbackSystemItem: .edit)
-        setupButton.accessibilityIdentifier = "addTrkrSetup"
+        setupButton = rTracker_resource.createActionButton(target: self, action: #selector(btnSetup(_:)), symbolName: "slider.horizontal.3", accId: "addTrkrSetup", fallbackSystemItem: .edit)
         setupButton.accessibilityLabel = "Setup"
         setupButton.accessibilityHint = "Configure tracker settings"
 
 
         // Copy button
-        copyButton = rTracker_resource.createActionButton(target: self, action: #selector(btnCopy(_:)), symbolName: "doc.on.doc", fallbackSystemItem: .action, fallbackTitle: "Copy")
-        copyButton.accessibilityIdentifier = "addTrkrCopy"
+        copyButton = rTracker_resource.createActionButton(target: self, action: #selector(btnCopy(_:)), symbolName: "doc.on.doc", accId: "addTrkrCopy", fallbackSystemItem: .action, fallbackTitle: "Copy")
         copyButton.accessibilityLabel = "Copy"
         copyButton.accessibilityHint = "Duplicate last item"
 

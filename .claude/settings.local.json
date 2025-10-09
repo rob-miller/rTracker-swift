@@ -13,7 +13,8 @@
       "Bash(git log:*)",
       "Bash(sort:*)",
       "SlashCommand(/save diagnostic logging for unwanted database entries bug)",
-      "SlashCommand(/save:*)"
+      "SlashCommand(/save:*)",
+      "Bash(xcodebuild:*)"
     ],
     "deny": []
   }

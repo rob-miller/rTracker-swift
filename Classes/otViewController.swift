@@ -237,7 +237,7 @@ private struct DoneButtonView: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> UIButton {
-        let barButton = rTracker_resource.createDoneButton(target: context.coordinator, action: #selector(Coordinator.tapped))
+        let barButton = rTracker_resource.createDoneButton(target: context.coordinator, action: #selector(Coordinator.tapped), accId: "otvc_done")
         if let button = barButton.uiButton {
             button.translatesAutoresizingMaskIntoConstraints = false
             button.setContentHuggingPriority(.required, for: .horizontal)

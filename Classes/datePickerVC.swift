@@ -152,6 +152,7 @@ class datePickerVC: UIViewController {
             target: self,
             action: #selector(entryNewBtnAction),
             symbolName: "doc.badge.plus",
+            accId: "datePicker_newEntry",
             symbolSize: 24,
             fallbackTitle: "New Entry"
         )
@@ -159,6 +160,7 @@ class datePickerVC: UIViewController {
         dateSetBtn = rTracker_resource.createDoneButton(
             target: self,
             action: #selector(dateSetBtnAction),
+            accId: "datePicker_setDate",
             preferYellow: false,
             symbolSize: 24
         )
@@ -167,6 +169,7 @@ class datePickerVC: UIViewController {
             target: self,
             action: #selector(dateGotoBtnAction),
             symbolName: "arrow.right.circle",
+            accId: "datePicker_gotoDate",
             symbolSize: 24,
             fallbackTitle: "Go to Date"
         )
@@ -175,6 +178,7 @@ class datePickerVC: UIViewController {
             symbolName: "xmark.circle",
             target: self,
             action: #selector(btnCancel(_:)),
+            accId: "datePicker_cancel",
             symbolSize: 24,
             fallbackTitle: "Cancel"
         )

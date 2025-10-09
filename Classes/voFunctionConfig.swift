@@ -970,7 +970,7 @@ extension voFunction {
             
             let scButtonItem = UIBarButtonItem(
                 customView: segmentedControl)
-            let fnHelpButtonItem = rTracker_resource.createHelpInfoButton(target: self, action: #selector(btnHelp))
+            let fnHelpButtonItem = rTracker_resource.createHelpInfoButton(target: self, action: #selector(btnHelp), accId: "voFunc_help")
 
             ctvovc?.toolBar.items = [
                 db,

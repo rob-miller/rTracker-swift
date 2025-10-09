@@ -231,9 +231,8 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         scroll.contentSize = CGSize(width: svsize.width, height: lasty + (3 * MARGIN))
         //[self.view addSubview:self.scroll];
 
-        let doneBtn = rTracker_resource.createDoneButton(target: self, action: #selector(btnDone(_:)))
+        let doneBtn = rTracker_resource.createDoneButton(target: self, action: #selector(btnDone(_:)), accId: "configtvo_done")
         doneBtn.accessibilityLabel = "Done"
-        doneBtn.accessibilityIdentifier = "configtvo_done"
 
         if vdlConfigVO && vo?.vtype == VOT_FUNC {
             (vo?.vos as? voFunction)?.funcVDL(self, donebutton: doneBtn)
@@ -246,9 +245,9 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
 
             var fnHelpButtonItem: UIBarButtonItem?
             if VOT_CHOICE == vo?.vtype {
-                fnHelpButtonItem = rTracker_resource.createHelpInfoButton(target: self, action: #selector(btnChoiceHelp))
+                fnHelpButtonItem = rTracker_resource.createHelpInfoButton(target: self, action: #selector(btnChoiceHelp), accId: "configtvo_choiceHelp")
             } else {
-                fnHelpButtonItem = rTracker_resource.createHelpInfoButton(target: self, action: #selector(btnInfoHelp))
+                fnHelpButtonItem = rTracker_resource.createHelpInfoButton(target: self, action: #selector(btnInfoHelp), accId: "configtvo_infoHelp")
             }
 
             var items: [UIBarButtonItem] = [doneBtn, flexibleSpaceButtonItem]

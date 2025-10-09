@@ -763,7 +763,7 @@ private struct DoneButtonView: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> UIButton {
-        let barButton = rTracker_resource.createDoneButton(target: context.coordinator, action: #selector(Coordinator.tapped))
+        let barButton = rTracker_resource.createDoneButton(target: context.coordinator, action: #selector(Coordinator.tapped), accId: "ahvc_done")
         if let button = barButton.uiButton {
             button.translatesAutoresizingMaskIntoConstraints = false
             button.setContentHuggingPriority(.required, for: .horizontal)
@@ -817,7 +817,7 @@ private struct HelpInfoButtonView: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> UIButton {
-        let barButton = rTracker_resource.createHelpInfoButton(target: context.coordinator, action: #selector(Coordinator.tapped))
+        let barButton = rTracker_resource.createHelpInfoButton(target: context.coordinator, action: #selector(Coordinator.tapped), accId: "ahvc_help")
         if let button = barButton.customView as? UIButton {
             context.coordinator.button = button
             return button

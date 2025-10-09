@@ -245,8 +245,8 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         
         // navigationbar setup
         let backButton = rejectable ?
-            rTracker_resource.createActionButton(target: self, action: #selector(addTrackerController.btnCancel), symbolName: "chevron.left.circle.fill", tintColor: .systemRed, fallbackTitle: "<") :
-            rTracker_resource.createNavigationButton(target: self, action: #selector(addTrackerController.btnCancel), direction: .left)
+            rTracker_resource.createActionButton(target: self, action: #selector(addTrackerController.btnCancel), symbolName: "chevron.left.circle.fill", accId: "trkrReject", tintColor: .systemRed, fallbackTitle: "<") :
+            rTracker_resource.createNavigationButton(target: self, action: #selector(addTrackerController.btnCancel), direction: .left, accId: "trkrBack")
         navigationItem.leftBarButtonItem = backButton
         
         // toolbar setup - defer to viewWillAppear to avoid constraint conflicts
@@ -1226,11 +1226,10 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     var _saveBtn: UIBarButtonItem?
     var saveBtn: UIBarButtonItem {
         if _saveBtn == nil {
-            _saveBtn = rTracker_resource.createDoneButton(target: self, action: #selector(addTrackerController.btnSave))
+            _saveBtn = rTracker_resource.createDoneButton(target: self, action: #selector(addTrackerController.btnSave), accId: "trkrSave")
 
             _saveBtn!.accessibilityLabel = "Save"
             _saveBtn!.accessibilityHint = "tap to save this entry"
-            _saveBtn!.accessibilityIdentifier = "trkrSave"
         }
         return _saveBtn!
     }
@@ -1239,16 +1238,14 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     var menuBtn: UIBarButtonItem {
         if _menuBtn == nil {
             if rejectable {
-                _menuBtn = rTracker_resource.createActionButton(target: self, action: #selector(btnAccept), symbolName: "arrow.down.doc.fill", tintColor: .systemGreen, fallbackTitle: "Accept")
+                _menuBtn = rTracker_resource.createActionButton(target: self, action: #selector(btnAccept), symbolName: "arrow.down.doc.fill", accId: "trkrAccept", tintColor: .systemGreen, fallbackTitle: "Accept")
                 _menuBtn!.accessibilityLabel = "Accept"
                 _menuBtn!.accessibilityHint = "tap to accept importing this tracker"
-                _menuBtn!.accessibilityIdentifier = "trkrAccept"
             } else {
                 let paleBlue = UIColor(red: 0.4, green: 0.6, blue: 0.9, alpha: 1.0)
-                _menuBtn = rTracker_resource.createActionButton(target: self, action: #selector(btnMenu), symbolName: "filemenu.and.pointer.arrow", tintColor: paleBlue, fallbackSystemItem: .action)
+                _menuBtn = rTracker_resource.createActionButton(target: self, action: #selector(btnMenu), symbolName: "filemenu.and.pointer.arrow", accId: "trkrMenu", tintColor: paleBlue, fallbackSystemItem: .action)
                 _menuBtn!.accessibilityLabel = "Share Menu"
                 _menuBtn!.accessibilityHint = "tap to show sharing options"
-                _menuBtn!.accessibilityIdentifier = "trkrMenu"
             }
         }
 
@@ -1862,10 +1859,9 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     var calBtn: UIBarButtonItem {
         if _calBtn == nil {
             let paleGreen = UIColor(red: 0.4, green: 0.8, blue: 0.4, alpha: 1.0)
-            _calBtn = rTracker_resource.createActionButton(target: self, action: #selector(btnCal), symbolName: "calendar", tintColor: paleGreen, fallbackTitle: "Cal")
+            _calBtn = rTracker_resource.createActionButton(target: self, action: #selector(btnCal), symbolName: "calendar", accId: "trkrCal", tintColor: paleGreen, fallbackTitle: "Cal")
             _calBtn!.accessibilityLabel = "Calendar"
             _calBtn!.accessibilityHint = "tap to select entries by date"
-            _calBtn!.accessibilityIdentifier = "trkrCal"
         }
 
         return _calBtn!
@@ -1875,10 +1871,9 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     var searchBtn: UIBarButtonItem {
         if _searchBtn == nil {
             let blue = UIColor(red: 0.0, green: 0.0, blue: 0.8, alpha: 1.0)
-            _searchBtn = rTracker_resource.createActionButton(target: self, action: #selector(btnSearch), symbolName: "magnifyingglass.circle", tintColor: blue, fallbackTitle: "Search")
+            _searchBtn = rTracker_resource.createActionButton(target: self, action: #selector(btnSearch), symbolName: "magnifyingglass.circle", accId: "trkrSearch", tintColor: blue, fallbackTitle: "Search")
             _searchBtn!.accessibilityLabel = "Search"
             _searchBtn!.accessibilityHint = "tap for search instructions"
-            _searchBtn!.accessibilityIdentifier = "trkrSearch"
         }
 
         return _searchBtn!
@@ -1895,7 +1890,7 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     var _delBtn: UIBarButtonItem?
     var delBtn: UIBarButtonItem {
         if _delBtn == nil {
-            _delBtn = rTracker_resource.createActionButton(target: self, action: #selector(btnDel), symbolName: "xmark.bin", tintColor: .systemRed, fallbackSystemItem: .trash)
+            _delBtn = rTracker_resource.createActionButton(target: self, action: #selector(btnDel), symbolName: "xmark.bin", accId: "trkrDel", tintColor: .systemRed, fallbackSystemItem: .trash)
         }
 
         return _delBtn!
@@ -1904,10 +1899,9 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     var _skip2EndBtn: UIBarButtonItem?
     var skip2EndBtn: UIBarButtonItem {
         if _skip2EndBtn == nil {
-            _skip2EndBtn = rTracker_resource.createActionButton(target: self, action: #selector(btnSkip2End), symbolName: "chevron.forward.to.line", fallbackSystemItem: .fastForward)
+            _skip2EndBtn = rTracker_resource.createActionButton(target: self, action: #selector(btnSkip2End), symbolName: "chevron.forward.to.line", accId: "trkrSkip", fallbackSystemItem: .fastForward)
             _skip2EndBtn!.accessibilityLabel = "Skip"
             _skip2EndBtn!.accessibilityHint = "tap to skip to new entry"
-            _skip2EndBtn!.accessibilityIdentifier = "trkrSkip"
         }
 
         return _skip2EndBtn!
@@ -1947,10 +1941,9 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     var _createChartBtn: UIBarButtonItem?
     var createChartBtn: UIBarButtonItem {
         if _createChartBtn == nil {
-            _createChartBtn = rTracker_resource.createActionButton(target: self, action: #selector(btnCreateChart), symbolName: "chart.line.uptrend.xyaxis", fallbackTitle: "Chart")
+            _createChartBtn = rTracker_resource.createActionButton(target: self, action: #selector(btnCreateChart), symbolName: "chart.line.uptrend.xyaxis", accId: "trkrChart", fallbackTitle: "Chart")
             _createChartBtn!.accessibilityLabel = "Chart"
             _createChartBtn!.accessibilityHint = "tap to view data charts"
-            _createChartBtn!.accessibilityIdentifier = "trkrChart"
         }
         return _createChartBtn!
     }

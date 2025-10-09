@@ -100,12 +100,10 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
 
     override func viewDidLoad() {
 
-        let cancelBtn = rTracker_resource.createNavigationButton(target: self, action: #selector(addTrackerController.btnCancel), direction: .left)
-        cancelBtn.accessibilityIdentifier = "avoCancel"
+        let cancelBtn = rTracker_resource.createNavigationButton(target: self, action: #selector(addTrackerController.btnCancel), direction: .left, accId: "avoCancel")
         navigationItem.leftBarButtonItem = cancelBtn
 
-        let saveBtn = rTracker_resource.createDoneButton(target: self, action: #selector(addTrackerController.btnSave))
-        saveBtn.accessibilityIdentifier = "avoSave"
+        let saveBtn = rTracker_resource.createDoneButton(target: self, action: #selector(addTrackerController.btnSave), accId: "avoSave")
         navigationItem.rightBarButtonItem = saveBtn
 
         // Create UI elements programmatically
@@ -251,7 +249,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
         view.addSubview(toolbar)
 
         // Add modern edit button to toolbar
-        let setupBtn = rTracker_resource.createActionButton(target: self, action: #selector(btnSetup(_:)), symbolName: "slider.horizontal.3", fallbackSystemItem: .edit)
+        let setupBtn = rTracker_resource.createActionButton(target: self, action: #selector(btnSetup(_:)), symbolName: "slider.horizontal.3", accId: "avoSetup", fallbackSystemItem: .edit)
         setupBtn.accessibilityLabel = "Setup"
         setupBtn.accessibilityHint = "Configure value object settings"
         toolbar.items = [setupBtn]

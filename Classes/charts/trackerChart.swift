@@ -426,7 +426,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
 
         let toolbar = UIToolbar()
         toolbar.sizeToFit()
-        let doneButton = rTracker_resource.createDoneButton(target: self, action: #selector(dismissMarklineKeyboard))
+        let doneButton = rTracker_resource.createDoneButton(target: self, action: #selector(dismissMarklineKeyboard), accId: "chart_marklineDone")
         let flexSpace = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
         toolbar.items = [flexSpace, doneButton]
         marklineTextField.inputAccessoryView = toolbar
@@ -972,7 +972,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         pickerContainer.addSubview(pickerView)
         
         // Create done button using unified button system - use blue for secondary done (not primary save)
-        let doneButtonItem = rTracker_resource.createDoneButton(target: self, action: #selector(dismissPicker), preferYellow: false)
+        let doneButtonItem = rTracker_resource.createDoneButton(target: self, action: #selector(dismissPicker), accId: "chart_pickerDone", preferYellow: false)
         var doneButton: UIButton?
         if let button = doneButtonItem.uiButton {
             button.translatesAutoresizingMaskIntoConstraints = false
@@ -981,7 +981,7 @@ class TrackerChart: UIViewController, UIPickerViewDelegate, UIPickerViewDataSour
         }
 
         // Create cancel button using unified button system
-        let cancelButtonItem = rTracker_resource.createCancelButton(target: self, action: #selector(cancelPicker))
+        let cancelButtonItem = rTracker_resource.createCancelButton(target: self, action: #selector(cancelPicker), accId: "chart_pickerCancel")
         var cancelButton: UIButton?
         if let button = cancelButtonItem.uiButton {
             button.translatesAutoresizingMaskIntoConstraints = false
