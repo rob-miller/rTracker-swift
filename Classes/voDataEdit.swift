@@ -175,9 +175,9 @@ class voDataEdit: UIViewController, UITextViewDelegate {
     class func getInitTVF(_ vc: UIViewController) -> CGRect {
         var frame = vc.view.frame
 
-        let frame2 = vc.navigationController!.navigationBar.frame
+        //let frame2 = vc.navigationController!.navigationBar.frame
         //DBGLog(String("nvb rect: \(frame2)"))
-        let frame3 = vc.navigationController!.toolbar.frame
+        //let frame3 = vc.navigationController!.toolbar.frame
         //DBGLog(String("tb rect: \(frame3))"))
 
         // Use safe area insets for more reliable layout
