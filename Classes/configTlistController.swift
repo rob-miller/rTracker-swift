@@ -649,6 +649,11 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
             completion(true)
         }
         deleteAction.backgroundColor = .systemRed
+        //deleteAction.accessibilityIdentifier = "deleteTracker_\(tlist?.topLayoutNames[row] ?? "")"
+        deleteAction.image = UIImage(systemName: "trash")
+        deleteAction.accessibilityLabel = "Delete"
+        deleteAction.accessibilityHint = "delete this tracker or just its records"
+
         
         // Check if tracker is hidden
         let isHidden = tlist?.isTrackerHidden(toid) ?? false
@@ -665,6 +670,10 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
         }
         hideAction.backgroundColor = isHidden ? .systemGreen : .systemBlue
         hideAction.image = UIImage(systemName: isHidden ? "eye" : "eye.slash")
+        //hideAction.accessibilityIdentifier = isHidden ? "revealTracker_\(tlist?.topLayoutNames[row] ?? "")" : "hideTracker_\(tlist?.topLayoutNames[row] ?? "")"
+        hideAction.accessibilityLabel = isHidden ? "Reveal" : "Hide"
+        hideAction.accessibilityHint = isHidden ? "unhide this tracker" : "hide this tracker from normal view"
+
         
         // Configure swipe action
         let configuration = UISwipeActionsConfiguration(actions: [deleteAction, hideAction])
