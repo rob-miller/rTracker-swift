@@ -14,7 +14,8 @@
       "Bash(sort:*)",
       "SlashCommand(/save diagnostic logging for unwanted database entries bug)",
       "SlashCommand(/save:*)",
-      "Bash(xcodebuild:*)"
+      "Bash(xcodebuild:*)",
+      "Bash(cat:*)"
     ],
     "deny": []
   }
