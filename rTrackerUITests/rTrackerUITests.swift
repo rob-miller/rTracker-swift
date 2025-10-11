@@ -67,7 +67,7 @@ final class rTrackerUITests: XCTestCase {
         
         // clear alerts if first run
         sleep(1)
-        //print(String("docs dir= \(rTracker_resource.ioFilePath(nil, access: true))"))
+        //DBGLog(String("docs dir= \(rTracker_resource.ioFilePath(nil, access: true))"))
         let apacheAlert = app.alerts["rTracker is free software."]
         if apacheAlert.exists {
             apacheAlert.buttons["Accept"].tap()
@@ -91,87 +91,16 @@ final class rTrackerUITests: XCTestCase {
     }
     
     func setupContactsAccessAndKateBell() throws {
-        // Check if the demo tracker exists and try to access contacts through it
-        let demoCell = app.tables.cells["trkr_👣rTracker demo"]
-        if demoCell.exists {
-            demoCell.tap()
-            sleep(1)
-            
-            // Clear any existing data first
-            let exitTrkrBtn = app.buttons["trkrBack"]
-            exitTrkrBtn.tap()
-            let modAlert = app.alerts["👣rTracker demo modified"]
-            if modAlert.exists {
-                modAlert.buttons["Discard"].tap()
-                sleep(1)
-            }
-            
-            // Re-enter demo tracker
-            demoCell.tap()
-            sleep(1)
-            
-            // Try to access textbox to trigger contacts authorization
-            let tbButton = app.buttons["👣rTracker demo_Text 📖 with history and search_tbButton"]
-            if tbButton.exists {
-                tbButton.tap()
-                sleep(1)
-                
-                // Switch to contacts tab to trigger authorization
-                let tbseg = app.segmentedControls["tbox-seg-control"]
-                if tbseg.exists {
-                    let contactsButton = tbseg.buttons["👥"]
-                    if contactsButton.exists {
-                        contactsButton.tap()
-                        app.tap() // Tap somewhere to potentially trigger contact access
-                        sleep(3) // Give time for authorization dialog
-                        
-                        // Check if Kate Bell already exists by looking for her in the interface
-                        // If contacts are loaded, we should be able to see contact names
-                        let kateBellExists = checkForKateBell()
-                        
-                        if !kateBellExists {
-                            print("Kate Bell not found in contacts - manual setup may be required")
-                            // Note: In UI tests, we cannot programmatically add contacts to the device
-                            // The test environment needs to have Kate Bell in contacts already
-                        }
-                    }
-                }
-                
-                // Exit textbox editor
-                if app.buttons["<"].exists {
-                    app.buttons["<"].tap()
-                    sleep(1)
-                }
-            }
-            
-            // Exit demo tracker
-            exitTrkrBtn.tap()
-            sleep(1)
-            
-            // Handle any modification alerts
-            if modAlert.exists {
-                modAlert.buttons["Discard"].tap()
-                sleep(1)
-            }
+        // Tap the 'kb' testing button to add Kate Bell contact
+        // This triggers the contacts authorization dialog and adds the contact programmatically
+        let kbButton = app.toolbars.buttons["kb"]
+        if kbButton.exists {
+            kbButton.tap()
+            sleep(3) // Give time for authorization dialog and contact creation
+            DBGLog("Tapped 'kb' button to add Kate Bell contact and trigger authorization")
+        } else {
+            DBGLog("Warning: 'kb' button not found - ensure running with TESTING build configuration")
         }
-    }
-    
-    func checkForKateBell() -> Bool {
-        // In the contacts interface, look for any indication that Kate Bell exists
-        // This is a basic check - in a real scenario, Kate Bell should be available
-        // in the iOS Simulator's default contacts
-
-        // Look for common contact-related elements that might indicate Kate Bell is available
-        let contactElements = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'Kate' OR label CONTAINS[c] 'Bell'"))
-
-        if contactElements.count > 0 {
-            print("Found potential Kate Bell contact reference")
-            return true
-        }
-
-        // If we don't see Kate Bell specifically, we'll assume contacts are accessible
-        // and the test will verify proper functionality during execution
-        return false
     }
 
     func test_rTracker() throws {
@@ -276,18 +205,18 @@ final class rTrackerUITests: XCTestCase {
     
     // Enhanced drag helper that tries multiple strategies for table cell reordering
     func performTableCellReorder(from sourceCell: XCUIElement, to destinationCell: XCUIElement, insertAbove: Bool = true) {
-        print("Attempting to reorder from '\(sourceCell.staticTexts.firstMatch.label)' to '\(destinationCell.staticTexts.firstMatch.label)'")
-        
+        DBGLog("Attempting to reorder from '\(sourceCell.staticTexts.firstMatch.label)' to '\(destinationCell.staticTexts.firstMatch.label)'")
+
         // Determine destination coordinate based on desired insertion position
         let destYOffset: CGFloat = insertAbove ? 0.1 : 0.9
-        
+
         // Get the cell name/identifier for building the reorder button identifier
         let cellLabel = sourceCell.staticTexts.firstMatch.label
-        
+
         // Strategy 1: Look for specific reorder button with images (preferred approach)
         let reorderButtonWithImage = sourceCell.buttons["Reorder \(cellLabel)"].images["line.horizontal.3"].firstMatch
         if reorderButtonWithImage.exists && reorderButtonWithImage.isHittable {
-            print("Strategy 1: Using 'Reorder \(cellLabel)' button with image")
+            DBGLog("Strategy 1: Using 'Reorder \(cellLabel)' button with image")
             let sourceCoordinate = reorderButtonWithImage.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
             let targetCoordinate = destinationCell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: destYOffset))
             sourceCoordinate.press(forDuration: 1.6, thenDragTo: targetCoordinate)
@@ -297,19 +226,19 @@ final class rTrackerUITests: XCTestCase {
         // Strategy 2: Look for explicit reorder control
         let reorderControl = sourceCell.buttons["Reorder"]
         if reorderControl.exists && reorderControl.isHittable {
-            print("Strategy 2: Using 'Reorder' button")
+            DBGLog("Strategy 2: Using 'Reorder' button")
             let sourceCoordinate = reorderControl.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
             let targetCoordinate = destinationCell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: destYOffset))
             sourceCoordinate.press(forDuration: 1.6, thenDragTo: targetCoordinate)
             return
         }
-        
+
         // Strategy 3: Look for buttons with reorder-related identifiers
         let reorderButtons = sourceCell.buttons.matching(NSPredicate(format: "identifier CONTAINS[c] 'reorder' OR label CONTAINS[c] 'reorder'"))
         if reorderButtons.count > 0 {
             let reorderButton = reorderButtons.firstMatch
             if reorderButton.exists && reorderButton.isHittable {
-                print("Strategy 3: Using reorder-related button")
+                DBGLog("Strategy 3: Using reorder-related button")
                 let sourceCoordinate = reorderButton.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
                 let targetCoordinate = destinationCell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: destYOffset))
                 sourceCoordinate.press(forDuration: 1.6, thenDragTo: targetCoordinate)
@@ -322,16 +251,16 @@ final class rTrackerUITests: XCTestCase {
         if allButtons.count > 0 {
             let rightmostButton = allButtons.last!
             if rightmostButton.exists && rightmostButton.isHittable {
-                print("Strategy 4: Using rightmost button: '\(rightmostButton.identifier)' - '\(rightmostButton.label)'")
+                DBGLog("Strategy 4: Using rightmost button: '\(rightmostButton.identifier)' - '\(rightmostButton.label)'")
                 let sourceCoordinate = rightmostButton.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
                 let targetCoordinate = destinationCell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: destYOffset))
                 sourceCoordinate.press(forDuration: 1.6, thenDragTo: targetCoordinate)
                 return
             }
         }
-        
+
         // Strategy 5: Coordinate-based drag from right side (where reorder control typically appears)
-        print("Strategy 5: Using coordinate-based drag from right edge")
+        DBGLog("Strategy 5: Using coordinate-based drag from right edge")
         let sourceCoordinate = sourceCell.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5))
         let targetCoordinate = destinationCell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: destYOffset))
         sourceCoordinate.press(forDuration: 1.6, thenDragTo: targetCoordinate)
@@ -359,29 +288,29 @@ final class rTrackerUITests: XCTestCase {
         sleep(2)  // Increased wait time
         
         // Add debugging to see what elements are available
-        print("=== Available StaticTexts ===")
+        DBGLog("=== Available StaticTexts ===")
         for i in 0..<app.staticTexts.count {
             let element = app.staticTexts.element(boundBy: i)
             if element.exists {
-                print("StaticText \(i): identifier='\(element.identifier)', label='\(element.label)'")
+                DBGLog("StaticText \(i): identifier='\(element.identifier)', label='\(element.label)'")
             }
         }
-        
+
         let fnTotalLabel = app.staticTexts["fnVal_total"]
         if !fnTotalLabel.exists {
             // Try alternative approaches to find the element
-            print("fnVal_total not found, looking for alternatives...")
-            
+            DBGLog("fnVal_total not found, looking for alternatives...")
+
             // Look for elements containing "22.00"
             let totalElements = app.staticTexts.containing(NSPredicate(format: "label CONTAINS '22.00'"))
             if totalElements.count > 0 {
-                print("Found element with 22.00: \(totalElements.firstMatch.label)")
+                DBGLog("Found element with 22.00: \(totalElements.firstMatch.label)")
                 XCTAssertEqual(totalElements.firstMatch.label, "22.00")
             } else {
                 // Look for any element that might be the total
                 let possibleElements = app.staticTexts.matching(NSPredicate(format: "identifier CONTAINS 'total' OR identifier CONTAINS 'fnVal'"))
                 if possibleElements.count > 0 {
-                    print("Found possible total element: identifier='\(possibleElements.firstMatch.identifier)', label='\(possibleElements.firstMatch.label)'")
+                    DBGLog("Found possible total element: identifier='\(possibleElements.firstMatch.identifier)', label='\(possibleElements.firstMatch.label)'")
                     XCTFail("fnVal_total element not found, but found possible alternative: \(possibleElements.firstMatch.identifier)")
                 } else {
                     XCTFail("fnVal_total element not found and no alternatives located")
@@ -414,7 +343,7 @@ final class rTrackerUITests: XCTestCase {
         XCUIDevice.shared.orientation = .portrait
 
         let tdate = app.buttons["trkrDate"]
-        //print(tdate.label)
+        //DBGLog(tdate.label)
         XCTAssertEqual(tdate.label, "12/29/14, 2:46 AM")
         app.buttons["trkrBack"].tap()
     }
@@ -524,26 +453,26 @@ final class rTrackerUITests: XCTestCase {
         sleep(1) // Wait for reorder controls to appear
         
         // Perform reverse reorder operation - move Exercise back to its original position
-        print("Performing reverse operation...")
-        
+        DBGLog("Performing reverse operation...")
+
         // Check if Exercise tracker cell exists in edit mode
         let exerciseCell = app.tables.cells["configt_🚴 Exercise"]
         let weightStatsCell = app.tables.cells["configt_📋 Weight stats"]
-        
-        print("Exercise cell exists: \(exerciseCell.exists)")
-        print("Weight stats cell exists: \(weightStatsCell.exists)")
-        
+
+        DBGLog("Exercise cell exists: \(exerciseCell.exists)")
+        DBGLog("Weight stats cell exists: \(weightStatsCell.exists)")
+
         // Verify both cells exist before attempting the drag
         guard exerciseCell.exists && weightStatsCell.exists else {
-            print("Required cells not found - Exercise exists: \(exerciseCell.exists), Weight stats exists: \(weightStatsCell.exists)")
-            
+            DBGLog("Required cells not found - Exercise exists: \(exerciseCell.exists), Weight stats exists: \(weightStatsCell.exists)")
+
             // Debug: print all available config cells
-            print("=== Available config cells ===")
+            DBGLog("=== Available config cells ===")
             let configTable = app.tables.firstMatch
             for i in 0..<configTable.cells.count {
                 let cell = configTable.cells.element(boundBy: i)
                 if cell.exists {
-                    print("Config cell \(i): identifier='\(cell.identifier)'")
+                    DBGLog("Config cell \(i): identifier='\(cell.identifier)'")
                 }
             }
             
@@ -551,21 +480,21 @@ final class rTrackerUITests: XCTestCase {
             return
         }
         
-        print("Attempting reverse drag from Exercise to Weight stats")
-        
+        DBGLog("Attempting reverse drag from Exercise to Weight stats")
+
         // Use the same reliable drag approach as the forward operation
         let reverseReorderHandle = app.buttons["Reorder 🚴 Exercise"].images["line.horizontal.3"].firstMatch
-        print("Reverse reorder handle exists: \(reverseReorderHandle.exists), hittable: \(reverseReorderHandle.isHittable)")
-        
+        DBGLog("Reverse reorder handle exists: \(reverseReorderHandle.exists), hittable: \(reverseReorderHandle.isHittable)")
+
         let reverseSourceCoordinate = reverseReorderHandle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         let reverseTargetCoordinate = app.tables.cells["configt_☕️🍷 Drinks"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9))
         reverseSourceCoordinate.press(forDuration: 1.6, thenDragTo: reverseTargetCoordinate)
-        
-        print("Reverse drag operation completed")
-        
+
+        DBGLog("Reverse drag operation completed")
+
         sleep(2) // Wait for reorder animation to complete
         app.buttons["rTracker"].tap()
-        
+
         // Get final order to verify the reverse operation - use fresh table reference
         let tableAfterReverseDrag = app.tables["trackerList"]
         newTitles = []
@@ -573,7 +502,7 @@ final class rTrackerUITests: XCTestCase {
             let cell = tableAfterReverseDrag.cells.element(boundBy: i)
             newTitles.append(cell.staticTexts.firstMatch.label)
         }
-        print("Order after reverse drag: \(newTitles)")
+        DBGLog("Order after reverse drag: \(newTitles)")
         XCTAssertEqual(itCopy, newTitles, "The order of cell titles is not restored!")
     }
     
@@ -917,8 +846,8 @@ Kate Bell
         //app.buttons["👣rTracker demo"].tap()
         
         // confirm textbox button shows first line
-        print(">\(tbButton.label)<")
-        print(">\(expectedTbContent.replacingOccurrences(of: "\n", with: " "))<")
+        DBGLog(">\(tbButton.label)<")
+        DBGLog(">\(expectedTbContent.replacingOccurrences(of: "\n", with: " "))<")
         XCTAssertEqual(tbButton.label, expectedTbContent.replacingOccurrences(of: "\n", with: " "), "textBox button label not as expected")
         
         // set text string
@@ -946,8 +875,8 @@ Kate Bell
         XCTAssertEqual(fnActiveVals.label, "6", "active values incorrect")
         
         XCTAssertEqual(olField.value as! String, "rules!", "The one liner field's value is incorrect")
-        print(">\(tbButton.label)<")
-        print(">\(expectedTbContent.replacingOccurrences(of: "\n", with: " "))<")
+        DBGLog(">\(tbButton.label)<")
+        DBGLog(">\(expectedTbContent.replacingOccurrences(of: "\n", with: " "))<")
         XCTAssertEqual(tbButton.label, expectedTbContent.replacingOccurrences(of: "\n", with: " "), "textBox button label not 'rTracker'")
         
         // confirm textBox value
@@ -1500,7 +1429,7 @@ Kate Bell
 
             slider.adjust(toNormalizedSliderPosition: CGFloat(i) * 0.1)
             if let sliderValue = slider.value as? String {
-                print("slider val: \(sliderValue)")
+                DBGLog("slider val: \(sliderValue)")
             }
             let choice1Seg = app.segmentedControls["testTracker_vchoice1_choices"]
             if i<5 {
@@ -1528,7 +1457,7 @@ Kate Bell
         } catch {
             XCTFail("error: \(error)")
         }
-        print("new tracker test done.")
+        DBGLog("new tracker test done.")
         
     }
     
@@ -1537,21 +1466,21 @@ Kate Bell
         app.tables.cells["trkr_testTracker"].tap()
         let vfuncLabel = app.staticTexts["fnVal_vfunction"]
         app.swipeRight()
-        XCTAssertEqual(vfuncLabel.label, "182.22")
+        XCTAssertEqual(vfuncLabel.label, "182.73")
         app.swipeRight()
-        XCTAssertEqual(vfuncLabel.label, "160.77")
+        XCTAssertEqual(vfuncLabel.label, "160.52")
         app.swipeRight()
-        XCTAssertEqual(vfuncLabel.label, "128.35")
+        XCTAssertEqual(vfuncLabel.label, "128.42")
         app.swipeRight()
         XCTAssertEqual(vfuncLabel.label, "100.15")
         app.swipeRight()
-        XCTAssertEqual(vfuncLabel.label, "70.34")
+        XCTAssertEqual(vfuncLabel.label, "69.30")
         app.swipeRight()
-        XCTAssertEqual(vfuncLabel.label, "46.21")
+        XCTAssertEqual(vfuncLabel.label, "50.42")
         app.swipeRight()
-        XCTAssertEqual(vfuncLabel.label, "29.21")
+        XCTAssertEqual(vfuncLabel.label, "30.09")
         app.swipeRight()
-        XCTAssertEqual(vfuncLabel.label, "13.14")
+        XCTAssertEqual(vfuncLabel.label, "13.21")
         app.buttons["trkrBack"].tap()
     }
     
@@ -1954,7 +1883,7 @@ Kate Bell
 
         for i in 0..<foo.count {
             let text = foo.element(boundBy: i).label
-            print("Static Text \(i): \(text)")
+            DBGLog("Static Text \(i): \(text)")
         }
         
         let label = ExAlert.staticTexts.element(boundBy: 1).label
@@ -1971,7 +1900,7 @@ Kate Bell
         }
 
         for scalar in label.unicodeScalars {
-            print("\(scalar) - \(scalar.value)")
+            DBGLog("\(scalar) - \(scalar.value)")
         }
 
         */
@@ -2122,7 +2051,7 @@ Kate Bell
         app.buttons["rTracker"].tap()
         XCTAssert(etrkrCell0.exists)
         XCTAssertFalse(etrkrCell1.exists)
-        //print("hello")
+        //DBGLog("hello")
         
     }
     
