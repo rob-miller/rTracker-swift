@@ -118,6 +118,8 @@ func coloredFileName(_ fileName: String) -> String {
         color = .MAGENTA
     case "healthKitSupport":
         color = .ORANGE
+    case "rTrackerUITests":
+        color = .VIOLET
     default:
         return fileName
     }
