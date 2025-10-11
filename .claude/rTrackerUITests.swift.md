@@ -39,6 +39,10 @@ UI test suite for the rTracker iOS application using XCTest framework. Contains 
 - Reverted to standard `slider.adjust(toNormalizedSliderPosition:)` despite known unreliability
 
 ## Current Issues & TODOs
+- **COMPLETED 2025-10-10**: Simplified `setupContactsAccessAndKateBell()` to use 'kb' testing button
+  - Replaced complex demo tracker navigation with simple button tap
+  - Now directly taps toolbar 'kb' button to trigger contacts authorization and add Kate Bell
+  - Much simpler and more reliable approach
 - **ABANDONED 2025-10-10**: Attempts to work around unreliable XCTest slider APIs
   - Tried: Linear compensation, binary search, element-relative taps, absolute coordinate taps, drag gestures
   - **ALL FAILED**: No approach could reliably set slider to specific values
@@ -58,7 +62,13 @@ UI test suite for the rTracker iOS application using XCTest framework. Contains 
 - c0e4095: Tests for URL scheme; UISwitch changes
 
 ## Last Updated
-2025-10-10: **ABANDONED** all attempts to work around XCTest slider APIs after exhaustive testing:
+2025-10-10: **SIMPLIFIED** `setupContactsAccessAndKateBell()` to use 'kb' testing button:
+- Replaced ~60 lines of complex demo tracker navigation with simple 'kb' button tap
+- Function now just taps toolbar button to trigger contacts authorization and add Kate Bell
+- Much more reliable and maintainable approach
+- Requires TESTING build configuration for 'kb' button to be available
+
+**EARLIER 2025-10-10**: **ABANDONED** all attempts to work around XCTest slider APIs after exhaustive testing:
 
 ### Problems Discovered
 1. **Drag gestures**: Triggered app's swipe-right recognizer → "Do you want to save?" alerts
