@@ -137,9 +137,16 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     func refreshToolBar(_ animated: Bool) {
         //DBGLog(@"refresh tool bar, noshow= %d",(PVNOSHOW == self.privacyObj.showing));
 #if TESTING
-        setToolbarItems(
-            [out2inBtn, xprivBtn, tstBtn, kbBtn, flexibleSpaceButtonItem, privateBtn].compactMap { $0 },
-            animated: animated)
+        // Testing code compiles in debug builds, but only shows UI when launched by UI tests
+        if ProcessInfo.processInfo.arguments.contains("--uitesting") {
+            setToolbarItems(
+                [out2inBtn, xprivBtn, tstBtn, kbBtn, flexibleSpaceButtonItem, privateBtn].compactMap { $0 },
+                animated: animated)
+        } else {
+            setToolbarItems(
+                [flexibleSpaceButtonItem, privateBtn].compactMap { $0 },
+                animated: animated)
+        }
 #else
         setToolbarItems(
             [flexibleSpaceButtonItem, privateBtn].compactMap { $0 },
