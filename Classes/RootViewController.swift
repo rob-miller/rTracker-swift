@@ -61,6 +61,7 @@ import UserNotifications
 import Foundation
 import AVFoundation
 import ZIPFoundation
+import Contacts
 
 extension Notification.Name {
     static let notifyOpenTracker = Notification.Name("notifyOpenTracker")
@@ -137,7 +138,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         //DBGLog(@"refresh tool bar, noshow= %d",(PVNOSHOW == self.privacyObj.showing));
 #if TESTING
         setToolbarItems(
-            [out2inBtn, xprivBtn, tstBtn, flexibleSpaceButtonItem, privateBtn].compactMap { $0 },
+            [out2inBtn, xprivBtn, tstBtn, kbBtn, flexibleSpaceButtonItem, privateBtn].compactMap { $0 },
             animated: animated)
 #else
         setToolbarItems(
@@ -763,11 +764,29 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
             if #available(iOS 26.0, *) {
                 _tstBtn!.hidesSharedBackground = true  // Remove white container background
             }
-            
+
             _tstBtn!.accessibilityLabel = "tst"
             //_tstBtn!.accessibilityIdentifier = "tst"
         }
         return _tstBtn!
+    }
+
+    var _kbBtn: UIBarButtonItem?
+    var kbBtn: UIBarButtonItem {
+        if _kbBtn == nil {
+            _kbBtn = UIBarButtonItem(
+                title: "kb",
+                style: .plain,
+                target: self,
+                action: #selector(btnKb))
+            if #available(iOS 26.0, *) {
+                _kbBtn!.hidesSharedBackground = true  // Remove white container background
+            }
+
+            _kbBtn!.accessibilityLabel = "kb"
+            //_kbBtn!.accessibilityIdentifier = "kb"
+        }
+        return _kbBtn!
     }
     #endif
 
@@ -894,6 +913,63 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         _ = self.privacyObj.lockDown()
         refreshView()
         //tableView?.reloadData()
+    }
+
+    @objc func btnKb() {
+        DBGLog("kb pressed - adding Kate Bell contact")
+
+        let contactStore = CNContactStore()
+
+        // Request authorization
+        contactStore.requestAccess(for: .contacts) { granted, error in
+            if let error = error {
+                DBGErr("Error requesting contacts access: \(error)")
+                return
+            }
+
+            guard granted else {
+                DBGWarn("Contacts access not granted")
+                return
+            }
+
+            // Check if Kate Bell already exists
+            let predicate = CNContact.predicateForContacts(matchingName: "Kate Bell")
+            let keysToFetch = [CNContactGivenNameKey, CNContactFamilyNameKey] as [CNKeyDescriptor]
+
+            do {
+                let existingContacts = try contactStore.unifiedContacts(matching: predicate, keysToFetch: keysToFetch)
+                if !existingContacts.isEmpty {
+                    DBGLog("Kate Bell contact already exists")
+                    return
+                }
+
+                // Create Kate Bell contact
+                let contact = CNMutableContact()
+                contact.givenName = "Kate"
+                contact.familyName = "Bell"
+
+                // Add phone number
+                let phoneNumber = CNLabeledValue(
+                    label: CNLabelPhoneNumberiPhone,
+                    value: CNPhoneNumber(stringValue: "(555) 564-8583"))
+                contact.phoneNumbers = [phoneNumber]
+
+                // Add email
+                let email = CNLabeledValue(
+                    label: CNLabelWork,
+                    value: "kate-bell@mac.com" as NSString)
+                contact.emailAddresses = [email]
+
+                // Save the contact
+                let saveRequest = CNSaveRequest()
+                saveRequest.add(contact, toContainerWithIdentifier: nil)
+                try contactStore.execute(saveRequest)
+
+                DBGLog("Successfully added Kate Bell contact")
+            } catch {
+                DBGErr("Error adding Kate Bell contact: \(error)")
+            }
+        }
     }
     #endif
     /*
