@@ -15,7 +15,9 @@
       "SlashCommand(/save diagnostic logging for unwanted database entries bug)",
       "SlashCommand(/save:*)",
       "Bash(xcodebuild:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(tee:*)",
+      "Read(//private/tmp/**)"
     ],
     "deny": []
   }
