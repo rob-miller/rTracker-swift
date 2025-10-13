@@ -56,6 +56,7 @@ SwiftUI view controller for selecting and configuring HealthKit data sources. Pr
 - Info buttons provide contextual help via sheet presentations
 
 ## Current Issues & TODOs
+- **COMPLETED** (2025-10-13): Singleton frequency implementation with conditional UI hiding
 - **COMPLETED** (2025-10-02): SF symbol icons for main category tabs (Metrics/Sleep/Workouts) with iOS 26+ support
 - **COMPLETED** (2025-10-02): SF symbol icons for workout category pills with icon + text display
 - **COMPLETED** (2025-10-02): Dynamic workout category filtering to hide empty categories
@@ -65,10 +66,32 @@ SwiftUI view controller for selecting and configuring HealthKit data sources. Pr
 - Info button moved from navigation bar to dedicated row for better accessibility
 - Styled "Update HealthKit Choices" button with capsule border design
 - Workout category pills use smooth animation transitions
+- Singleton frequency properly hides time filter and aggregation pickers
 - No known issues with current implementation
 
 ## Recent Development History
-**Latest Changes (2025-10-02) - SF Symbol Icons and Dynamic Category Filtering:**
+**Latest Changes (2025-10-13) - Singleton Frequency Implementation:**
+- **Singleton Frequency Option**: Added "Singleton" to frequency picker (line 383)
+  - Positioned first in list before "Daily"
+  - Designed for high-frequency HealthKit data (.highFrequency aggregationType)
+  - Picks single closest datapoint to target timestamp instead of aggregating
+- **Conditional UI Hiding**: Time filter and aggregation pickers hidden when singleton selected (lines 125-128)
+  - Uses `if ahFrequency != "singleton"` conditional wrapper
+  - Maintains clean UI - no irrelevant options shown
+  - Time filter completely ignored for singleton queries
+  - No aggregation needed - just picking closest single value
+- **Target Timestamp Logic**: Singleton only fills **existing** tracker entries
+  - If tracker entry exists: uses that entry's timestamp as target
+  - If no tracker entry exists for a day: **skips that day** (does NOT create entry)
+  - Works with ahkTimeSrc: time source creates entries → singleton fills HK values
+  - Without ahkTimeSrc: singleton only fills days with manual entries
+  - Only considers HK datapoints from same calendar day
+- **Backend Integration**: Works with voNumber.swift singleton implementation
+  - handleSingletonMatching() matches HK dates to tracker timestamps
+  - processHealthQuery() queries entire day, picks closest datapoint
+  - findClosestResult() finds minimum time distance match
+
+**Previous Changes (2025-10-02) - SF Symbol Icons and Dynamic Category Filtering:**
 - **Main Category Tab Icons**: Added iOS 26+ SF symbol support to sampleTypeSelector
   - SampleFilter.icon property delegates to MenuTab.icon (lines 477-486)
   - Conditional display in sampleTypeSelector (lines 588-600)
@@ -91,7 +114,13 @@ SwiftUI view controller for selecting and configuring HealthKit data sources. Pr
 - **ahPrevD Enhancement**: Improved previous day data handling with proper date shifting
 
 ## Last Updated
-2025-10-02 - SF Symbol Icons and Dynamic Workout Category Filtering:
+2025-10-13 - Singleton Frequency Implementation:
+- **Singleton Option**: Added to frequency picker (line 383), picks single closest HK datapoint per day
+- **Conditional UI**: Time filter and aggregation pickers hidden when singleton selected (lines 125-128)
+- **Target Logic**: Uses tracker entry timestamp (ahkTimeSrc) or 12:00 noon, finds closest match within same day
+- **Integration**: Works with voNumber.swift backend (handleSingletonMatching, processHealthQuery, findClosestResult)
+
+Previous update (2025-10-02) - SF Symbol Icons and Dynamic Workout Category Filtering:
 - **Main Tab Icons**: iOS 26+ conditional display with MenuTab.icon delegation
 - **Workout Category Icons**: 8 SF symbols with icon + text pill buttons (all iOS versions)
 - **Dynamic Filtering**: availableWorkoutCategories hides empty categories, shows only those with entries

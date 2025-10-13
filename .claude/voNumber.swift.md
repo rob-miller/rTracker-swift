@@ -63,6 +63,49 @@ Handles numeric input fields in trackers, supporting manual entry, HealthKit int
 - **Impact**: Blood pressure systolic/diastolic now display consistently across current and historical records
 - **Note**: `noHKdataMsg` property at line 33 is now unused and can be removed in future cleanup
 
+**Latest Changes (2025-10-13) - Singleton Frequency Implementation:**
+- **handleSingletonMatching() Function**: New function (lines 1623-1687) for singleton frequency support
+  - Matches each HK date to closest tracker timestamp on same calendar day
+  - **If no tracker entry exists: SKIPS that day** (does NOT create entries)
+  - If tracker entry exists: finds closest timestamp using minimum distance
+  - Returns (newDates, matchedDates) tuple like handleHkTimeSrc
+  - Logs distance in minutes for debugging: "Δ42min"
+  - **Key behavior**: Only populates **existing** tracker entries, never creates new ones
+  - **Optimization** (lines 1634-1647): Batch database query instead of per-day queries
+    - Queries ALL tracker timestamps once (1 SQL query instead of N)
+    - Groups by calendar day in memory using dictionary: `[String: [TimeInterval]]`
+    - Fast O(1) dictionary lookup per HK date instead of repeated SQL queries
+    - Major performance improvement when processing multiple days
+- **Date Processing Logic Update**: Modified loadHKdata date merging section (lines 1026-1054)
+  - Added `if frequency == "singleton"` branch before `else if frequency == "daily"`
+  - Singleton calls handleSingletonMatching() instead of mergeDates or handleHkTimeSrc
+  - Maintains separate paths: singleton → daily → time slots
+- **processHealthQuery() Enhancement**: Updated to handle singleton queries (lines 1802-1814, 1836-1871)
+  - **Optimized Query Window**: Singleton queries ±2 hour window around target timestamp (4 hours total)
+  - Window clamped to calendar day boundaries (doesn't cross midnight)
+  - 6x smaller queries than full day (4 hours vs 24 hours)
+  - Stores targetTimestamp for finding closest match
+  - Completion handler branches: singleton uses findClosestResult, others use time filter + aggregation
+  - Time filter and aggregation completely bypassed for singleton
+- **findClosestResult() Function**: New helper function (lines 1913-1934)
+  - Takes all HK results from day query and target timestamp
+  - Returns single result with minimum abs(result.date - targetTimestamp)
+  - Logs distance in minutes: "Δ15min from target"
+  - Returns nil if no results
+- **calculateEndDate() Update**: Comment updated (line 1898) to clarify singleton returns nil like daily
+- **Singleton Behavior**: Picks single closest HK datapoint to tracker timestamp per day
+  - **Query window**: ±2 hours around target (4-hour total window)
+  - No time filtering (searches within window)
+  - No aggregation (one value per day)
+  - Target is existing tracker entry timestamp (from ahkTimeSrc or manual entry)
+  - Only searches within ±2 hour window on same calendar day
+  - **Does NOT create new tracker entries** - only fills existing ones
+  - **Performance**: 6x faster queries than full-day search
+- **Use Cases**:
+  - With ahkTimeSrc: Time source creates entries → singleton fills HK values at those timestamps
+  - Without ahkTimeSrc: Singleton only fills days where user manually created entries
+- **UI Integration**: Works with ahViewController.swift changes (singleton picker option, conditional UI hiding)
+
 **Previous Changes (2025-10-13) - High-Frequency Data Fix for ahkTimeSrc:**
 - **Bug Fix**: Excluded high-frequency data from ahkTimeSrc matching to prevent excessive logging
 - **Problem**: High-frequency HealthKit data (100+ HRV samples) triggered 100+ identical log messages
