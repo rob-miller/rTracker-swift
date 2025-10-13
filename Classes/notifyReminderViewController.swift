@@ -268,17 +268,9 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
             for: .normal)
         btnHelpOutlet.accessibilityLabel = "Help"
         btnHelpOutlet.accessibilityIdentifier = "nrvc_help"
-        
-        btnDoneOutlet.title = "\u{2611}"
+
+        // btnDoneOutlet styling handled by createDoneButton - modern iOS 26 burnt yellow checkmark
         btnDoneOutlet.accessibilityLabel = "Done"
-        btnDoneOutlet.accessibilityIdentifier = "nrvc_done"
-        
-        btnDoneOutlet.setTitleTextAttributes(
-            [
-                .font: UIFont.systemFont(ofSize: 28.0)
-            //,NSForegroundColorAttributeName: [UIColor greenColor]
-            ],
-            for: .normal)
 
 
         nextAddBarButton.setTitleTextAttributes(
@@ -723,7 +715,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         toolBar.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(toolBar)
 
-        btnDoneOutlet = UIBarButtonItem(title: "Item", style: .plain, target: self, action: #selector(btnDone(_:)))
+        btnDoneOutlet = rTracker_resource.createDoneButton(target: self, action: #selector(btnDone(_:)), accId: "nrvc_done")
 
         let flexibleSpace1 = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
 
