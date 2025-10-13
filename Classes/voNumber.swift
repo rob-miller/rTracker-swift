@@ -1000,6 +1000,7 @@ class voNumber: voState, UITextFieldDelegate {
           var datesToMerge = datesToCheck
 
           // For high-frequency daily data, collapse timestamps within timeFilter windows
+          // Singleton frequency uses all_day (no time filter)
           if frequency == "daily" && queryConfig.aggregationType == .highFrequency {
             datesToMerge = self.collapseTimeFilterWindow(
               timestamps: datesToCheck,
@@ -1022,7 +1023,12 @@ class voNumber: voState, UITextFieldDelegate {
           }
 
           // ignore ahPrevD here.  these are the tracker dates to be in the database for the values whether specified day or previous day
-          if frequency == "daily" {
+          if frequency == "singleton" {
+            // Singleton mode: match HK dates to existing tracker timestamps, or use 12:00 noon if no entry exists
+            let result = handleSingletonMatching(datesToMerge: datesToMerge, tracker: to, srcName: srcName)
+            newDates = result.newDates
+            matchedDates = result.matchedDates
+          } else if frequency == "daily" {
             let trackerHasTimeSrc = to.optDict["ahkTimeSrc"] != nil
             let isHighFrequency = queryConfig.aggregationType == .highFrequency
 
@@ -1607,6 +1613,79 @@ class voNumber: voState, UITextFieldDelegate {
 
   // MARK: - Health Query Processing
 
+  /// Handles singleton frequency: matches each HK date to closest tracker timestamp on same calendar day
+  /// or creates new entry at 12:00 noon if no tracker entry exists for that day
+  /// - Parameters:
+  ///   - datesToMerge: HK sample dates (calendar days with HK data)
+  ///   - tracker: The tracker object (for querying trkrData)
+  ///   - srcName: Name of HK source (for logging)
+  /// - Returns: Tuple of (newDates, matchedDates) sets
+  private func handleSingletonMatching(
+    datesToMerge: [TimeInterval],
+    tracker: trackerObj,
+    srcName: String
+  ) -> (newDates: Set<TimeInterval>, matchedDates: Set<TimeInterval>) {
+
+    let calendar = Calendar.current
+    let now = Date()
+    var matchedDates: Set<TimeInterval> = []
+    let newDates: Set<TimeInterval> = []  // Never mutated in singleton mode - always empty
+
+    // Optimization: Query ALL tracker timestamps once instead of per-day queries
+    let allDatesSql = "SELECT date FROM trkrData ORDER BY date"
+    let allTimestamps = tracker.toQry2AryI(sql: allDatesSql).map { TimeInterval($0) }
+
+    // Group tracker timestamps by calendar day for fast lookup
+    var timestampsByDay: [String: [TimeInterval]] = [:]
+    for timestamp in allTimestamps {
+      let date = Date(timeIntervalSince1970: timestamp)
+      let components = calendar.dateComponents([.year, .month, .day], from: date)
+      if let year = components.year, let month = components.month, let day = components.day {
+        let dayKey = "\(year)-\(month)-\(day)"
+        timestampsByDay[dayKey, default: []].append(timestamp)
+      }
+    }
+
+    // Process each HK date
+    for hkTimestamp in datesToMerge {
+      let hkDate = Date(timeIntervalSince1970: hkTimestamp)
+      guard hkDate <= now else { continue }  // Skip future dates
+
+      // Get calendar day key for this HK timestamp
+      let dayComponents = calendar.dateComponents([.year, .month, .day], from: hkDate)
+      guard let year = dayComponents.year, let month = dayComponents.month, let day = dayComponents.day else {
+        continue
+      }
+      let dayKey = "\(year)-\(month)-\(day)"
+
+      // Fast dictionary lookup instead of database query
+      guard let existingTimestamps = timestampsByDay[dayKey], !existingTimestamps.isEmpty else {
+        // No tracker entry for this day - singleton does NOT create entries, skip
+        //DBGLog("[\(srcName)] singleton: \(i2ltd(Int(hkTimestamp))) → SKIPPED (no trkrData for day)")
+        continue
+      }
+
+      // Find closest tracker timestamp to the HK timestamp
+      var closestTimestamp = existingTimestamps[0]
+      var minDistance = abs(hkTimestamp - closestTimestamp)
+
+      for trkrTimestamp in existingTimestamps {
+        let distance = abs(hkTimestamp - trkrTimestamp)
+        if distance < minDistance {
+          minDistance = distance
+          closestTimestamp = trkrTimestamp
+        }
+      }
+
+      matchedDates.insert(closestTimestamp)
+      DBGLog("[\(srcName)] singleton: \(i2ltd(Int(hkTimestamp))) → \(i2ltd(Int(closestTimestamp))) (Δ\(Int(minDistance/60))min)")
+    }
+
+    DBGLog("[\(srcName)] singleton: matched:\(matchedDates.count), new:\(newDates.count)")
+
+    return (newDates: newDates, matchedDates: matchedDates)
+  }
+
   /// Handles timestamp matching for trackers with ahkTimeSrc enabled
   /// Uses distance-sorted greedy algorithm to match HK samples to existing trkrData
   /// - Parameters:
@@ -1723,23 +1802,39 @@ class voNumber: voState, UITextFieldDelegate {
 
     // Calculate base start date from timestamp
     // Note: ahPrevD date shifting is now handled in loadHKdata by shifting storage dates forward
-    var startDate = Date(timeIntervalSince1970: TimeInterval(timestamp))
+    let targetTimestamp = Date(timeIntervalSince1970: TimeInterval(timestamp))
+    var startDate = targetTimestamp
+    var endDate: Date? = nil
 
-    // Special handling for sleep_hours with daily frequency
-    // Adjust startDate to 23:00 previous day to match the sleep hours window
-    if timeFilter == "sleep_hours" && frequency == "daily" && queryConfig.aggregationType == .highFrequency {
-      let trackerDay = calendar.startOfDay(for: startDate)
-      let previousDay = calendar.date(byAdding: .day, value: -1, to: trackerDay)!
-      startDate = calendar.date(byAdding: .hour, value: 23, to: previousDay)!
+    // Singleton frequency: query ±2 hour window around target timestamp
+    if frequency == "singleton" && queryConfig.aggregationType == .highFrequency {
+      // Query ±2 hours around target timestamp for high-frequency data
+      let windowHours = 2
+      let windowStart = calendar.date(byAdding: .hour, value: -windowHours, to: targetTimestamp) ?? targetTimestamp
+      let windowEnd = calendar.date(byAdding: .hour, value: windowHours, to: targetTimestamp) ?? targetTimestamp
+
+      // Clamp to same calendar day boundaries
+      let dayStart = calendar.startOfDay(for: targetTimestamp)
+      let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)!
+      startDate = max(windowStart, dayStart)
+      endDate = min(windowEnd, dayEnd)
+    } else {
+      // Special handling for sleep_hours with daily frequency
+      // Adjust startDate to 23:00 previous day to match the sleep hours window
+      if timeFilter == "sleep_hours" && frequency == "daily" && queryConfig.aggregationType == .highFrequency {
+        let trackerDay = calendar.startOfDay(for: startDate)
+        let previousDay = calendar.date(byAdding: .day, value: -1, to: trackerDay)!
+        startDate = calendar.date(byAdding: .hour, value: 23, to: previousDay)!
+      }
+
+      // Calculate endDate for high-frequency processing
+      // IMPORTANT: For high-frequency data, calculateEndDate returns a "backwards" endDate
+      // (earlier than startDate) to indicate we want the interval BEFORE the slot timestamp.
+      // This makes a 3pm slot represent 2pm-3pm data instead of 3pm-4pm data.
+      // performHealthQuery will detect endDate < startDate and swap them for the HealthKit query.
+      // EXCEPTION: sleep_hours with daily frequency returns proper forward endDate (06:00 tracker day)
+      endDate = calculateEndDate(from: startDate, frequency: frequency, queryConfig: queryConfig, timeFilter: timeFilter)
     }
-
-    // Calculate endDate for high-frequency processing
-    // IMPORTANT: For high-frequency data, calculateEndDate returns a "backwards" endDate
-    // (earlier than startDate) to indicate we want the interval BEFORE the slot timestamp.
-    // This makes a 3pm slot represent 2pm-3pm data instead of 3pm-4pm data.
-    // performHealthQuery will detect endDate < startDate and swap them for the HealthKit query.
-    // EXCEPTION: sleep_hours with daily frequency returns proper forward endDate (06:00 tracker day)
-    let endDate = calculateEndDate(from: startDate, frequency: frequency, queryConfig: queryConfig, timeFilter: timeFilter)
 
     // Prepare unit
     var unit: HKUnit? = nil
@@ -1756,13 +1851,20 @@ class voNumber: voState, UITextFieldDelegate {
       endDate: endDate,
       specifiedUnit: unit
     ) { allResults in
-      // Always apply time filtering and aggregation
-      let filteredResults = self.applyTimeFilter(
-        results: allResults, timeFilter: self.vo.optDict["ahTimeFilter"] ?? "all_day")
-      let aggregatedResult = self.applyAggregation(
-        results: filteredResults, aggregation: self.vo.optDict["ahAggregation"] ?? "avg")
+      let finalResult: rtHealthKit.HealthQueryResult?
 
-      if let result = aggregatedResult {
+      // Singleton frequency: find closest datapoint to target timestamp
+      if frequency == "singleton" && queryConfig.aggregationType == .highFrequency {
+        finalResult = self.findClosestResult(results: allResults, targetTimestamp: targetTimestamp)
+      } else {
+        // Normal processing: apply time filtering and aggregation
+        let filteredResults = self.applyTimeFilter(
+          results: allResults, timeFilter: self.vo.optDict["ahTimeFilter"] ?? "all_day")
+        finalResult = self.applyAggregation(
+          results: filteredResults, aggregation: self.vo.optDict["ahAggregation"] ?? "avg")
+      }
+
+      if let result = finalResult {
         /*
         DBGLog("aggregated result for \(srcName) at \(startDate) is \(result.value) \(result.unit) (timeFilter: \(self.vo.optDict["ahTimeFilter"] ?? "all_day"))")
         DBGLog("input set:")
@@ -1804,13 +1906,42 @@ class voNumber: voState, UITextFieldDelegate {
     case "every_6h": intervalHours = 6
     case "every_8h": intervalHours = 8
     case "twice_daily": intervalHours = 12
-    default: return nil  // daily
+    default: return nil  // daily, singleton - single point queries
     }
 
     // IMPORTANT: For high-frequency data, we want the interval BEFORE the slot timestamp
     // This makes a 3pm slot represent 2pm-3pm data instead of 3pm-4pm data
     // We return startDate - intervalHours, which will be detected and handled in performHealthQuery
     return calendar.date(byAdding: .hour, value: -intervalHours, to: startDate)
+  }
+
+  /// Finds the single closest HealthKit datapoint to a target timestamp
+  /// Used by singleton frequency to pick one value per day
+  /// - Parameters:
+  ///   - results: All HealthKit results from the query (entire day)
+  ///   - targetTimestamp: The tracker entry timestamp (from ahkTimeSrc or 12:00 noon)
+  /// - Returns: The result with minimum time distance to target, or nil if no results
+  private func findClosestResult(
+    results: [rtHealthKit.HealthQueryResult],
+    targetTimestamp: Date
+  ) -> rtHealthKit.HealthQueryResult? {
+    guard !results.isEmpty else { return nil }
+
+    // Find result with minimum time distance
+    var closestResult = results[0]
+    var minDistance = abs(results[0].date.timeIntervalSince(targetTimestamp))
+
+    for result in results {
+      let distance = abs(result.date.timeIntervalSince(targetTimestamp))
+      if distance < minDistance {
+        minDistance = distance
+        closestResult = result
+      }
+    }
+
+    DBGLog("singleton: found closest HK datapoint at \(ltd(closestResult.date)) (Δ\(Int(minDistance/60))min from target \(ltd(targetTimestamp)))")
+
+    return closestResult
   }
 
   private func applyTimeFilter(results: [rtHealthKit.HealthQueryResult], timeFilter: String)

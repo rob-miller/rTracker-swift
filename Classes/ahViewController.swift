@@ -121,8 +121,11 @@ struct ahViewController: View {
                 // High frequency controls
                 if shouldShowNewControls() {
                     frequencyContent
-                    timeFilterContent
-                    aggregationContent
+                    // Hide time filter and aggregation pickers when singleton is selected
+                    if ahFrequency != "singleton" {
+                        timeFilterContent
+                        aggregationContent
+                    }
                 }
 
                 // Push everything to top
@@ -380,6 +383,7 @@ struct ahViewController: View {
             }
             
             Picker("Frequency", selection: $ahFrequency) {
+                Text("Singleton").tag("singleton")
                 Text("Daily").tag("daily")
                 Text("Every 1h").tag("every_1h")
                 Text("Every 2h").tag("every_2h")
