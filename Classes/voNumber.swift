@@ -260,7 +260,9 @@ class voNumber: voState, UITextFieldDelegate {
               return HKUnit(from: unitStr)
             }()
 
-            healthKitResult = (self?.shouldShowZeroForNoData(unit: hkUnit) ?? false) ? "0" : self?.noHKdataMsg
+            // Use "0" for time/count units, empty string for physiological units
+            // Empty string allows the ghosted placeholder "<no data>" to show
+            healthKitResult = (self?.shouldShowZeroForNoData(unit: hkUnit) ?? false) ? "0" : ""
           }
           semaphore.signal()
         }
@@ -1021,11 +1023,25 @@ class voNumber: voState, UITextFieldDelegate {
 
           // ignore ahPrevD here.  these are the tracker dates to be in the database for the values whether specified day or previous day
           if frequency == "daily" {
-            let mergeResult = to.mergeDates(inDates: datesToMerge, aggregationTime: queryConfig.aggregationTime)
-            newDates = mergeResult.newDates
-            matchedDates = mergeResult.matchedDates
+            let trackerHasTimeSrc = to.optDict["ahkTimeSrc"] != nil
+            let isHighFrequency = queryConfig.aggregationType == .highFrequency
+
+            // ahkTimeSrc is designed for discrete measurements (multiple blood pressure readings per day)
+            // High-frequency data (HRV, heart rate) should always aggregate to a single daily value
+            // regardless of ahkTimeSrc setting
+            if trackerHasTimeSrc && !isHighFrequency {
+              // ahkTimeSrc mode: Use actual timestamps with optimal matching for discrete measurements
+              let result = handleHkTimeSrc(datesToMerge: datesToMerge, tracker: to, srcName: srcName)
+              newDates = result.newDates
+              matchedDates = result.matchedDates
+            } else {
+              // Normal mode or high-frequency: use mergeDates with 12:00 normalization
+              let mergeResult = to.mergeDates(inDates: datesToMerge, aggregationTime: queryConfig.aggregationTime)
+              newDates = mergeResult.newDates
+              matchedDates = mergeResult.matchedDates
+            }
           } else {
-            // Generate time slots based on frequency with potentially shifted dates
+            // High-frequency data - use time slots
             let timeSlotResult = to.generateTimeSlots(from: datesToCheck, frequency: frequency, aggregationTime: queryConfig.aggregationTime)
             newDates = timeSlotResult.newDates
             matchedDates = timeSlotResult.matchedDates
@@ -1590,6 +1606,101 @@ class voNumber: voState, UITextFieldDelegate {
   }
 
   // MARK: - Health Query Processing
+
+  /// Handles timestamp matching for trackers with ahkTimeSrc enabled
+  /// Uses distance-sorted greedy algorithm to match HK samples to existing trkrData
+  /// - Parameters:
+  ///   - datesToMerge: HK sample timestamps to process
+  ///   - tracker: The tracker object (for querying trkrData)
+  ///   - srcName: Name of HK source (for logging)
+  /// - Returns: Tuple of (newDates, matchedDates) sets
+  private func handleHkTimeSrc(
+    datesToMerge: [TimeInterval],
+    tracker: trackerObj,
+    srcName: String
+  ) -> (newDates: Set<TimeInterval>, matchedDates: Set<TimeInterval>) {
+
+    let calendar = Calendar.current
+    let now = Date()
+
+    // Get existing trkrData for same calendar day
+    let dayComponents = calendar.dateComponents([.year, .month, .day],
+      from: Date(timeIntervalSince1970: datesToMerge.first ?? 0))
+    let dayStart = calendar.date(from: dayComponents)!
+    let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)!
+
+    let existingDatesSql = """
+      SELECT date FROM trkrData
+      WHERE date >= \(Int(dayStart.timeIntervalSince1970))
+      AND date < \(Int(dayEnd.timeIntervalSince1970))
+      ORDER BY date
+    """
+    let existingTimestamps = tracker.toQry2AryI(sql: existingDatesSql).map { TimeInterval($0) }
+
+    // Build candidate matches: all (hkSample, trkrDate, distance) pairs
+    struct MatchCandidate {
+      let hkTimestamp: TimeInterval
+      let trkrTimestamp: TimeInterval
+      let distance: TimeInterval
+    }
+
+    var candidates: [MatchCandidate] = []
+    for hkTimestamp in datesToMerge {
+      let hkDate = Date(timeIntervalSince1970: hkTimestamp)
+      guard hkDate <= now else { continue }  // Skip future timestamps
+
+      for trkrTimestamp in existingTimestamps {
+        let distance = abs(hkTimestamp - trkrTimestamp)
+        candidates.append(MatchCandidate(
+          hkTimestamp: hkTimestamp,
+          trkrTimestamp: trkrTimestamp,
+          distance: distance
+        ))
+      }
+    }
+
+    // Sort by distance (shortest first) - KEY for optimal matching
+    candidates.sort { $0.distance < $1.distance }
+
+    // Greedy assignment: process shortest distances first
+    var usedHkTimestamps = Set<TimeInterval>()
+    var usedTrkrTimestamps = Set<TimeInterval>()
+    var matchedDates: Set<TimeInterval> = []
+    var newDates: Set<TimeInterval> = []
+
+    for candidate in candidates {
+      // If both timestamps are still available, match them
+      if !usedHkTimestamps.contains(candidate.hkTimestamp) &&
+         !usedTrkrTimestamps.contains(candidate.trkrTimestamp) {
+        matchedDates.insert(candidate.trkrTimestamp)
+        usedHkTimestamps.insert(candidate.hkTimestamp)
+        usedTrkrTimestamps.insert(candidate.trkrTimestamp)
+
+        #if DEBUGLOG
+        if candidate.distance > 60 {
+          DBGLog("  \(i2ltd(Int(candidate.hkTimestamp))) → \(i2ltd(Int(candidate.trkrTimestamp))) (Δ\(Int(candidate.distance/60))min)")
+        }
+        #endif
+      }
+    }
+
+    // Any unmatched HK timestamps become new entries at their actual times
+    for hkTimestamp in datesToMerge {
+      let hkDate = Date(timeIntervalSince1970: hkTimestamp)
+      guard hkDate <= now else { continue }
+
+      if !usedHkTimestamps.contains(hkTimestamp) {
+        newDates.insert(hkTimestamp)
+        #if DEBUGLOG
+        DBGLog("  \(i2ltd(Int(hkTimestamp))) → NEW (no unused trkrData)")
+        #endif
+      }
+    }
+
+    DBGLog("[\(srcName)] ahkTimeSrc: matched:\(matchedDates.count), new:\(newDates.count)")
+
+    return (newDates: newDates, matchedDates: matchedDates)
+  }
 
   private func processHealthQuery(
     timestamp: Int,

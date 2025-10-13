@@ -333,13 +333,29 @@ class trackerObj: tObjBase {
 
         // Extract HealthKit valueObjs first
         var hkValueObjs: [valueObj] = []
+        var timeSrcVo: valueObj? = nil
+        let timeSrcVid = optDict["ahkTimeSrc"] as? String  // String(vid) or nil
+
         for vo in valObjTable {
             if vo.optDict["ahksrc"] ?? "0" != "0" {
                 rslt = true
-                hkValueObjs.append(vo)
                 hkValueObjIDs.append(vo.vid)
                 localGroup.enter()  // leave when voNumber.loadHKdata completes
+
+                // Check if this is the time source
+                if let timeSrcVid = timeSrcVid, String(vo.vid) == timeSrcVid {
+                    timeSrcVo = vo
+                    DBGLog("ahkTimeSrc: Identified time source '\(vo.valueName ?? "unnamed")' (vid:\(vo.vid))")
+                } else {
+                    hkValueObjs.append(vo)
+                }
             }
+        }
+
+        // Reorder: time source FIRST, then others
+        if let timeSrcVo = timeSrcVo {
+            hkValueObjs.insert(timeSrcVo, at: 0)
+            DBGLog("ahkTimeSrc: Time source will process FIRST")
         }
 
         // Sequential processing helper function
