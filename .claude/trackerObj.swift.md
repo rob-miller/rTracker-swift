@@ -35,6 +35,7 @@ Refactored to eliminate code duplication using helper functions
   - Filter results wrapped in `Set()` to maintain Set type consistency
 
 ## Current Issues & TODOs
+✅ COMPLETED (2025-10-13): ahkTimeSrc feature - time source prioritization for sequential processing
 ✅ COMPLETED (2025-10-02): Set-based deduplication for mergeDates and generateTimeSlots
 ✅ Fixed single-date processing issue
 ✅ Eliminated code duplication between Phase 1 and Phase 2
@@ -42,7 +43,17 @@ Refactored to eliminate code duplication using helper functions
 ✅ Added transaction wrapping for Phase 2 future dates processing loop
 
 ## Recent Development History
-**Latest Changes (2025-10-07) - Transaction Wrapping for Performance:**
+**Latest Changes (2025-10-13) - ahkTimeSrc Time Source Prioritization:**
+- **Feature**: Added support for `tracker.optDict["ahkTimeSrc"]` to designate a valueObj as time source for actual HealthKit timestamps
+- **loadHKdata Processing Order**: Modified valueObj collection logic to identify and reorder time source
+  - Time source valueObj moved to front of processing queue (processed first)
+  - Ensures time source creates trkrData timeline before other valueObjs need it
+  - Other valueObjs then match their samples to existing timestamps
+- **Implementation**: Added timeSrcVo variable and reordering logic in loadHKdata function
+- **Behavior**: Only active when `ahkTimeSrc` is set; normal processing unchanged otherwise
+- **Purpose**: Enables trackers to preserve actual HealthKit sample timestamps instead of normalizing to 12:00 noon
+
+**Previous Changes (2025-10-07) - Transaction Wrapping for Performance:**
 - **saveConfig()**: Added BEGIN/COMMIT transaction wrapper (lines 1776, 1806)
   - Wraps DELETE operations + INSERT loop for all valueObjs
   - Expected 5-20x speedup, especially during .rtrk import
@@ -68,6 +79,14 @@ Refactored to eliminate code duplication using helper functions
 - 47f5d16 streakCount instrumentation and checks against current date
 
 ## Last Updated
+2025-10-13 - ahkTimeSrc Time Source Prioritization:
+- **New Feature**: Support for tracker-level time source designation
+- **Processing Order**: Time source valueObj now processes first in loadHKdata sequential queue
+- **Implementation**: Added logic to extract time source from `tracker.optDict["ahkTimeSrc"]` and reorder hkValueObjs array
+- **Impact**: Enables distance-sorted timestamp matching for all valueObjs when ahkTimeSrc is enabled
+- **Backwards Compatible**: No changes to normal processing when ahkTimeSrc not set
+
+Previous update:
 2025-10-02 - Set-Based Deduplication for mergeDates and generateTimeSlots:
 - Converted return types and internal variables from Arrays to Sets
 - Eliminated manual duplicate checking (O(n)) in favor of Set insertion (O(1))

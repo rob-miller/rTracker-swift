@@ -12,10 +12,11 @@ Handles numeric input fields in trackers, supporting manual entry, HealthKit int
 ## Important Methods/Functions
 - `voDisplay(_:)`: Creates and configures the text field, handles HealthKit/Other Tracker data loading
 - `update(_:)`: Returns current value, handles time format conversion
-- `loadHKdata(forDate:dispatchGroup:)`: Loads HealthKit data into database with enhanced ahPrevD support
+- `loadHKdata(forDate:dispatchGroup:)`: Loads HealthKit data into database with enhanced ahPrevD support and ahkTimeSrc handling
 - `clearHKdata(forDate:)`: Removes HealthKit-sourced data from database
 - `createTextField()`: Sets up the UITextField with proper formatting and input accessories
 - `textFieldDidEndEditing(_:)`: Handles value changes and notifications
+- `handleHkTimeSrc(datesToMerge:tracker:srcName:)`: Distance-sorted greedy matching algorithm for ahkTimeSrc mode
 - `processHealthQuery()`: Enhanced HealthKit data processing with proper date shifting for ahPrevD
 - `getHealthKitDates()`: Improved date handling using `HealthDataQuery.makeSampleType()`
 
@@ -35,6 +36,11 @@ Handles numeric input fields in trackers, supporting manual entry, HealthKit int
 - Input accessory toolbar with Done and minus buttons (modern SF symbols)
 
 ## Implementation Details
+- **ahkTimeSrc Support**: When tracker has time source designated, uses distance-sorted matching instead of 12:00 normalization
+  - `handleHkTimeSrc()` function implements optimal nearest-neighbor algorithm
+  - Builds candidate (HK sample, trkrData) pairs, sorts by distance, greedily assigns shortest matches
+  - Unmatched samples create new trkrData entries at actual HealthKit timestamps
+  - Preserves actual measurement times (e.g., 08:45, 14:30, 19:20) instead of collapsing to 12:00
 - **Enhanced ahPrevD Support**: Proper date shifting logic - shifts trkrData dates forward for storage, shifts HealthKit query dates backward
 - **HealthKit Integration**: Uses `HealthDataQuery.makeSampleType()` for unified type creation, supports all sample types
 - **Date Management**: Complex dual-direction shifting for ahPrevD mode to handle "previous day" data attribution
@@ -47,7 +53,42 @@ Handles numeric input fields in trackers, supporting manual entry, HealthKit int
 - **Privacy**: Respects privacy levels for data access
 
 ## Recent Development History
-**Latest Changes (2025-10-02) - Date Adjustment Section Removed:**
+**Latest Changes (2025-10-13) - Consistent Ghosted Display for Empty HealthKit Data:**
+- **UI Improvement**: Changed empty HealthKit data display for physiological units to use ghosted placeholder
+- **Problem**: Current records showed "No HealthKit data available" as solid text, while historical records showed ghosted "<no data>" placeholder
+- **Solution**: Changed line 265 from `self?.noHKdataMsg` to `""` (empty string)
+- **Behavior**:
+  - Time/count units still show "0" as solid text (unchanged)
+  - Physiological units (mmHg, bpm, etc.) now show ghosted "<no data>" placeholder (consistent with historical)
+- **Impact**: Blood pressure systolic/diastolic now display consistently across current and historical records
+- **Note**: `noHKdataMsg` property at line 33 is now unused and can be removed in future cleanup
+
+**Previous Changes (2025-10-13) - High-Frequency Data Fix for ahkTimeSrc:**
+- **Bug Fix**: Excluded high-frequency data from ahkTimeSrc matching to prevent excessive logging
+- **Problem**: High-frequency HealthKit data (100+ HRV samples) triggered 100+ identical log messages
+- **Root Cause**: `collapseTimeFilterWindow()` with `timeFilter="all_day"` returned all timestamps unchanged, causing `handleHkTimeSrc()` to process each individual sample
+- **Solution**: Added `isHighFrequency` check at line 1025 to route high-freq data to `mergeDates()` instead of `handleHkTimeSrc()`
+- **Rationale**: ahkTimeSrc is designed for discrete measurements (blood pressure readings), not aggregated high-freq data (HRV, heart rate)
+- **Impact**: High-frequency data now correctly aggregates to single daily value regardless of ahkTimeSrc setting
+
+**Previous Changes (2025-10-13) - ahkTimeSrc Distance-Sorted Matching:**
+- **New Feature**: Support for `tracker.optDict["ahkTimeSrc"]` to preserve actual HealthKit timestamps
+- **handleHkTimeSrc() Function**: New private helper function implementing distance-sorted greedy matching algorithm
+  - Queries existing trkrData for same calendar day
+  - Builds all possible (HK sample, trkrData) candidate pairs with distances
+  - Sorts candidates by distance (shortest first) - key for optimal matching
+  - Greedy assignment: matches shortest distances first using nearest unused neighbor
+  - Unmatched HK samples become new trkrData entries at actual times
+  - Complexity: O(nm log nm) where n=samples, m=trkrData entries
+- **loadHKdata Integration**: Modified date merging logic in loadHKdata function
+  - Detects `trackerHasTimeSrc` flag from tracker.optDict
+  - Calls `handleHkTimeSrc()` instead of `mergeDates()` when ahkTimeSrc enabled
+  - Falls back to normal `mergeDates()` behavior (12:00 normalization) when disabled
+- **Code Organization**: Refactored 82 lines of inline matching logic into dedicated function
+- **Benefits**: Near-optimal timestamp matching, no arbitrary time thresholds, handles all edge cases naturally
+- **Use Case**: Blood pressure tracker with multiple readings per day (08:45, 14:30, 19:20) creates separate entries
+
+**Previous Changes (2025-10-02) - Date Adjustment Section Removed:**
 - **Commented Out Entire Section**: The 36-hour window guard and all date adjustment logic (aggregation boundary and sleep_hours) has been commented out in loadHKdata function
 - **Reason**: mergeDates already handles aggregationTime, processHealthQuery handles sleep_hours - adjustments were redundant
 - **Comment Note**: "think not needed because mergedates handles aggregationTime, processHealthWQuery handles sleep_hours"
@@ -101,6 +142,9 @@ Handles numeric input fields in trackers, supporting manual entry, HealthKit int
 - **Cache Improvements**: Enhanced HealthKit caching with unit-specific keys
 
 ## Current Issues & TODOs
+- **COMPLETED** (2025-10-13): Ghosted placeholder display for empty physiological HealthKit data
+- **COMPLETED** (2025-10-13): High-frequency data excluded from ahkTimeSrc matching to prevent log spam
+- **COMPLETED** (2025-10-13): ahkTimeSrc feature - distance-sorted matching for actual timestamps
 - **COMPLETED** (2025-10-09): Unit-based zero display for no-data HealthKit values
 - **COMPLETED** (2025-10-07): Transaction handling bug fix - prevent "no transaction in progress" error
 - **COMPLETED** (2025-10-02): Set-based deduplication to eliminate duplicate HealthKit queries
@@ -119,6 +163,45 @@ Handles numeric input fields in trackers, supporting manual entry, HealthKit int
 - **HealthKit Cross-Contamination Bug** (2025-08-26): Fixed issue where low-frequency HealthKit valueObjs would repeatedly reprocess dates where we already knew there was `noData`. The complex OR-based SQL query only excluded `stat = hkData` entries but allowed `stat = noData` entries to be reprocessed indefinitely. Simplified to exclude ANY existing voHKstatus entry for the specific valueObj, preventing unnecessary reprocessing of dates we've already attempted.
 
 ## Last Updated
+2025-10-13 - Consistent Ghosted Display for Empty HealthKit Data:
+- **UI Fix**: Changed empty HealthKit data display for physiological units to use ghosted placeholder instead of solid text
+- **Change**: Modified voDisplay function at line 265 from `self?.noHKdataMsg` to `""` (empty string)
+- **Behavior Before**:
+  - Current record: "No HealthKit data available" as solid text
+  - Historical record: "<no data>" as ghosted placeholder
+  - Inconsistent appearance between current and historical
+- **Behavior After**:
+  - Current record: "<no data>" as ghosted placeholder (uses UITextField.placeholder)
+  - Historical record: "<no data>" as ghosted placeholder (unchanged)
+  - Consistent ghosted appearance across all views
+- **Units Affected**: Physiological metrics (mmHg, bpm, %, ms, etc.) - time/count units still show "0" as intended
+- **User Experience**: Blood pressure systolic/diastolic now have consistent ghosted display whether viewing current or historical records
+
+Previous update:
+2025-10-13 - High-Frequency Data Fix for ahkTimeSrc:
+- **Bug Fix**: Excluded high-frequency HealthKit data from ahkTimeSrc matching algorithm
+- **Problem**: High-frequency valueObjs (HRV, heart rate) with 100+ samples per day were logging excessive "→ NEW (no unused trkrData)" messages
+- **Root Cause**: `collapseTimeFilterWindow()` with `timeFilter="all_day"` returned all individual timestamps unchanged, causing `handleHkTimeSrc()` to process each sample separately
+- **Implementation** ([voNumber.swift:1025-1040](Classes/voNumber.swift#L1025-L1040)):
+  - Added `isHighFrequency` check: `queryConfig.aggregationType == .highFrequency`
+  - Modified conditional: `if trackerHasTimeSrc && !isHighFrequency` routes only discrete measurements to `handleHkTimeSrc()`
+  - High-frequency data now always uses `mergeDates()` with 12:00 normalization, regardless of ahkTimeSrc setting
+- **Rationale**: ahkTimeSrc is designed for discrete measurements (multiple blood pressure readings per day), not aggregated high-frequency data (HRV averaging 100 samples into 1 daily value)
+- **Impact**: Eliminates log spam, ensures high-freq data aggregates correctly to single daily entry
+
+Previous update:
+2025-10-13 - ahkTimeSrc Distance-Sorted Matching Algorithm:
+- **New Feature**: Trackers can now preserve actual HealthKit timestamps when `ahkTimeSrc` is set
+- **Implementation**:
+  - Added `handleHkTimeSrc()` private function with optimal nearest-neighbor matching algorithm
+  - Modified loadHKdata to call handleHkTimeSrc() or mergeDates() based on tracker configuration
+  - Refactored code for better organization (extracted 82-line algorithm into dedicated function)
+- **Algorithm**: Distance-sorted greedy matching - builds candidate pairs, sorts by distance, assigns shortest matches first
+- **Behavior**: When ahkTimeSrc enabled, matches HK samples to nearest unused trkrData timestamp; unmatched samples create new entries
+- **Benefits**: Preserves measurement timing context (e.g., morning vs evening blood pressure), eliminates arbitrary thresholds
+- **Backwards Compatible**: Normal 12:00 normalization behavior unchanged when ahkTimeSrc not set
+
+Previous update:
 2025-10-09 - Unit-Based Zero Display for No-Data HealthKit Values:
 - **Feature**: Added intelligent no-data display based on unit type
 - **Implementation**:
