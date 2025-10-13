@@ -365,7 +365,7 @@ struct ahViewController: View {
         .sheet(isPresented: $showingTimeSrcInfo) {
             infoSheet(
                 title: "Time Source",
-                content: "When enabled, this HealthKit data source will be used as the timestamp source for tracker entries. Only one time source can be active per tracker."
+                content: "When enabled, this HealthKit data source will be used as the timestamp source for tracker entries. Only one time source can be active per tracker.  If not enabled, the tracker's default time will be 12:00 noon."
             )
         }
     }
