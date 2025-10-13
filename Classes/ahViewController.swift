@@ -15,24 +15,26 @@ struct ahViewController: View {
     private let SHOW_ALL_WORKOUT_CATEGORIES = false
 
     let valueName: String
-    var onDismiss: (String?, String?, Bool, String, String, String) -> Void
+    var onDismiss: (String?, String?, Bool, Bool, String, String, String) -> Void
     @Environment(\.dismiss) var dismiss // For the Back/Exit button
     @State private var currentSelection: String? // Stores the datasource selection
     @State private var currentUnit: HKUnit? // Tracks the selected unit
     @State private var avgDataSwitch: Bool  // Tracks avg value switch
     @State private var prevDateSwitch: Bool  // Tracks previous date switch
+    @State private var ahkTimeSrcSwitch: Bool  // Tracks time source switch
     @State private var ahFrequency: String = "daily"  // Tracks frequency selection
     @State private var ahTimeFilter: String = "all_day"  // Tracks time filter selection
     @State private var ahAggregation: String = "avg"  // Tracks aggregation selection
     @State private var showingAvgInfo = false // For average info popup
     @State private var showingPrevDayInfo = false // For previous day info popup
+    @State private var showingTimeSrcInfo = false // For time source info popup
     @State private var showingConfigInfo = false // For selected config info popup
     @State private var seenMinuteSelections: Set<String> = []  // Add this to track which selections we've seen
     @State private var sampleFilter: SampleFilter = .metrics
     @State private var workoutFilter: WorkoutCategoryFilter = .all
     @ObservedObject var rthk = rtHealthKit.shared
     
-    init(valueName: String, selectedChoice: String?, selectedUnitString: String?, ahPrevD: Bool, ahFrequency: String = "daily", ahTimeFilter: String = "all_day", ahAggregation: String = "avg", onDismiss: @escaping (String?, String?, Bool, String, String, String) -> Void) {
+    init(valueName: String, selectedChoice: String?, selectedUnitString: String?, ahPrevD: Bool, ahkTimeSrc: Bool, ahFrequency: String = "daily", ahTimeFilter: String = "all_day", ahAggregation: String = "avg", onDismiss: @escaping (String?, String?, Bool, Bool, String, String, String) -> Void) {
         self.valueName = valueName
         self.onDismiss = onDismiss
 
@@ -66,6 +68,7 @@ struct ahViewController: View {
         }
         avgDataSwitch = false  // Always false - no averaging needed
         prevDateSwitch = ahPrevD
+        _ahkTimeSrcSwitch = State(initialValue: ahkTimeSrc)
         _ahFrequency = State(initialValue: ahFrequency)
         _ahTimeFilter = State(initialValue: ahTimeFilter)
         _ahAggregation = State(initialValue: ahAggregation)
@@ -106,10 +109,15 @@ struct ahViewController: View {
                 
                 // Average data switch
                 // averageDataSection
-                
+
                 // Previous day switch
                 previousDaySection
-                
+
+                // Time source switch (conditionally shown)
+                if shouldShowTimeSrcSwitch() {
+                    timeSrcSection
+                }
+
                 // High frequency controls
                 if shouldShowNewControls() {
                     frequencyContent
@@ -146,7 +154,7 @@ struct ahViewController: View {
                         if currentSelection == nil {
                             currentSelection = rthk.configurations.first?.displayName
                         }
-                        onDismiss(currentSelection, currentUnit?.unitString, prevDateSwitch, ahFrequency, ahTimeFilter, ahAggregation)
+                        onDismiss(currentSelection, currentUnit?.unitString, prevDateSwitch, ahkTimeSrcSwitch, ahFrequency, ahTimeFilter, ahAggregation)
                         dismiss()
                     }
                     .accessibilityLabel("Done")
@@ -311,7 +319,7 @@ struct ahViewController: View {
             Text("For previous day")
                 .font(.system(size: 16))
                 .foregroundColor(.primary)
-            
+
             Button(action: {
                 showingPrevDayInfo = true
             }) {
@@ -319,7 +327,7 @@ struct ahViewController: View {
                     .foregroundColor(.blue)
             }
             .accessibilityLabel("Previous Day Information")
-            
+
             Spacer()
             Toggle("", isOn: $prevDateSwitch)
                 .labelsHidden()
@@ -330,6 +338,34 @@ struct ahViewController: View {
             infoSheet(
                 title: "For Previous Day",
                 content: "ON: Assigns the data to the following day.  Like active energy for a sleep tracker, where the activity might affect your sleep the following night.\n\nOFF: Keeps data assigned to the day it was collected. Best for an exercise or calorie tracker where the data belongs to the day of activity."
+            )
+        }
+    }
+
+    private var timeSrcSection: some View {
+        HStack {
+            Text("Use as time source")
+                .font(.system(size: 16))
+                .foregroundColor(.primary)
+
+            Button(action: {
+                showingTimeSrcInfo = true
+            }) {
+                Image(systemName: "info.circle")
+                    .foregroundColor(.blue)
+            }
+            .accessibilityLabel("Time Source Information")
+
+            Spacer()
+            Toggle("", isOn: $ahkTimeSrcSwitch)
+                .labelsHidden()
+        }
+        .padding(.horizontal)
+        .frame(minHeight: 25)
+        .sheet(isPresented: $showingTimeSrcInfo) {
+            infoSheet(
+                title: "Time Source",
+                content: "When enabled, this HealthKit data source will be used as the timestamp source for tracker entries. Only one time source can be active per tracker."
             )
         }
     }
@@ -423,6 +459,17 @@ struct ahViewController: View {
         // Sum option is no longer needed - HealthKit provides daily totals automatically
         return false
     }
+
+    // Determine if time source switch should be shown
+    private func shouldShowTimeSrcSwitch() -> Bool {
+        guard let config = selectedConfiguration() else { return false }
+
+        // Show switch only for discreteArithmetic entries with no custom processing
+        return config.aggregationStyle == .discreteArithmetic
+            && config.customProcessor == nil
+            && config.aggregationTime == nil
+            && config.aggregationType == nil
+    }
     
     // Reusable info sheet view
     private func infoSheet(title: String, content: String) -> some View {
@@ -439,6 +486,7 @@ struct ahViewController: View {
                 // This will close whichever sheet is open
                 showingAvgInfo = false
                 showingPrevDayInfo = false
+                showingTimeSrcInfo = false
                 showingConfigInfo = false
             }
             .frame(maxWidth: .infinity)

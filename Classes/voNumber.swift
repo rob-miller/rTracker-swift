@@ -1405,12 +1405,13 @@ class voNumber: voState, UITextFieldDelegate {
         selectedChoice: vo.optDict["ahSource"],
         selectedUnitString: vo.optDict["ahUnit"],
         ahPrevD: vo.optDict["ahPrevD"] ?? "0" == "1",
+        ahkTimeSrc: MyTracker.optDict["ahkTimeSrc"] as? String == String(vo.vid),
         ahFrequency: vo.optDict["ahFrequency"] ?? AHFREQUENCYDFLT,
         ahTimeFilter: vo.optDict["ahTimeFilter"] ?? AHTIMEFILTERDFLT,
         ahAggregation: vo.optDict["ahAggregation"] ?? AHAGGREGATIONDFLT,
         onDismiss: {
           [self]
-          updatedChoice, updatedUnit, updatedAhPrevD, updatedAhFrequency,
+          updatedChoice, updatedUnit, updatedAhPrevD, updatedAhkTimeSrc, updatedAhFrequency,
           updatedAhTimeFilter, updatedAhAggregation in
           vo.optDict["ahSource"] = updatedChoice
           vo.optDict["ahUnit"] = updatedUnit
@@ -1418,6 +1419,18 @@ class voNumber: voState, UITextFieldDelegate {
           vo.optDict["ahFrequency"] = updatedAhFrequency
           vo.optDict["ahTimeFilter"] = updatedAhTimeFilter
           vo.optDict["ahAggregation"] = updatedAhAggregation
+
+          // Handle ahkTimeSrc at tracker level
+          if updatedAhkTimeSrc {
+            // Switch is ON: Set this vo as the time source
+            MyTracker.optDict["ahkTimeSrc"] = String(vo.vid)
+          } else {
+            // Switch is OFF: Remove time source if it was this vo
+            if MyTracker.optDict["ahkTimeSrc"] as? String == String(vo.vid) {
+              MyTracker.optDict.removeValue(forKey: "ahkTimeSrc")
+            }
+          }
+
           if let button = ctvovcp?.scroll.subviews.first(where: {
             $0 is UIButton && $0.accessibilityIdentifier == "configtv_ahSelBtn"
           }) as? UIButton {
