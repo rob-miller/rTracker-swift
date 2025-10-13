@@ -39,6 +39,38 @@ UI test suite for the rTracker iOS application using XCTest framework. Contains 
 - Reverted to standard `slider.adjust(toNormalizedSliderPosition:)` despite known unreliability
 
 ## Current Issues & TODOs
+- **⚠️ DISCONTINUED 2025-10-13**: iOS UI testing abandoned due to fundamental unreliability
+  - **REASON**: XCTest framework is fundamentally unreliable and produces non-repeatable results
+  - **ROOT CAUSES**:
+    1. **Slider APIs completely broken** - No method can reliably set values (adjust(), coordinates, drag)
+    2. **Timing issues** - Race conditions and flakiness despite waits and assertions
+    3. **Element identification fragility** - UI elements inconsistently accessible
+    4. **Non-deterministic behavior** - Same test produces different results on different runs
+  - **DECISION**: Manual testing only going forward
+  - **STATUS**: Test suite preserved as documentation but not actively maintained
+  - **RECOMMENDATION**: Do not invest further time in XCTest UI automation for this project
+
+## Completed Work (Historical)
+- **COMPLETED 2025-10-12**: Fixed Save button identifier in `testReminders()`
+  - Replaced `app.buttons["Save"]` with `app.buttons["addTrkrSave"]` (2 occurrences at lines 2410, 2442)
+  - Was causing test failures: "Failed to tap 'Save' Button: No matches found"
+  - Consistent with rest of test file which uses `addTrkrSave` identifier
+- **COMPLETED 2025-10-12**: Added `assertMinutesAtZero()` helper for proper minute boundary testing
+  - Created new helper function that accepts exactly "59", "00", or "01" for minute fields
+  - Fixes semantic issue where tolerance ±1 on minutes=0 would incorrectly treat hours/minutes independently
+  - Updated 3 assertions at lines 2388, 2390, 2401 to use new helper
+  - Prevents accepting wrong times (e.g., hours off by 1 like 6:00 vs 7:00)
+  - Simple string comparison, no wraparound math needed
+- **COMPLETED 2025-10-12**: Made time assertions more robust with tolerance in `testReminders()`
+  - Replaced strict `XCTAssertEqual` with `assertValueWithinTolerance` for time fields (±1 tolerance)
+  - Updated 6 assertions at lines 2363-2366 and 2377-2378
+  - Prevents test failures from minor slider positioning variations
+  - Consistent with earlier assertions in same test (lines 2343, 2345, 2350)
+- **COMPLETED 2025-10-12**: Fixed button identifier inconsistency in UI tests
+  - Replaced all instances of `modTrkrConfig` with `addTrkrSetup` (4 occurrences at lines 2008, 2029, 2218, 2410)
+  - The app code uses `addTrkrSetup` as the button identifier in addTrackerController
+  - This was causing test failures: "Failed to tap 'modTrkrConfig' Button: No matches found"
+  - Updated comment at line 1522 to clarify correct identifier
 - **COMPLETED 2025-10-10**: Simplified `setupContactsAccessAndKateBell()` to use 'kb' testing button
   - Replaced complex demo tracker navigation with simple button tap
   - Now directly taps toolbar 'kb' button to trigger contacts authorization and add Kate Bell
@@ -49,8 +81,6 @@ UI test suite for the rTracker iOS application using XCTest framework. Contains 
   - **FUNDAMENTAL LIMITATION**: XCTest slider interaction APIs are broken across all tested approaches
   - Removed all custom functions: `setSliderPrecisely()`, `parseSliderValue()`, `debugSliderProperties()`, `testDebugSliderValues()`
   - Reverted to standard `slider.adjust()` with acceptance of unreliable results
-- **KNOWN ISSUE**: Slider tests may fail intermittently due to XCTest API limitations - this is an Apple bug, not a test bug
-- **RECOMMENDATION**: Consider removing slider from UI tests or accepting approximate values only
 
 ## Recent Development History
 - 2d79c85: Tests ok through demoTrackerUse
@@ -62,15 +92,41 @@ UI test suite for the rTracker iOS application using XCTest framework. Contains 
 - c0e4095: Tests for URL scheme; UISwitch changes
 
 ## Last Updated
-2025-10-10: **SIMPLIFIED** `setupContactsAccessAndKateBell()` to use 'kb' testing button:
+**2025-10-13: DISCONTINUED iOS UI TESTING**
+- **Decision**: Abandoning XCTest UI automation for this project
+- **Reason**: Framework is fundamentally unreliable with non-repeatable results
+- **Root causes**: Broken slider APIs, timing issues, element identification fragility, non-deterministic behavior
+- **Going forward**: Manual testing only
+- **Test suite status**: Preserved as documentation but not actively maintained
+- **Firm recommendation**: Do not invest further time in XCTest UI automation
+
+---
+
+## Historical Updates (Prior to Discontinuation)
+
+**2025-10-12**: Fixed Save button identifier in `testReminders()`
+- Replaced 2 instances of `app.buttons["Save"]` with `app.buttons["addTrkrSave"]` (lines 2410, 2442)
+- Button identifier mismatch was causing test failures
+
+**2025-10-12**: Added minute boundary assertion helper
+- Created `assertMinutesAtZero()` helper (line 255) that accepts exactly "59", "00", or "01"
+- Fixes semantic bug: tolerance ±1 on minutes=0 was treating hours/minutes independently
+- Updated 3 minute field assertions at lines 2388, 2390, 2401
+
+**2025-10-12**: Improved test robustness in `testReminders()`
+- Replaced 6 strict time assertions with tolerance-based assertions (±1 range)
+- Lines 2363-2366 and 2377-2378 now use `assertValueWithinTolerance`
+
+**2025-10-12**: Fixed button identifier inconsistency
+- Replaced all `modTrkrConfig` references with correct `addTrkrSetup` identifier
+
+**2025-10-10**: Simplified `setupContactsAccessAndKateBell()` to use 'kb' testing button
 - Replaced ~60 lines of complex demo tracker navigation with simple 'kb' button tap
-- Function now just taps toolbar button to trigger contacts authorization and add Kate Bell
-- Much more reliable and maintainable approach
-- Requires TESTING build configuration for 'kb' button to be available
+- Requires TESTING build configuration
 
-**EARLIER 2025-10-10**: **ABANDONED** all attempts to work around XCTest slider APIs after exhaustive testing:
+**2025-10-10**: Abandoned all attempts to work around XCTest slider APIs
 
-### Problems Discovered
+### Problems Discovered with XCTest Slider APIs
 1. **Drag gestures**: Triggered app's swipe-right recognizer → "Do you want to save?" alerts
 2. **Linear error compensation**: Oscillated (target 20% → 21% → 22% → 21% → 22%...)
 3. **`slider.adjust()` non-monotonic**: Positions 0.1667-0.1680 all produce 24-25% (should be 16-17%)
@@ -84,11 +140,5 @@ UI test suite for the rTracker iOS application using XCTest framework. Contains 
 - ❌ Element-relative coordinate tapping
 - ❌ Absolute screen coordinate tapping with pixel-perfect calculations
 
-### Conclusion
+### Technical Conclusion
 **XCTest provides NO reliable programmatic method to set UISlider values to specific positions.**
-
-### Resolution
-- **Removed**: All custom functions (`setSliderPrecisely()`, `parseSliderValue()`, `debugSliderProperties()`, `testDebugSliderValues()`)
-- **Reverted**: To standard `slider.adjust(toNormalizedSliderPosition:)`
-- **Accepted**: Tests may fail intermittently - this is an Apple/XCTest limitation, not a test bug
-- **Recommendation**: Remove slider from UI tests or accept approximate values only

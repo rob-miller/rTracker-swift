@@ -38,6 +38,11 @@ Controller for setting up reminder notifications for trackers. Manages complex U
 - AM/PM handling based on locale settings
 
 ## Current Issues & TODOs
+- ✅ **COMPLETED 2025-10-12**: Updated Done button to use modern iOS 26 createDoneButton
+  - Replaced manual button creation with `rTracker_resource.createDoneButton()`
+  - Now uses burnt yellow background with checkmark symbol (consistent with app-wide design)
+  - Removed obsolete manual styling code (title emoji, setTitleTextAttributes)
+  - Maintains accessibility labels for proper UI testing support
 - ✅ **RESOLVED**: notifyReminderVC2 instantiation updated to use programmatic UI
 - ⚠️ **STILL XIB-BASED**: This controller itself still uses XIB (notifyReminderViewController.xib)
 - **FUNCTIONALITY**: Complex reminder scheduling system working properly
@@ -57,4 +62,11 @@ Controller for setting up reminder notifications for trackers. Manages complex U
 - Original conversion from Objective-C via Swiftify (e41ceb5)
 
 ## Last Updated
+2025-10-12 - **MODERNIZED DONE BUTTON**: Replaced manual button creation with `rTracker_resource.createDoneButton()`:
+- Line 726: Changed from basic `UIBarButtonItem(title: "Item")` to modern `createDoneButton()`
+- Removed lines 272, 274, 276-281: Obsolete manual styling (emoji title, font attributes)
+- Now uses iOS 26 burnt yellow background with checkmark symbol
+- Consistent with app-wide button design system
+- Maintains accessibility support for UI testing
+
 2025-09-26 - Updated child controller instantiation to remove XIB dependency. notifyReminderVC2 now uses programmatic UI.
