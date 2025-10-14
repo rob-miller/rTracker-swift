@@ -28,6 +28,7 @@ struct ahViewController: View {
     @State private var showingAvgInfo = false // For average info popup
     @State private var showingPrevDayInfo = false // For previous day info popup
     @State private var showingTimeSrcInfo = false // For time source info popup
+    @State private var showingFrequencyInfo = false // For frequency info popup
     @State private var showingConfigInfo = false // For selected config info popup
     @State private var seenMinuteSelections: Set<String> = []  // Add this to track which selections we've seen
     @State private var sampleFilter: SampleFilter = .metrics
@@ -379,9 +380,18 @@ struct ahViewController: View {
                 Text("Frequency")
                     .font(.system(size: 16))
                     .foregroundColor(.primary)
+
+                Button(action: {
+                    showingFrequencyInfo = true
+                }) {
+                    Image(systemName: "info.circle")
+                        .foregroundColor(.blue)
+                }
+                .accessibilityLabel("Frequency Information")
+
                 Spacer()
             }
-            
+
             Picker("Frequency", selection: $ahFrequency) {
                 Text("Singleton").tag("singleton")
                 Text("Daily").tag("daily")
@@ -396,6 +406,12 @@ struct ahViewController: View {
         }
         .padding(.horizontal)
         .frame(minHeight: 45)
+        .sheet(isPresented: $showingFrequencyInfo) {
+            infoSheet(
+                title: "Frequency - Singleton",
+                content: "Chooses the single HealthKit reading closest to the target date. Will not generate a new entry."
+            )
+        }
     }
     
     private var timeFilterContent: some View {
@@ -491,6 +507,7 @@ struct ahViewController: View {
                 showingAvgInfo = false
                 showingPrevDayInfo = false
                 showingTimeSrcInfo = false
+                showingFrequencyInfo = false
                 showingConfigInfo = false
             }
             .frame(maxWidth: .infinity)

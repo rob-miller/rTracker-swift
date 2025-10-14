@@ -57,6 +57,7 @@ SwiftUI view controller for selecting and configuring HealthKit data sources. Pr
 
 ## Current Issues & TODOs
 - **COMPLETED** (2025-10-13): Singleton frequency implementation with conditional UI hiding
+- **COMPLETED** (2025-10-13): Info button added next to Frequency label with explanation sheet
 - **COMPLETED** (2025-10-02): SF symbol icons for main category tabs (Metrics/Sleep/Workouts) with iOS 26+ support
 - **COMPLETED** (2025-10-02): SF symbol icons for workout category pills with icon + text display
 - **COMPLETED** (2025-10-02): Dynamic workout category filtering to hide empty categories
@@ -67,6 +68,7 @@ SwiftUI view controller for selecting and configuring HealthKit data sources. Pr
 - Styled "Update HealthKit Choices" button with capsule border design
 - Workout category pills use smooth animation transitions
 - Singleton frequency properly hides time filter and aggregation pickers
+- Frequency info button provides contextual help about singleton option
 - No known issues with current implementation
 
 ## Recent Development History
@@ -114,8 +116,16 @@ SwiftUI view controller for selecting and configuring HealthKit data sources. Pr
 - **ahPrevD Enhancement**: Improved previous day data handling with proper date shifting
 
 ## Last Updated
-2025-10-13 - Singleton Frequency Implementation:
-- **Singleton Option**: Added to frequency picker (line 383), picks single closest HK datapoint per day
+2025-10-13 - Frequency Info Button Addition:
+- **Info Button**: Added blue info.circle button next to "Frequency" label (lines 384-390)
+- **Sheet Presentation**: Shows explanation sheet when tapped (lines 409-414)
+- **State Management**: Added showingFrequencyInfo state variable (line 31)
+- **Dismiss Handler**: Updated to include new state variable (line 510)
+- **Pattern Consistency**: Matches existing info button pattern from "For previous day" section
+- **Explanation Text**: "Chooses the single HealthKit reading closest to the target date. Will not generate a new entry."
+
+Previous update 2025-10-13 - Singleton Frequency Implementation:
+- **Singleton Option**: Added to frequency picker (line 396), picks single closest HK datapoint per day
 - **Conditional UI**: Time filter and aggregation pickers hidden when singleton selected (lines 125-128)
 - **Target Logic**: Uses tracker entry timestamp (ahkTimeSrc) or 12:00 noon, finds closest match within same day
 - **Integration**: Works with voNumber.swift backend (handleSingletonMatching, processHealthQuery, findClosestResult)
