@@ -88,7 +88,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         view.addSubview(toolbar)
 
         // Setup button
-        setupButton = rTracker_resource.createActionButton(target: self, action: #selector(btnSetup(_:)), symbolName: "slider.horizontal.3", accId: "addTrkrSetup", fallbackSystemItem: .edit)
+        setupButton = rTracker_resource.createSettingsButton(target: self, action: #selector(btnSetup(_:)), accId: "addTrkrSetup")
         setupButton.accessibilityLabel = "Setup"
         setupButton.accessibilityHint = "Configure tracker settings"
 

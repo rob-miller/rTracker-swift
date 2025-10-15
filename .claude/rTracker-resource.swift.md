@@ -7,6 +7,7 @@ Central utility class providing shared resources and UI components across the ap
 - Static utility class with class methods
 - Manages global UI state for loading indicators
 - Provides centralized file path and utility functions
+- **settingsIcon**: Global constant for settings button SF Symbol ("gear")
 
 ## Important Methods/Functions
 - `startActivityIndicator(_:navItem:disable:str:)` - Shows modern styled loading spinner with message
@@ -26,6 +27,7 @@ Central utility class providing shared resources and UI components across the ap
 - `createDoneButton(target:action:preferYellow:symbolSize:)` - Yellow/blue checkmark (default 18pt)
 - `createActionButton(target:action:symbolName:tintColor:symbolSize:fallbackSystemItem:fallbackTitle:)` - Generic symbol button (default 18pt)
 - `createNavigationButton(target:action:direction:style:)` - Back/forward navigation with direction enum
+- `createSettingsButton(target:action:accId:)` - Settings/configuration button with gear icon (uses settingsIcon constant)
 
 **Removed Functions (25+ eliminated):**
 - ~~All UseTrackerController-specific functions~~ → Use `createActionButton`
@@ -95,17 +97,26 @@ Central utility class providing shared resources and UI components across the ap
 - Maintained backward compatibility with existing API
 
 ## Current Issues & TODOs
-- **COMPLETED**: Major button consolidation - Reduced from 25+ functions to 4 core functions
+- **COMPLETED**: Major button consolidation - Reduced from 25+ functions to 5 core functions
 - **COMPLETED**: Updated all client files to use consolidated button functions
 - **COMPLETED**: Fixed all compilation errors across UseTrackerController, voNumber, trackerChart, privacyV, addValObjController, RootViewController, addTrackerController
 - **COMPLETED**: Maintained all visual styling and functionality while eliminating code duplication
 - **COMPLETED**: Standardized button sizing (18pt default, 16pt for keyboard accessories)
 - **COMPLETED**: Implemented color theming (yellow primary saves, blue secondary done, red cancel/reject)
 - **COMPLETED**: Preserved backward compatibility with pre-iOS 26 fallbacks
+- **COMPLETED**: Settings button refactoring - Centralized settings icon using "gear" SF Symbol with settingsIcon constant
 - All button system refactoring and consolidation work is now complete
 
 ## Last Updated
-2025-09-26 - MAJOR BUTTON CONSOLIDATION SESSION:
+2025-10-15 - SETTINGS BUTTON REFACTORING:
+- **Added settingsIcon constant**: Global "gear" SF Symbol constant for settings buttons
+- **Added createSettingsButton function**: Dedicated function for settings/configuration buttons
+- **Replaced "slider.horizontal.3"**: All uses now reference settingsIcon constant instead of hardcoded string
+- **Updated 4 files**: RootViewController, addTrackerController, addValObjController, privacyV
+- **Centralized Icon Management**: Single source of truth for settings icon symbol name
+- **Core Architecture Now**: 5 consolidated button functions (createStyledButton, createDoneButton, createActionButton, createNavigationButton, createSettingsButton)
+
+Previous session - 2025-09-26 - MAJOR BUTTON CONSOLIDATION SESSION:
 - **MASSIVE REFACTOR**: Reduced 25+ button creation functions to 4 core functions
 - **Architecture Overhaul**: createDoneButton, createActionButton, createNavigationButton, createStyledButton (base)
 - **Updated 7 files**: UseTrackerController, voNumber, trackerChart, privacyV, addValObjController, RootViewController, addTrackerController

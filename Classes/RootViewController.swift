@@ -704,7 +704,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     var _editBtn: UIBarButtonItem?
     var editBtn: UIBarButtonItem {
         if _editBtn == nil {
-            _editBtn = rTracker_resource.createActionButton(target: self, action: #selector(btnEdit), symbolName: "slider.horizontal.3", accId: "edit", fallbackSystemItem: .edit)
+            _editBtn = rTracker_resource.createSettingsButton(target: self, action: #selector(btnEdit), accId: "edit")
             _editBtn!.accessibilityLabel = "Edit"
             _editBtn!.accessibilityHint = "tap modify existing trackers"
         }

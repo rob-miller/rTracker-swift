@@ -399,7 +399,7 @@ class privacyV: UIView {
     private var _configBtn: UIButton?
     var configBtn: UIButton? {
         if _configBtn == nil {
-            _configBtn = rTracker_resource.createActionButton(target: self, action: #selector(showConfig(_:)), symbolName: "slider.horizontal.3", accId: "setup", fallbackSystemItem: .edit).uiButton
+            _configBtn = rTracker_resource.createSettingsButton(target: self, action: #selector(showConfig(_:)), accId: "setup").uiButton
 
             // Let button use its intrinsic content size, then position
             let buttonSize = _configBtn?.intrinsicContentSize ?? CGSize.zero

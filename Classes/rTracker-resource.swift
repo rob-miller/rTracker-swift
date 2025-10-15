@@ -39,6 +39,9 @@ let hiddenColor = UIColor(red: 0.9, green: 0.95, blue: 1.0, alpha: 0.6)
 
 let LABELMINHEIGHT = 31.0  // uiswitch minimum intrinsic height
 
+// Settings/Configuration icon - centralized SF Symbol name
+let settingsIcon = "gear"
+
 func minLabelHeight(_ height: CGFloat) -> CGFloat {
   return max(height, LABELMINHEIGHT)
 }
@@ -1503,6 +1506,17 @@ class rTracker_resource: NSObject {
   enum NavigationStyle {
     case plain
     case circle
+  }
+
+  /// Creates a settings/configuration button with gear icon
+  class func createSettingsButton(target: Any?, action: Selector, accId: String) -> UIBarButtonItem {
+    return createActionButton(
+      target: target,
+      action: action,
+      symbolName: settingsIcon,
+      accId: accId,
+      fallbackSystemItem: .edit
+    )
   }
 
 }

@@ -249,7 +249,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
         view.addSubview(toolbar)
 
         // Add modern edit button to toolbar
-        let setupBtn = rTracker_resource.createActionButton(target: self, action: #selector(btnSetup(_:)), symbolName: "slider.horizontal.3", accId: "avoSetup", fallbackSystemItem: .edit)
+        let setupBtn = rTracker_resource.createSettingsButton(target: self, action: #selector(btnSetup(_:)), accId: "avoSetup")
         setupBtn.accessibilityLabel = "Setup"
         setupBtn.accessibilityHint = "Configure value object settings"
         toolbar.items = [setupBtn]
