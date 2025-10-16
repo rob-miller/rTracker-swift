@@ -52,13 +52,15 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
     }
 
     func pleaseRegister(forNotifications rootViewController: RootViewController) {
-        
+        DBGLog("=== pleaseRegister() CALLED ===")
+
         if !rTracker_resource.getNotificationsEnabled() {
-            
-            
+            DBGLog("Notifications not enabled")
+
             if !rTracker_resource.getToldAboutNotifications() {
                 // if not yet told
-                
+                DBGLog("Not yet told about notifications - showing prompt")
+
                 let alert = UIAlertController(
                     title: "Authorise notifications",
                     message: "Authorise notifications in the next window to enable tracker reminders.",
@@ -68,21 +70,32 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
                     title: "OK",
                     style: .default,
                     handler: { [self] action in
+                        DBGLog("=== NOTIFICATION OK TAPPED ===")
                         registerForNotifications()
 
                         rTracker_resource.setToldAboutNotifications(true)
                         UserDefaults.standard.set(true, forKey: "toldAboutNotifications")
 
-                        // Mark new users as already told about backup (they don't need the prompt)
-                        rTracker_resource.setToldToBackup(true)
-                        UserDefaults.standard.set(true, forKey: "toldToBackup")
+                        // REMOVED: Don't set toldToBackup here
+                        // Only welcome sheet sets toldToBackup = true
+                        // This allows backup requester to show for existing users
 
                         UserDefaults.standard.synchronize()
+
+                        // Welcome sheet is now handled by scene delegate in proper sequence
+                        // with backup requester, so we don't show it here
+                        DBGLog("Notification registration complete - welcome/backup sheets handled by scene delegate")
                     })
                 
                 alert.addAction(defaultAction)
                 rootViewController.present(alert, animated: true)
+            } else {
+                DBGLog("Already told about notifications - skipping prompt")
             }
+        } else {
+            DBGLog("Notifications already enabled - skipping registration")
+            // Welcome sheet is now handled by scene delegate in proper sequence
+            // with backup requester, so we don't show it here
         }
     }
 
@@ -101,6 +114,7 @@ class rTrackerAppDelegate: NSObject, UIApplicationDelegate {
         // Settings initialization will be handled by SceneDelegate after UI setup
         rTracker_resource.setNotificationsEnabled()
         rTracker_resource.setToldAboutNotifications(sud.bool(forKey: "toldAboutNotifications"))
+        rTracker_resource.setShownWelcomeSheet(sud.integer(forKey: "shownWelcomeSheet"))
 
         let prod = Bundle.main.infoDictionary?["CFBundleName"]
         let ver = Bundle.main.infoDictionary?["CFBundleShortVersionString"]

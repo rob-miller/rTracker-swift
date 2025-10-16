@@ -187,6 +187,60 @@ class rTrackerSceneDelegate: NSObject, UIWindowSceneDelegate {
         }
     }
     
+    private func checkAndShowBackupRequester(rootViewController: RootViewController, completion: (() -> Void)? = nil) {
+        DBGLog("=== BACKUP REQUESTER CHECK ===")
+        let sud = UserDefaults.standard
+        let toldAboutSwipe = sud.bool(forKey: "toldAboutSwipe")
+        let toldToBackup = sud.bool(forKey: "toldToBackup")
+        let hasSignificantData = rootViewController.hasSignificantUserData()
+
+        DBGLog("toldAboutSwipe = \(toldAboutSwipe)")
+        DBGLog("toldToBackup = \(toldToBackup)")
+        DBGLog("hasSignificantUserData = \(hasSignificantData)")
+        DBGLog("Condition for backup requester: \(toldAboutSwipe) && !\(toldToBackup) && \(hasSignificantData) = \(toldAboutSwipe && !toldToBackup && hasSignificantData)")
+
+        // Check if user has significant data worth backing up
+        if toldAboutSwipe && !toldToBackup && hasSignificantData {
+            DBGLog("=== SHOWING BACKUP REQUESTER ===")
+            // Existing user with significant data who hasn't been told to backup
+            // This only happens for users who never saw welcome sheet (upgrading from old version)
+
+            // If user has custom trackers, mark as having seen welcome sheet
+            if !rootViewController.hasOnlyDemoTrackers() {
+                rTracker_resource.setShownWelcomeSheet(WELCOME_SHEET_VERSION)
+                UserDefaults.standard.set(WELCOME_SHEET_VERSION, forKey: "shownWelcomeSheet")
+                UserDefaults.standard.synchronize()
+            }
+
+            rootViewController.presentBackupRequester(completion: completion)
+        } else {
+            // Not showing backup requester, call completion immediately
+            if toldAboutSwipe && toldToBackup {
+                DBGLog("=== NOT SHOWING BACKUP REQUESTER (already told) ===")
+                // Existing user who already backed up or saw welcome sheet
+                // Mark as having seen welcome sheet if they have custom trackers
+                if !rootViewController.hasOnlyDemoTrackers() {
+                    rTracker_resource.setShownWelcomeSheet(WELCOME_SHEET_VERSION)
+                    UserDefaults.standard.set(WELCOME_SHEET_VERSION, forKey: "shownWelcomeSheet")
+                    UserDefaults.standard.synchronize()
+                }
+            } else {
+                DBGLog("=== NOT SHOWING BACKUP REQUESTER ===")
+                if !toldAboutSwipe {
+                    DBGLog("Reason: Not yet told about swipe (user hasn't opened a tracker)")
+                }
+                if toldToBackup {
+                    DBGLog("Reason: Already told to backup")
+                }
+                if !hasSignificantData {
+                    DBGLog("Reason: No significant data to backup")
+                }
+            }
+            // Call completion immediately since we're not showing anything
+            completion?()
+        }
+    }
+
     private func handleLicenseAcceptance(rootViewController: RootViewController, appDelegate: rTrackerAppDelegate) {
         let sud = UserDefaults.standard
         if !sud.bool(forKey: "acceptLicense") {
@@ -200,12 +254,29 @@ class rTrackerSceneDelegate: NSObject, UIWindowSceneDelegate {
             let defaultAction = UIAlertAction(
                 title: "Accept",
                 style: .default,
-                handler: { action in
+                handler: { [weak self] action in
                     rTracker_resource.setAcceptLicense(true)
                     UserDefaults.standard.set(true, forKey: "acceptLicense")
                     UserDefaults.standard.synchronize()
 
                     appDelegate.pleaseRegister(forNotifications: rootViewController)
+
+                    // Show backup requester FIRST, then welcome sheet in completion
+                    // This ensures sequential presentation without conflicts
+                    self?.checkAndShowBackupRequester(rootViewController: rootViewController) {
+                        DBGLog("Backup requester dismissed or skipped - checking welcome sheet")
+
+                        // After backup requester is dismissed (or skipped), check welcome sheet
+                        let shownVersion = rTracker_resource.getShownWelcomeSheet()
+                        let onlyDemos = rootViewController.hasOnlyDemoTrackers()
+
+                        if shownVersion < WELCOME_SHEET_VERSION && onlyDemos {
+                            DBGLog("=== CALLING presentWelcomeSheet() after backup requester ===")
+                            rootViewController.presentWelcomeSheet()
+                        } else {
+                            DBGLog("Welcome sheet not needed")
+                        }
+                    }
                 })
 
             let recoverAction = UIAlertAction(
@@ -220,14 +291,8 @@ class rTrackerSceneDelegate: NSObject, UIWindowSceneDelegate {
 
             rootViewController.present(alert, animated: true)
         } else {
-            // License already accepted - check if we need to show backup requester to existing users
-            let toldAboutSwipe = sud.bool(forKey: "toldAboutSwipe")
-            let toldToBackup = sud.bool(forKey: "toldToBackup")
-
-            if toldAboutSwipe && !toldToBackup {
-                // This is an existing user who hasn't been told about backup yet
-                rootViewController.presentBackupRequester()
-            }
+            // License already accepted - check if we need to show messages to existing users
+            checkAndShowBackupRequester(rootViewController: rootViewController)
         }
     }
 }

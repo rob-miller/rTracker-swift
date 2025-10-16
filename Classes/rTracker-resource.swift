@@ -81,6 +81,7 @@ var toldAboutSwipe = false
 var toldAboutSwipe2 = false
 var toldAboutNotifications = false
 var toldToBackup = false
+var shownWelcomeSheet = 0  // Version number, 0 = never shown
 var notificationsEnabled = false
 var maintainerRqst = false
 
@@ -799,6 +800,14 @@ class rTracker_resource: NSObject {
 
   class func setToldToBackup(_ told: Bool) {
     toldToBackup = told
+  }
+
+  class func getShownWelcomeSheet() -> Int {
+    return shownWelcomeSheet
+  }
+
+  class func setShownWelcomeSheet(_ version: Int) {
+    shownWelcomeSheet = version
   }
 
   class func setNotificationsEnabled() {

@@ -177,6 +177,9 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
             if shouldShowHealthBtn {
                 items.append(healthBtn)
             }
+            #if DEBUGLOG
+            items.append(debugResetBtn)  // Add debug reset button in debug builds
+            #endif
             items.append(flexibleSpaceButtonItem)
             if shouldShowPrivacyBtn {
                 items.append(privateBtn)
@@ -185,13 +188,25 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         }
 #else
         var items: [UIBarButtonItem?] = []
+        DBGLog("refreshToolBar: Setting up toolbar items")
         if shouldShowHealthBtn {
+            DBGLog("refreshToolBar: Adding health button")
             items.append(healthBtn)
+        } else {
+            DBGLog("refreshToolBar: Health button hidden")
         }
+        #if DEBUGLOG
+        DBGLog("refreshToolBar: Adding debug reset button")
+        items.append(debugResetBtn)  // Add debug reset button in debug builds
+        #endif
         items.append(flexibleSpaceButtonItem)
         if shouldShowPrivacyBtn {
+            DBGLog("refreshToolBar: Adding privacy button")
             items.append(privateBtn)
+        } else {
+            DBGLog("refreshToolBar: Privacy button hidden")
         }
+        DBGLog("refreshToolBar: Final toolbar items count = \(items.count)")
         setToolbarItems(items.compactMap { $0 }, animated: animated)
 #endif
     }
@@ -780,6 +795,26 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         return _healthBtn!
     }
 
+#if DEBUGLOG
+    var _debugResetBtn: UIBarButtonItem?
+    var debugResetBtn: UIBarButtonItem {
+        if _debugResetBtn == nil {
+            DBGLog("Creating debug reset button")
+            _debugResetBtn = rTracker_resource.createActionButton(
+                target: self,
+                action: #selector(btnDebugReset),
+                symbolName: "arrow.counterclockwise.circle",
+                accId: "debugReset",
+                tintColor: .systemOrange,
+                fallbackSystemItem: .refresh)
+            _debugResetBtn!.accessibilityLabel = "Reset Welcome Flags"
+            _debugResetBtn!.accessibilityHint = "Debug: Reset toldToBackup and shownWelcomeSheet"
+            DBGLog("Debug reset button created successfully")
+        }
+        return _debugResetBtn!
+    }
+#endif
+
     var _addBtn: UIBarButtonItem?
     var addBtn: UIBarButtonItem {
         if _addBtn == nil {
@@ -969,6 +1004,42 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         hostingController.modalPresentationStyle = .pageSheet
         present(hostingController, animated: true, completion: nil)
     }
+
+#if DEBUGLOG
+    @objc func btnDebugReset() {
+        DBGLog("Debug reset button pressed - clearing welcome sheet and backup flags")
+
+        let alert = UIAlertController(
+            title: "Reset Welcome/Backup Flags",
+            message: "This will remove UserDefaults keys:\n• acceptLicense\n• shownWelcomeSheet\n• toldToBackup\n• toldAboutNotifications\n\nSimulates fresh install. Restart to test.",
+            preferredStyle: .alert)
+
+        let resetAction = UIAlertAction(
+            title: "Reset",
+            style: .destructive,
+            handler: { action in
+                let sud = UserDefaults.standard
+
+                // Only remove from UserDefaults - simulates fresh install where keys don't exist
+                sud.removeObject(forKey: "acceptLicense")
+                sud.removeObject(forKey: "shownWelcomeSheet")
+                sud.removeObject(forKey: "toldToBackup")
+                sud.removeObject(forKey: "toldAboutNotifications")
+                sud.synchronize()
+
+                DBGLog("Reset complete: removed acceptLicense, shownWelcomeSheet, toldToBackup, and toldAboutNotifications from UserDefaults")
+
+                rTracker_resource.alert("Flags Reset", msg: "Keys removed from UserDefaults. Restart the app to test fresh install scenario (with license acceptance).", vc: self)
+            })
+
+        let cancelAction = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
+
+        alert.addAction(resetAction)
+        alert.addAction(cancelAction)
+
+        present(alert, animated: true)
+    }
+#endif
 
     @objc func btnPrivate() {
         tableView!.scrollRectToVisible(CGRect(x: 0, y: 0, width: 1, height: 1), animated: true) // ScrollToTop
@@ -1211,10 +1282,137 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         Thread.detachNewThreadSelector(#selector(startBackupExportZip), toTarget: self, with: nil)
     }
 
-    func presentBackupRequester() {
+    func hasOnlyDemoTrackers() -> Bool {
+        DBGLog("=== hasOnlyDemoTrackers() CALLED ===")
+
+        // Known demo/sample tracker names from screenshot - EXACT strings with icons
+        // Note: Some emojis include variant selectors (U+FE0F) for display style
+        let demoTrackerNames = [
+            "🚗 Car",
+            "☕️🍷 Drinks",  // Coffee has U+FE0F variant selector
+            "🚴 Exercise",
+            "📋 Weight stats",
+            "👣rTracker demo"  // No space between emoji and "rTracker"
+        ]
+
+        // Get all tracker names (including hidden)
+        let allTrackerNames = tlist.topLayoutNamesH
+
+        DBGLog("Total trackers found: \(allTrackerNames.count)")
+        for (index, name) in allTrackerNames.enumerated() {
+            DBGLog("Tracker[\(index)]: '\(name)'")
+        }
+
+        // If no trackers, treat as new user
+        if allTrackerNames.isEmpty {
+            DBGLog("No trackers - returning TRUE (new user)")
+            return true
+        }
+
+        // Check if ALL trackers are demos
+        for trackerName in allTrackerNames {
+            if !demoTrackerNames.contains(trackerName) {
+                DBGLog("Found NON-DEMO tracker: '\(trackerName)'")
+                DBGLog("Returning FALSE (has custom trackers)")
+                return false  // Found custom tracker
+            }
+        }
+
+        DBGLog("All trackers are demos - returning TRUE")
+        return true  // All trackers are demos
+    }
+
+    func hasSignificantUserData() -> Bool {
+        // If user has created custom trackers, they have significant data
+        if !hasOnlyDemoTrackers() {
+            return true
+        }
+
+        // User only has demo trackers - check if they've added 2+ records to any demo
+        // (excluding rTracker demo which has pre-installed records)
+        let demoTrackersToCheck = [
+            "🚗 Car",
+            "☕🍷 Drinks",
+            "🚴 Exercise",
+            "📋 Weight stats"
+        ]
+
+        // Map tracker names to IDs
+        let allTrackerNames = tlist.topLayoutNamesH
+        let allTrackerIDs = tlist.topLayoutIDsH
+
+        for (index, trackerName) in allTrackerNames.enumerated() {
+            // Only check the 4 empty demo trackers
+            if demoTrackersToCheck.contains(trackerName) {
+                let tid = allTrackerIDs[index]
+                let tracker = trackerObj(tid)
+
+                // Count records in this tracker
+                let sql = "SELECT COUNT(*) FROM trkrData"
+                let recordCount = tracker.toQry2Int(sql: sql)
+
+                // If 2 or more records, user has significant data
+                if recordCount >= 2 {
+                    return true
+                }
+            }
+        }
+
+        // User has only demos with 0-1 records - not significant
+        return false
+    }
+
+    func presentWelcomeSheet(completion: (() -> Void)? = nil) {
+        DBGLog("=== presentWelcomeSheet() CALLED ===")
+
+        let welcomeMessage = """
+        Explore the sample trackers, then tap the ➕ button to create your own.
+
+        Trackers can include numbers, sliders, text, choices, functions and more.
+
+        A ❤️ means the feature is powered by Apple Health.  Number values can be configured in settings ⚙️ to read values from ❤️ Apple Health.
+
+        Once a tracker has more than 3 records, tap its 📈 button to view charts and graphs.
+
+        Pull to refresh a tracker to get the latest data from ❤️ Apple Health.
+        """
+
+        DBGLog("Creating welcome alert")
+        let alert = UIAlertController(
+            title: "Welcome to rTracker!",
+            message: welcomeMessage,
+            preferredStyle: .alert)
+
+        let action = UIAlertAction(
+            title: "Get Started",
+            style: .default,
+            handler: { action in
+                DBGLog("Welcome sheet Get Started tapped")
+
+                // Set welcome sheet version
+                rTracker_resource.setShownWelcomeSheet(WELCOME_SHEET_VERSION)
+                UserDefaults.standard.set(WELCOME_SHEET_VERSION, forKey: "shownWelcomeSheet")
+
+                // Mark as told about backup - welcome sheet users manage their own backups
+                rTracker_resource.setToldToBackup(true)
+                UserDefaults.standard.set(true, forKey: "toldToBackup")
+
+                UserDefaults.standard.synchronize()
+                DBGLog("Welcome sheet flags saved: shownWelcomeSheet=\(WELCOME_SHEET_VERSION), toldToBackup=true")
+
+                // Call completion handler after welcome sheet is dismissed
+                completion?()
+            })
+
+        alert.addAction(action)
+        DBGLog("Presenting welcome alert")
+        present(alert, animated: true)
+    }
+
+    func presentBackupRequester(completion: (() -> Void)? = nil) {
         let alert = UIAlertController(
             title: "Backup Your Data",
-            message: "This is a new version of rTracker with many new features and probably new bugs as well. Please backup all your trackers to ensure you don't lose any data. Be sure to try the Apple HealthKit sources for the number values, and the new charts!",
+            message: "This is a new version of rTracker with many new features and probably new bugs as well. Please backup all your trackers to ensure you don't lose any data.\n\nThis full backup functionality is available by tapping the main window settings ⚙️ and then using the share menu 📤.\n\nBe sure to try the new Apple HealthKit ❤️ source option for number values, and the new charts!",
             preferredStyle: .alert)
 
         let backupAction = UIAlertAction(
@@ -1226,6 +1424,9 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                 UserDefaults.standard.synchronize()
 
                 self?.doBackupNow()
+
+                // Call completion after backup action
+                completion?()
             })
 
         let skipAction = UIAlertAction(
@@ -1235,6 +1436,9 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                 rTracker_resource.setToldToBackup(true)
                 UserDefaults.standard.set(true, forKey: "toldToBackup")
                 UserDefaults.standard.synchronize()
+
+                // Call completion after skip
+                completion?()
             })
 
         alert.addAction(backupAction)
