@@ -78,6 +78,8 @@
 		D482D272114FEB5E00CE6BC8 /* trackerList.swift in Sources */ = {isa = PBXBuildFile; fileRef = D482D271114FEB5E00CE6BC8 /* trackerList.swift */; };
 		D482D276114FEB7500CE6BC8 /* trackerObj.swift in Sources */ = {isa = PBXBuildFile; fileRef = D482D275114FEB7500CE6BC8 /* trackerObj.swift */; };
 		D487D7741260A77800298C1D /* configTVObjVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = D487D7721260A77800298C1D /* configTVObjVC.swift */; };
+		D489A2C22EA0285D0006DE8B /* HealthStatusViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D489A2C12EA0285D0006DE8B /* HealthStatusViewController.swift */; };
+		D489A2C32EA0285D0006DE8B /* HealthStatusViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D489A2C12EA0285D0006DE8B /* HealthStatusViewController.swift */; };
 		D48E98642A23BE8100AC5ACB /* voTextBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4B6AE71127EC35E00C036ED /* voTextBox.swift */; };
 		D48F9E7F119AA02A00B37C93 /* valueObj.swift in Sources */ = {isa = PBXBuildFile; fileRef = D48F9E7E119AA02A00B37C93 /* valueObj.swift */; };
 		D48F9FB2119B4CA600B37C93 /* addValObjController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D48F9FB0119B4CA600B37C93 /* addValObjController.swift */; };
@@ -246,6 +248,7 @@
 		D482D271114FEB5E00CE6BC8 /* trackerList.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = trackerList.swift; sourceTree = "<group>"; };
 		D482D275114FEB7500CE6BC8 /* trackerObj.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = trackerObj.swift; sourceTree = "<group>"; };
 		D487D7721260A77800298C1D /* configTVObjVC.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = configTVObjVC.swift; sourceTree = "<group>"; };
+		D489A2C12EA0285D0006DE8B /* HealthStatusViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HealthStatusViewController.swift; path = Classes/HealthStatusViewController.swift; sourceTree = "<group>"; };
 		D48F9E7E119AA02A00B37C93 /* valueObj.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = valueObj.swift; sourceTree = "<group>"; };
 		D48F9FB0119B4CA600B37C93 /* addValObjController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = addValObjController.swift; sourceTree = "<group>"; };
 		D494D5B42DA567B800298132 /* healthKitData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = healthKitData.swift; sourceTree = "<group>"; };
@@ -387,6 +390,7 @@
 		29B97314FDCFA39411CA2CEA /* CustomTemplate */ = {
 			isa = PBXGroup;
 			children = (
+				D489A2C12EA0285D0006DE8B /* HealthStatusViewController.swift */,
 				D444F4182D32E218008780FE /* rTracker.entitlements */,
 				D41AA9012D26CA62001393C8 /* rTrackerDebug no-log.entitlements */,
 				D4B091BE2A166EFA00C0D5E3 /* rTracker-Bridging-Header.h */,
@@ -851,6 +855,7 @@
 				D482D272114FEB5E00CE6BC8 /* trackerList.swift in Sources */,
 				D482D276114FEB7500CE6BC8 /* trackerObj.swift in Sources */,
 				D417E3102A2121570093564A /* TSQCalendarMonthHeaderCell.m in Sources */,
+				D489A2C22EA0285D0006DE8B /* HealthStatusViewController.swift in Sources */,
 				D417E3132A2121570093564A /* TSQCalendarView.m in Sources */,
 				D4588ADC1177497200AD2106 /* addTrackerController.swift in Sources */,
 				D4A314AA1189BB6A00F062AC /* tObjBase.swift in Sources */,
@@ -917,6 +922,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D489A2C32EA0285D0006DE8B /* HealthStatusViewController.swift in Sources */,
 				D4BCFC722E96E568008F1442 /* rTrackerUITests.swift in Sources */,
 				D4BCFC732E96E568008F1442 /* rTrackerUITestsLaunchTests.swift in Sources */,
 				D42D3E6C2E9A913D009584A4 /* dbg-defs.swift in Sources */,
