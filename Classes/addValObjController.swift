@@ -68,6 +68,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
     var toolbar: UIToolbar!
     var typeLabel: UILabel!
     var graphLabel: UILabel!
+    var graphInfoButton: UIButton!
     var containerView: UIView!
     private var tmpVtype = 0
     private var tmpVcolor = 0
@@ -236,6 +237,14 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
         graphLabel.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(graphLabel)
 
+        // Create info button next to Graph label
+        graphInfoButton = UIButton(type: .infoDark)
+        graphInfoButton.translatesAutoresizingMaskIntoConstraints = false
+        graphInfoButton.accessibilityIdentifier = "avoGraphInfo"
+        graphInfoButton.accessibilityLabel = "Graph Help"
+        graphInfoButton.accessibilityHint = "Explains which graph these settings apply to"
+        view.addSubview(graphInfoButton)
+
         // Create picker view
         votPicker = UIPickerView()
         votPicker.accessibilityHint = "left wheel sets value type"
@@ -282,9 +291,15 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
             typeLabel.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor, constant: 80),
             typeLabel.topAnchor.constraint(equalTo: containerView.bottomAnchor, constant: 30),
 
-            // Graph label
-            graphLabel.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor, constant: -80),
+            // Graph label (with space for info button)
+            graphLabel.trailingAnchor.constraint(equalTo: graphInfoButton.leadingAnchor, constant: -4),
             graphLabel.centerYAnchor.constraint(equalTo: typeLabel.centerYAnchor),
+
+            // Graph info button (next to Graph label)
+            graphInfoButton.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor, constant: -56),
+            graphInfoButton.centerYAnchor.constraint(equalTo: graphLabel.centerYAnchor),
+            graphInfoButton.widthAnchor.constraint(equalToConstant: 24),
+            graphInfoButton.heightAnchor.constraint(equalToConstant: 24),
 
             // Picker view
             votPicker.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor),
@@ -306,6 +321,9 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
 
         // Connect text field action
         labelField.addTarget(self, action: #selector(labelFieldDone(_:)), for: .editingDidEndOnExit)
+
+        // Connect info button action
+        graphInfoButton.addTarget(self, action: #selector(btnGraphInfo), for: .touchUpInside)
     }
 
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
@@ -468,6 +486,16 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
 
     @objc func handleViewSwipeRight(_ gesture: UISwipeGestureRecognizer?) {
         btnSave()
+    }
+
+    @objc func btnGraphInfo() {
+        let alert = UIAlertController(
+            title: "Graph Settings",
+            message: "These graph settings are for the graph shown when your device is rotated to landscape orientation.",
+            preferredStyle: .alert)
+        let okAction = UIAlertAction(title: "OK", style: .default, handler: nil)
+        alert.addAction(okAction)
+        present(alert, animated: true)
     }
 
     @IBAction func btnSetup(_ sender: Any) {

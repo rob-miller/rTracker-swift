@@ -1370,11 +1370,13 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
         Trackers can include numbers, sliders, text, choices, functions and more.
 
-        A ❤️ means the feature is powered by Apple Health.  Number values can be configured in settings ⚙️ to read values from ❤️ Apple Health.
+        A ❤️ means the feature is powered by Apple Health.  Number values can be configured in settings ⚙️ to read values from Apple Health.
 
         Once a tracker has more than 3 records, tap its 📈 button to view charts and graphs.
 
-        Pull to refresh a tracker to get the latest data from ❤️ Apple Health.
+        Pull to refresh a tracker to get the latest data from Apple Health, re-load from linked tracker values, and recalculate functions.
+
+        rTracker data is private to your device and never shared without your instruction.
         """
 
         DBGLog("Creating welcome alert")

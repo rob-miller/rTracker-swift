@@ -100,6 +100,7 @@ View controller for adding/editing value objects in trackers. Handles value obje
 - **RESOLVED**: Empty white button issue fixed by removing infoBtn entirely
 - **RESOLVED**: Text field width now properly constrained for full screen width
 - **RESOLVED**: iOS 26 buttons properly integrated with modern styling
+- **COMPLETED** (2025-10-16): Added info button for graph settings clarification
 
 ## Recent Development History
 **Current Session (2025-09-26) - Button Consolidation Fixes:**
@@ -122,9 +123,32 @@ View controller for adding/editing value objects in trackers. Handles value obje
 - Integration with tracker configuration workflow
 
 ## Last Updated
+2025-10-16 - **Added Info Button Next to Graph Label:**
+- **New UI Element**: Added info button (ⓘ) next to "Graph" label (line 71, 241-246)
+  - Standard iOS `UIButton(type: .infoDark)` for native appearance
+  - Positioned immediately to the right of "Graph" label
+  - Accessibility ID: "avoGraphInfo"
+  - Accessibility label: "Graph Help"
+  - Accessibility hint: "Explains which graph these settings apply to"
+- **New Action Handler**: `btnGraphInfo()` (lines 485-493)
+  - Presents UIAlertController with explanation
+  - Title: "Graph Settings"
+  - Message: "These graph settings are for the graph shown when your device is rotated to landscape orientation."
+  - Clarifies that settings apply to legacy landscape graph, NOT modern iOS Charts
+- **Layout Constraints**: Lines 295-302
+  - Graph label trailing anchor tied to info button leading edge (4pt spacing)
+  - Info button positioned 56pt from trailing edge
+  - Button sized 24x24pt for touch target
+  - Vertically centered with Graph label
+- **Action Connection**: Line 326 in `connectActionsAndDelegates()`
+- **Purpose**: Reduces user confusion about which graph system these settings affect
+- **Location**: Info button appears in picker section, contextually near the graph settings it explains
+- **Syntax**: Verified with swiftc - compilation successful
+
+Previous update:
 2025-09-26 - Button consolidation fixes applied:
 - Updated to use consolidated button system (createNavigationButton, createActionButton)
 - Resolved compilation errors from button function consolidation
 - All button functionality preserved with cleaner implementation
 
-Previous session - Completed major XIB-to-programmatic conversion with iOS 26 button styling and proper Auto Layout constraints
+Earlier session - Completed major XIB-to-programmatic conversion with iOS 26 button styling and proper Auto Layout constraints
