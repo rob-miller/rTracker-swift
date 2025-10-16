@@ -45,6 +45,9 @@ let settingsIcon = "gear"
 // HealthKit/Apple Health icon - centralized SF Symbol name
 let healthKitIcon = "heart.fill"
 
+// Privacy icon - centralized SF Symbol name
+let privacyIcon = "sunglasses"
+
 func minLabelHeight(_ height: CGFloat) -> CGFloat {
   return max(height, LABELMINHEIGHT)
 }
@@ -1343,7 +1346,8 @@ class rTracker_resource: NSObject {
     borderWidth: CGFloat = 0,
     symbolSize: CGFloat = 22,
     fallbackSystemItem: UIBarButtonItem.SystemItem? = nil,
-    fallbackTitle: String? = nil
+    fallbackTitle: String? = nil,
+    legacyImageName: String? = nil
   ) -> UIBarButtonItem {
     if #available(iOS 26.0, *) {
       let button = UIButton(type: .system)
@@ -1374,6 +1378,22 @@ class rTracker_resource: NSObject {
       return buttonItem
     } else {
       // Pre-iOS 26: Use fallbacks
+
+      // First check for legacy bespoke image (e.g., privacy button PNGs)
+      if let imageName = legacyImageName {
+        let button = UIButton(type: .custom)
+        button.setImage(UIImage(named: imageName), for: .normal)
+        button.frame = CGRect(x: 0, y: 0,
+                             width: (button.currentImage?.size.width ?? 0.0) * 1.5,
+                             height: button.currentImage?.size.height ?? 0.0)
+        button.addTarget(target, action: action, for: .touchUpInside)
+        button.accessibilityIdentifier = accId
+        let buttonItem = UIBarButtonItem(customView: button)
+        buttonItem.accessibilityIdentifier = accId
+        return buttonItem
+      }
+
+      // Otherwise use systemItem or title fallbacks
       let buttonItem: UIBarButtonItem
       if let systemItem = fallbackSystemItem {
         buttonItem = UIBarButtonItem(barButtonSystemItem: systemItem, target: target, action: action)

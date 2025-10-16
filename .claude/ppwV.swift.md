@@ -63,6 +63,21 @@ Password picker view controller - UI component for text-based password entry wit
 - e41ceb5: files from Swiftify
 
 ## Last Updated
+2025-10-16 - **Changed Replace Password Confirm Button to Blue (Secondary Style):**
+- **Updated confirmBtn creation**: Line 153
+  - Added `preferYellow: false` parameter to `createDoneButton()`
+  - Changes button from yellow (primary) to blue (secondary) style
+  - **iOS 26**: Blue `checkmark.circle.fill` with `.systemBlue` color
+  - **Pre-iOS 26**: Standard `.done` system button item
+- **Context**: This is the confirm button shown during password change/replacement
+  - Appears in `changePass()` mode (line 450: `confirmBtn?.isHidden = false`)
+  - User enters new password and taps this button to confirm
+- **Rationale**: Password change is a secondary confirmation action, not a primary data save
+  - Blue secondary style more appropriate for confirmation actions
+  - Matches other non-primary save operations throughout the app
+- **Syntax**: Verified with swiftc - compilation successful
+
+Previous update:
 2025-01-15 - Password Change System Overhaul and Z-Order Fixes:
 - **Two-Button System**: Added confirm button (checkmark.circle) alongside cancel button for explicit password confirmation
 - **Fixed Erroneous Messages**: Eliminated "password changed" messages on keyboard done and cancel button - now only on explicit confirmation

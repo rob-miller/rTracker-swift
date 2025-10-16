@@ -105,9 +105,32 @@ Central utility class providing shared resources and UI components across the ap
 - **COMPLETED**: Implemented color theming (yellow primary saves, blue secondary done, red cancel/reject)
 - **COMPLETED**: Preserved backward compatibility with pre-iOS 26 fallbacks
 - **COMPLETED**: Settings button refactoring - Centralized settings icon using "gear" SF Symbol with settingsIcon constant
+- **COMPLETED** (2025-10-16): Privacy button migration to iOS 26 SF symbols with legacy PNG fallback support
 - All button system refactoring and consolidation work is now complete
 
 ## Last Updated
+2025-10-16 - **Privacy Button Migration to iOS 26 SF Symbols:**
+- **New privacyIcon Constant**: Line 49 - `let privacyIcon = "sunglasses"`
+  - Centralized SF Symbol name for privacy buttons
+  - Follows pattern of settingsIcon and healthKitIcon constants
+- **Enhanced createStyledButton**: Line 1350 - Added `legacyImageName: String?` parameter
+  - Supports bespoke PNG images for pre-iOS 26 fallback
+  - Line 1383-1394: New fallback branch checks for legacyImageName first
+  - Creates UIButton with PNG image when provided (preserves frame sizing)
+  - Falls back to systemItem/title if no legacy image
+- **Privacy Button SF Symbol States**:
+  - Green sunglasses.fill: Privacy off, no private trackers (closedview-button-7.png)
+  - Red sunglasses.fill: Privacy off, some private trackers (shadeview-button-7.png)
+  - Black sunglasses outline: Privacy unlocked (fullview-button-blue-7.png)
+- **Benefits**:
+  - Zero code duplication - single parameter addition to existing function
+  - Maintains full backward compatibility with PNG images
+  - Consistent with consolidated button architecture
+  - Eliminates manual UIButton creation in RootViewController
+- **Pattern**: legacyImageName allows single-button fallback without duplicating button creation logic
+- **Syntax**: Verified with swiftc - compilation successful
+
+Previous update:
 2025-10-15 - **Added healthKitIcon Constant** (line 46, 1556):
 - **New Constant**: `let healthKitIcon = "heart.fill"`
 - **Purpose**: Centralized SF Symbol name for HealthKit/Apple Health icons

@@ -47,6 +47,7 @@ Main root view controller for the rTracker app. Manages the primary tracker list
 - **COMPLETED**: Added kbBtn testing button for adding Kate Bell contact
 - **COMPLETED** (2025-10-15): Added Apple Health status button to toolbar with conditional hiding
 - **COMPLETED** (2025-10-16): Added "Hide the privacy button" preference with implementation
+- **COMPLETED** (2025-10-16): Migrated privacy button to iOS 26 SF symbols with legacy PNG fallback
 - All button functionality working correctly with new consolidated system
 
 ## Recent Development History
@@ -72,6 +73,39 @@ Main root view controller for the rTracker app. Manages the primary tracker list
 - `819040f`: Cleanup debug message improvements
 
 ## Last Updated
+2025-10-16 - **Privacy Button Security Fix + iOS 26 Migration:**
+- **SECURITY FIX in privBtnSetImg()**: Lines 686-717
+  - **Critical Issue**: Initial implementation changed icon to clear sunglasses when privacy view appeared (security vulnerability!)
+  - **Root Cause**: iOS 26 branch had `if noshow` condition that showed outline when view visible
+  - **Fix**: iOS 26 now always shows filled sunglasses (green/red based on `minprv` only)
+  - **Security**: Icon no longer reveals password attempt status - stays green/red until unlocked
+  - Lines 690-706: Simplified iOS 26 logic - removed noshow conditionals
+  - Green sunglasses.fill: No private trackers (`!minprv`)
+  - Red sunglasses.fill: Some private trackers (`minprv`)
+  - Clear sunglasses outline: Only when unlocked (handled in privateBtn getter, NOT here)
+  - Preserved legacy PNG logic for pre-iOS 26 (lines 708-716) - already secure!
+- **Updated privateBtn getter**: Lines 734-786
+  - Now uses `rTracker_resource.createStyledButton()` (lines 738-745)
+  - Initial creation with green sunglasses.fill / closedview PNG
+  - Special case handling for unlocked state (lines 758-777)
+  - Uses legacyImageName parameter for pre-iOS 26 fallback
+- **SF Symbol State Machine** (matches legacy PNG behavior):
+  - `.systemGreen` fill: No private trackers (closedview-button-7.png / closedview-button-blue-7.png)
+  - `.systemRed` fill: Some private trackers (shadeview-button-7.png / shadeview-button-blue-7.png)
+  - `.label` outline: ONLY when unlocked (fullview-button-blue-7.png) - set in privateBtn getter
+- **Key Insight**: Legacy `-blue` PNG variants maintain their lens colors (green/red stay same!)
+  - The "blue" in filename refers to frame color, not lens transparency
+  - This prevents revealing password attempt status to attackers
+  - iOS 26 implementation now matches this security behavior
+- **Benefits**:
+  - ✅ Secure: Icon doesn't reveal password validity
+  - ✅ Eliminates manual UIButton creation code
+  - ✅ Consolidated with rest of iOS 26 button system
+  - ✅ Maintains full backward compatibility
+  - ✅ Zero code duplication via legacyImageName parameter
+- **Syntax**: Verified with swiftc - compilation successful
+
+Previous update:
 2025-10-16 - **Added "Hide the privacy button" preference:**
 - **New Setting**: Added `hide_privacy_button` toggle in Settings.bundle/Root.plist
   - Title: "Hide the privacy button"

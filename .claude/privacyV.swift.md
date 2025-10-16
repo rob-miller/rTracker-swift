@@ -74,6 +74,26 @@ Privacy view controller that provides graphical password protection for the app
 - ea97c39: privacy not visible at bottom on startup - initial iOS 26 issue
 
 ## Last Updated
+2025-10-16 - **Security Fix: Lock Button Now Resets Password State:**
+- **Updated showConfig()**: Line 944
+  - Added `_pwState = PWQUERYPASS` when lock button is tapped
+  - **Critical Bug Fixed**: Lock button was not resetting password verification state
+  - **Previous Behavior (BROKEN)**: User could tap lock → tap setup → immediate config access (no password required!)
+  - **New Behavior (SECURE)**: User taps lock → password state reset → tap setup → password entry required
+- **Root Cause**: Lock button only changed `showing` state to PVQUERY, but left `_pwState = PWKNOWPASS`
+  - Line 313 check: `if PWKNOWPASS == pwState` would pass immediately on next setup button tap
+  - Allowed unauthorized access to privacy configuration after "locking"
+- **Fix Impact**:
+  - Forces password re-entry after locking config (line 352: `ppwv?.checkPass()`)
+  - Makes lock button behavior match security expectations
+  - Prevents bypass of password protection
+- **Password State Flow**:
+  - Enter password → `_pwState = PWKNOWPASS` → Config opens
+  - Tap lock → `_pwState = PWQUERYPASS` (reset) → Returns to PVQUERY
+  - Tap setup → Check fails → Requires password entry (PVCHECKPASS state)
+- **Syntax**: Verified with swiftc - compilation successful
+
+Previous update:
 2025-09-26 - Button consolidation fixes applied:
 - Updated all privacy buttons to use consolidated button system (createActionButton)
 - Resolved compilation errors from button function consolidation

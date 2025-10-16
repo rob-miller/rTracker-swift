@@ -684,50 +684,88 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     // MARK: button accessor getters
 
     func privBtnSetImg(_ pbtn: UIButton?, noshow: Bool) {
-        //BOOL shwng = (self.privacyObj.showing == PVNOSHOW); 
+        //BOOL shwng = (self.privacyObj.showing == PVNOSHOW);
         let minprv = privacyValue > MINPRIV
-        let btnImg = noshow
-            ? (minprv ? "shadeview-button-7.png" : "closedview-button-7.png")
-            : (minprv ? "shadeview-button-blue-7.png" : "closedview-button-blue-7.png")
 
-        DispatchQueue.main.async(execute: {
-            pbtn?.setImage(UIImage(named: btnImg), for: .normal)
-        })
+        if #available(iOS 26.0, *) {
+            // iOS 26: Always show filled sunglasses (green or red based on minprv)
+            // Unlocked state (clear sunglasses) is handled separately in privateBtn getter
+            let symbolName = privacyIcon + ".fill"
+            let symbolColor: UIColor = minprv ? .systemRed : .systemGreen
+
+            let symSize = UIImage.SymbolConfiguration(pointSize: 22, weight: .regular)
+            let image = UIImage(systemName: symbolName)?
+                .applyingSymbolConfiguration(symSize)?
+                .withTintColor(symbolColor, renderingMode: .alwaysOriginal)
+
+            DispatchQueue.main.async(execute: {
+                if var config = pbtn?.configuration {
+                    config.image = image
+                    pbtn?.configuration = config
+                }
+            })
+        } else {
+            // Pre-iOS 26: Use existing PNG image logic
+            let btnImg = noshow
+                ? (minprv ? "shadeview-button-7.png" : "closedview-button-7.png")
+                : (minprv ? "shadeview-button-blue-7.png" : "closedview-button-blue-7.png")
+
+            DispatchQueue.main.async(execute: {
+                pbtn?.setImage(UIImage(named: btnImg), for: .normal)
+            })
+        }
     }
 
     var _privateBtn: UIBarButtonItem?
     var privateBtn: UIBarButtonItem {
-        //
         if _privateBtn == nil {
-            let pbtn = UIButton()
-            pbtn.setImage(
-                UIImage(named: "closedview-button-7.png"),
-                for: .normal)
-            pbtn.frame = CGRect(x: 0, y: 0, width: (pbtn.currentImage?.size.width ?? 0.0) * 1.5, height: pbtn.currentImage?.size.height ?? 0.0)
-            pbtn.addTarget(self, action: #selector(btnPrivate), for: .touchUpInside)
-            _privateBtn = UIBarButtonItem(
-                customView: pbtn)
-            privBtnSetImg(_privateBtn!.customView as? UIButton, noshow: true)
-            
+            // Create initial button with green sunglasses.fill / closedview PNG
+            _privateBtn = rTracker_resource.createStyledButton(
+                symbolName: privacyIcon + ".fill",
+                target: self,
+                action: #selector(btnPrivate),
+                accId: "privacy",
+                symbolColor: .systemGreen,
+                legacyImageName: "closedview-button-7.png"
+            )
             _privateBtn!.accessibilityLabel = "Privacy"
             _privateBtn!.accessibilityHint = "tap to show privacy filter"
-            _privateBtn!.accessibilityIdentifier = "privacy"
+
+            // Update initial state
+            privBtnSetImg(_privateBtn!.customView as? UIButton, noshow: true)
         } else {
+            // Update button state based on privacy status
             var noshow = true
             if _privacyObj != nil {
                 noshow = PVNOSHOW == privacyObj.showing
             }
+
             if !(noshow) && (PWKNOWPASS == privacyObj.pwState) {
-                //DBGLog(@"unlock btn");
-                (_privateBtn!.customView as? UIButton)?.setImage(
-                    UIImage(named: "fullview-button-blue-7.png"),
-                    for: .normal)
+                // Special case: unlocked - use black sunglasses outline on iOS 26, fullview PNG on legacy
+                if #available(iOS 26.0, *) {
+                    let symSize = UIImage.SymbolConfiguration(pointSize: 22, weight: .regular)
+                    let image = UIImage(systemName: privacyIcon)?
+                        .applyingSymbolConfiguration(symSize)?
+                        .withTintColor(.label, renderingMode: .alwaysOriginal)
+
+                    DispatchQueue.main.async(execute: {
+                        if var config = (self._privateBtn!.customView as? UIButton)?.configuration {
+                            config.image = image
+                            (self._privateBtn!.customView as? UIButton)?.configuration = config
+                        }
+                    })
+                } else {
+                    //DBGLog(@"unlock btn");
+                    (_privateBtn!.customView as? UIButton)?.setImage(
+                        UIImage(named: "fullview-button-blue-7.png"),
+                        for: .normal)
+                }
             } else {
+                // Standard locked/hidden states
                 //DBGLog(@"lock btn");
                 privBtnSetImg(_privateBtn!.customView as? UIButton, noshow: noshow)
             }
         }
-
 
         return _privateBtn!
     }

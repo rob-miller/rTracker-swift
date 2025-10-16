@@ -941,6 +941,7 @@ class privacyV: UIView {
         if btn?.accessibilityIdentifier == "setup" {
             showing = PVCONFIG
         } else if btn?.accessibilityIdentifier == "lock" {
+            _pwState = PWQUERYPASS  // Reset password state to require re-entry
             showing = PVQUERY
         }
     }
