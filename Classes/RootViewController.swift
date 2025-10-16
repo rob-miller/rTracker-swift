@@ -156,6 +156,10 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
             }
         }
 
+        // Check if privacy button should be hidden
+        let hidePrivacyButton = UserDefaults.standard.bool(forKey: "hide_privacy_button")
+        let shouldShowPrivacyBtn = !hidePrivacyButton
+
 #if TESTING
         // Testing code compiles in debug builds, but only shows UI when launched by UI tests
         if ProcessInfo.processInfo.arguments.contains("--uitesting") {
@@ -163,14 +167,20 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
             if shouldShowHealthBtn {
                 items.append(healthBtn)
             }
-            items.append(contentsOf: [flexibleSpaceButtonItem, privateBtn])
+            items.append(flexibleSpaceButtonItem)
+            if shouldShowPrivacyBtn {
+                items.append(privateBtn)
+            }
             setToolbarItems(items.compactMap { $0 }, animated: animated)
         } else {
             var items: [UIBarButtonItem?] = []
             if shouldShowHealthBtn {
                 items.append(healthBtn)
             }
-            items.append(contentsOf: [flexibleSpaceButtonItem, privateBtn])
+            items.append(flexibleSpaceButtonItem)
+            if shouldShowPrivacyBtn {
+                items.append(privateBtn)
+            }
             setToolbarItems(items.compactMap { $0 }, animated: animated)
         }
 #else
@@ -178,7 +188,10 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         if shouldShowHealthBtn {
             items.append(healthBtn)
         }
-        items.append(contentsOf: [flexibleSpaceButtonItem, privateBtn])
+        items.append(flexibleSpaceButtonItem)
+        if shouldShowPrivacyBtn {
+            items.append(privateBtn)
+        }
         setToolbarItems(items.compactMap { $0 }, animated: animated)
 #endif
     }
