@@ -508,9 +508,12 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 cell?.accessibilityIdentifier = "\(vo?.parentTracker.trackerName ?? "tNull")_\(vo?.valueName ?? "vNull")"
                 cell?.accessoryType = .detailDisclosureButton
 
+                // Add health indicator string (only applies to numbers)
+                let healthIndicator = isAhkSource ? "from Apple Health - " : ""
+
                 if "0" == vo!.optDict["graph"] || vo!.vGraphType == VOG_NONE {
                     let vtypeNames = ValueObjectType.typeNames[vo!.vtype]
-                    cell?.detailTextLabel?.text = "\(vtypeNames) - no graph"
+                    cell?.detailTextLabel?.text = "\(vtypeNames) - \(healthIndicator)no graph"
                 } else if VOT_CHOICE == vo!.vtype {
                     let vtypeNames = ValueObjectType.typeNames[vo!.vtype]
                     let voGraphSet = (vo?.vos?.voGraphSet())?[vo!.vGraphType]
@@ -522,7 +525,7 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                     let vtypeNames = ValueObjectType.typeNames[vo!.vtype]
                     let voGraphSet = (vo?.vos?.voGraphSet())?[vo!.vGraphType]
                     let colorNames = rTracker_resource.colorNames[vo!.vcolor]
-                    cell?.detailTextLabel?.text = "\(vtypeNames) - \(voGraphSet!) - \(colorNames)"
+                    cell?.detailTextLabel?.text = "\(vtypeNames) - \(healthIndicator)\(voGraphSet!) - \(colorNames)"
                 }
 
                 if vo?.optDict["hidden"] == "1" {

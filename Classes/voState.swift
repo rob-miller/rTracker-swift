@@ -614,18 +614,39 @@ class voState: NSObject, voProtocol {
             cell.contentView.addSubview(secondLabelContainer)
         }
     }
-    
+
+    // Helper method to check if current entry's data came from Apple Health
+    private func isCurrentEntryFromHealthKit() -> Bool {
+        // First check if tracker has HealthKit enabled
+        guard vo.optDict["ahksrc"] == "1" else { return false }
+
+        // Get the current tracker date
+        guard let trackerDate = vo.parentTracker.trackerDate else { return false }
+        let currentDate = Int(trackerDate.timeIntervalSince1970)
+        guard currentDate > 0 else { return false }
+
+        // Query voHKstatus table to check if this specific entry came from HealthKit
+        let sql = "SELECT stat FROM voHKstatus WHERE id = \(vo.vid) AND date = \(currentDate)"
+        let stat = vo.parentTracker.toQry2Int(sql: sql)
+
+        // Return true only if stat = 1 (hkData), meaning data came from Apple Health
+        return stat == hkStatus.hkData.rawValue
+    }
+
     func voTVCellHeight() -> CGFloat {
         let labelSize = vo.getLabelSize()
         let maxLabel = vo.parentTracker.maxLabel
 
+        // Add extra height for HealthKit subtitle (16pt: 14pt label + 2pt spacing)
+        let subtitleHeight: CGFloat = isCurrentEntryFromHealthKit() ? 16 : 0
+
         if labelSize.width <= maxLabel.width || VOT_INFO == vo.vtype {
             //return CELL_HEIGHT_NORMAL;
             //return maxLabel.height + (2*MARGIN);
-            return labelSize.height + (2 * MARGIN)
+            return labelSize.height + (2 * MARGIN) + subtitleHeight
         } else {
             //return CELL_HEIGHT_TALL;
-            return labelSize.height + maxLabel.height + (2 * MARGIN)
+            return labelSize.height + maxLabel.height + (2 * MARGIN) + subtitleHeight
         }
     }
 
@@ -645,15 +666,15 @@ class voState: NSObject, voProtocol {
             while let viewToRemove = cell?.contentView.viewWithTag(kViewTag) {
                 viewToRemove.removeFromSuperview()
             }
-            
+
             // Remove any existing control view
             if let controlView = cell?.contentView.viewWithTag(kViewTag + 100) {
                 controlView.removeFromSuperview()
             }
         }
-         
+
         cell?.backgroundColor = .clear
-        
+
         // Create the label portion
         setupLabelForCell(cell!, maxLabel: maxLabel)
         
@@ -682,16 +703,18 @@ class voState: NSObject, voProtocol {
         
         let containerView = UIView(frame: bounds)
         containerView.tag = kViewTag
-        
-        let isIconTagged = vo.optDict["otsrc"] == "1" || vo.optDict["ahksrc"] == "1" || vo.vtype == VOT_FUNC
-        
+
+        // Check if this specific entry's data came from Apple Health
+        let isFromHealthKit = isCurrentEntryFromHealthKit()
+        let isIconTagged = vo.optDict["otsrc"] == "1" || isFromHealthKit || vo.vtype == VOT_FUNC
+
         let label = UILabel(frame: CGRect(
             x: isIconTagged ? 26 : 0,
             y: 0,
             width: isIconTagged ? bounds.size.width - 26 : bounds.size.width,
             height: bounds.size.height
         ))
-        
+
         label.font = PrefBodyFont
         label.textColor = .label
         let darkMode = vc?.traitCollection.userInterfaceStyle == .dark
@@ -702,20 +725,38 @@ class voState: NSObject, voProtocol {
         label.text = vo.valueName
         label.lineBreakMode = .byTruncatingTail
         label.numberOfLines = 1
-        
+
         containerView.addSubview(label)
-        
+
         // Add source indicator if needed
         if isIconTagged {
-            let iconName = vo.optDict["otsrc"] == "1" ? "link" : vo.optDict["ahksrc"] == "1" ? healthKitIcon : "function"
+            let iconName = vo.optDict["otsrc"] == "1" ? "link" : isFromHealthKit ? healthKitIcon : "function"
             let sourceIndicator = UIImageView(image: UIImage(systemName: iconName))
-            sourceIndicator.tintColor = vo.optDict["ahksrc"] == "1" ? .systemRed : .systemBlue
+            sourceIndicator.tintColor = isFromHealthKit ? .systemRed : .systemBlue
             sourceIndicator.contentMode = .scaleAspectFit
             sourceIndicator.frame = CGRect(x: 0, y: 0, width: 22, height: bounds.size.height)
             sourceIndicator.center.y = bounds.size.height / 2
             containerView.addSubview(sourceIndicator)
         }
-        
+
+        // Add subtitle for HealthKit data sources
+        if isFromHealthKit {
+            let subtitleLabel = UILabel(frame: CGRect(
+                x: isIconTagged ? 26 : 0,
+                y: label.frame.maxY + 2,
+                width: label.frame.width,
+                height: 14
+            ))
+            subtitleLabel.font = UIFont.systemFont(ofSize: 11)
+            subtitleLabel.textColor = .secondaryLabel
+            subtitleLabel.text = "from Apple Health"
+            subtitleLabel.tag = kViewTag + 1  // Tag for subtitle
+            containerView.addSubview(subtitleLabel)
+
+            // Expand container to accommodate subtitle
+            containerView.frame.size.height = bounds.size.height + 16
+        }
+
         cell.contentView.addSubview(containerView)
         cell.accessibilityIdentifier = "useT_\(vo.vos!.tvn())"
     }

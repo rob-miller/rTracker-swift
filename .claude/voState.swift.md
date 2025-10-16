@@ -30,6 +30,23 @@ Base UI state class for value objects in rTracker. Manages the UI presentation a
 [To be populated during analysis]
 
 ## Recent Development History
+- **2025-10-16**: Added per-entry Apple Health detection with subtitle (lines 618-634, 641, 707-756)
+  - **FIXED**: Heart icon and subtitle now only appear for entries where data actually came from Apple Health
+  - Added `isCurrentEntryFromHealthKit()` helper method (lines 618-634)
+    - Queries `voHKstatus` table for current tracker date to determine data source
+    - Returns true only if `stat = 1` (hkData), meaning data came from Apple Health
+    - Handles cases: manual entry (no voHKstatus), HealthKit data (stat=1), no data found (stat=0)
+  - Updated `setupLabelForCell()` to use helper method (lines 707-743)
+    - `isFromHealthKit` variable replaces `ahksrc == "1"` checks
+    - Icon and tint color logic updated: red heart only for HealthKit-sourced entries
+    - Subtitle only shown for entries with `isFromHealthKit = true`
+  - Updated `voTVCellHeight()` to use helper method (line 641)
+    - Cell height adjusted dynamically based on actual data source per entry
+  - Subtitle text: "from Apple Health" (11pt, `.secondaryLabel` color)
+  - **Behavior**: Mixed trackers now correctly show icon/subtitle only for HealthKit entries
+    - Example: Weight tracker with manual entries + smart scale data
+    - Manual entries: No icon, no subtitle
+    - Smart scale entries: Red heart icon + "from Apple Health" subtitle
 - **2025-10-15**: Updated HealthKit source indicator symbol and color (lines 577, 579, 710, 712)
   - Changed symbol from `"heart.text.square"` to `"heart.fill"` for HealthKit sources
   - Changed color from `.systemBlue` to `.systemRed` for HealthKit sources

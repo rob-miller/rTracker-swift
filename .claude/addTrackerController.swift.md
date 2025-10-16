@@ -57,6 +57,23 @@ Controller for creating and modifying trackers. Handles tracker configuration, v
 The HealthKit change detection correctly calls `clearHKdata()` when settings change, but the subsequent trkrData cleanup was overly aggressive. However, this was not the root cause of the manual data deletion issue - that was in the `voNumber.loadHKdata()` query logic that incorrectly processed manually-entered data.
 
 ## Last Updated
+2025-10-16 - **Added "from Apple Health" to Table Subtitles** (lines 511-528):
+- **Enhancement**: Added "from Apple Health" text to subtitles for HealthKit-enabled number valueObjs
+- **Location**: addTrackerController table view subtitle generation
+- **Implementation**:
+  - Added `healthIndicator` variable: `isAhkSource ? "from Apple Health - " : ""`
+  - Updated no-graph case (line 516): `"\(vtypeNames) - \(healthIndicator)no graph"`
+  - Updated standard format case (line 528): `"\(vtypeNames) - \(healthIndicator)\(voGraphSet!) - \(colorNames)"`
+  - Choice and Info cases unchanged (they don't support HealthKit)
+- **Behavior**:
+  - Number with HealthKit: `"number - from Apple Health - line - red"`
+  - Number without HealthKit: `"number - line - red"`
+  - Number with HealthKit, no graph: `"number - from Apple Health - no graph"`
+  - Other types unchanged: `"choice - dots"`, `"info"`, etc.
+- **Type-safe**: Only VOT_NUMBER can have `ahksrc == "1"`, so indicator naturally only appears for numbers
+- **Complements existing red heart icon** at lines 495-498 for visual consistency
+
+Previous update:
 2025-10-15 - **Updated HealthKit Source Indicator** (lines 495, 498):
 - **Symbol Change**: `"heart.text.square"` → `"heart.fill"` for HealthKit sources
 - **Color Change**: `.systemBlue` → `.systemRed` for HealthKit sources
