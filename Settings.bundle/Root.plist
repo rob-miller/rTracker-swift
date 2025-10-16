@@ -50,6 +50,16 @@
 			<key>DefaultValue</key>
 			<true/>
 		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSToggleSwitchSpecifier</string>
+			<key>Title</key>
+			<string>Hide main Apple Health button when all sources authorized</string>
+			<key>Key</key>
+			<string>hide_health_button_when_enabled</string>
+			<key>DefaultValue</key>
+			<false/>
+		</dict>
 	</array>
 	<key>StringsTable</key>
 	<string>Root</string>

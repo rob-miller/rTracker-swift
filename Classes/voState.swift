@@ -574,9 +574,9 @@ class voState: NSObject, voProtocol {
         
         // Add source indicator if needed
         if isIconTagged {
-            let iconName = vo.optDict["otsrc"] == "1" ? "link" : vo.optDict["ahksrc"] == "1" ? "heart.text.square" : "function"
+            let iconName = vo.optDict["otsrc"] == "1" ? "link" : vo.optDict["ahksrc"] == "1" ? healthKitIcon : "function"
             let sourceIndicator = UIImageView(image: UIImage(systemName: iconName))
-            sourceIndicator.tintColor = .systemBlue
+            sourceIndicator.tintColor = vo.optDict["ahksrc"] == "1" ? .systemRed : .systemBlue
             sourceIndicator.contentMode = .scaleAspectFit
             sourceIndicator.frame = CGRect(x: 0, y: 0, width: 22, height: bounds.size.height)
             sourceIndicator.center.y = bounds.size.height / 2
@@ -707,9 +707,9 @@ class voState: NSObject, voProtocol {
         
         // Add source indicator if needed
         if isIconTagged {
-            let iconName = vo.optDict["otsrc"] == "1" ? "link" : vo.optDict["ahksrc"] == "1" ? "heart.text.square" : "function"
+            let iconName = vo.optDict["otsrc"] == "1" ? "link" : vo.optDict["ahksrc"] == "1" ? healthKitIcon : "function"
             let sourceIndicator = UIImageView(image: UIImage(systemName: iconName))
-            sourceIndicator.tintColor = .systemBlue
+            sourceIndicator.tintColor = vo.optDict["ahksrc"] == "1" ? .systemRed : .systemBlue
             sourceIndicator.contentMode = .scaleAspectFit
             sourceIndicator.frame = CGRect(x: 0, y: 0, width: 22, height: bounds.size.height)
             sourceIndicator.center.y = bounds.size.height / 2

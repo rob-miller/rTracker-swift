@@ -185,6 +185,7 @@ Handles numeric input fields in trackers, supporting manual entry, HealthKit int
 - **Cache Improvements**: Enhanced HealthKit caching with unit-specific keys
 
 ## Current Issues & TODOs
+- **COMPLETED** (2025-10-15): Added Apple Health status button to configuration screen
 - **COMPLETED** (2025-10-13): Ghosted placeholder display for empty physiological HealthKit data
 - **COMPLETED** (2025-10-13): High-frequency data excluded from ahkTimeSrc matching to prevent log spam
 - **COMPLETED** (2025-10-13): ahkTimeSrc feature - distance-sorted matching for actual timestamps
@@ -206,6 +207,66 @@ Handles numeric input fields in trackers, supporting manual entry, HealthKit int
 - **HealthKit Cross-Contamination Bug** (2025-08-26): Fixed issue where low-frequency HealthKit valueObjs would repeatedly reprocess dates where we already knew there was `noData`. The complex OR-based SQL query only excluded `stat = hkData` entries but allowed `stat = noData` entries to be reprocessed indefinitely. Simplified to exclude ANY existing voHKstatus entry for the specific valueObj, preventing unnecessary reprocessing of dates we've already attempted.
 
 ## Last Updated
+2025-10-15 - **Fixed Health Button Horizontal Position** (line 1562-1564):
+- **Problem**: Button overlapped right 1/3 of switch instead of being positioned to the right
+  - Line 1564 calculated: `x: frame.origin.x + frame.size.width + SPACE`
+  - But `frame.size.width` was set to `labframe.size.height` (label height, ~20pt)
+  - UISwitch actual width is ~51pt (intrinsic size)
+  - Button appeared at x + 20pt instead of x + 51pt
+- **Root Cause**: configSwitch returns the frame passed to it, which doesn't reflect UISwitch intrinsic size
+  - UISwitch enforces its own standard width regardless of frame
+  - Frame width was arbitrarily set to label height for layout purposes
+- **Solution**: Use standard UISwitch width constant (51pt) instead of frame.size.width
+  - Added: `let switchWidth: CGFloat = 51.0  // Standard UISwitch width`
+  - Changed x calculation to: `frame.origin.x + switchWidth + SPACE`
+- **Result**: Button now positioned correctly to the right of switch with proper spacing
+
+Previous update:
+2025-10-15 - **Fixed Health Button Positioning and Presentation** (lines 1421-1433, 1569):
+- **Problem 1 - Wrong Parent View**: Button added to `ctvovc.view` instead of `ctvovc.scroll`
+  - All form elements (switches, labels, etc.) are added to scroll view
+  - Button was positioned relative to scroll content but added to wrong container
+  - Result: Button appeared in wrong location
+- **Problem 2 - Presentation Not Working**: Complex navigation controller logic failed silently
+  - Conditional check for navigationController might have been failing
+  - No error logging when presentation failed
+- **Solution 1 - Scroll View** (line 1569):
+  - Changed: `ctvovc.view.addSubview(healthButton)`
+  - To: `ctvovc.scroll.addSubview(healthButton)`
+  - Now consistent with switch positioning (configSwitch adds to scroll at line 545)
+- **Solution 2 - Direct Presentation** (lines 1429-1432):
+  - Changed: Complex conditional with navigationController
+  - To: `ctvovcp?.present(hostingController, animated: true)`
+  - Same proven pattern as `configAppleHealthView()` (line 1490)
+  - Added completion handler with debug log
+- **Result**: Button now appears in correct location and opens HealthStatusViewController on tap
+
+Previous update:
+2025-10-15 - **Fixed Health Button Using Standard UIBarButtonItem Pattern** (lines 1555-1570):
+- **Problem**: Initial implementation broke established iOS 26 button pattern
+  - Created custom `createInlineHealthButton()` that returned UIButton directly
+  - Violated pattern used throughout codebase where ALL functions return UIBarButtonItem
+- **Solution**: Use standard `.uiButton` extraction pattern (same as everywhere else)
+  - `createHealthButton()` returns UIBarButtonItem (consistent with all button functions)
+  - Use `.uiButton` property to extract underlying UIButton
+  - Same pattern as voNumber keyboard buttons (lines 123, 131)
+  - Same pattern as privacyV buttons, datePickerVC, ppwV, voTextBox
+- **Implementation**:
+  ```swift
+  let healthButtonItem = rTracker_resource.createHealthButton(...)
+  if let healthButton = healthButtonItem.uiButton {
+      healthButton.frame = CGRect(...)
+      ctvovc.view.addSubview(healthButton)
+  }
+  ```
+- **Button Positioning**: To right of ahsBtn switch, 30pt width, aligned height, same line as label
+- **Action Handler**: Lines 1421-1434 `showHealthStatus()` - presents `HealthStatusViewController` without config instructions
+- **Integration**: Uses standard `createHealthButton()` with `.uiButton` extraction
+- **Symbol States**: heart/heart.fill/arrow.trianglehead.clockwise.heart based on DB status
+- **Consistency**: Now follows same pattern as all other inline button placements
+- **Accessibility ID**: `voNumber_health` for UI testing
+
+Previous update:
 2025-10-13 - Consistent Ghosted Display for Empty HealthKit Data:
 - **UI Fix**: Changed empty HealthKit data display for physiological units to use ghosted placeholder instead of solid text
 - **Change**: Modified voDisplay function at line 265 from `self?.noHKdataMsg` to `""` (empty string)

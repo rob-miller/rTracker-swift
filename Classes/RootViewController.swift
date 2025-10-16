@@ -62,6 +62,7 @@ import Foundation
 import AVFoundation
 import ZIPFoundation
 import Contacts
+import SwiftUI
 
 extension Notification.Name {
     static let notifyOpenTracker = Notification.Name("notifyOpenTracker")
@@ -136,21 +137,49 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
     func refreshToolBar(_ animated: Bool) {
         //DBGLog(@"refresh tool bar, noshow= %d",(PVNOSHOW == self.privacyObj.showing));
+
+        // Check if health button should be hidden
+        let hideHealthButton = UserDefaults.standard.bool(forKey: "hide_health_button_when_enabled")
+        var shouldShowHealthBtn = true
+
+        if hideHealthButton {
+            // Check if all health sources are authorized (heart.fill state)
+            let tl = trackerList.shared
+            let sql = "SELECT disabled FROM rthealthkit"
+            let statuses = tl.toQry2AryI(sql: sql)
+
+            if statuses.count > 0 {
+                let activeStatuses = statuses.filter { $0 != 4 }
+                if !activeStatuses.isEmpty && activeStatuses.allSatisfy({ $0 == 1 || $0 == 3 }) {
+                    shouldShowHealthBtn = false
+                }
+            }
+        }
+
 #if TESTING
         // Testing code compiles in debug builds, but only shows UI when launched by UI tests
         if ProcessInfo.processInfo.arguments.contains("--uitesting") {
-            setToolbarItems(
-                [out2inBtn, xprivBtn, tstBtn, kbBtn, flexibleSpaceButtonItem, privateBtn].compactMap { $0 },
-                animated: animated)
+            var items: [UIBarButtonItem?] = [out2inBtn, xprivBtn, tstBtn, kbBtn]
+            if shouldShowHealthBtn {
+                items.append(healthBtn)
+            }
+            items.append(contentsOf: [flexibleSpaceButtonItem, privateBtn])
+            setToolbarItems(items.compactMap { $0 }, animated: animated)
         } else {
-            setToolbarItems(
-                [flexibleSpaceButtonItem, privateBtn].compactMap { $0 },
-                animated: animated)
+            var items: [UIBarButtonItem?] = []
+            if shouldShowHealthBtn {
+                items.append(healthBtn)
+            }
+            items.append(contentsOf: [flexibleSpaceButtonItem, privateBtn])
+            setToolbarItems(items.compactMap { $0 }, animated: animated)
         }
 #else
-        setToolbarItems(
-            [flexibleSpaceButtonItem, privateBtn].compactMap { $0 },
-            animated: animated)
+        var items: [UIBarButtonItem?] = []
+        if shouldShowHealthBtn {
+            items.append(healthBtn)
+        }
+        items.append(contentsOf: [flexibleSpaceButtonItem, privateBtn])
+        setToolbarItems(items.compactMap { $0 }, animated: animated)
 #endif
     }
     
@@ -690,6 +719,15 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         return _privateBtn!
     }
 
+    var _healthBtn: UIBarButtonItem?
+    var healthBtn: UIBarButtonItem {
+        if _healthBtn == nil {
+            _healthBtn = rTracker_resource.createHealthButton(target: self, action: #selector(btnHealth), accId: "health")
+            _healthBtn!.accessibilityLabel = "Apple Health"
+            _healthBtn!.accessibilityHint = "tap to view Apple Health status and manage permissions"
+        }
+        return _healthBtn!
+    }
 
     var _addBtn: UIBarButtonItem?
     var addBtn: UIBarButtonItem {
@@ -871,6 +909,14 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
     func btnMultiGraph() {
         DBGLog("btnMultiGraph was pressed!")
+    }
+
+    @objc func btnHealth() {
+        DBGLog("Health button pressed")
+        let healthStatusView = HealthStatusViewController(showConfigInstructions: true)
+        let hostingController = UIHostingController(rootView: healthStatusView)
+        hostingController.modalPresentationStyle = .pageSheet
+        present(hostingController, animated: true, completion: nil)
     }
 
     @objc func btnPrivate() {

@@ -57,6 +57,15 @@ Controller for creating and modifying trackers. Handles tracker configuration, v
 The HealthKit change detection correctly calls `clearHKdata()` when settings change, but the subsequent trkrData cleanup was overly aggressive. However, this was not the root cause of the manual data deletion issue - that was in the `voNumber.loadHKdata()` query logic that incorrectly processed manually-entered data.
 
 ## Last Updated
+2025-10-15 - **Updated HealthKit Source Indicator** (lines 495, 498):
+- **Symbol Change**: `"heart.text.square"` → `"heart.fill"` for HealthKit sources
+- **Color Change**: `.systemBlue` → `.systemRed` for HealthKit sources
+- Maintains `.systemBlue` for Other Tracker ("link") and Function sources
+- Consistent with health status button and UseTrackerController indicators
+- Clear visual distinction: Red heart = HealthKit, Blue link = Other Tracker, Blue function = Function
+- Affects valueObj list display in tracker configuration screen
+
+Previous update:
 2025-09-26 - Button consolidation fixes applied:
 - Updated to use consolidated button system (createNavigationButton, createActionButton)
 - Resolved compilation errors from button function consolidation

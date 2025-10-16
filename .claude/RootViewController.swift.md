@@ -45,6 +45,7 @@ Main root view controller for the rTracker app. Manages the primary tracker list
 - **COMPLETED**: Resolved compilation errors from button function consolidation
 - **COMPLETED**: Maintained all visual styling and accessibility features
 - **COMPLETED**: Added kbBtn testing button for adding Kate Bell contact
+- **COMPLETED** (2025-10-15): Added Apple Health status button to toolbar with conditional hiding
 - All button functionality working correctly with new consolidated system
 
 ## Recent Development History
@@ -70,6 +71,30 @@ Main root view controller for the rTracker app. Manages the primary tracker list
 - `819040f`: Cleanup debug message improvements
 
 ## Last Updated
+2025-10-15 - **Updated "All Good" Status Logic for Button Hiding** (line 153):
+- **Problem**: Button hiding logic required ALL sources to have data (status 1)
+  - Matched old heart.fill logic - unrealistic for most users
+  - Settings.bundle preference: "hide_health_button_when_enabled" couldn't be achieved
+- **Solution**: Changed condition from `$0 == 1` to `$0 == 1 || $0 == 3`
+  - Now hides button when all sources are authorized (regardless of data presence)
+  - Status 1 (enabled with data) OR Status 3 (authorized but no data) = hide button
+  - Only Status 2 (not authorized) keeps button visible
+- **Comment Updated**: Line 146 now says "authorized" instead of "enabled"
+- **Impact**: Makes button hiding feature achievable and useful for users
+
+Previous update:
+2025-10-15 - Added Apple Health Status Button with Dynamic Icon State:
+- **New `healthBtn` Property**: Lines 694-702, lazy property creates health button using `rTracker_resource.createHealthButton()`
+- **Dynamic SF Symbol States**: Button shows different heart icons based on HealthKit configuration
+- **Conditional Hiding**: Lines 141-157 in `refreshToolBar()` - checks UserDefaults setting `hide_health_button_when_enabled`
+  - Queries database to check if all active sources meet "all good" criteria
+  - Hides button when setting enabled AND all sources fully configured
+- **Action Handler**: Lines 914-920 `btnHealth()` - presents `HealthStatusViewController` as form sheet
+- **SwiftUI Import**: Added line 65 for `HealthStatusViewController` presentation
+- **Accessibility**: Proper labels and hints for VoiceOver support
+- **Integration**: Button added to toolbar arrays in both TESTING and production builds
+
+Previous update:
 2025-10-10 - Added testing button for Kate Bell contact creation:
 - New `kbBtn` testing button added to toolbar
 - Contacts framework integration for programmatic contact creation

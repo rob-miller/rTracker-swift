@@ -492,10 +492,10 @@ class addTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
                 let isIconTagged = isOtSource || isAhkSource || isFn
                 cell?.textLabel?.text = vo?.valueName
                 if isIconTagged {
-                    let iconName = isOtSource ? "link" : isAhkSource ? "heart.text.square" : "function"
+                    let iconName = isOtSource ? "link" : isAhkSource ? healthKitIcon : "function"
                     let sourceIndicator = UIImageView(image: UIImage(systemName: iconName))
                     sourceIndicator.tag = kViewTag + 1
-                    sourceIndicator.tintColor = .systemBlue
+                    sourceIndicator.tintColor = isAhkSource ? .systemRed : .systemBlue
                     sourceIndicator.contentMode = .scaleAspectFit
                     sourceIndicator.frame = CGRect(x: 0, y: 0, width: 12, height: 12)
                     let cellIndentation: CGFloat = 15

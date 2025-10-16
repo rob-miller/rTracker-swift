@@ -240,94 +240,79 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
 
                                 if query.identifier == "HKCategoryTypeIdentifierSleepAnalysis" {  // filter on sleep sample types
                                     let displayName = query.displayName
-                                    let components = displayName.split(separator: "-", maxSplits: 1, omittingEmptySubsequences: true)
-                                    if components.count > 1 {
-                                        let suffix = components[1].trimmingCharacters(in: .whitespaces) // Extract and trim the part after '-'
-                                        switch suffix {
-                                        case "In Bed":
-                                            predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-                                                HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
-                                                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.inBed.rawValue)
-                                            ])
-                                        case "Deep":
-                                            predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-                                                HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
-                                                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepDeep.rawValue)
-                                            ])
-                                        case "Other":
-                                            predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-                                                HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
-                                                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue)
-                                            ])
-                                        case "All":  // assume core will always be present at some point for all sleep
-                                            fallthrough
-                                        case "Total":  // previous name for core + deep + rem
-                                            fallthrough
-                                        case "Specified":
-                                            fallthrough
-                                        case "Core + Deep + REM":  // assume core will always be present at some point for total sleep
-                                            fallthrough
-                                        case "Core":
-                                            predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-                                                HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
-                                                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepCore.rawValue)
-                                            ])
-                                        case "REM":
-                                            predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-                                                HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
-                                                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepREM.rawValue)
-                                            ])
-                                        case "Awake":
-                                            predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-                                                HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
-                                                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.awake.rawValue)
-                                            ])
-                                        // Add cases for the new sleep metrics
-                                        case "Deep Segments":
-                                            // For Deep Segments, check if any Deep sleep data exists
-                                            predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-                                                HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
-                                                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepDeep.rawValue)
-                                            ])
-                                        case "REM Segments":
-                                            // For REM Segments, check if any REM sleep data exists
-                                            predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-                                                HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
-                                                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepREM.rawValue)
-                                            ])
-                                        case "Cycles":
-                                            // For Sleep Cycles, check if both Deep and REM sleep data exist
-                                            // Since we need both, let's check for Deep sleep here (simplification)
-                                            predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-                                                HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
-                                                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepDeep.rawValue)
-                                            ])
-                                        case "Transitions":
-                                            // For Transitions, we'll just check if any sleep data exists
-                                            // This is a simplified approach - ideally we'd check for multiple stages
-                                            predicate = HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: [])
-                                        default:
-                                            DBGErr("Unhandled display name suffix: \(suffix)")
-                                            // Handle other cases
-                                        }
-                                    } else {
-                                        if displayName == "Sleep" {
-                                            predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-                                                HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
-                                                NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue)
-                                            ])
-                                        } else {
-                                            DBGErr("No suffix found in displayName: \(displayName)")
-                                            // Handle cases where there is no '-'
-                                        }
+
+                                    // Direct display name matching - matches actual format in healthkitData.swift
+                                    switch displayName {
+                                    case "Sleep: Awake":
+                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                            HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                            NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.awake.rawValue)
+                                        ])
+                                    case "Core Sleep":
+                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                            HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                            NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepCore.rawValue)
+                                        ])
+                                    case "REM Sleep":
+                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                            HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                            NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepREM.rawValue)
+                                        ])
+                                    case "Deep Sleep":
+                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                            HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                            NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepDeep.rawValue)
+                                        ])
+                                    case "Sleep":
+                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                            HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                            NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue)
+                                        ])
+                                    case "Specified Sleep":
+                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                            HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                            NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepCore.rawValue)
+                                        ])
+                                    case "Sleep: In Bed":
+                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                            HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                            NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.inBed.rawValue)
+                                        ])
+                                    case "Deep Sleep Segments":
+                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                            HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                            NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepDeep.rawValue)
+                                        ])
+                                    case "REM Sleep Segments":
+                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                            HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                            NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepREM.rawValue)
+                                        ])
+                                    case "Awake Segments":
+                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                            HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                            NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.awake.rawValue)
+                                        ])
+                                    case "Sleep Cycles":
+                                        // Check for Deep sleep (cycles need both Deep and REM, checked later)
+                                        predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                            HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),
+                                            NSPredicate(format: "value == %d", HKCategoryValueSleepAnalysis.asleepDeep.rawValue)
+                                        ])
+                                    case "Sleep Transitions":
+                                        // Any sleep data exists
+                                        predicate = HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: [])
+                                    default:
+                                        DBGErr("Unhandled sleep display name: \(displayName)")
+                                        predicate = HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: [])
                                     }
 
                                 }
                                 let sampleQuery = HKSampleQuery(sampleType: categoryType, predicate: predicate, limit: 1, sortDescriptors: nil) { (_, samples, _) in
                                     dataExists = (samples?.count ?? 0) > 0
 
-                                    // Special handling for "Sleep - Cycles" which needs both Deep and REM
-                                    if query.displayName == "Sleep - Cycles" && dataExists {
+                                    // Special handling for "Sleep Cycles" which needs both Deep and REM
+                                    if query.displayName == "Sleep Cycles" && dataExists {
                                         // We checked for Deep sleep above, now check for REM
                                         let remPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
                                             HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: []),

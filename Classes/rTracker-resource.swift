@@ -42,6 +42,9 @@ let LABELMINHEIGHT = 31.0  // uiswitch minimum intrinsic height
 // Settings/Configuration icon - centralized SF Symbol name
 let settingsIcon = "gear"
 
+// HealthKit/Apple Health icon - centralized SF Symbol name
+let healthKitIcon = "heart.fill"
+
 func minLabelHeight(_ height: CGFloat) -> CGFloat {
   return max(height, LABELMINHEIGHT)
 }
@@ -1516,6 +1519,57 @@ class rTracker_resource: NSObject {
       symbolName: settingsIcon,
       accId: accId,
       fallbackSystemItem: .edit
+    )
+  }
+
+  /// Creates an Apple Health status button with dynamic SF symbol based on HealthKit configuration state
+  /// - Parameters:
+  ///   - target: The target object for the button action
+  ///   - action: The selector to call when button is tapped
+  ///   - accId: Accessibility identifier for the button
+  /// - Returns: UIBarButtonItem with appropriate heart symbol state:
+  ///   - "heart" (outline, red): Not configured or all hidden
+  ///   - "heart.fill" (red): All sources enabled
+  ///   - "arrow.trianglehead.clockwise.heart" (red): Some not authorized or no data
+  class func createHealthButton(target: Any?, action: Selector, accId: String) -> UIBarButtonItem {
+    // Query database for HealthKit configuration status
+    let tl = trackerList.shared
+    let sql = "SELECT disabled FROM rthealthkit"
+    let statuses = tl.toQry2AryI(sql: sql)
+
+    // Determine which symbol to use based on configuration state
+    let symbolName: String
+    let hasAny = statuses.count > 0
+
+    if !hasAny {
+      // No configurations exist
+      symbolName = "heart"
+    } else {
+      // Filter out hidden entries (status 4) for analysis
+      let activeStatuses = statuses.filter { $0 != 4 }
+
+      if activeStatuses.isEmpty {
+        // All are hidden
+        symbolName = "heart"
+      } else if activeStatuses.allSatisfy({ $0 == 1 || $0 == 3 }) {
+        // All enabled (status 1) or authorized with no data (status 3)
+        symbolName = healthKitIcon
+      } else if activeStatuses.contains(where: { $0 == 2 }) {
+        // Some not authorized (2)
+        symbolName = "arrow.trianglehead.clockwise.heart"
+      } else {
+        // Default fallback
+        symbolName = "heart"
+      }
+    }
+
+    return createActionButton(
+      target: target,
+      action: action,
+      symbolName: symbolName,
+      accId: accId,
+      tintColor: .systemRed,
+      fallbackTitle: "❤️"
     )
   }
 

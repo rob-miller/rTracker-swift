@@ -108,6 +108,63 @@ Central utility class providing shared resources and UI components across the ap
 - All button system refactoring and consolidation work is now complete
 
 ## Last Updated
+2025-10-15 - **Added healthKitIcon Constant** (line 46, 1556):
+- **New Constant**: `let healthKitIcon = "heart.fill"`
+- **Purpose**: Centralized SF Symbol name for HealthKit/Apple Health icons
+- **Pattern**: Matches existing `settingsIcon = "gear"` constant pattern (line 43)
+- **Usage**: Replaces hardcoded "heart.fill" strings throughout codebase
+- **Locations Using Constant**:
+  - rTracker-resource.swift line 1556: Dynamic health button logic (`createHealthButton`)
+  - voState.swift: Source indicators (2 locations)
+  - addTrackerController.swift: ValueObj list indicators
+  - HealthStatusViewController.swift: Manage Permissions button
+- **Benefits**: Single source of truth, easier to update icon globally, consistent with settings icon pattern
+
+Previous update:
+2025-10-15 - **Maintained Consistent UIBarButtonItem Pattern** (removed inconsistent inline approach):
+- **Pattern Preserved**: ALL button creation functions return `UIBarButtonItem` (never UIButton directly)
+- **Inline Usage**: Use `.uiButton` extension to extract underlying button when needed for inline placement
+- **Consistency**: Same pattern used throughout codebase:
+  - privacyV: 6 buttons using `.uiButton` (lines 380, 402, 424, 449, 524, 548)
+  - voNumber keyboard: 2 buttons using `.uiButton` (lines 123, 131)
+  - datePickerVC: 4 buttons using `.uiButton` (lines 195, 200, 205, 212)
+  - ppwV: 2 buttons using `.uiButton` (lines 129, 153)
+  - voTextBox: 2 buttons using `.uiButton` (lines 82, 110)
+- **Health Button**: Uses `createHealthButton().uiButton` for inline placement (no special function needed)
+- **Architecture**: 6 consolidated button functions remain unchanged (no inline-specific variants)
+- **Extension**: `.uiButton` property on UIBarButtonItem (lines 1575-1579) provides standard extraction pattern
+- **Correction**: Removed previously added `createInlineHealthButton()` to maintain consistency
+
+Previous update:
+2025-10-15 - **Updated "All Good" Status Logic** (lines 1551-1556):
+- **Problem**: Previous logic required ALL sources to have data (status 1) for heart.fill icon
+  - Unrealistic: users won't have data for every workout type (skiing, swimming, etc.)
+  - Many metrics require specific devices or activities users don't do
+  - Made "all good" state unachievable for most users
+- **Solution**: Changed condition from `$0 == 1` to `$0 == 1 || $0 == 3`
+  - Status 1 (enabled with data): ✅ Good
+  - Status 3 (authorized but no data): ✅ Good (user is authorized, just hasn't used it yet)
+  - Status 2 (not authorized): ❌ Needs action
+- **Symbol Logic Now**:
+  - `heart.fill`: All sources are authorized (status 1 or 3)
+  - `arrow.trianglehead.clockwise.heart`: Any source not authorized (status 2)
+  - `heart`: No configurations or all hidden
+- **Impact**: Makes "all good" state achievable and realistic for users
+
+Previous update:
+2025-10-15 - Added Apple Health Status Button with Dynamic Icon Selection:
+- **New `createHealthButton()` Function**: Lines 1522-1571
+  - Queries database: `SELECT disabled FROM rthealthkit` to determine button state
+  - **Internal Symbol Logic**: Function automatically selects appropriate SF symbol based on data
+  - Filters out hidden entries (status 4) before analyzing active configurations
+  - Uses `.systemRed` tint color for all states
+  - Fallback emoji: ❤️ for pre-SF symbol iOS versions
+  - **Key Design**: Caller doesn't need to determine state - button function handles everything
+- **Pattern Consistency**: Follows existing `createSettingsButton()` pattern but with smart state detection
+- **Usage**: Called from both RootViewController and voNumber configuration screen
+- **Core Architecture Now**: 6 consolidated button functions (createStyledButton, createDoneButton, createActionButton, createNavigationButton, createSettingsButton, createHealthButton)
+
+Previous update:
 2025-10-15 - SETTINGS BUTTON REFACTORING:
 - **Added settingsIcon constant**: Global "gear" SF Symbol constant for settings buttons
 - **Added createSettingsButton function**: Dedicated function for settings/configuration buttons

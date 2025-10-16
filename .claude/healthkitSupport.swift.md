@@ -48,11 +48,26 @@ Handles HealthKit integration for querying and processing health metrics, catego
 - **Authorization Updates**: Extended permission requests to include workout types
 
 ## Current Issues & TODOs
+- **COMPLETED (2025-10-15)**: Fixed sleep category name parsing in updateAuthorisations
 - **COMPLETED (2025-10-08)**: Added Awake Segments case handler for counting nighttime awakenings
 - **COMPLETED (2025-09-29)**: Fixed date attribution for interval-based measurements using `useEndDate` flag
 - **COMPLETED (2025-09-29)**: Fixed sleep cycles/segments/transitions naming mismatch
 
 ## Last Updated
+2025-10-15: **Sleep Category Name Parsing Fix** - Fixed critical bug in `updateAuthorisations()` function (lines 241-310):
+- **Problem**: Function was parsing sleep display names expecting dash separator (e.g., "Sleep - Awake"), but actual names use colon or no separator (e.g., "Sleep: Awake", "Core Sleep")
+- **Symptom**: All sleep categories logged "No suffix found in displayName" errors and failed to check for data availability
+- **Solution**: Replaced complex string splitting/parsing logic with direct display name matching using switch statement
+- **Fixed Display Names**:
+  - "Sleep: Awake", "Core Sleep", "REM Sleep", "Deep Sleep"
+  - "Sleep", "Specified Sleep", "Sleep: In Bed"
+  - "Deep Sleep Segments", "REM Sleep Segments", "Awake Segments"
+  - "Sleep Cycles", "Sleep Transitions"
+- **Also Fixed**: Line 315 - Changed "Sleep - Cycles" to "Sleep Cycles" for REM check consistency
+- **Result**: Eliminates all parsing errors, correctly checks for sleep data availability, proper authorization status in database
+- **Code Quality**: Simpler, more maintainable switch statement vs complex parsing with fallthrough cases
+
+Previous update:
 2025-10-08: **Awake Segments Handler Added** - Added new switch case in `handleSleepAnalysisQuery()` for "Awake Segments" (lines 684-698). Uses `countSleepSegments()` with:
 - `targetValue: HKCategoryValueSleepAnalysis.awake.rawValue`
 - `allowedGapValues: [:]` (no gaps allowed)

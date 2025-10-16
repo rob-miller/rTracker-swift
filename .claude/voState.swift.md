@@ -30,6 +30,12 @@ Base UI state class for value objects in rTracker. Manages the UI presentation a
 [To be populated during analysis]
 
 ## Recent Development History
+- **2025-10-15**: Updated HealthKit source indicator symbol and color (lines 577, 579, 710, 712)
+  - Changed symbol from `"heart.text.square"` to `"heart.fill"` for HealthKit sources
+  - Changed color from `.systemBlue` to `.systemRed` for HealthKit sources
+  - Maintains `.systemBlue` for Other Tracker ("link") and Function sources
+  - Consistent with health status button icon and color scheme
+  - Clear visual distinction: Red heart = HealthKit, Blue link = Other Tracker, Blue function = Function
 - `65d8bfd`: Implement AnyValue for otsrc; implement mergeDates and otsrc loads all other tracker dates
 - `834d4d3`: Implement progress bar for useTracker full refresh
 - `da3c929`: Comments, remove dbg messages

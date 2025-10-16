@@ -1418,6 +1418,20 @@ class voNumber: voState, UITextFieldDelegate {
     }
   }
 
+  @objc func showHealthStatus() {
+    DBGLog("Show health status pressed from voNumber")
+
+    // Present health status view without config instructions (user already at config screen)
+    let healthStatusView = HealthStatusViewController(showConfigInstructions: false)
+    let hostingController = UIHostingController(rootView: healthStatusView)
+    hostingController.modalPresentationStyle = .pageSheet
+
+    // Present directly from ctvovcp (same pattern as configAppleHealthView)
+    ctvovcp?.present(hostingController, animated: true, completion: {
+      DBGLog("HealthStatusViewController presented")
+    })
+  }
+
   @objc func configAppleHealthView() {
     DBGLog("config Apple Health view")
 
@@ -1536,6 +1550,25 @@ class voNumber: voState, UITextFieldDelegate {
       key: "ahsBtn",
       state: vo.optDict["ahksrc"] == "1",
       addsv: true)
+
+    // Add health status button next to switch (on same line, to the right)
+    // UISwitch has intrinsic size ~51pt wide, use that instead of frame.size.width
+    let healthButtonItem = rTracker_resource.createHealthButton(
+      target: self,
+      action: #selector(showHealthStatus),
+      accId: "voNumber_health"
+    )
+    if let healthButton = healthButtonItem.uiButton {
+      let switchWidth: CGFloat = 80.0
+      let healthBtnFrame = CGRect(
+        x: frame.origin.x + switchWidth + SPACE,
+        y: frame.origin.y,
+        width: 30,
+        height: frame.size.height
+      )
+      healthButton.frame = healthBtnFrame
+      ctvovc.scroll.addSubview(healthButton)
+    }
 
     frame.origin.x = MARGIN
     frame.origin.y += MARGIN + frame.size.height
