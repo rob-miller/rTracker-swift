@@ -30,6 +30,16 @@ Base UI state class for value objects in rTracker. Manages the UI presentation a
 [To be populated during analysis]
 
 ## Recent Development History
+- **2025-10-16 (Second Update)**: Fixed HealthKit icon/subtitle display for current/unsaved records (lines 618-644)
+  - **FIXED**: Heart icon and subtitle now appear for current records when `ahksrc == "1"`
+  - Modified `isCurrentEntryFromHealthKit()` to distinguish between saved vs unsaved records
+  - Added database check: `SELECT EXISTS(SELECT 1 FROM trkrData WHERE date = ...)`
+  - **Logic flow:**
+    - If record NOT in database (current/new) → Show icon/subtitle when `ahksrc == "1"` (configured)
+    - If record IN database (historical) → Query `voHKstatus` to check actual data source
+  - **Behavior:** Current records now correctly show HealthKit branding when HealthKit is enabled
+    - Example: New weight entry with smart scale enabled shows heart icon + subtitle
+    - Historical manual entries still correctly show NO icon (even if HealthKit is enabled)
 - **2025-10-16**: Added per-entry Apple Health detection with subtitle (lines 618-634, 641, 707-756)
   - **FIXED**: Heart icon and subtitle now only appear for entries where data actually came from Apple Health
   - Added `isCurrentEntryFromHealthKit()` helper method (lines 618-634)
@@ -58,3 +68,6 @@ Base UI state class for value objects in rTracker. Manages the UI presentation a
 - `da3c929`: Comments, remove dbg messages
 - `66b26ec`: Implement hidden valueObjs
 - `6869287`: fn updates with current tracker; vos.update accepts String?
+
+## Last Updated
+2025-10-16 - **HealthKit Icon Fix for Current Records**: Modified `isCurrentEntryFromHealthKit()` to check if record exists in database before querying `voHKstatus`. For unsaved/current records, now correctly shows HealthKit icon and subtitle when `ahksrc == "1"` (configured for HealthKit). For saved/historical records, continues to query actual data source from `voHKstatus` table. This ensures current records display HealthKit branding appropriately while maintaining accurate historical data source indicators.

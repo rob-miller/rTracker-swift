@@ -625,7 +625,17 @@ class voState: NSObject, voProtocol {
         let currentDate = Int(trackerDate.timeIntervalSince1970)
         guard currentDate > 0 else { return false }
 
-        // Query voHKstatus table to check if this specific entry came from HealthKit
+        // Check if this date exists in the database (i.e., has been saved)
+        let checkDbSql = "SELECT EXISTS(SELECT 1 FROM trkrData WHERE date = \(currentDate))"
+        let existsInDb = vo.parentTracker.toQry2Int(sql: checkDbSql) == 1
+
+        if !existsInDb {
+            // Record hasn't been saved yet (current/new record)
+            // Show HealthKit indicator if HealthKit is configured for this valueObj
+            return true
+        }
+
+        // Record exists in database - check voHKstatus to see if data actually came from HealthKit
         let sql = "SELECT stat FROM voHKstatus WHERE id = \(vo.vid) AND date = \(currentDate)"
         let stat = vo.parentTracker.toQry2Int(sql: sql)
 
