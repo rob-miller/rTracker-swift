@@ -46,6 +46,7 @@ Main root view controller for the rTracker app. Manages the primary tracker list
 - **COMPLETED**: Maintained all visual styling and accessibility features
 - **COMPLETED**: Added kbBtn testing button for adding Kate Bell contact
 - **COMPLETED** (2025-10-15): Added Apple Health status button to toolbar with conditional hiding
+- **COMPLETED** (2025-10-16): Added "Hide the privacy button" preference with implementation
 - All button functionality working correctly with new consolidated system
 
 ## Recent Development History
@@ -71,6 +72,24 @@ Main root view controller for the rTracker app. Manages the primary tracker list
 - `819040f`: Cleanup debug message improvements
 
 ## Last Updated
+2025-10-16 - **Added "Hide the privacy button" preference:**
+- **New Setting**: Added `hide_privacy_button` toggle in Settings.bundle/Root.plist
+  - Title: "Hide the privacy button"
+  - Key: `hide_privacy_button`
+  - Default: `false` (button visible by default)
+- **Implementation**: Lines 159-161 in `refreshToolBar()`
+  - Reads UserDefaults for `hide_privacy_button` preference
+  - Sets `shouldShowPrivacyBtn` boolean
+- **Toolbar Updates**: Lines 170-195
+  - Modified all 3 toolbar configurations (TESTING with uitesting, TESTING without, production)
+  - Changed from unconditional `privateBtn` append to conditional based on `shouldShowPrivacyBtn`
+  - Separated `flexibleSpaceButtonItem` and `privateBtn` appends for clarity
+- **Rationale**: Some users don't understand why private trackers are useful
+  - This setting allows them to hide the privacy button entirely
+  - Follows same pattern as `hide_health_button_when_enabled` preference
+- **Syntax**: Verified with swiftc - compilation successful
+
+Previous update:
 2025-10-15 - **Updated "All Good" Status Logic for Button Hiding** (line 153):
 - **Problem**: Button hiding logic required ALL sources to have data (status 1)
   - Matched old heart.fill logic - unrealistic for most users
