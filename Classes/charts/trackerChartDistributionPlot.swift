@@ -1282,6 +1282,9 @@ extension TrackerChart {
         let binCount = backgroundConfig["binCount"] as? Int ?? 10
         let binWidth = backgroundConfig["binWidth"] as? Double ?? ((paddedMaxValue - paddedMinValue) / Double(binCount))
         
+        DBGLog("Distribution Plot Config - min: \(backgroundValues.min() ?? 0), pmin: \(paddedMinValue), max: \(backgroundValues.max() ?? 0), pmax: \(paddedMaxValue), binCount: \(binCount), binWidth: \(binWidth)")
+        
+
         // Initialize container for selection data
         var selectionData: [String: [Double]] = [:]
         
