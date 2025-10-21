@@ -75,8 +75,57 @@ func SYSTEM_VERSION_LESS_THAN_OR_EQUAL_TO(_ v: String) -> Bool {
 
 
 
+// Color enum for debug message backgrounds
+enum DBGColor {
+    case RED, BLUE, GREEN, YELLOW, ORANGE, CYAN, VIOLET, MAGENTA, WHITE
+    
+    var ansiCode: String {
+        switch self {
+        case .RED:
+            return "\u{001B}[41m"
+        case .BLUE:
+            return "\u{001B}[44m"
+        case .GREEN:
+            return "\u{001B}[42m"
+        case .YELLOW:
+            return "\u{001B}[43m"
+        case .ORANGE:
+            return "\u{001B}[43;91m"
+        case .CYAN:
+            return "\u{001B}[46m"
+        case .VIOLET:
+            return "\u{001B}[45m"
+        case .MAGENTA:
+            return "\u{001B}[45m"
+        case .WHITE:
+            return "\u{001B}[47m"
+        }
+    }
+    
+    static let reset = "\u{001B}[0m"
+}
+
 // implementation for debug messages:
-     
+
+func coloredFileName(_ fileName: String) -> String {
+    let color: DBGColor?
+    switch fileName {
+    case "trackerObj":
+        color = .BLUE
+    case "voNumber":
+        color = .CYAN
+    case "useTrackerController":
+        color = .MAGENTA
+    case "healthKitSupport":
+        color = .ORANGE
+    case "rTrackerUITests":
+        color = .VIOLET
+    default:
+        return fileName
+    }
+    return "\(color!.ansiCode)\(fileName)\(DBGColor.reset)"
+}
+
 func SQLDbg(_ message: String) {
 #if SQLDEBUG
     print(message)
@@ -86,11 +135,24 @@ func SQLDbg(_ message: String) {
 #endif
 }
 
-func DBGLog(_ message: String, file: String = #file, function: String = #function, line: Int = #line) {
+func DBGLog(_ message: String, color: DBGColor? = nil, file: String = #file, function: String = #function, line: Int = #line) {
 #if DEBUGLOG
     //#define DBGLog(args...) NSLog(@"%s%d: %@",__PRETTY_FUNCTION__,__LINE__,[NSString stringWithFormat: args])
-    let fileName = file.components(separatedBy: "/").last ?? ""
-    print("[\(fileName):\(line)] \(function): \(message)")
+    var fileName = file.components(separatedBy: "/").last ?? ""
+    if fileName.hasSuffix(".swift") {
+        fileName = String(fileName.dropLast(6))
+    }
+    let coloredFile = coloredFileName(fileName)
+    let tim = String(format: "%.6f", CFAbsoluteTimeGetCurrent())
+
+    let formattedMessage: String
+    if let color = color {
+        formattedMessage = "\(color.ansiCode)\(message)\(DBGColor.reset)"
+    } else {
+        formattedMessage = message
+    }
+
+    print("\(tim):[\(coloredFile):\(line)] \(function): \(formattedMessage)")
 #endif
 }
 
@@ -98,7 +160,9 @@ func DBGWarn(_ message: String, file: String = #file, function: String = #functi
 #if DEBUGWARN
     //print("dbgwarn enabled")
     let fileName = file.components(separatedBy: "/").last ?? ""
-    print("**warning** [\(fileName):\(line)] \(function): \(message)")
+    let tim = String(format: "%.6f", CFAbsoluteTimeGetCurrent())
+    let formattedLine = "\(DBGColor.YELLOW.ansiCode)\(tim):**warning** [\(fileName):\(line)] \(function): \(message)\(DBGColor.reset)"
+    print(formattedLine)
     //#define DBGWarn(args...) NSLog(@"%@",[NSString stringWithFormat: args])
     //#define DBGWarn(args...) NSLog(@"%s%d: **WARNING** %@",__PRETTY_FUNCTION__,__LINE__,[NSString stringWithFormat: args])
 #endif
@@ -107,9 +171,33 @@ func DBGWarn(_ message: String, file: String = #file, function: String = #functi
 func DBGErr(_ message: String, file: String = #file, function: String = #function, line: Int = #line) {
 #if DEBUGERR
     let fileName = file.components(separatedBy: "/").last ?? ""
-    print("**error** [\(fileName):\(line)] \(function): \(message)")
+    let tim = String(format: "%.6f", CFAbsoluteTimeGetCurrent())
+    let formattedLine = "\(DBGColor.RED.ansiCode)\(tim):**error** [\(fileName):\(line)] \(function): \(message)\(DBGColor.reset)"
+    print(formattedLine)
     //#define DBGErr(args...) NSLog(@"%s%d: **ERROR** %@",__PRETTY_FUNCTION__,__LINE__,[NSString stringWithFormat: args])
 #endif
+}
+
+/// Local Time Date - formats a Date object as local time string
+/// - Parameters:
+///   - date: The Date object to format
+///   - secs: Include seconds in output (default: false)
+/// - Returns: Formatted string as "hh:mm dd-mm-yy" or "hh:mm:ss dd-mm-yy" if secs=true
+func ltd(_ date: Date, secs: Bool = false) -> String {
+    let formatter = DateFormatter()
+    formatter.timeZone = Calendar.current.timeZone
+    formatter.dateFormat = secs ? "HH:mm:ss dd-MM-yy" : "HH:mm dd-MM-yy"
+    return formatter.string(from: date)
+}
+
+/// Int to Local Time Date - converts Unix timestamp to formatted local time string
+/// - Parameters:
+///   - timestamp: Unix timestamp (seconds since 1970)
+///   - secs: Include seconds in output (default: false)
+/// - Returns: Formatted string as "i:hh:mm dd-mm-yy" or "i:hh:mm:ss dd-mm-yy" if secs=true
+func i2ltd(_ timestamp: Int, secs: Bool = false) -> String {
+    let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
+    return "i:" + ltd(date, secs: secs)
 }
 
 func dbgNSAssert(_ x: Bool, _ y: String) {

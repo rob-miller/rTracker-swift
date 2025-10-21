@@ -70,7 +70,6 @@ var privacyValue: Int {
     }
     set {
         _privacyValue = newValue
-        DBGLog(String("updatePrivacy:\(_privacyValue)"))
     }
 }
 
@@ -80,24 +79,19 @@ var lastShow: TimeInterval = 0
 func jumpMaxPriv() {
     if nil == stashedPriv {
         stashedPriv = NSNumber(value: privacyValue)
-        DBGLog(String("stashed priv \(stashedPriv!)"))
     }
 
     //[self.privacyObj setPrivacyValue:MAXPRIV];  // temporary max privacy level so see all
     privacyValue = MAXPRIV
     _jmpriv = true
-    DBGLog("priv jump!")
 }
 
 func restorePriv() {
     if nil == stashedPriv {
         return
     }
-    //if (YES == self.openUrlLock) {
-    //    return;
-    //}
-    DBGLog(String("restore priv to \(stashedPriv!)"))
-    //[self.privacyObj setPrivacyValue:[self.stashedPriv intValue]];  // return to privacy level
+
+
     privacyValue = stashedPriv?.intValue ?? 0
     stashedPriv = nil
     _jmpriv = false
@@ -107,7 +101,6 @@ func restorePriv() {
 class privacyV: UIView {
     
     func lockDown() -> Int {
-        DBGLog("privObj: lockdown")
         let currP = privacyValue
 
         ttv?.showKey(0)
@@ -119,9 +112,6 @@ class privacyV: UIView {
         }
 
         showing = PVNOSHOW
-        //if ([self.configBtn.currentTitle isEqualToString:CFGBTNLOCK]) {
-        //    self.showing = PVQUERY;
-        //}
         return currP
     }
 
@@ -136,7 +126,8 @@ class privacyV: UIView {
     }*/
     var parentView: UIView?
     var parent: RootViewController?
-    var tbh: CGFloat = 0.0
+    var bottomBarHeight: CGFloat = 0.0  // Height of bottom bar (tab bar or toolbar)
+    private var overlayView: UIView?  // Transparent overlay for tap-outside-to-dismiss
     
     private var _ttv: tictacV?
     var ttv: tictacV? {
@@ -162,9 +153,14 @@ class privacyV: UIView {
             _ppwv!.tob = tob
             _ppwv!.parent = self
             _ppwv!.parentAction = #selector(ppwvResponse)
-            tbh = parent!.navigationController!.toolbar.frame.height
-            _ppwv?.topy = frame.origin.y - (frame.size.height + tbh) // parentView!.frame.size.height - (frame.size.height /*+ tbh + CGFloat(49)*/)
-            DBGLog(String("pv.y = \(parentView!.frame.size.height)  s.h = \(frame.size.height)  ty= \(_ppwv!.topy)"))
+            // Update bottom bar height when creating ppwv
+            if let tabBarHeight = parent?.tabBarController?.tabBar.frame.height {
+                bottomBarHeight = tabBarHeight
+            } else {
+                bottomBarHeight = parent?.view.safeAreaInsets.bottom ?? 0
+            }
+            // Set initial topy - this will be adjusted based on privacy view state
+            updatePpwvPosition()
         }
         return _ppwv
     }
@@ -176,7 +172,6 @@ class privacyV: UIView {
             _showing
         }
         set(newState) {
-            DBGLog(String("priv: setShowing \(_showing) -> \(newState)  curr priv= \(privacyValue)"))
             if (PVNOSHOW == _showing) && (PVNOSHOW == newState) {
                 return // this happens when closing down.
             }
@@ -234,14 +229,21 @@ class privacyV: UIView {
                 let vc = window!.rootViewController
                 vc?.present(alert, animated: true)
             } else if PVNOSHOW != newState && PWNEEDPASS == pwState {
-                // must set an initial password to use privacy features        
+                // must set an initial password to use privacy features
                 _showing = PVNEEDPASS
                 ppwv?.createPass(newState, cancel: PVNOSHOW) // recurse on input newState
+                // Ensure ppwV appears on top of privacyV
+                if let ppwv = _ppwv {
+                    parentView?.bringSubviewToFront(ppwv)
+                }
 
                 //[self.ppwv createPass:PVCONFIG cancel:PVNOSHOW]; // need more work // recurse on input newState, config on successful new pass
             } else if PVQUERY == newState {
+                DBGLog("Privacy view entering PVQUERY state")
                 //self.hidden = NO;
                 alpha = 1.0
+                // Show overlay for tap-outside-to-dismiss
+                showOverlay()
                 if PVNEEDPASS == _showing {
                     // if just created, pass is currently up, set up pvquery behind keyboard
                     _pwState = PWKNOWPASS // just successfully created password so don't ask again
@@ -252,17 +254,25 @@ class privacyV: UIView {
                 } else {
                     //[UIView beginAnimations:nil context:NULL];
                     //[UIView setAnimationDuration:kAnimationDuration];
-
+                    // Check if view is properly attached before animating
+                    if superview == nil {
+                        parentView?.addSubview(self)
+                        parentView?.bringSubviewToFront(self)
+                    }
                     UIView.animate(withDuration: 0.2, animations: { [self] in
                         if PVCONFIG == self.showing {
                             ppwv?.hidePPWV(animated: false)
                             hideConfigBtns(true)
-                            configBtn?.setTitle(CFGBTNCONFIG, for: .normal)
+                            // Show setup button, hide lock button
+                            configBtn?.isHidden = false
+                            lockBtn?.isHidden = true
                         } else {
                             // only PVNOSHOW possible ?
                             showPVQ(true)
                         }
                     })
+                    // Ensure privacy view is above overlay
+                    parentView?.bringSubviewToFront(self)
                     //[UIView commitAnimations];
                 }
                 if PVNEEDPASS == _showing {
@@ -274,10 +284,11 @@ class privacyV: UIView {
             } else if PVNOSHOW == newState {
                 //[UIView beginAnimations:nil context:NULL];
                 //[UIView setAnimationDuration:kAnimationDuration];
+                // Hide overlay when dismissing privacy view
+                hideOverlay()
                 UIView.animate(withDuration: 0.2, animations: { [self] in
                     if PVNEEDPASS == self.showing {
                         // if set pass is up, cancelled out of create
-                        DBGLog("cancelled out of create pass")
                         ppwv?.hidePPWV(animated: false)
                         parentView?.setNeedsDisplay() //  privateBtn.title = @"private";
                     } else {
@@ -298,6 +309,7 @@ class privacyV: UIView {
 
                 _showing = PVNOSHOW
             } else if PVCONFIG == newState {
+                DBGLog("Privacy view entering PVCONFIG state")
                 if PWKNOWPASS == pwState || (PVCHECKPASS == _showing && ppwv!.ok == ppwv!.nextState) {
                     if PVCHECKPASS == _showing {
                         _pwState = PWKNOWPASS // just successfully entered password so don't ask again
@@ -307,22 +319,41 @@ class privacyV: UIView {
                         //	//[self.ppwv hidePPWVAnimated:FALSE];
                         //else {
                     }
+                    // Show overlay for tap-outside-to-dismiss
+                    showOverlay()
                     hideConfigBtns(false)
                     //[UIView beginAnimations:nil context:NULL];
                     //[UIView setAnimationDuration:kAnimationDuration];
                     //}
+
+                    // Set showing state BEFORE updating position so it uses correct positioning logic
+                    _showing = PVCONFIG
+
                     UIView.animate(withDuration: 0.2, animations: { [self] in
+                        updatePpwvPosition()  // Update position before showing password change
                         ppwv?.changePass(PVCONFIG, cancel: PVCONFIG)
-                        configBtn?.setTitle(CFGBTNLOCK, for: .normal)
+                        // Show lock button, hide setup button
+                        configBtn?.isHidden = true
+                        lockBtn?.isHidden = false
                         setTTV()
                     })
+                    // Ensure privacy view is above overlay
+                    parentView?.bringSubviewToFront(self)
+                    // Ensure ppwV appears on top of privacyV after animation
+                    if let ppwv = _ppwv {
+                        parentView?.bringSubviewToFront(ppwv)
+                    }
 
                     //[UIView commitAnimations];
-                    _showing = PVCONFIG
                     parent?.refreshToolBar(true)
                 } else {
                     _showing = PVCHECKPASS
+                    updatePpwvPosition()  // Update position before showing password check
                     ppwv?.checkPass(PVCONFIG, cancel: PVQUERY)
+                    // Ensure ppwV appears on top of privacyV
+                    if let ppwv = _ppwv {
+                        parentView?.bringSubviewToFront(ppwv)
+                    }
                 }
             }
             parent?.refreshToolBar(true)
@@ -346,14 +377,21 @@ class privacyV: UIView {
     private var _clearBtn: UIButton?
     var clearBtn: UIButton? {
         if _clearBtn == nil {
-            _clearBtn = getBtn(
-                " Clear ",
-                borg: CGPoint(x: frame.origin.x + (frame.size.width * (TICTACHRZFRAC / 2.0)), y: frame.size.height * TICTACVRTFRAC))
-            _clearBtn?.addTarget(self, action: #selector(doClear(_:)), for: .touchUpInside)
-            _clearBtn?.layer.cornerRadius = CGFloat(BTNRADIUS)
-            //clearBtn.backgroundColor = [UIColor systemBackgroundColor];
-            
-            _clearBtn?.accessibilityIdentifier = "clear"
+            _clearBtn = rTracker_resource.createActionButton(target: self, action: #selector(doClear(_:)), symbolName: "clear", accId: "clear", fallbackTitle: "Clear").uiButton
+
+            // Let button use its intrinsic content size, then position
+            let buttonSize = _clearBtn?.intrinsicContentSize ?? CGSize.zero
+
+            // Set position - center horizontally at the intended location
+            let centerX = self.frame.origin.x + (self.frame.size.width * (TICTACHRZFRAC / 2.0))
+            let y = self.frame.size.height * TICTACVRTFRAC
+
+            _clearBtn?.frame = CGRect(
+                x: centerX - (buttonSize.width / 2.0),
+                y: y,
+                width: buttonSize.width,
+                height: buttonSize.height
+            )
         }
         return _clearBtn
     }
@@ -361,38 +399,70 @@ class privacyV: UIView {
     private var _configBtn: UIButton?
     var configBtn: UIButton? {
         if _configBtn == nil {
+            _configBtn = rTracker_resource.createSettingsButton(target: self, action: #selector(showConfig(_:)), accId: "setup").uiButton
 
-            _configBtn = getBtn(
-                CFGBTNCONFIG,
-                borg: CGPoint(x: frame.origin.x + (frame.size.width * (1.0 - (TICTACHRZFRAC / 2.0))), y: frame.size.height * TICTACVRTFRAC))
+            // Let button use its intrinsic content size, then position
+            let buttonSize = _configBtn?.intrinsicContentSize ?? CGSize.zero
 
-            /*
-                     // use button title for state info
-                    configBtn = [UIButton buttonWithType:UIButtonTypeInfoLight];
-                    configBtn.frame = CGRectMake(self.frame.origin.x+(self.frame.size.width * (1.0f - (TICTACHRZFRAC/2.0f))),
-                                                 self.frame.size.height * TICTACVRTFRAC,
-                                                 44, 44);
-                     */
-            _configBtn?.addTarget(self, action: #selector(showConfig(_:)), for: .touchUpInside)
-            _configBtn?.layer.cornerRadius = CGFloat(BTNRADIUS)
-            //configBtn.backgroundColor = [UIColor whiteColor];
-            
-            _configBtn?.accessibilityIdentifier = "setup"
+            // Set position - center horizontally at the intended location
+            let centerX = self.frame.origin.x + (self.frame.size.width * (1.0 - (TICTACHRZFRAC / 2.0)))
+            let y = self.frame.size.height * TICTACVRTFRAC
+
+            _configBtn?.frame = CGRect(
+                x: centerX - (buttonSize.width / 2.0),
+                y: y,
+                width: buttonSize.width,
+                height: buttonSize.height
+            )
         }
         return _configBtn
+    }
+
+    private var _lockBtn: UIButton?
+    var lockBtn: UIButton? {
+        if _lockBtn == nil {
+            _lockBtn = rTracker_resource.createActionButton(target: self, action: #selector(showConfig(_:)), symbolName: "lock.fill", accId: "lock", fallbackTitle: "Lock").uiButton
+
+            // Let button use its intrinsic content size, then position
+            let buttonSize = _lockBtn?.intrinsicContentSize ?? CGSize.zero
+
+            // Set position - same as config button
+            let centerX = self.frame.origin.x + (self.frame.size.width * (1.0 - (TICTACHRZFRAC / 2.0)))
+            let y = self.frame.size.height * TICTACVRTFRAC
+
+            _lockBtn?.frame = CGRect(
+                x: centerX - (buttonSize.width / 2.0),
+                y: y,
+                width: buttonSize.width,
+                height: buttonSize.height
+            )
+
+            _lockBtn?.isHidden = true  // Initially hidden
+        }
+        return _lockBtn
     }
     //  PVCONFIG
 
     private var _saveBtn: UIButton?
     var saveBtn: UIButton? {
         if _saveBtn == nil {
-            _saveBtn = getBtn(
-                " Save ",
-                borg: CGPoint(x: frame.origin.x + (frame.size.width * (1.0 - (TICTACHRZFRAC / 2.0))), y: frame.size.height * ((1.0 - TICTACVRTFRAC) - (1.0 - TICTACHGTFRAC))))
-            _saveBtn?.addTarget(self, action: #selector(saveConfig(_:)), for: .touchUpInside)
-            _saveBtn?.layer.cornerRadius = CGFloat(BTNRADIUS)
+            _saveBtn = rTracker_resource.createDoneButton(target: self, action: #selector(saveConfig(_:)), accId: "save").uiButton
+
+            // Let button use its intrinsic content size, then position
+            let buttonSize = _saveBtn?.intrinsicContentSize ?? CGSize.zero
+
+            // Set position - center horizontally at the intended location
+            let centerX = self.frame.origin.x + (self.frame.size.width * (1.0 - (TICTACHRZFRAC / 2.0)))
+            let y = self.frame.size.height * ((1.0 - TICTACVRTFRAC) - (1.0 - TICTACHGTFRAC))
+
+            _saveBtn?.frame = CGRect(
+                x: centerX - (buttonSize.width / 2.0),
+                y: y,
+                width: buttonSize.width,
+                height: buttonSize.height
+            )
+
             _saveBtn?.isHidden = true
-            _saveBtn?.accessibilityIdentifier = "save"
         }
         return _saveBtn
     }
@@ -432,7 +502,7 @@ class privacyV: UIView {
     var ssValLab: UILabel? {
         let lfx = frame.origin.x + (frame.size.width * (TICTACHRZFRAC / 2.0))            // x= same as clearBtn
         let lfy = frame.size.height * ((1.0 - TICTACVRTFRAC) - (1.0 - TICTACHGTFRAC))           // y = same as saveBtn
-        let lfsize = "100".size(withAttributes: [NSAttributedString.Key.font: PrefBodyFont])
+        let lfsize = "1000".size(withAttributes: [NSAttributedString.Key.font: PrefBodyFont])
         if _ssValLab == nil {
             var lframe = CGRect(x:lfx, y:lfy, width:lfsize.width, height:lfsize.height)
             lframe.origin.x -= lframe.size.width / 2.0
@@ -451,15 +521,23 @@ class privacyV: UIView {
     private var _nextBtn: UIButton?
     var nextBtn: UIButton? {
         if _nextBtn == nil {
-            _nextBtn = getBtn(
-                NXTBTNLBL,
-                borg: CGPoint(x: frame.origin.x + (frame.size.width * (1.0 - (TICTACHRZFRAC / 2.0)))            // x= same as saveBtn
-            , y: (TICTACVRTFRAC + TICTACHGTFRAC + TICTACVRTFRAC) * frame.size.height)) // y= same as showslider
-            _nextBtn?.addTarget(self, action: #selector(adjustTTV(_:)), for: .touchUpInside)
-            _nextBtn?.layer.cornerRadius = CGFloat(BTNRADIUS)
+            _nextBtn = rTracker_resource.createNavigationButton(target: self, action: #selector(adjustTTV(_:)), direction: .right, accId: "next", style: .circle).uiButton
+
+            // Let button use its intrinsic content size, then position
+            let buttonSize = _nextBtn?.intrinsicContentSize ?? CGSize.zero
+
+            // Set position - center horizontally at the intended location
+            let centerX = self.frame.origin.x + (self.frame.size.width * (1.0 - (TICTACHRZFRAC / 2.0)))
+            let y = (TICTACVRTFRAC + TICTACHGTFRAC + TICTACVRTFRAC) * self.frame.size.height
+
+            _nextBtn?.frame = CGRect(
+                x: centerX - (buttonSize.width / 2.0),
+                y: y,
+                width: buttonSize.width,
+                height: buttonSize.height
+            )
+
             _nextBtn?.isHidden = true
-            
-            _nextBtn?.accessibilityIdentifier = "next"
         }
         return _nextBtn
     }
@@ -467,19 +545,138 @@ class privacyV: UIView {
     private var _prevBtn: UIButton?
     var prevBtn: UIButton? {
         if _prevBtn == nil {
-            _prevBtn = getBtn(
-                PRVBTNLBL,
-                borg: CGPoint(x: frame.origin.x + (frame.size.width * (TICTACHRZFRAC / 2.0))            // x= same as clearBtn
-            , y: (TICTACVRTFRAC + TICTACHGTFRAC + TICTACVRTFRAC) * frame.size.height)) // y= same as showslider
-            _prevBtn?.addTarget(self, action: #selector(adjustTTV(_:)), for: .touchUpInside)
-            _prevBtn?.layer.cornerRadius = CGFloat(BTNRADIUS)
+            _prevBtn = rTracker_resource.createNavigationButton(target: self, action: #selector(adjustTTV(_:)), direction: .left, accId: "prev", style: .circle).uiButton
+
+            // Let button use its intrinsic content size, then position
+            let buttonSize = _prevBtn?.intrinsicContentSize ?? CGSize.zero
+
+            // Set position - center horizontally at the intended location
+            let centerX = self.frame.origin.x + (self.frame.size.width * (TICTACHRZFRAC / 2.0))
+            let y = (TICTACVRTFRAC + TICTACHGTFRAC + TICTACVRTFRAC) * self.frame.size.height
+
+            _prevBtn?.frame = CGRect(
+                x: centerX - (buttonSize.width / 2.0),
+                y: y,
+                width: buttonSize.width,
+                height: buttonSize.height
+            )
+
             _prevBtn?.isHidden = true
-            
-            _prevBtn?.accessibilityIdentifier = "prev"
         }
         return _prevBtn
     }
 
+    // MARK: -
+    // MARK: Overlay for tap-outside-to-dismiss
+
+    private func setupOverlay() {
+        guard let parentView = parentView else {
+            DBGLog("setupOverlay: no parent view")
+            return
+        }
+
+        if overlayView == nil {
+            overlayView = UIView(frame: parentView.bounds)
+            overlayView?.backgroundColor = UIColor.clear  // Transparent overlay
+            overlayView?.alpha = 0.0  // Start hidden
+            overlayView?.isUserInteractionEnabled = true  // Ensure it can receive touches
+
+            // Add tap gesture to dismiss privacy view
+            let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleOverlayTap))
+            tapGesture.cancelsTouchesInView = true  // Prevent touches from going to views below
+            overlayView?.addGestureRecognizer(tapGesture)
+
+            DBGLog("setupOverlay: created tap-outside-to-dismiss overlay")
+        }
+    }
+
+    @objc private func handleOverlayTap(_ gesture: UITapGestureRecognizer) {
+        let tapLocation = gesture.location(in: parentView)
+
+        // If ppwV is visible, check if tap is within ppwV or privacy view bounds
+        if showing == PVCHECKPASS, let ppwv = _ppwv {
+            let ppwvFrame = ppwv.frame
+            let privacyFrame = self.frame
+
+            // Don't dismiss if tap is within ppwV or privacy view area
+            if ppwvFrame.contains(tapLocation) || privacyFrame.contains(tapLocation) {
+                DBGLog("handleOverlayTap: tap within ppwV or privacy view, ignoring")
+                return
+            }
+        } else {
+            // For non-password states, don't dismiss if tap is within privacy view
+            let privacyFrame = self.frame
+            if privacyFrame.contains(tapLocation) {
+                DBGLog("handleOverlayTap: tap within privacy view, ignoring")
+                return
+            }
+        }
+
+        DBGLog("handleOverlayTap: tap outside views, dismissing privacy view")
+
+        // Force keyboard to dismiss first to prevent reappearance issues
+        parentView?.endEditing(true)
+
+        // Dismiss privacy view when tapping outside
+        showing = PVNOSHOW
+    }
+
+    private func showOverlay() {
+        setupOverlay()
+        guard let overlayView = overlayView, let parentView = parentView else { return }
+
+        // Update overlay frame to cover full parent view
+        overlayView.frame = parentView.bounds
+
+        // Add overlay to parent view
+        parentView.addSubview(overlayView)
+
+        // Position overlay correctly based on ppwV visibility
+        if showing == PVCHECKPASS, let ppwv = _ppwv {
+            // When ppwV is visible, position overlay below both privacy view and ppwV
+            // We'll use hit testing in the tap handler to avoid ppwV area
+            parentView.insertSubview(overlayView, belowSubview: ppwv)
+            DBGLog("showOverlay: ppwV visible, using hit testing to protect ppwV")
+        } else {
+            // Normal case: position overlay below privacy view but above other content
+            parentView.insertSubview(overlayView, belowSubview: self)
+        }
+
+        // Animate overlay appearance
+        UIView.animate(withDuration: 0.2) {
+            overlayView.alpha = 1.0
+        }
+    }
+
+    private func hideOverlay() {
+        guard let overlayView = overlayView else { return }
+
+        UIView.animate(withDuration: 0.2, animations: {
+            overlayView.alpha = 0.0
+        }, completion: { _ in
+            overlayView.removeFromSuperview()
+        })
+    }
+
+    // MARK: -
+    // MARK: ppwV positioning management
+
+    func updatePpwvPosition() {
+        guard let _ppwv = _ppwv else { return }
+
+        if showing == PVCONFIG || showing == PVCHECKPASS {
+            // When privacy view is visible, position ppwV just above the privacy view
+            // Use the actual current frame position of the privacy view
+            _ppwv.topy = self.frame.origin.y  // Position ppwV bottom at privacy view top
+            //DBGLog("updatePpwvPosition: PVCONFIG/PVCHECKPASS - ppwV.topy = \(_ppwv.topy), privacyV.frame.origin.y = \(self.frame.origin.y)")
+        } else {
+            // Default positioning - position above the bottom bar, ready to appear above keyboard
+            // The ppwV should appear just above the tab bar/safe area when keyboard shows
+            let parentHeight = parentView!.frame.size.height
+            _ppwv.topy = parentHeight - bottomBarHeight
+            //DBGLog("updatePpwvPosition: default - ppwV.topy = \(_ppwv.topy)")
+        }
+    }
 
     // MARK: -
     // MARK: core UIView object methods and support
@@ -497,29 +694,47 @@ class privacyV: UIView {
     let PVH = 0.46
 
     init(parentView pv: RootViewController!) {
-        DBGLog(String("privV enter parent= x=\(pv?.view.frame.origin.x ?? 0) y=\(pv?.view.frame.origin.y ?? 0) w=\(pv?.view.frame.size.width ?? 0) h=\(pv?.view.frame.size.height ?? 0)"))
-        //CGRect frame = CGRectMake(0.0f, pv.frame.size.height,pv.frame.size.width,(pv.frame.size.height * PVH));
-        // like this but need to re-calc button positions too :-( CGRect frame = CGRectMake(pv.frame.size.width-320.0, pv.frame.size.height,320.0,171.0);
-        
-        tbh = pv.navigationController!.toolbar.frame.height
-        let frame = CGRect(x: 0.0, y: pv.view.frame.size.height, width: 320.0, height: 171.0)  // rtmx location issues placing priv view and ppw view here
-        DBGLog(String("privacyV: x=\(frame.origin.x) y=\(frame.origin.y) w=\(frame.size.width) h=\(frame.size.height)"))
+
+        // Calculate bottom bar height from safe area insets
+        bottomBarHeight = pv.view.safeAreaInsets.bottom
+
+        // Check for tab bar
+        if let tabBarHeight = pv.tabBarController?.tabBar.frame.height {
+            // Tab bar height includes safe area, so use it if available
+            bottomBarHeight = tabBarHeight
+        }
+
+        // Check for toolbar
+        if let toolbar = pv.navigationController?.toolbar, !toolbar.isHidden {
+            let toolbarHeight = toolbar.frame.height
+            if toolbarHeight > 0 && toolbarHeight < 200 {  // Sanity check
+                bottomBarHeight = max(bottomBarHeight, toolbarHeight)
+            }
+        }
+
+        // iOS 26 fix: Use parent view width instead of hardcoded 320, position below visible area
+        let parentWidth = pv.view.frame.size.width > 0 ? pv.view.frame.size.width : 320.0
+
+        // Calculate dynamic height based on content needs
+        let topMargin = 30.0  // Space for top buttons (instead of 171 * 0.1 = 17.1)
+        let tictacHeight = 102.0  // Keep tic-tac-toe space (similar to 171 * 0.6 = 102.6)
+        let sliderSpace = 40.0  // Space for slider and controls
+        let bottomButtonSpace = 50.0  // Space for bottom navigation buttons
+        let bottomMargin = 20.0  // Bottom margin
+        let dynamicHeight = topMargin + tictacHeight + sliderSpace + bottomButtonSpace + bottomMargin
+
+        let frame = CGRect(x: 0.0, y: pv.view.frame.size.height, width: parentWidth, height: dynamicHeight)  // Start below visible area
         super.init(frame: frame)
         
         parent = pv
         parentView = pv.view
         _pwState = PWNEEDPRIVOK //PWNEEDPASS;
-        /*
-        let bg = UIImageView(image: UIImage(named: rTracker_resource.getLaunchImageName() ?? ""))
 
-        addSubview(bg)
-        sendSubviewToBack(bg)
-         */
         backgroundColor = .secondarySystemBackground  // .clear  //.white
 
         layer.cornerRadius = 8
+        clipsToBounds = false  // Allow buttons to extend beyond view bounds if needed
         showing = PVNOSHOW
-        //self.hidden = YES;
         alpha = 1.0
 
         if let ttv {
@@ -530,6 +745,9 @@ class privacyV: UIView {
         }
         if let configBtn {
             addSubview(configBtn)
+        }
+        if let lockBtn {
+            addSubview(lockBtn)
         }
         if let saveBtn {
             addSubview(saveBtn)
@@ -569,12 +787,12 @@ class privacyV: UIView {
 
     func dbTestKey(_ `try`: Int) -> Int {
         let sql = "select lvl from priv1 where key=\(`try`);"
-        return tob!.toQry2Int(sql:sql)!
+        return tob!.toQry2Int(sql:sql)
     }
 
     func dbTestLvl(_ `try`: Int) -> Bool {
         let sql = "select count(*) from priv1 where lvl=\(`try`);"
-        return tob!.toQry2Int(sql:sql)! != 0
+        return tob!.toQry2Int(sql:sql) != 0
     }
     
     func dbSetKey(_ key: Int, level lvl: Int) {
@@ -597,7 +815,7 @@ class privacyV: UIView {
     
     func dbGetKey(_ lvl: Int) -> UInt {
         let sql = "select key from priv1 where lvl=\(lvl);"
-        return UInt(tob!.toQry2Int(sql: sql)!)
+        return UInt(tob!.toQry2Int(sql: sql))
     }
 
     func dbGetAdjacentKey(_ lvl: Int, nxt: Bool) -> (Int, Int) {
@@ -610,9 +828,7 @@ class privacyV: UIView {
         } else {
             sql = "select key, lvl from priv1 where lvl<\(lvl) order by lvl desc limit 1;"
         }
-        DBGLog(String("getAdjacentVal: next=(nxt) in lvl=(lvl)"))
         (rkey, lvlrslt) = tob!.toQry2IntInt(sql: sql!)!
-        DBGLog(String("getAdjacentVal: rtn lvl=(lvl) key=(rkey)"))
         return (rkey, lvlrslt)
     }
 
@@ -625,6 +841,13 @@ class privacyV: UIView {
         prevBtn?.isHidden = state
         showSlider?.isHidden = state
         ssValLab?.isHidden = state
+        // Hide both config buttons when hiding config controls
+        if state {
+            configBtn?.isHidden = state
+            lockBtn?.isHidden = state
+        }
+        // Note: When showing (state == false), specific button visibility
+        // is handled by the calling context based on privacy state
     }
 
     func togglePrivacySetter() {
@@ -645,36 +868,51 @@ class privacyV: UIView {
     }
 
     @objc func ppwvResponse() {
-        DBGLog(String("ppwvResponse: transition to (ppwv?.next)"))
 
         showing = ppwv!.nextState
     }
 
     func showPVQ(_ state: Bool) {
-        DBGLog(String("parent v h= (parentView?.frame.size.height ?? 0.0) pvh= (PVH) prod= ((parentView?.frame.size.height ?? 0.0) * PVH)"))
-        DBGLog(String(format: "x= %f y= %f w= %f h= %f", frame.origin.x, frame.origin.y, frame.size.width, frame.size.height))
-        //tbh = parent!.navigationController!.toolbar.frame.height
+
+        // iOS 26 fix: Ensure view is still attached to parent
+        if superview == nil {
+            parentView?.addSubview(self)
+            parentView?.bringSubviewToFront(self)
+        }
+
         if state {
-            // show
+            // show - slide up so bottom of privacy view touches top of bottom bar
             lastShow = Date().timeIntervalSinceReferenceDate
-            configBtn?.setTitle(CFGBTNCONFIG, for: .normal)
-            //self.transform = CGAffineTransformMakeTranslation(0, -(self.parentView.frame.size.height * PVH));
-            //self.transform = CGAffineTransformMakeTranslation(0, -(self.parentView.frame.size.height * PVH));
-            transform = CGAffineTransform(translationX: 0, y: -(frame.size.height + 2*tbh))
+            // Show setup button, hide lock button
+            configBtn?.isHidden = false
+            lockBtn?.isHidden = true
+
+            // Calculate position: want bottom of our view to touch top of bottom bar
+            // Our view starts at y = parentView.height (below screen)
+            // We need to move up by (our height + bottom safe area) to position correctly
+            //let parentHeight = parentView?.frame.size.height ?? 0
+            let safeBottom = parentView?.safeAreaInsets.bottom ?? 0
+
+            // The translation needed to position the view properly
+            // Move up by our height plus the bottom safe area
+            let translationY = -(frame.size.height + safeBottom)
+
+            // Apply transform from identity
+            transform = .identity
+            transform = CGAffineTransform(translationX: 0, y: translationY)
+
             //self.parentView.userInteractionEnabled=NO;  // sadly kills interaction for child view as well
         } else {
-            // hide
+            // hide - move back below screen
             let thisHide = Date().timeIntervalSinceReferenceDate
-            DBGLog(String("lastShow= (lastShow) thisHide= (thisHide) delta= (thisHide - lastShow)"))
             if (thisHide - lastShow) <= 0.6 {
                 ttv?.showKey(0)
                 privacyValue = PRIVDFLT
             }
             ppwv?.hide()
 
-            //self.transform = CGAffineTransformMakeTranslation(0, (self.parentView.frame.size.height * PVH));
-            //self.transform = CGAffineTransformMakeTranslation(0, (self.parentView.frame.size.height * PVH));
-            transform = CGAffineTransform(translationX: 0, y: (frame.size.height + 2*tbh))
+            // Reset to identity transform (original position below screen)
+            transform = .identity
             //self.parentView.userInteractionEnabled=YES;
         }
     }
@@ -700,9 +938,10 @@ class privacyV: UIView {
 
     @objc func showConfig(_ btn: UIButton?) {
 
-        if btn?.currentTitle == CFGBTNCONFIG {
+        if btn?.accessibilityIdentifier == "setup" {
             showing = PVCONFIG
-        } else if btn?.currentTitle == CFGBTNLOCK {
+        } else if btn?.accessibilityIdentifier == "lock" {
+            _pwState = PWQUERYPASS  // Reset password state to require re-entry
             showing = PVQUERY
         }
     }
@@ -740,7 +979,7 @@ class privacyV: UIView {
         ///*
         var k: Int
         var dir: Bool
-        if btn?.currentTitle == NXTBTNLBL {
+        if btn?.accessibilityIdentifier == "next" {
             // next
             dir = true
         } else {
@@ -748,7 +987,6 @@ class privacyV: UIView {
             dir = false
         }
 
-        DBGLog(String("adjustTTv: slider lvl= (lvl) dir=(dir)"))
 
         (k, lvl) = dbGetAdjacentKey(lvl, nxt: dir)
 

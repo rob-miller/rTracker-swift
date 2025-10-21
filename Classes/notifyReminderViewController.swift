@@ -88,7 +88,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         if nil == _everyTrackerNames {
             _everyTrackerNames = []
             _everyTrackerNames?.append(tracker!.trackerName!)
-            for vo in tracker!.valObjTable{
+            for vo in tracker!.valObjTableH{
                 _everyTrackerNames!.append(vo.valueName!)
             }
         }
@@ -101,57 +101,57 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
     var everyTrackerNdx = 0
     var everyMode: UInt8 = 0
     var delayDaysState = false
-    @IBOutlet var navBar: UINavigationBar!
-    @IBOutlet var prevBarButton: UIBarButtonItem!
-    @IBOutlet var nextAddBarButton: UIBarButtonItem!
-    @IBOutlet var msgTF: UITextField!
-    @IBOutlet var enableButton: UIButton!
-    @IBOutlet var delayDaysButton: UIButton!
-    @IBOutlet var thenOnLabel: UILabel!
-    @IBOutlet var wdButton1: UIButton!
-    @IBOutlet var wdButton2: UIButton!
-    @IBOutlet var wdButton3: UIButton!
-    @IBOutlet var wdButton4: UIButton!
-    @IBOutlet var wdButton5: UIButton!
-    @IBOutlet var wdButton6: UIButton!
-    @IBOutlet var wdButton7: UIButton!
+    var navBar: UINavigationBar!
+    var prevBarButton: UIBarButtonItem!
+    var nextAddBarButton: UIBarButtonItem!
+    var msgTF: UITextField!
+    var enableButton: UIButton!
+    var delayDaysButton: UIButton!
+    var thenOnLabel: UILabel!
+    var wdButton1: UIButton!
+    var wdButton2: UIButton!
+    var wdButton3: UIButton!
+    var wdButton4: UIButton!
+    var wdButton5: UIButton!
+    var wdButton6: UIButton!
+    var wdButton7: UIButton!
     //@IBOutlet var monthDaysLabel: UILabel!
-    @IBOutlet var monthDays: UITextField!
-    @IBOutlet var everyTF: UITextField!
-    @IBOutlet var everyButton: UIButton!
-    @IBOutlet var fromLastButton: UIButton!
-    @IBOutlet var fromLastLabel: UILabel!
-    @IBOutlet var everyTrackerButton: UIButton!
+    var monthDays: UITextField!
+    var everyTF: UITextField!
+    var everyButton: UIButton!
+    var fromLastButton: UIButton!
+    var fromLastLabel: UILabel!
+    var everyTrackerButton: UIButton!
     var activeField: UITextField? //just a pointer, no retain
     //@property (nonatomic,retain) IBOutlet UISegmentedControl *weekMonthEvery;
     //- (IBAction)weekMonthEveryChange:(id)sender;
 
-    @IBOutlet var startHr: UITextField!
-    @IBOutlet var startMin: UITextField!
-    @IBOutlet var startSlider: UISlider!
-    @IBOutlet var startTimeAmPm: UILabel!
-    @IBOutlet var startLabel: UILabel!
-    @IBOutlet var finishHr: UITextField!
-    @IBOutlet var finishMin: UITextField!
-    @IBOutlet var finishSlider: UISlider!
-    @IBOutlet var finishTimeAmPm: UILabel!
-    @IBOutlet var finishLabel: UILabel!
-    @IBOutlet var finishColon: UILabel!
-    @IBOutlet var repeatTimes: UITextField!
-    @IBOutlet var repeatTimesLabel: UILabel!
-    @IBOutlet var intervalButton: UIButton!
-    @IBOutlet var enableFinishButton: UIButton!
+    var startHr: UITextField!
+    var startMin: UITextField!
+    var startSlider: UISlider!
+    var startTimeAmPm: UILabel!
+    var startLabel: UILabel!
+    var finishHr: UITextField!
+    var finishMin: UITextField!
+    var finishSlider: UISlider!
+    var finishTimeAmPm: UILabel!
+    var finishLabel: UILabel!
+    var finishColon: UILabel!
+    var repeatTimes: UITextField!
+    var repeatTimesLabel: UILabel!
+    var intervalButton: UIButton!
+    var enableFinishButton: UIButton!
 
 
-    @IBOutlet weak var r_nextevent: UILabel!
-    @IBOutlet weak var r_day: UILabel!
-    @IBOutlet weak var r_month: UILabel!
-    @IBOutlet weak var r_monthday: UILabel!
-    @IBOutlet weak var r_year: UILabel!
-    @IBOutlet weak var r_hour: UILabel!
-    @IBOutlet weak var r_colon: UILabel!
-    @IBOutlet weak var r_minute: UILabel!
-    @IBOutlet weak var r_ampm: UILabel!
+    var r_nextevent: UILabel!
+    var r_day: UILabel!
+    var r_month: UILabel!
+    var r_monthday: UILabel!
+    var r_year: UILabel!
+    var r_hour: UILabel!
+    var r_colon: UILabel!
+    var r_minute: UILabel!
+    var r_ampm: UILabel!
     
     var r_set: [UILabel] {
         [r_nextevent, r_day, r_month, r_monthday, r_year, r_hour, r_colon, r_minute, r_ampm]
@@ -163,21 +163,34 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
     - (IBAction) intervalBtn:(id)sender;
     */
 
-    @IBOutlet var toolBar: UIToolbar!
-    @IBOutlet var gearButton: UIBarButtonItem!
-    @IBOutlet var btnDoneOutlet: UIBarButtonItem!
-    @IBOutlet var btnHelpOutlet: UIBarButtonItem!
+    var toolBar: UIToolbar!
+    var gearButton: UIBarButtonItem!
+    var btnDoneOutlet: UIBarButtonItem!
+    var btnHelpOutlet: UIBarButtonItem!
 
     var dismissalHandler: (() -> Void)?  // so presenting controller configTVObjVC can know when we finish
 
     override init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) {
-        super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)
+        super.init(nibName: nil, bundle: nil)
         //self.tmpReminder=TRUE;
 
         //self.title=@"hello";
         // Custom initialization
         // [self viewDidLoad];
-        
+
+    }
+
+    // MARK: - View Loading
+
+    override func loadView() {
+        // Create main view
+        view = UIView()
+        view.backgroundColor = UIColor.systemBackground
+
+        // Create all UI elements
+        createUIElements()
+        setupConstraints()
+        wireUpActions()
     }
 
     // MARK: -
@@ -255,17 +268,9 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
             for: .normal)
         btnHelpOutlet.accessibilityLabel = "Help"
         btnHelpOutlet.accessibilityIdentifier = "nrvc_help"
-        
-        btnDoneOutlet.title = "\u{2611}"
+
+        // btnDoneOutlet styling handled by createDoneButton - modern iOS 26 burnt yellow checkmark
         btnDoneOutlet.accessibilityLabel = "Done"
-        btnDoneOutlet.accessibilityIdentifier = "nrvc_done"
-        
-        btnDoneOutlet.setTitleTextAttributes(
-            [
-                .font: UIFont.systemFont(ofSize: 28.0)
-            //,NSForegroundColorAttributeName: [UIColor greenColor]
-            ],
-            for: .normal)
 
 
         nextAddBarButton.setTitleTextAttributes(
@@ -306,6 +311,617 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         // Do any additional setup after loading the view from its nib.
     }
 
+    // MARK: - UI Creation
+
+    private func createUIElements() {
+        createNavigationBar()
+        createDelaySection()
+        createEverySection()
+        createWeekdaysSection()
+        createTimeSection()
+        createFinishSection()
+        createRepeatSection()
+        createMessageSection()
+        createNextEventSection()
+        createToolbar()
+    }
+
+    private func createNavigationBar() {
+        navBar = UINavigationBar()
+        navBar.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(navBar)
+
+        let navigationItem = UINavigationItem(title: "Reminders")
+
+        prevBarButton = UIBarButtonItem(title: "<", style: .plain, target: self, action: #selector(prevBtn(_:)))
+        prevBarButton.isEnabled = false
+
+        nextAddBarButton = UIBarButtonItem(title: "+>", style: .plain, target: self, action: #selector(nextAddBtn(_:)))
+        nextAddBarButton.isEnabled = false
+
+        navigationItem.leftBarButtonItem = prevBarButton
+        navigationItem.rightBarButtonItem = nextAddBarButton
+
+        navBar.setItems([navigationItem], animated: false)
+    }
+
+    private func createDelaySection() {
+        delayDaysButton = UIButton(type: .system)
+        delayDaysButton.translatesAutoresizingMaskIntoConstraints = false
+        delayDaysButton.setTitle("Delay:", for: .normal)
+        delayDaysButton.contentHorizontalAlignment = .left
+        delayDaysButton.accessibilityIdentifier = "dly_dom"
+        delayDaysButton.addTarget(self, action: #selector(delayDaysBtn(_:)), for: .touchUpInside)
+        view.addSubview(delayDaysButton)
+
+        fromLastButton = UIButton(type: .custom)
+        fromLastButton.translatesAutoresizingMaskIntoConstraints = false
+        fromLastButton.setImage(UIImage(named: "unchecked.png"), for: .normal)
+        fromLastButton.addTarget(self, action: #selector(fromLastBtn(_:)), for: .touchUpInside)
+        view.addSubview(fromLastButton)
+
+        fromLastLabel = UILabel()
+        fromLastLabel.translatesAutoresizingMaskIntoConstraints = false
+        fromLastLabel.text = "from last"
+        fromLastLabel.font = UIFont.systemFont(ofSize: 17)
+        view.addSubview(fromLastLabel)
+    }
+
+    private func createEverySection() {
+        everyTF = UITextField()
+        everyTF.translatesAutoresizingMaskIntoConstraints = false
+        everyTF.borderStyle = .roundedRect
+        everyTF.font = UIFont.systemFont(ofSize: 14)
+        everyTF.keyboardType = .numbersAndPunctuation
+        everyTF.returnKeyType = .done
+        everyTF.delegate = self
+        everyTF.addTarget(self, action: #selector(TFdidBeginEditing(_:)), for: .editingDidBegin)
+        everyTF.addTarget(self, action: #selector(everyTFChange(_:)), for: .editingDidEndOnExit)
+        view.addSubview(everyTF)
+
+        everyButton = UIButton(type: .system)
+        everyButton.translatesAutoresizingMaskIntoConstraints = false
+        everyButton.setTitle("Hours", for: .normal)
+        everyButton.addTarget(self, action: #selector(everyBtn(_:)), for: .touchUpInside)
+        view.addSubview(everyButton)
+
+        everyTrackerButton = UIButton(type: .system)
+        everyTrackerButton.translatesAutoresizingMaskIntoConstraints = false
+        everyTrackerButton.setTitle("-tracker-", for: .normal)
+        everyTrackerButton.contentHorizontalAlignment = .left
+        everyTrackerButton.isHidden = true
+        everyTrackerButton.addTarget(self, action: #selector(everyTrackerBtn(_:)), for: .touchUpInside)
+        view.addSubview(everyTrackerButton)
+
+        monthDays = UITextField()
+        monthDays.translatesAutoresizingMaskIntoConstraints = false
+        monthDays.borderStyle = .roundedRect
+        monthDays.placeholder = "1,8,15,22,29"
+        monthDays.font = UIFont.systemFont(ofSize: 14)
+        monthDays.keyboardType = .numbersAndPunctuation
+        monthDays.returnKeyType = .done
+        monthDays.delegate = self
+        monthDays.isHidden = true
+        monthDays.accessibilityIdentifier = "r_domtf"
+        monthDays.addTarget(self, action: #selector(TFdidBeginEditing(_:)), for: .editingDidBegin)
+        monthDays.addTarget(self, action: #selector(monthDaysChange(_:)), for: .editingDidEndOnExit)
+        view.addSubview(monthDays)
+    }
+
+    private func createWeekdaysSection() {
+        thenOnLabel = UILabel()
+        thenOnLabel.translatesAutoresizingMaskIntoConstraints = false
+        thenOnLabel.text = "then on"
+        thenOnLabel.font = UIFont.systemFont(ofSize: 17)
+        view.addSubview(thenOnLabel)
+
+        // Create weekday buttons
+        wdButton1 = createWeekdayButton(identifier: "nrvc_wd0")
+        wdButton2 = createWeekdayButton(identifier: "nrvc_wd1")
+        wdButton3 = createWeekdayButton(identifier: "nrvc_wd2")
+        wdButton4 = createWeekdayButton(identifier: "nrvc_wd3")
+        wdButton5 = createWeekdayButton(identifier: "nrvc_wd4")
+        wdButton6 = createWeekdayButton(identifier: "nrvc_wd5")
+        wdButton7 = createWeekdayButton(identifier: "nrvc_wd6")
+
+        // Create stack view for weekday buttons
+        let weekdaysStackView = UIStackView(arrangedSubviews: [wdButton1, wdButton2, wdButton3, wdButton4, wdButton5, wdButton6, wdButton7])
+        weekdaysStackView.translatesAutoresizingMaskIntoConstraints = false
+        weekdaysStackView.axis = .horizontal
+        weekdaysStackView.distribution = .equalSpacing
+        weekdaysStackView.spacing = UIStackView.spacingUseSystem
+        view.addSubview(weekdaysStackView)
+    }
+
+    private func createWeekdayButton(identifier: String) -> UIButton {
+        let button = UIButton(type: .system)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.accessibilityIdentifier = identifier
+        button.addTarget(self, action: #selector(wdBtn(_:)), for: .touchUpInside)
+        return button
+    }
+
+    private func createTimeSection() {
+        startLabel = UILabel()
+        startLabel.translatesAutoresizingMaskIntoConstraints = false
+        startLabel.text = "At"
+        startLabel.font = UIFont.systemFont(ofSize: 17)
+        view.addSubview(startLabel)
+
+        startHr = UITextField()
+        startHr.translatesAutoresizingMaskIntoConstraints = false
+        startHr.borderStyle = .roundedRect
+        startHr.text = "07"
+        startHr.font = UIFont.systemFont(ofSize: 14)
+        startHr.keyboardType = .numbersAndPunctuation
+        startHr.returnKeyType = .done
+        startHr.delegate = self
+        startHr.accessibilityIdentifier = "nrvc_at_hrs"
+        startHr.addTarget(self, action: #selector(TFdidBeginEditing(_:)), for: .editingDidBegin)
+        startHr.addTarget(self, action: #selector(startHrChange(_:)), for: .editingDidEndOnExit)
+        view.addSubview(startHr)
+
+        let colonLabel = UILabel()
+        colonLabel.translatesAutoresizingMaskIntoConstraints = false
+        colonLabel.text = ":"
+        colonLabel.font = UIFont.systemFont(ofSize: 17)
+        colonLabel.textColor = UIColor.darkText
+        view.addSubview(colonLabel)
+
+        startMin = UITextField()
+        startMin.translatesAutoresizingMaskIntoConstraints = false
+        startMin.borderStyle = .roundedRect
+        startMin.text = "00"
+        startMin.font = UIFont.systemFont(ofSize: 14)
+        startMin.keyboardType = .numbersAndPunctuation
+        startMin.returnKeyType = .done
+        startMin.delegate = self
+        startMin.accessibilityIdentifier = "nrvc_at_minutes"
+        startMin.addTarget(self, action: #selector(TFdidBeginEditing(_:)), for: .editingDidBegin)
+        startMin.addTarget(self, action: #selector(startMinChange(_:)), for: .editingDidEndOnExit)
+        view.addSubview(startMin)
+
+        // Add the colon constraint
+        NSLayoutConstraint.activate([
+            colonLabel.centerYAnchor.constraint(equalTo: startLabel.centerYAnchor),
+            colonLabel.leadingAnchor.constraint(equalTo: startHr.trailingAnchor, constant: 1)
+        ])
+
+        startTimeAmPm = UILabel()
+        startTimeAmPm.translatesAutoresizingMaskIntoConstraints = false
+        startTimeAmPm.text = "am"
+        startTimeAmPm.font = UIFont.systemFont(ofSize: 17)
+        startTimeAmPm.textColor = UIColor.darkText
+        startTimeAmPm.isHidden = true
+        view.addSubview(startTimeAmPm)
+
+        startSlider = UISlider()
+        startSlider.translatesAutoresizingMaskIntoConstraints = false
+        startSlider.minimumValue = 0.0
+        startSlider.maximumValue = 1439.0
+        startSlider.value = 420.0
+        startSlider.isEnabled = false
+        startSlider.accessibilityIdentifier = "nrvc_at_slider"
+        startSlider.addTarget(self, action: #selector(startSliderAction(_:)), for: .valueChanged)
+        view.addSubview(startSlider)
+    }
+
+    private func createFinishSection() {
+        enableFinishButton = UIButton(type: .custom)
+        enableFinishButton.translatesAutoresizingMaskIntoConstraints = false
+        enableFinishButton.setImage(UIImage(named: "unchecked.png"), for: .normal)
+        enableFinishButton.accessibilityLabel = "enable"
+        enableFinishButton.accessibilityHint = "set end time for reminders"
+        enableFinishButton.accessibilityIdentifier = "nrvc_enable_until"
+        enableFinishButton.addTarget(self, action: #selector(enableFinishBtn(_:)), for: .touchUpInside)
+        view.addSubview(enableFinishButton)
+
+        finishLabel = UILabel()
+        finishLabel.translatesAutoresizingMaskIntoConstraints = false
+        finishLabel.text = "Until"
+        finishLabel.font = UIFont.systemFont(ofSize: 17)
+        finishLabel.isEnabled = false
+        view.addSubview(finishLabel)
+
+        finishHr = UITextField()
+        finishHr.translatesAutoresizingMaskIntoConstraints = false
+        finishHr.borderStyle = .roundedRect
+        finishHr.text = "23"
+        finishHr.font = UIFont.systemFont(ofSize: 14)
+        finishHr.keyboardType = .numbersAndPunctuation
+        finishHr.returnKeyType = .done
+        finishHr.delegate = self
+        finishHr.isEnabled = false
+        finishHr.accessibilityIdentifier = "nrvc_until_hrs"
+        finishHr.addTarget(self, action: #selector(TFdidBeginEditing(_:)), for: .editingDidBegin)
+        finishHr.addTarget(self, action: #selector(finishHrChange(_:)), for: .editingDidEndOnExit)
+        view.addSubview(finishHr)
+
+        finishColon = UILabel()
+        finishColon.translatesAutoresizingMaskIntoConstraints = false
+        finishColon.text = ":"
+        finishColon.font = UIFont.systemFont(ofSize: 17)
+        finishColon.textColor = UIColor.darkText
+        view.addSubview(finishColon)
+
+        finishMin = UITextField()
+        finishMin.translatesAutoresizingMaskIntoConstraints = false
+        finishMin.borderStyle = .roundedRect
+        finishMin.text = "00"
+        finishMin.font = UIFont.systemFont(ofSize: 14)
+        finishMin.keyboardType = .numbersAndPunctuation
+        finishMin.returnKeyType = .done
+        finishMin.delegate = self
+        finishMin.isEnabled = false
+        finishMin.accessibilityIdentifier = "nrvc_until_minutes"
+        finishMin.addTarget(self, action: #selector(TFdidBeginEditing(_:)), for: .editingDidBegin)
+        finishMin.addTarget(self, action: #selector(finishMinChange(_:)), for: .editingDidEndOnExit)
+        view.addSubview(finishMin)
+
+        finishTimeAmPm = UILabel()
+        finishTimeAmPm.translatesAutoresizingMaskIntoConstraints = false
+        finishTimeAmPm.text = "pm"
+        finishTimeAmPm.font = UIFont.systemFont(ofSize: 17)
+        finishTimeAmPm.textColor = UIColor.darkText
+        finishTimeAmPm.isHidden = true
+        view.addSubview(finishTimeAmPm)
+
+        finishSlider = UISlider()
+        finishSlider.translatesAutoresizingMaskIntoConstraints = false
+        finishSlider.minimumValue = 0.0
+        finishSlider.maximumValue = 1439.0
+        finishSlider.value = 1380.0
+        finishSlider.isEnabled = false
+        finishSlider.accessibilityIdentifier = "nrvc_until_slider"
+        finishSlider.addTarget(self, action: #selector(finishSliderAction(_:)), for: .valueChanged)
+        view.addSubview(finishSlider)
+    }
+
+    private func createRepeatSection() {
+        repeatTimes = UITextField()
+        repeatTimes.translatesAutoresizingMaskIntoConstraints = false
+        repeatTimes.borderStyle = .roundedRect
+        repeatTimes.text = "2"
+        repeatTimes.font = UIFont.systemFont(ofSize: 14)
+        repeatTimes.keyboardType = .numbersAndPunctuation
+        repeatTimes.returnKeyType = .done
+        repeatTimes.delegate = self
+        repeatTimes.isHidden = true
+        repeatTimes.accessibilityIdentifier = "nrvc_times_count"
+        repeatTimes.addTarget(self, action: #selector(TFdidBeginEditing(_:)), for: .editingDidBegin)
+        repeatTimes.addTarget(self, action: #selector(timesChange(_:)), for: .editingDidEndOnExit)
+        view.addSubview(repeatTimes)
+
+        repeatTimesLabel = UILabel()
+        repeatTimesLabel.translatesAutoresizingMaskIntoConstraints = false
+        repeatTimesLabel.text = "times"
+        repeatTimesLabel.font = UIFont.systemFont(ofSize: 17)
+        repeatTimesLabel.isHidden = true
+        view.addSubview(repeatTimesLabel)
+
+        intervalButton = UIButton(type: .system)
+        intervalButton.translatesAutoresizingMaskIntoConstraints = false
+        intervalButton.setTitle("Equal Intervals", for: .normal)
+        intervalButton.contentHorizontalAlignment = .left
+        intervalButton.isHidden = true
+        intervalButton.accessibilityIdentifier = "nrvc_interval_random"
+        intervalButton.addTarget(self, action: #selector(intervalBtn(_:)), for: .touchUpInside)
+        view.addSubview(intervalButton)
+    }
+
+    private func createMessageSection() {
+        let textLabel = UILabel()
+        textLabel.translatesAutoresizingMaskIntoConstraints = false
+        textLabel.text = "Text:"
+        textLabel.font = UIFont.systemFont(ofSize: 17)
+        view.addSubview(textLabel)
+
+        msgTF = UITextField()
+        msgTF.translatesAutoresizingMaskIntoConstraints = false
+        msgTF.borderStyle = .roundedRect
+        msgTF.font = UIFont.systemFont(ofSize: 14)
+        msgTF.returnKeyType = .done
+        msgTF.delegate = self
+        msgTF.addTarget(self, action: #selector(TFdidBeginEditing(_:)), for: .editingDidBegin)
+        msgTF.addTarget(self, action: #selector(messageTFChange(_:)), for: .editingDidEndOnExit)
+        view.addSubview(msgTF)
+
+        enableButton = UIButton(type: .custom)
+        enableButton.translatesAutoresizingMaskIntoConstraints = false
+        enableButton.setImage(UIImage(named: "checked.png"), for: .normal)
+        enableButton.setImage(UIImage(named: "checked.png"), for: .selected)
+        enableButton.isSelected = true
+        enableButton.isHidden = true
+        enableButton.addTarget(self, action: #selector(enableBtn(_:)), for: .touchUpInside)
+        view.addSubview(enableButton)
+    }
+
+    private func createNextEventSection() {
+        r_nextevent = UILabel()
+        r_nextevent.translatesAutoresizingMaskIntoConstraints = false
+        r_nextevent.text = "Next event:"
+        r_nextevent.font = UIFont.systemFont(ofSize: 17)
+        r_nextevent.isHidden = true
+        r_nextevent.accessibilityIdentifier = "r_nextEvent"
+        view.addSubview(r_nextevent)
+
+        r_day = UILabel()
+        r_day.translatesAutoresizingMaskIntoConstraints = false
+        r_day.text = "Wednesday"
+        r_day.font = UIFont.systemFont(ofSize: 17)
+        r_day.isHidden = true
+        r_day.accessibilityIdentifier = "r_day"
+        view.addSubview(r_day)
+
+        r_month = UILabel()
+        r_month.translatesAutoresizingMaskIntoConstraints = false
+        r_month.text = "November"
+        r_month.font = UIFont.systemFont(ofSize: 17)
+        r_month.isHidden = true
+        r_month.accessibilityIdentifier = "r_month"
+        view.addSubview(r_month)
+
+        r_monthday = UILabel()
+        r_monthday.translatesAutoresizingMaskIntoConstraints = false
+        r_monthday.text = "23"
+        r_monthday.font = UIFont.systemFont(ofSize: 17)
+        r_monthday.isHidden = true
+        r_monthday.accessibilityIdentifier = "r_monthday"
+        view.addSubview(r_monthday)
+
+        r_year = UILabel()
+        r_year.translatesAutoresizingMaskIntoConstraints = false
+        r_year.text = "2023"
+        r_year.font = UIFont.systemFont(ofSize: 17)
+        r_year.isHidden = true
+        r_year.accessibilityIdentifier = "r_year"
+        view.addSubview(r_year)
+
+        r_hour = UILabel()
+        r_hour.translatesAutoresizingMaskIntoConstraints = false
+        r_hour.text = "00"
+        r_hour.font = UIFont.systemFont(ofSize: 17)
+        r_hour.isHidden = true
+        r_hour.accessibilityIdentifier = "r_hour"
+        view.addSubview(r_hour)
+
+        r_colon = UILabel()
+        r_colon.translatesAutoresizingMaskIntoConstraints = false
+        r_colon.text = ":"
+        r_colon.font = UIFont.systemFont(ofSize: 17)
+        r_colon.isHidden = true
+        r_colon.accessibilityIdentifier = "r_colon"
+        view.addSubview(r_colon)
+
+        r_minute = UILabel()
+        r_minute.translatesAutoresizingMaskIntoConstraints = false
+        r_minute.text = "00"
+        r_minute.font = UIFont.systemFont(ofSize: 17)
+        r_minute.isHidden = true
+        r_minute.accessibilityIdentifier = "r_minute"
+        view.addSubview(r_minute)
+
+        r_ampm = UILabel()
+        r_ampm.translatesAutoresizingMaskIntoConstraints = false
+        r_ampm.text = "AM"
+        r_ampm.font = UIFont.systemFont(ofSize: 17)
+        r_ampm.isHidden = true
+        r_ampm.accessibilityIdentifier = "r_ampm"
+        view.addSubview(r_ampm)
+    }
+
+    private func createToolbar() {
+        toolBar = UIToolbar()
+        toolBar.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(toolBar)
+
+        btnDoneOutlet = rTracker_resource.createDoneButton(target: self, action: #selector(btnDone(_:)), accId: "nrvc_done")
+
+        let flexibleSpace1 = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
+
+        gearButton = UIBarButtonItem(title: "⚙", style: .plain, target: self, action: #selector(btnGear(_:)))
+
+        let flexibleSpace2 = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
+
+        btnHelpOutlet = UIBarButtonItem(title: "?", style: .plain, target: self, action: #selector(btnHelp(_:)))
+
+        toolBar.setItems([btnDoneOutlet, flexibleSpace1, gearButton, flexibleSpace2, btnHelpOutlet], animated: false)
+    }
+
+    private func setupConstraints() {
+        let safeArea = view.safeAreaLayoutGuide
+
+        NSLayoutConstraint.activate([
+            // Navigation Bar
+            navBar.topAnchor.constraint(equalTo: view.topAnchor, constant: 22),
+            navBar.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor),
+            navBar.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor),
+            navBar.heightAnchor.constraint(equalToConstant: 44),
+
+            // Delay section
+            delayDaysButton.topAnchor.constraint(equalTo: navBar.bottomAnchor, constant: 10),
+            delayDaysButton.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor, constant: 20),
+
+            fromLastButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            fromLastButton.centerYAnchor.constraint(equalTo: delayDaysButton.centerYAnchor),
+            fromLastButton.widthAnchor.constraint(equalToConstant: 24),
+            fromLastButton.heightAnchor.constraint(equalToConstant: 20),
+
+            fromLastLabel.leadingAnchor.constraint(equalTo: fromLastButton.trailingAnchor, constant: 8),
+            fromLastLabel.centerYAnchor.constraint(equalTo: delayDaysButton.centerYAnchor),
+
+            // Every section
+            everyTF.topAnchor.constraint(equalTo: fromLastButton.bottomAnchor, constant: 10),
+            everyTF.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor, constant: 10),
+            everyTF.widthAnchor.constraint(equalToConstant: 32),
+
+            everyButton.topAnchor.constraint(equalTo: fromLastButton.bottomAnchor, constant: 10),
+            everyButton.leadingAnchor.constraint(equalTo: everyTF.trailingAnchor, constant: 3),
+
+            everyTrackerButton.topAnchor.constraint(equalTo: fromLastButton.bottomAnchor, constant: 10),
+            everyTrackerButton.leadingAnchor.constraint(equalTo: fromLastButton.trailingAnchor),
+
+            monthDays.topAnchor.constraint(equalTo: fromLastButton.bottomAnchor, constant: 10),
+            monthDays.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor, constant: 10),
+            monthDays.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor, constant: -10),
+
+            // Then on section
+            thenOnLabel.topAnchor.constraint(equalTo: monthDays.bottomAnchor, constant: 10),
+            thenOnLabel.leadingAnchor.constraint(equalTo: delayDaysButton.leadingAnchor),
+        ])
+
+        // Find the weekdays stack view and set up its constraints
+        if let weekdaysStackView = view.subviews.first(where: { $0 is UIStackView }) as? UIStackView {
+            NSLayoutConstraint.activate([
+                weekdaysStackView.topAnchor.constraint(equalTo: thenOnLabel.bottomAnchor, constant: 10),
+                weekdaysStackView.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor, constant: 20),
+                weekdaysStackView.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor, constant: -20),
+                weekdaysStackView.heightAnchor.constraint(equalToConstant: 30),
+            ])
+
+            setupTimeConstraints(belowView: weekdaysStackView, safeArea: safeArea)
+        }
+    }
+
+    private func setupTimeConstraints(belowView: UIView, safeArea: UILayoutGuide) {
+        NSLayoutConstraint.activate([
+            // Start time section
+            startLabel.topAnchor.constraint(equalTo: belowView.bottomAnchor, constant: 34),
+            startLabel.leadingAnchor.constraint(equalTo: delayDaysButton.leadingAnchor),
+
+            startHr.centerYAnchor.constraint(equalTo: startLabel.centerYAnchor),
+            startHr.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor, constant: -120),
+            startHr.widthAnchor.constraint(equalToConstant: 45),
+
+            startMin.centerYAnchor.constraint(equalTo: startLabel.centerYAnchor),
+            startMin.leadingAnchor.constraint(equalTo: startHr.trailingAnchor, constant: 7),
+            startMin.widthAnchor.constraint(equalToConstant: 46),
+
+            startTimeAmPm.centerYAnchor.constraint(equalTo: startLabel.centerYAnchor),
+            startTimeAmPm.leadingAnchor.constraint(equalTo: startMin.trailingAnchor, constant: 8),
+            startTimeAmPm.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor, constant: -36),
+
+            startSlider.topAnchor.constraint(equalTo: startLabel.bottomAnchor, constant: 10),
+            startSlider.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor, constant: 20),
+            startSlider.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor, constant: -20),
+
+            // Finish section
+            enableFinishButton.topAnchor.constraint(equalTo: startSlider.bottomAnchor, constant: 32),
+            enableFinishButton.leadingAnchor.constraint(equalTo: delayDaysButton.leadingAnchor),
+            enableFinishButton.widthAnchor.constraint(equalToConstant: 24),
+            enableFinishButton.heightAnchor.constraint(equalToConstant: 20),
+
+            finishLabel.leadingAnchor.constraint(equalTo: enableFinishButton.trailingAnchor, constant: 8),
+            finishLabel.centerYAnchor.constraint(equalTo: enableFinishButton.centerYAnchor),
+
+            finishHr.centerYAnchor.constraint(equalTo: enableFinishButton.centerYAnchor),
+            finishHr.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor, constant: -121),
+            finishHr.widthAnchor.constraint(equalToConstant: 45),
+
+            finishColon.centerYAnchor.constraint(equalTo: enableFinishButton.centerYAnchor),
+            finishColon.leadingAnchor.constraint(equalTo: finishHr.trailingAnchor, constant: 1),
+
+            finishMin.centerYAnchor.constraint(equalTo: enableFinishButton.centerYAnchor),
+            finishMin.leadingAnchor.constraint(equalTo: finishColon.trailingAnchor, constant: 1),
+            finishMin.widthAnchor.constraint(equalToConstant: 46),
+
+            finishTimeAmPm.centerYAnchor.constraint(equalTo: enableFinishButton.centerYAnchor),
+            finishTimeAmPm.leadingAnchor.constraint(equalTo: finishMin.trailingAnchor, constant: 8),
+            finishTimeAmPm.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor, constant: -36),
+
+            finishSlider.topAnchor.constraint(equalTo: finishLabel.bottomAnchor, constant: 10),
+            finishSlider.leadingAnchor.constraint(equalTo: startSlider.leadingAnchor),
+            finishSlider.trailingAnchor.constraint(equalTo: startSlider.trailingAnchor),
+
+            // Repeat section
+            repeatTimes.topAnchor.constraint(equalTo: finishSlider.bottomAnchor, constant: 26.5),
+            repeatTimes.leadingAnchor.constraint(equalTo: delayDaysButton.leadingAnchor),
+            repeatTimes.widthAnchor.constraint(equalToConstant: 37),
+
+            repeatTimesLabel.leadingAnchor.constraint(equalTo: repeatTimes.trailingAnchor, constant: 8),
+            repeatTimesLabel.centerYAnchor.constraint(equalTo: repeatTimes.centerYAnchor),
+
+            intervalButton.centerYAnchor.constraint(equalTo: repeatTimesLabel.centerYAnchor),
+            intervalButton.centerXAnchor.constraint(equalTo: safeArea.centerXAnchor),
+            intervalButton.widthAnchor.constraint(equalToConstant: 100),
+
+            // Toolbar
+            toolBar.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor),
+            toolBar.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor),
+            toolBar.bottomAnchor.constraint(equalTo: safeArea.bottomAnchor),
+            toolBar.heightAnchor.constraint(equalToConstant: 49)
+        ])
+
+        // Set up message and next event sections separately
+        setupMessageConstraints(belowView: repeatTimes, safeArea: safeArea)
+        setupNextEventConstraints(safeArea: safeArea)
+    }
+
+    private func setupMessageConstraints(belowView: UIView, safeArea: UILayoutGuide) {
+        // Find the Text: label and message text field
+        let textLabel = view.subviews.first { ($0 as? UILabel)?.text == "Text:" } as? UILabel
+
+        if let textLabel = textLabel {
+            NSLayoutConstraint.activate([
+                textLabel.topAnchor.constraint(equalTo: belowView.bottomAnchor, constant: 26.5),
+                textLabel.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor, constant: 20),
+
+                msgTF.centerYAnchor.constraint(equalTo: textLabel.centerYAnchor),
+                msgTF.leadingAnchor.constraint(equalTo: textLabel.trailingAnchor, constant: 8),
+                msgTF.trailingAnchor.constraint(equalTo: enableButton.leadingAnchor, constant: -10),
+
+                enableButton.centerYAnchor.constraint(equalTo: msgTF.centerYAnchor),
+                enableButton.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor, constant: -10),
+                enableButton.widthAnchor.constraint(equalToConstant: 30),
+                enableButton.heightAnchor.constraint(equalToConstant: 30)
+            ])
+        }
+    }
+
+    private func setupNextEventConstraints(safeArea: UILayoutGuide) {
+        // Find message text field for positioning
+        let messageBottomAnchor = msgTF.bottomAnchor
+
+        NSLayoutConstraint.activate([
+            r_nextevent.topAnchor.constraint(equalTo: messageBottomAnchor, constant: 47.5),
+            r_nextevent.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor, constant: 20),
+            r_nextevent.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor, constant: -237),
+
+            r_day.topAnchor.constraint(equalTo: r_nextevent.bottomAnchor, constant: 7.5),
+            r_day.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor, constant: 29),
+            r_day.widthAnchor.constraint(equalToConstant: 97),
+
+            r_month.firstBaselineAnchor.constraint(equalTo: r_day.firstBaselineAnchor),
+            r_month.leadingAnchor.constraint(equalTo: r_day.trailingAnchor, constant: 14),
+            r_month.widthAnchor.constraint(equalToConstant: 85),
+
+            r_monthday.firstBaselineAnchor.constraint(equalTo: r_day.firstBaselineAnchor),
+            r_monthday.leadingAnchor.constraint(equalTo: fromLastLabel.leadingAnchor),
+            r_monthday.widthAnchor.constraint(equalToConstant: 26),
+
+            r_year.firstBaselineAnchor.constraint(equalTo: r_monthday.firstBaselineAnchor),
+            r_year.leadingAnchor.constraint(equalTo: r_monthday.trailingAnchor, constant: 19),
+
+            r_hour.topAnchor.constraint(equalTo: r_day.bottomAnchor, constant: 8),
+            r_hour.leadingAnchor.constraint(equalTo: repeatTimesLabel.leadingAnchor),
+
+            r_colon.firstBaselineAnchor.constraint(equalTo: r_hour.firstBaselineAnchor),
+            r_colon.leadingAnchor.constraint(equalTo: r_hour.trailingAnchor, constant: 3),
+            r_colon.widthAnchor.constraint(equalToConstant: 4),
+
+            r_minute.firstBaselineAnchor.constraint(equalTo: r_colon.firstBaselineAnchor),
+            r_minute.leadingAnchor.constraint(equalTo: r_colon.trailingAnchor, constant: 8),
+
+            r_ampm.firstBaselineAnchor.constraint(equalTo: r_minute.firstBaselineAnchor),
+            r_ampm.leadingAnchor.constraint(equalTo: r_minute.trailingAnchor, constant: 8)
+        ])
+    }
+
+    private func wireUpActions() {
+        // All button actions and text field delegates are already set up in createUIElements methods
+        // This method exists for any additional wiring that might be needed
+    }
+
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         view.setNeedsDisplay()
     }
@@ -328,12 +944,12 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         return false
     }
 
-    @IBAction func btnDone(_ sender: Any?) {
+    @objc func btnDone(_ sender: Any?) {
         _ = leaveNR()
         dismiss(animated: true)
     }
 
-    @IBAction func prevBtn(_ sender: Any) {
+ @objc func prevBtn(_ sender: Any) {
         DBGLog("prevBtn")
         let rslt = leaveNR()
         nr = (0 == nr?.rid) || rslt ? tracker?.currReminder() : tracker?.prevReminder()
@@ -341,7 +957,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         guiFromNr()
     }
 
-    @IBAction func nextAddBtn(_ sender: Any) {
+ @objc func nextAddBtn(_ sender: Any) {
         DBGLog("nextAddBtn")
         if leaveNR() {
             nr = tracker?.currReminder()
@@ -496,9 +1112,9 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
             if nr!.fromLast {
                 fromLastButton.isSelected = true
                 if nr!.vid != 0 {
-                    let c = tracker?.valObjTable.count ?? 0
+                    let c = tracker?.valObjTableH.count ?? 0
                     for i in 0..<c {
-                        if nr!.vid == ((tracker!.valObjTable)[i]).vid {
+                        if nr!.vid == ((tracker!.valObjTableH)[i]).vid {
                             everyTrackerNdx = i + 1
                         }
                     }
@@ -604,7 +1220,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
             nr?.everyMode = everyMode
             nr?.fromLast = fromLastButton.isSelected
             if !everyTrackerButton.isHidden {
-                nr?.vid = (everyTrackerNdx != 0 ? ((tracker?.valObjTable)?[everyTrackerNdx - 1] as? valueObj)?.vid : 0) ?? 0
+                nr?.vid = (everyTrackerNdx != 0 ? ((tracker?.valObjTableH)?[everyTrackerNdx - 1] as? valueObj)?.vid : 0) ?? 0
             }
             for i in 0..<7 {
                 if ((weekdayBtns)?[i] as? UIButton)?.isSelected ?? false {
@@ -865,14 +1481,14 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         updateMessage()
     }
 
-    @IBAction func fromLastBtn(_ sender: Any) {
+ @objc func fromLastBtn(_ sender: Any) {
         DBGLog("fromLastBtn")
         toggleCheckBtn(fromLastButton)
 
         fromLastBtnStateUpdate()
     }
 
-    @IBAction func everyBtn(_ sender: Any) {
+ @objc func everyBtn(_ sender: Any) {
         DBGLog(String("everyBtn \(everyButton.title(for: .normal))"))
         everyMode = UInt8((everyMode != 0 ? Int((everyMode << 1)) & EV_MASK : EV_HOURS))
         everyBtnStateUpdate()
@@ -941,14 +1557,15 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         //[self updateEnabledButton];
     }
 
-    @IBAction func btnGear(_ sender: Any) {
+ @objc func btnGear(_ sender: Any) {
         DBGLog("gear button here")
         nrFromGui()
 
-        let nrvc2 = notifyReminderVC2(nibName: "notifyReminderVC2", bundle: nil)
+        let nrvc2 = notifyReminderVC2()
         //nrvc.view.hidden = NO;
         nrvc2.parentNRVC = self
-        nrvc2.modalTransitionStyle = .flipHorizontal
+        nrvc2.modalPresentationStyle = .fullScreen
+        nrvc2.modalTransitionStyle = .coverVertical
         //if ( SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"6.0") ) {
         present(nrvc2, animated: true)
         //} else {
@@ -961,12 +1578,12 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
 
     }
 
-    @IBAction func btnHelp(_ sender: Any) {
+ @objc func btnHelp(_ sender: Any) {
         DBGLog("btnHelp")
         rTracker_resource.alert("Reminders", msg: "Blue labels are buttons, tap to see the options.\nSet a delay from the last time this tracker (or value) was saved and the weekdays the reminder should trigger, or choose calendar days.\nSet a single time for the reminder to fire, or a time range with equal or random intervals.\nWhen settings are OK, an 'enable' checkbox appears in the lower right.\nTo delete a reminder, leave the form when the enable checkbox is not shown.\nMultiple reminders may be set using the < and +> buttons in the titlebar.", vc: self)
     }
 
-    @IBAction func monthDaysChange(_ sender: Any) {
+ @objc func monthDaysChange(_ sender: Any) {
         DBGLog("monthDaysChange ")
         updateEnabledButton()
     }
@@ -975,7 +1592,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         if lastDefaultMsg == msgTF.text {
             if !(fromLastButton.isHidden) && (fromLastButton.isSelected) {
                 if everyTrackerNdx != 0 {
-                    msgTF.text = "\(tracker?.trackerName ?? "") : \(((tracker?.valObjTable)?[everyTrackerNdx - 1] as? valueObj)?.valueName ?? "")"
+                    msgTF.text = "\(tracker?.trackerName ?? "") : \(((tracker?.valObjTableH)?[everyTrackerNdx - 1] as? valueObj)?.valueName ?? "")"
                     lastDefaultMsg = msgTF.text
                     return
                 }
@@ -992,12 +1609,12 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         updateMessage()
     }
 
-    @IBAction func everyTrackerBtn(_ sender: Any) {
+ @objc func everyTrackerBtn(_ sender: Any) {
         everyTrackerNdx = everyTrackerNdx < everyTrackerNames.count - 1 ? everyTrackerNdx + 1 : 0
         setEveryTrackerBtnName()
     }
 
-    @IBAction func everyTFChange(_ sender: UITextField) {
+ @objc func everyTFChange(_ sender: UITextField) {
         DBGLog("everyTFChange")
         if let intval = Int(sender.text!) {
             if 0 >= intval {
@@ -1009,7 +1626,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         updateEnabledButton()
     }
 
-    @IBAction func messageTFChange(_ sender: Any) {
+ @objc func messageTFChange(_ sender: Any) {
         DBGLog("messageTFChange")
     }
 
@@ -1054,7 +1671,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         updateEnabledButton()
     }
 
-    @IBAction func delayDaysBtn(_ sender: UIButton) {
+ @objc func delayDaysBtn(_ sender: UIButton) {
         //- (IBAction)weekMonthEveryChange:(id)sender {
         //    DBGLog(@"weekMonthEveryChange -- %d --",[sender selectedSegmentIndex]);
         DBGLog(String("curr title: \(sender.titleLabel?.text)"))
@@ -1100,7 +1717,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
              */
     }
 
-    @IBAction func wdBtn(_ sender: UIButton) {
+ @objc func wdBtn(_ sender: UIButton) {
         DBGLog(String("wdBtn \(sender.currentTitle)"))
         sender.isSelected = !sender.isSelected
         updateEnabledButton()
@@ -1186,14 +1803,14 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
 
     }
 
-    @IBAction func enableBtn(_ sender: UIButton) {
+ @objc func enableBtn(_ sender: UIButton) {
         toggleCheckBtn(sender)
         if !sender.isSelected {
             rTracker_resource.alert("Reminder disabled", msg: "This reminder is now disabled.  To delete it, clear the settings and 'set reminders' or save the tracker.", vc: self)
         }
     }
 
-    @IBAction func enableFinishBtn(_ sender: Any) {
+ @objc func enableFinishBtn(_ sender: Any) {
         DBGLog("enableFinishBtn")
         toggleCheckBtn(sender as? UIButton)
         doEFbtnState()
@@ -1204,7 +1821,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         //efBtn.
     }
 
-    @IBAction func intervalBtn(_ sender: UIButton) {
+ @objc func intervalBtn(_ sender: UIButton) {
         DBGLog(String("intervalBtn \(sender.currentTitle)"))
         DBGLog(String("everyBtn \(intervalButton.title(for: .normal))"))
         if intervalButton.title(for: .normal) == "Random" {
@@ -1242,12 +1859,12 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         updateEnabledButton()
     }
 
-    @IBAction func startSliderAction(_ sender: UISlider) {
+ @objc func startSliderAction(_ sender: UISlider) {
         //DBGLog(@"startSlider");
         sliderUpdate(Int(sender.value), hrtf: startHr, mntf: startMin, ampml: startTimeAmPm)
     }
 
-    @IBAction func finishSliderAction(_ sender: UISlider) {
+ @objc func finishSliderAction(_ sender: UISlider) {
         //DBGLog(@"finishSlider %f",sender.value);
         sliderUpdate(Int(sender.value), hrtf: finishHr, mntf: finishMin, ampml: finishTimeAmPm)
     }
@@ -1278,26 +1895,26 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
     }
 
     //start
-    @IBAction func startHrChange(_ sender: UITextField) {
+ @objc func startHrChange(_ sender: UITextField) {
         DBGLog(String("hrChange \(sender.text)"))
         limitTimeTF(sender, max: 23)
         timeTfUpdate(startSlider, hrtf: startHr, mntf: startMin, ampml: startTimeAmPm)
     }
 
-    @IBAction func startMinChange(_ sender: UITextField) {
+ @objc func startMinChange(_ sender: UITextField) {
         DBGLog(String("minChange \(sender.text)"))
         limitTimeTF(sender, max: 59)
         timeTfUpdate(startSlider, hrtf: startHr, mntf: startMin, ampml: startTimeAmPm)
     }
 
     //fin
-    @IBAction func finishHrChange(_ sender: UITextField) {
+ @objc func finishHrChange(_ sender: UITextField) {
         DBGLog(String("hrChange \(sender.text)"))
         limitTimeTF(sender, max: 23)
         timeTfUpdate(finishSlider, hrtf: finishHr, mntf: finishMin, ampml: finishTimeAmPm)
     }
 
-    @IBAction func finishMinChange(_ sender: UITextField) {
+ @objc func finishMinChange(_ sender: UITextField) {
         DBGLog(String("minChange \(sender.text)"))
         limitTimeTF(sender, max: 59)
         timeTfUpdate(finishSlider, hrtf: finishHr, mntf: finishMin, ampml: finishTimeAmPm)
@@ -1318,7 +1935,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
         }
     }
     
-    @IBAction func timesChange(_ sender: UITextField) {
+ @objc func timesChange(_ sender: UITextField) {
         DBGLog(String("timesChange \(sender.text)"))
         limitTimes()
         updateEnabledButton()
@@ -1326,7 +1943,7 @@ class notifyReminderViewController: UIViewController, UITextFieldDelegate {
 
     // MARK: -
 
-    @IBAction func TFdidBeginEditing(_ textField: Any) {
+ @objc func TFdidBeginEditing(_ textField: Any) {
         DBGLog("tf begin editing")
         activeField = textField as? UITextField
     }

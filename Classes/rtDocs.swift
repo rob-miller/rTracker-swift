@@ -1,0 +1,364 @@
+//
+//  rtDocs.swift
+//  rTracker
+//
+//  Created by Robert Miller on 23/09/2025.
+//  Copyright © 2025 Robert T. Miller. All rights reserved.
+//
+
+import Foundation
+
+// MARK: - Documentation Data Structures
+
+/// Represents a single documentation entry
+struct rtDocEntry {
+    let identifier: String      // Unique identifier for this entry
+    let title: String           // Display title
+    let description: String     // Main help text
+
+    init(identifier: String, title: String, description: String) {
+        self.identifier = identifier
+        self.title = title
+        self.description = description
+    }
+}
+
+/// Main documentation manager class
+class rtDocs {
+
+    // MARK: - Singleton
+    static let shared = rtDocs()
+    private init() {
+        // Initialize entries dictionary from static data
+        for entry in Self.allEntries {
+            entries[entry.identifier] = entry
+        }
+    }
+
+    // MARK: - Documentation Storage
+    private var entries: [String: rtDocEntry] = [:]
+
+    // MARK: - Public API
+
+    /// Get documentation entry by identifier
+    func getEntry(_ identifier: String) -> rtDocEntry? {
+        return entries[identifier]
+    }
+
+    /// Get multiple entries by identifiers
+    func getEntries(_ identifiers: [String]) -> [rtDocEntry] {
+        return identifiers.compactMap { entries[$0] }
+    }
+
+    // MARK: - Static Documentation Data
+
+    static let allEntries: [rtDocEntry] = [
+        // Page descriptions
+        rtDocEntry(
+            identifier: "page_function_overview",
+            title: "Function Overview",
+            description: "This page shows a summary of your function configuration including the range settings and formula. Use the Range and Definition tabs to modify your function."
+        ),
+        rtDocEntry(
+            identifier: "page_function_range",
+            title: "Function Range",
+            description: "Set the range of entries your function will calculate over. The 'Previous' endpoint determines where the function starts looking for data, and 'Current' determines where it ends. The function will use all entries between these two points."
+        ),
+        rtDocEntry(
+            identifier: "page_function_definition",
+            title: "Function Definition",
+            description: "Build your function by selecting operators and values from the picker and tapping 'add'. Use parentheses to group operations and create complex formulas."
+        ),
+        rtDocEntry(
+            identifier: "value_choice",
+            title: "Choice Configuration",
+            description: "Configure radio buttons that let users select from a predefined list of options.  Optionally set specific values for each choice."
+        ),
+        rtDocEntry(
+            identifier: "value_info",
+            title: "Info Configuration",
+            description: "Info values are just text with optional static values.  Make it a tappable URL if you like."
+        ),
+
+        // Function operators
+        rtDocEntry(
+            identifier: "op_change_in",
+            title: "change_in",
+            description: "Calculates the difference between the last and first values in the range. The value in the first entry is subtracted from the value in the last entry. Example: change_in[odometer] in the Car tracker calculates distance traveled."
+        ),
+        rtDocEntry(
+            identifier: "op_sum",
+            title: "sum",
+            description: "Adds up all values in the range. All non-empty values between the range endpoints are summed together. Example: sum[calories] totals daily calorie intake."
+        ),
+        rtDocEntry(
+            identifier: "op_post_sum",
+            title: "post-sum",
+            description: "Sums values excluding the first entry in the range. Used when you want to exclude the starting value from the calculation. Example: post-sum[fuel] excludes initial tank reading for mileage calculation."
+        ),
+        rtDocEntry(
+            identifier: "op_pre_sum",
+            title: "pre-sum",
+            description: "Sums values excluding the last entry in the range. Used when you want to exclude the ending value from the calculation. Example: pre-sum[purchases] excludes current transaction."
+        ),
+        rtDocEntry(
+            identifier: "op_avg",
+            title: "avg",
+            description: "Calculates the average value. If the previous endpoint is a time unit (e.g. -2 weeks), the sum is divided by the number of time units; otherwise the sum is divided by the number of entries in the range.  Example: avg[drug] with early endpoint of '-10 days' indicates consistency taking medication over the previous 10 days.",
+        ),
+        rtDocEntry(
+            identifier: "op_min",
+            title: "min",
+            description: "Returns the minimum value in the range. Finds the smallest non-empty value between the range endpoints.",
+        ),
+        rtDocEntry(
+            identifier: "op_max",
+            title: "max",
+            description: "Returns the maximum value in the range. Finds the largest value between the range endpoints.",
+        ),
+        rtDocEntry(
+            identifier: "op_count",
+            title: "count",
+            description: "Counts the number of entries in the range where the value has data stored. Empty entries are not counted.",
+        ),
+        rtDocEntry(
+            identifier: "op_old_new",
+            title: "old/new",
+            description: "Calculates the ratio of the first value to the last value in the range. Returns first_value / last_value. Example: old/new[weight] shows weight change ratio.",
+        ),
+        rtDocEntry(
+            identifier: "op_new_old",
+            title: "new/old",
+            description: "Calculates the ratio of the last value to the first value in the range. Returns last_value / first_value. Example: new/old[savings] shows savings growth ratio.",
+        ),
+        rtDocEntry(
+            identifier: "op_elapsed_weeks",
+            title: "elapsed_weeks",
+            description: "Calculates weeks between first and last entries with data in the range.",
+        ),
+        rtDocEntry(
+            identifier: "op_elapsed_days",
+            title: "elapsed_days",
+            description: "Calculates days between first and last entries with data in the range.",
+        ),
+        rtDocEntry(
+            identifier: "op_elapsed_hrs",
+            title: "elapsed_hrs",
+            description: "Calculates hours between first and last entries with data in the range.",
+        ),
+        rtDocEntry(
+            identifier: "op_elapsed_mins",
+            title: "elapsed_mins",
+            description: "Calculates minutes between first and last entries with data in the range.",
+        ),
+        rtDocEntry(
+            identifier: "op_elapsed_secs",
+            title: "elapsed_secs",
+            description: "Calculates seconds between first and last entries with data in the range.",
+        ),
+        rtDocEntry(
+            identifier: "op_delay",
+            title: "delay",
+            description: "Returns the value from the first entry in the range. Use this to mark lagged events. Example: delay[training] with early endpoint of '-10 days' might be used to measure retention exactly 10 days after a lesson.",
+        ),
+        rtDocEntry(
+            identifier: "op_round",
+            title: "round",
+            description: "Returns the rounded value from the current entry. Rounds to the nearest integer (removes decimal places).",
+        ),
+        rtDocEntry(
+            identifier: "op_classify",
+            title: "classify",
+            description: "Classifies values into up to 7 categories using numeric thresholds (>=) or text substring matching. Numeric: values >= threshold get that classification (higher classifications checked first). Text: values containing the threshold text get that classification. Returns the classification number (1-7) or empty if no match.",
+        ),
+        rtDocEntry(
+            identifier: "op_not",
+            title: "!",
+            description: "Logical NOT operator. Returns the opposite boolean value. Example: ![condition] returns false when condition is true.",
+        ),
+        rtDocEntry(
+            identifier: "op_before",
+            title: "before",
+            description: "Returns true (1) if the tracker record date/time is before the configured date/time, otherwise returns false (empty). Select 'before' from picker, tap 'Set Date/Time' to configure. Function string shows date only."
+        ),
+        rtDocEntry(
+            identifier: "op_after",
+            title: "after",
+            description: "Returns true (1) if the tracker record date/time is after the configured date/time, otherwise returns false (empty). Select 'after' from picker, tap 'Set Date/Time' to configure. Function string shows date only."
+        ),
+
+        // Arithmetic operators
+        rtDocEntry(
+            identifier: "op_plus",
+            title: "+",
+            description: "Addition operator. Adds two values together.",
+        ),
+        rtDocEntry(
+            identifier: "op_minus",
+            title: "-",
+            description: "Subtraction operator. Subtracts the second value from the first.",
+        ),
+        rtDocEntry(
+            identifier: "op_multiply",
+            title: "*",
+            description: "Multiplication operator. Multiplies two values.",
+        ),
+        rtDocEntry(
+            identifier: "op_divide",
+            title: "/",
+            description: "Division operator. Divides the first value by the second.",
+        ),
+
+        // Logical operators
+        rtDocEntry(
+            identifier: "op_and",
+            title: "&",
+            description: "Logical AND operator. Returns true only when both values are true.",
+        ),
+        rtDocEntry(
+            identifier: "op_or",
+            title: "|",
+            description: "Logical OR operator. Returns true when at least one value is true.",
+        ),
+        rtDocEntry(
+            identifier: "op_xor",
+            title: "^",
+            description: "Logical XOR operator. Returns true when exactly one value is true.",
+        ),
+
+        // Comparison operators
+        rtDocEntry(
+            identifier: "op_equal",
+            title: "==",
+            description: "Equality comparison. Returns true when both values are equal.",
+        ),
+        rtDocEntry(
+            identifier: "op_not_equal",
+            title: "!=",
+            description: "Inequality comparison. Returns true when values are not equal.",
+        ),
+        rtDocEntry(
+            identifier: "op_greater",
+            title: ">",
+            description: "Greater than comparison. Returns true when first value is greater than second.",
+        ),
+        rtDocEntry(
+            identifier: "op_less",
+            title: "<",
+            description: "Less than comparison. Returns true when first value is less than second.",
+        ),
+        rtDocEntry(
+            identifier: "op_greater_equal",
+            title: ">=",
+            description: "Greater than or equal comparison. Returns true when first value is greater than or equal to second.",
+        ),
+        rtDocEntry(
+            identifier: "op_less_equal",
+            title: "<=",
+            description: "Less than or equal comparison. Returns true when first value is less than or equal to second.",
+        ),
+
+        // Floor/ceiling
+        rtDocEntry(
+            identifier: "op_floor",
+            title: "⌊",
+            description: "Floor function. Returns the largest integer less than or equal to the value. Example: ⌊[price]⌋ rounds down to nearest dollar.",
+        ),
+        rtDocEntry(
+            identifier: "op_ceiling",
+            title: "⌈",
+            description: "Ceiling function. Returns the smallest integer greater than or equal to the value. Example: ⌈[guests]⌉ rounds up for planning.",
+        ),
+
+        // Min2/max2
+        rtDocEntry(
+            identifier: "op_min2",
+            title: "><",
+            description: "Returns the smaller of two values. Example: [budget] >< [actual] shows the lesser amount.",
+        ),
+        rtDocEntry(
+            identifier: "op_max2",
+            title: "<>",
+            description: "Returns the larger of two values. Example: [minimum] <> [actual] ensures a minimum threshold.",
+        ),
+
+        // Range endpoints
+        rtDocEntry(
+            identifier: "endpoint_entry",
+            title: "entry",
+            description: "The previous or current entry for this tracker.",
+        ),
+        rtDocEntry(
+            identifier: "endpoint_none",
+            title: "<none>",
+            description: "The function calculates over the current tracker entry only.",
+        ),
+        rtDocEntry(
+            identifier: "endpoint_value",
+            title: "value",
+            description: "The previous or current tracker entry where this value is defined.",
+        ),
+        rtDocEntry(
+            identifier: "endpoint_cal_years",
+            title: "cal years",
+            description: "Complete calendar years. The previous endpoint will be counted back by complete calendar years. Example: '-2 cal years' from December 12, 2022 will be 12:00 AM on January 1, 2021.\n'Only Last' means only calculate at the end of the range, otherwise the graph will show values for every entry.",
+        ),
+        rtDocEntry(
+            identifier: "endpoint_years",
+            title: "years",
+            description: "Time offset in years. The previous endpoint will be the same date and time of day, but the specified number of years before. Example: '-2 years' from December 12, 2022 will be December 12, 2020.",
+        ),
+        rtDocEntry(
+            identifier: "endpoint_cal_months",
+            title: "cal months",
+            description: "Complete calendar months. The previous endpoint will be counted back by complete calendar months. Example: '-2 cal months' from December 12 will be 12:00 AM on November 1.\n'Only Last' means only calculate at the end of the range, otherwise the graph will show values for every entry.",
+        ),
+        rtDocEntry(
+            identifier: "endpoint_months",
+            title: "months",
+            description: "Time offset in months. The previous endpoint will be the same date and time of day, but the specified number of months before. Example: '-2 months' from December 12 will be October 12.",
+        ),
+        rtDocEntry(
+            identifier: "endpoint_cal_weeks",
+            title: "cal weeks",
+            description: "Complete calendar weeks. The previous endpoint will be counted back by complete calendar weeks. Example: If current entry is Thursday with '-1 cal weeks', the previous endpoint will be 12:00 AM on the first day of the current week for your locale.\n'Only Last' means only calculate at the end of the range, otherwise the graph will show values for every entry.",
+        ),
+        rtDocEntry(
+            identifier: "endpoint_weeks",
+            title: "weeks",
+            description: "Time offset in weeks. The previous endpoint will be exactly the specified weeks (7 days) before the current entry time.",
+        ),
+        rtDocEntry(
+            identifier: "endpoint_cal_days",
+            title: "cal days",
+            description: "Complete calendar days. The previous endpoint will be counted back by complete calendar days. Example: If current entry is Dec 12 with '-2 cal days', the previous endpoint will be 12:00 AM on Dec 10.\n'Only Last' means only calculate at the end of the range, otherwise the graph will show values for every entry.",
+        ),
+        rtDocEntry(
+            identifier: "endpoint_days",
+            title: "days",
+            description: "Time offset in days. The previous endpoint will be exactly the specified days before the current entry time.",
+        ),
+        rtDocEntry(
+            identifier: "endpoint_hours",
+            title: "hours",
+            description: "Time offset in hours. The previous endpoint will be exactly the specified hours before the current entry time.",
+        ),
+        rtDocEntry(
+            identifier: "endpoint_minutes",
+            title: "minutes",
+            description: "Time offset in minutes. The previous endpoint will be exactly the specified minutes before the current entry time.",
+        ),
+
+        // General features
+        rtDocEntry(
+            identifier: "feature_reminders",
+            title: "Reminders",
+            description: "Set up notifications to remind you to update your tracker at specified times or intervals."
+        ),
+        rtDocEntry(
+            identifier: "feature_export",
+            title: "Data Export",
+            description: "Export your tracker data in various formats for analysis or backup."
+        )
+    ]
+}

@@ -58,7 +58,7 @@ class tictacV: UIView {
             return theKey
         }
         set(k) {
-            DBGLog("setKey: \(theKey) \(String(theKey, radix: 2)) -> \(k) \(String(k, radix: 2))")
+            //DBGLog("setKey: \(theKey) \(String(theKey, radix: 2)) -> \(k) \(String(k, radix: 2))")
             theKey = k
         }
     }
@@ -108,7 +108,7 @@ class tictacV: UIView {
         ttf.origin.y = TICTACVRTFRAC * ttf.size.height
         ttf.size.width *= TICTACWIDFRAC
         ttf.size.height *= TICTACHGTFRAC
-        DBGLog(String("ttv: x=\(ttf.origin.x) y=\(ttf.origin.y) w=\(ttf.size.width) h=\(ttf.size.height)"));
+        //DBGLog(String("ttv: x=\(ttf.origin.x) y=\(ttf.origin.y) w=\(ttf.size.width) h=\(ttf.size.height)"));
         super.init(frame: ttf)
         backgroundColor = .secondarySystemBackground //.white
         layer.cornerRadius = 8 // doesn't work, probably overwriting rectangle elsewhere
@@ -157,7 +157,7 @@ class tictacV: UIView {
 
     func drawTicTac() {
         //var i: Int
-        DBGLog(String("\(frame)"))
+        //DBGLog(String("\(frame)"))
         safeDispatchSync({ [self] in
             vborder = TTBF * frame.size.height
             hborder = TTBF * frame.size.width
@@ -234,16 +234,27 @@ class tictacV: UIView {
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .center
         let attributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 18.0), // font size
+            .font: UIFont.boldSystemFont(ofSize: 18.0), // font size - bold for better visibility
             .foregroundColor: UIColor.label,  // UIColor.black, // font color
             .paragraphStyle: paragraphStyle
         ]
 
         context?.saveGState()
-        
+
+        // Calculate text size for proper centering
+        let textSize = str!.size(withAttributes: attributes)
+
+        // Center the text both horizontally and vertically within currRect
+        let centeredRect = CGRect(
+            x: currRect.origin.x + (currRect.size.width - textSize.width) / 2.0,
+            y: currRect.origin.y + (currRect.size.height - textSize.height) / 2.0,
+            width: textSize.width,
+            height: textSize.height
+        )
+
         // draw the text
         UIGraphicsPushContext(context!)
-        str!.draw(in: currRect, withAttributes: attributes)
+        str!.draw(in: centeredRect, withAttributes: attributes)
         UIGraphicsPopContext()
 
     }

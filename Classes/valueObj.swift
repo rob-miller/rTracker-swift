@@ -27,20 +27,61 @@ import UIKit
 
 //#import "trackerObj.h"
 
-// supported valueObj types ; note these defns tied to rTracker-resource vtypeNames array
-let VOT_NUMBER = 0
-let VOT_TEXT = 1
-let VOT_TEXTB = 2
-let VOT_SLIDER = 3
-let VOT_CHOICE = 4
-let VOT_BOOLEAN = 5
-let VOT_FUNC = 6
-let VOT_INFO = 7
+// ValueObjectType enum provides tight coupling between integer values and string names
+enum ValueObjectType: Int, CaseIterable {
+    case VOT_NUMBER = 0
+    case VOT_TEXT = 1
+    case VOT_TEXTB = 2
+    case VOT_SLIDER = 3
+    case VOT_CHOICE = 4
+    case VOT_BOOLEAN = 5
+    case VOT_FUNC = 6
+    case VOT_INFO = 7
+    case VOT_NONE = 8
+    
+    var stringValue: String {
+        switch self {
+        case .VOT_NUMBER: return "number"
+        case .VOT_TEXT: return "text"
+        case .VOT_TEXTB: return "textbox"
+        case .VOT_SLIDER: return "slider"
+        case .VOT_CHOICE: return "choice"
+        case .VOT_BOOLEAN: return "yes/no"
+        case .VOT_FUNC: return "function"
+        case .VOT_INFO: return "info"
+        case .VOT_NONE: return "none"
+        }
+    }
+    
+    static var typeNames: [String] {
+        return [VOT_NUMBER, VOT_TEXT, VOT_TEXTB, VOT_SLIDER, VOT_CHOICE, VOT_BOOLEAN, VOT_FUNC, VOT_INFO].map { $0.stringValue }
+    }
+    
+    init?(stringValue: String) {
+        if let type = Self.allCases.first(where: { $0.stringValue == stringValue }) {
+            self = type
+        } else {
+            return nil
+        }
+    }
+}
 
-let VOT_MAX = 7
+// Backward compatibility constants - existing code continues to work unchanged
+let VOT_NUMBER = ValueObjectType.VOT_NUMBER.rawValue
+let VOT_TEXT = ValueObjectType.VOT_TEXT.rawValue
+let VOT_TEXTB = ValueObjectType.VOT_TEXTB.rawValue
+let VOT_SLIDER = ValueObjectType.VOT_SLIDER.rawValue
+let VOT_CHOICE = ValueObjectType.VOT_CHOICE.rawValue
+let VOT_BOOLEAN = ValueObjectType.VOT_BOOLEAN.rawValue
+let VOT_FUNC = ValueObjectType.VOT_FUNC.rawValue
+let VOT_INFO = ValueObjectType.VOT_INFO.rawValue
+
+let VOT_NONE = ValueObjectType.VOT_NONE.rawValue
+
+let VOT_MAX = ValueObjectType.VOT_INFO.rawValue
 
 // image not yet
-// #define VOT_IMAGE	7
+// #define VOT_IMAGE    7
 
 // max number of choices for VOT_CHOICE
 //#define CHOICES 6
@@ -81,21 +122,30 @@ let ASFROMZERODFLT = true
 let SHRINKBDFLT = false
 let EXPORTVALBDFLT = false
 let INTEGERSTEPSBDFLT = false
-let DEFAULTENABLEDBDFLT = false
 let SLIDRSWLBDFLT = false
 let TBNLDFLT = false
 let TBNIDFLT = true
 let TBHIDFLT = false
 let GRAPHDFLT = true
 let NSWLDFLT = false
-let GRAPHLASTDFLT = true
+let AHKSRCDFLT = false
+let AHAVGDFLT = true
+let AHPREVDDFLT = false
+let AHFREQUENCYDFLT = "daily"
+let AHTIMEFILTERDFLT = "all_day"  
+let AHAGGREGATIONDFLT = "avg"
+let OTSRCDFLT = false
+let OTCURRDFLT = true
+let HRSMINSDFLT = false
+let CALONLYLASTDFLT = true
 let SETSTRACKERDATEDFLT = false
+let HIDDENDFLT = false
 
 // vo config textfield default values
 let SLIDRMINDFLT = 0.0
 let SLIDRMAXDFLT = 100.0
 let SLIDRDFLTDFLT = 50.0
-//#define PRIVDFLT		0
+//#define PRIVDFLT        0
 let FREPDFLT = -1
 let FDDPDFLT = 2
 let BOOLVALDFLT = 1.0
@@ -108,11 +158,31 @@ let INFOSAVEDFLT = false
 
 let NUMDDPDFLT = -1
 
+let OTANYNAME = "-<Any Value>-"
+let OTANYVID = -1
 
+
+// healthKit status in table voHKstatus
+enum hkStatus: Int {
+    case noData = 0
+    case hkData = 1
+}
+
+// otherTracker status in table voOTstatus
+enum otStatus: Int {
+    case noData = 0
+    case otData = 1
+}
+
+// Function data status in table voFNstatus
+enum fnStatus: Int {
+    case noData = 0
+    case fnData = 1
+}
 protocol voProtocol: AnyObject {
     func getValCap() -> Int
     func getNumVal() -> Double
-    func update(_ instr: String) -> String
+    func update(_ instr: String?) -> String
     func voDisplay(_ bounds: CGRect) -> UIView
     func voTVCell(_ tableView: UITableView) -> UITableViewCell
     func voTVCellHeight() -> CGFloat
@@ -125,16 +195,18 @@ protocol voProtocol: AnyObject {
     func dataEditVDidLoad(_ vc: UIViewController)
     func dataEditVWAppear(_ vc: UIViewController)
     func dataEditVWDisappear(_ vc: UIViewController)
-    //- (void) dataEditVDidUnload;
-    //- (void) dataEditFinished;
-    //- (void) transformVO:(NSMutableArray *)xdat ydat:(NSMutableArray *)ydat dscale:(double)dscale height:(CGFloat)height border:(float)border firstDate:(int)firstDate;
     func newVOGD() -> vogd
-    //- (void) recalculate;
-    func setFnVals(_ tDate: Int)
     func doTrimFnVals()
     func resetData()
     func mapValue2Csv() -> String?
     func mapCsv2Value(_ inCsv: String) -> String
+    func loadHKdata(forDate date: Int?, dispatchGroup: DispatchGroup?)
+    //func loadOTdata(dispatchGroup: DispatchGroup?)
+    func setFnVal(_ tDate: Int, dispatchGroup: DispatchGroup?)
+    func clearHKdata(forDate date: Int?)
+    func clearOTdata(forDate date: Int?)
+    func clearFNdata(forDate date: Int?)
+    func setFNrecalc()
 }
 
 //extern const NSInteger kViewTag;
@@ -185,33 +257,32 @@ class valueObj: NSObject, UITextFieldDelegate {
                 //value = [[NSMutableString alloc] initWithCapacity:32];
                 //[self.value setString:@""];
             /*
-            		case VOT_IMAGE:
-            			tvos = [[voImage alloc] initWithVO:self];
-            			//value = [[NSMutableString alloc] initWithCapacity:64];
-            			//[self.value setString:@""];
-            			break;
+                    case VOT_IMAGE:
+                        tvos = [[voImage alloc] initWithVO:self];
+                        //value = [[NSMutableString alloc] initWithCapacity:64];
+                        //[self.value setString:@""];
+                        break;
                          */
             case VOT_TEXTB:
                 tvos = voTextBox(vo: self)
                 //value = [[NSMutableString alloc] initWithCapacity:96];
                 //[self.value setString:@""];
+            case VOT_NONE:
+                // Claude's hack for charts to have a 'None' datasource 
+                fallthrough
             case VOT_INFO:
                 tvos = voInfo(vo: self)
                 vcolor = -1
-                //value = [[NSMutableString alloc] initWithCapacity:1];
-                //[self.value setString:@"0"];
+                
             default:
                 dbgNSAssert(false, String(format:"valueObj init vtype %ld not supported", vt))
                 tvos = voNumber(vo: self) // to clear analyzer worry
                 _vtype = VOT_NUMBER // consistency if we get here
             }
-            // vos = nil
+
             vos = tvos //as voState //as? (voState & voProtocol)
-            //var tval: String?
-            //tval = String(repeating: "\0", count: vos?.getValCap() ?? 0)
-            // value = nil
             _value = ""
-            //[self.value release];   // clear retain count from alloc + retain
+
         }
     }
     var vpriv = 0
@@ -221,10 +292,7 @@ class valueObj: NSObject, UITextFieldDelegate {
     var value: String {
         get {
             dbgNSAssert(vos != nil, "accessing vo.value with nil vos")
-            if _value == nil {
-                _value = ""
-            }
-            _value = vos?.update(_value!)
+            _value = vos?.update(_value)  // update with textfield contents if _value is empty
             return _value!
         }
         set {
@@ -251,16 +319,11 @@ class valueObj: NSObject, UITextFieldDelegate {
             _switchUseVO?.contentHorizontalAlignment = .center
             _switchUseVO?.tag = kViewTag
             _switchUseVO?.addTarget(self, action: #selector(switchAction(_:)), for: .valueChanged)
+            _switchUseVO?.isUserInteractionEnabled = optDict["otsrc"] ?? "0" != "1"
         }
         return _switchUseVO
     }
 
- //, retrievedData;
-    /*
-    override convenience init() {
-        self.init(data: nil, in_vid: 0, in_vtype: 0, in_vname: "", in_vcolor: 0, in_vgraphtype: 0, in_vpriv: 0)
-    }
-     */
     init(
         data parentTO: trackerObj,
         in_vid: Int,
@@ -270,7 +333,6 @@ class valueObj: NSObject, UITextFieldDelegate {
         in_vgraphtype: Int,
         in_vpriv: Int
     ) {
-        //DBGLog(@"init vObj with args vid: %d vtype: %d vname: %@",in_vid, in_vtype, in_vname);
         parentTracker = parentTO
         super.init()
         //self.useVO = YES;
@@ -284,12 +346,7 @@ class valueObj: NSObject, UITextFieldDelegate {
     }
 
     init(dict parentTO: trackerObj, dict: [AnyHashable : Any]?) {
-        /*
-        	DBGLog(@"init vObj with dict vid: %d vtype: %d vname: %@",
-                   [(NSNumber*) [dict objectForKey:@"vid"] integerValue],
-                   [(NSNumber*) [dict objectForKey:@"vtype"] integerValue],
-                   (NSString*) [dict objectForKey:@"valueName"]);
-             */
+
         parentTracker = parentTO
         super.init()
         useVO = true
@@ -345,28 +402,6 @@ class valueObj: NSObject, UITextFieldDelegate {
     // MARK: dictionary to/from
 
     func dictFromVO() -> [String : Any]? {
-        /*
-            NSNumber *myvid = [NSNumber numberWithInteger:self.vid];
-            NSNumber *myvtype = [NSNumber numberWithInteger:self.vtype];
-            NSNumber *myvpriv = [NSNumber numberWithInteger:self.vpriv];
-            NSString *myvaluename = self.valueName;
-            NSNumber *myvcolor = [NSNumber numberWithInteger:self.vcolor];
-            NSNumber *myvgt = [NSNumber numberWithInteger:self.vGraphType];
-            NSDictionary *myoptdict = self.optDict;
-
-            DBGLog(@"vid %@  vtype %@  vpriv %@  valuename %@  vcolor %@  vgt %@  optdict  %@",
-                   myvid, myvtype, myvpriv, myvaluename,myvcolor,myvgt,myoptdict);
-
-            DBGLog(@"vid %@  vtype %@  vpriv %@  valuename %@  vcolor  %@ vgt  %@ optdict  %@",
-                   [NSNumber numberWithInteger:self.vid],
-                    [NSNumber numberWithInteger:self.vtype],
-                    [NSNumber numberWithInteger:self.vpriv],
-                    self.valueName,
-                    [NSNumber numberWithInteger:self.vcolor],
-                    [NSNumber numberWithInteger:self.vGraphType],
-                    self.optDict
-                   );
-            */
         return [
             "vid": NSNumber(value: vid),
             "vtype": NSNumber(value: vtype),
@@ -398,6 +433,14 @@ class valueObj: NSObject, UITextFieldDelegate {
         // do self.useVO in vos resetData
         //DBGLog(@"vo resetData %@",self.valueName);
     }
+    
+    func isDerived() -> Bool {
+        let isHealthKit = optDict["ahksrc"] == "1"
+        let isOtherTracker = optDict["otsrc"] == "1"
+        let isFunction = vtype == VOT_FUNC
+        
+        return isHealthKit || isOtherTracker || isFunction
+    }
 
     // MARK: -
     // MARK: display fn dispatch
@@ -408,7 +451,7 @@ class valueObj: NSObject, UITextFieldDelegate {
         }
 
         if display == nil {
-            DBGLog(String("vo new display name:  \(valueName) currVal: .\(value)."))
+            //DBGLog(String("vo new display name:  \(valueName) currVal: .\(value)."))
             display = vos?.voDisplay(bounds)
             display?.tag = kViewTag
         }
@@ -468,7 +511,7 @@ class valueObj: NSObject, UITextFieldDelegate {
                     // handle slider option 'starts with last'
                     let to = parentTracker
                     var sql = String(format: "select count(*) from voData where id=%ld and date<%d", vid, Int(to.trackerDate!.timeIntervalSince1970))
-                    let v = to.toQry2Int(sql:sql) ?? 0
+                    let v = to.toQry2Int(sql:sql)
                     if v > 0 {
                         sql = String(format: "select val from voData where id=%ld and date<%d order by date desc limit 1;", vid, Int(to.trackerDate!.timeIntervalSince1970))
                         sdflt = to.toQry2Float(sql:sql)
@@ -489,7 +532,7 @@ class valueObj: NSObject, UITextFieldDelegate {
     // MARK: utility methods
 
     func describe(_ od: Bool) {
-        #if DEBUGLOG
+#if DEBUGLOG
         if od {
             DBGLog(String("value id \(vid) name \(valueName ?? "") type \(vtype) value >\(value)< optDict:"))
             for (key, value) in optDict {
@@ -498,13 +541,13 @@ class valueObj: NSObject, UITextFieldDelegate {
         } else {
             DBGLog(String("value id \(vid) name \(valueName ?? "") type \(vtype) value >\(value)<"))
         }
-        #endif
+#endif
     }
 
     //+ (NSArray *) graphsForVOT:(NSInteger)vot;
     //- (NSArray *) graphsForVOT:(NSInteger)vot;
     class func allGraphs() -> [AnyHashable]? {
-        return ["dots", "bar", "line", "line+dots", "pie"]
+        return ["dots", "bar", "line", "line+dots", "pie", "no graph"]
     }
 
     class func mapGraphType(_ gts: String?) -> Int {
@@ -556,8 +599,8 @@ class valueObj: NSObject, UITextFieldDelegate {
             if vcolor < 0 {
                 DBGErr(String("\(VOINF) invalid vcolor (negative): \(vcolor)"))
                 vcolor = 0
-            } else if vcolor > (rTracker_resource.colorSet().count - 1) {
-                DBGErr(String("\(VOINF) invalid vcolor (too large): \(vcolor) max color= \(UInt(rTracker_resource.colorSet().count - 1))"))
+            } else if vcolor > (rTracker_resource.colorSet.count - 1) {
+                DBGErr(String("\(VOINF) invalid vcolor (too large): \(vcolor) max color= \(UInt(rTracker_resource.colorSet.count - 1))"))
                 vcolor = 0
             }
         }
@@ -583,8 +626,8 @@ class valueObj: NSObject, UITextFieldDelegate {
                     if ncol < 0 {
                         DBGErr(String("\(VOINF) invalid choice \(i) color (negative): \(ncol)"))
                         optDict[key] = "0"
-                    } else if ncol > (rTracker_resource.colorSet().count - 1) {
-                        DBGErr(String("\(VOINF) invalid choice \(i) color (too large): \(ncol) max color= \(UInt(rTracker_resource.colorSet().count) - 1))"))
+                    } else if ncol > (rTracker_resource.colorSet.count - 1) {
+                        DBGErr(String("\(VOINF) invalid choice \(i) color (too large): \(ncol) max color= \(UInt(rTracker_resource.colorSet.count) - 1))"))
                         optDict[key] = "0"
                     }
                 }
@@ -609,77 +652,63 @@ class valueObj: NSObject, UITextFieldDelegate {
         //return [self.valueName sizeWithAttributes:@{NSFontAttributeName:[UIFont systemFontOfSize:[UIFont systemFontSize]]}];
     }
 
-    func getLongTitleSize() -> CGSize {
-        var labelSize = CGSize(width: 0, height: 0)
-        if optDict["longTitle"] != nil && ("" != optDict["longTitle"]) {
-            var maxSize = rTracker_resource.getKeyWindowFrame().size
-            maxSize.height = 9999
-            maxSize.width -= 2 * MARGIN
-            let lts = optDict["longTitle"]
-            let ltrect = lts?.boundingRect(with: maxSize, options: .usesLineFragmentOrigin, attributes: [
-                NSAttributedString.Key.font: PrefBodyFont
-            ], context: nil)
-            labelSize.height += (ltrect?.size.height ?? 0.0) - (ltrect?.origin.y ?? 0.0)
-            labelSize.height = minLabelHeight(labelSize.height)
-            labelSize.width = ltrect?.size.width ?? 0.0
-        }
-        return labelSize
-
-        //return [self.valueName sizeWithAttributes:@{NSFontAttributeName:[UIFont systemFontOfSize:[UIFont systemFontSize]]}];
-    }
-
     // specific to VOT_CHOICE with optional values - seach dictionary for value, return index
     func getChoiceIndex(forValue val: String?) -> Int {
-        //DBGLog(@"gciv val=%@",val);
-        let inValF = CGFloat(Float(val ?? "") ?? 0.0)
-        var minValF: CGFloat = 0.0
-        var maxValF: CGFloat = 0.0
-        //CGFloat closestValF = 99999999999.9F;
-        var closestNdx = -1
-        var closestDistanceF: CGFloat = 99999999999.9
-
-        let inVal = "\(Float(val ?? "") ?? 0.0)"
-        for i in 0..<CHOICES {
-            let key = "cv\(i)"
-            var tstVal = optDict[key]
-            //if (tstVal) { // bug - don't get to handling default value below - introduced jan/feb, removed 8 mar 2015
-            if nil == tstVal {
-                tstVal = "\(Float(i) + 1)" // added 7.iv.2013 - need default value
-            } else {
-                tstVal = "\(Float(tstVal!)!)"
-            }
-            //DBGLog(@"gciv test against %d: %@",i,tstVal);
-            if tstVal == inVal {
-                return i
-            }
-
-            let tstValF = CGFloat(Float(tstVal!)!)
-            if minValF > tstValF {
-                minValF = tstValF
-            }
-            if maxValF < tstValF {
-                maxValF = tstValF
-            }
-            let testDistanceF = CGFloat(abs(Float(tstValF - inValF)))
-            if testDistanceF < closestDistanceF {
-                closestDistanceF = testDistanceF
-                closestNdx = i
-            }
-            //}
+        guard let val = val,
+              let inValue = Double(val) else {
+            return CHOICES - 1  // Return last choice if value is nil or not a number
         }
-
-        //DBGLog(@"gciv: no match");
-        if (-1 != closestNdx) && (inValF > minValF) && (inValF < maxValF) {
-            return closestNdx
-        }
-        return CHOICES-1
-
+        return getChoiceIndex(forDouble: inValue)
     }
-}
+    
+    func getChoiceIndex(forDouble val: Double) -> Int {
+        let inValue = val
+            // Create array of tuples with index and value for each valid choice
+            var choiceValues: [(index: Int, value: Double)] = []
+            
+            // Collect only valid choices
+            for i in 0..<CHOICES {
+                let key = "cv\(i)"
+                // Check if we have a choice label - if not, we've hit the end of valid choices
+                if (optDict["c\(i)"] ?? "").isEmpty {
+                    break
+                }
+                
+                let value: Double
+                if let customVal = optDict[key],
+                   let customDouble = Double(customVal) {
+                    value = customDouble
+                } else {
+                    value = Double(i + 1)  // Default value if no custom value set
+                }
+                
+                choiceValues.append((i, value))
+            }
+            
+            guard !choiceValues.isEmpty else {
+                return 0  // Return 0 if no valid choices
+            }
+            
+            // First try exact match
+            if let exactMatch = choiceValues.first(where: { $0.value == inValue }) {
+                return exactMatch.index
+            }
+            
+            // Sort by value for min/max comparisons
+            let sortedChoices = choiceValues.sorted { $0.value < $1.value }
+            
+            // If value is less than minimum, return the choice with minimum value
+            if inValue <= sortedChoices[0].value {
+                return sortedChoices[0].index
+            }
+            
+            // If value is greater than maximum, return the choice with maximum value
+            if inValue >= sortedChoices[sortedChoices.count - 1].value {
+                return sortedChoices[sortedChoices.count - 1].index
+            }
+            
+            // For values in between, find closest match
+            return choiceValues.min { abs($0.value - inValue) < abs($1.value - inValue) }?.index ?? sortedChoices[0].index
+        }
 
-/*
-//@class voState;
-func f(_ x: Any) -> CGFloat {
-    CGFloat(x)
 }
-*/

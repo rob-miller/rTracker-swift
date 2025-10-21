@@ -33,49 +33,134 @@ extension Notification.Name {
 
 class CustomAccessoryView: UIView {
 
-    @IBOutlet weak var addButton: UIButton!
-    @IBOutlet weak var segControl: UISegmentedControl!
-    @IBOutlet weak var searchSeg: UISegmentedControl!
-    @IBOutlet weak var clearButton: UIButton!
-    @IBOutlet weak var orAndSeg: UISegmentedControl!
+    var addButton: UIButton!
+    var segControl: UISegmentedControl!
+    var searchSeg: UISegmentedControl!
+    var clearButton: UIButton!
+    var orAndSeg: UISegmentedControl!
     var votb: voTextBox!
     
     class func instanceFromNib(_ invotb: voTextBox) -> CustomAccessoryView {
-        let cav =  UINib(nibName: "voTBacc2", bundle: nil).instantiate(withOwner: nil, options: nil)[0] as! CustomAccessoryView
+        let cav = CustomAccessoryView(frame: CGRect(x: 0, y: 0, width: 680, height: 43))
         cav.votb = invotb
+        cav.setupUI()
         return cav
     }
     
     override init(frame: CGRect) {
         super.init(frame: frame)
-        
-        // Initialize your view
-
     }
-    
+
     required init?(coder aDecoder: NSCoder) {
         super.init(coder: aDecoder)
-        
-        // Initialize your view
+    }
 
+    func setupUI() {
+        backgroundColor = .systemBackground
+        autoresizingMask = [.flexibleLeftMargin, .flexibleWidth, .flexibleRightMargin]
+
+        createSubviews()
+        setupConstraints()
+    }
+
+    private func createSubviews() {
+        // Create main segmented control (Contacts/History/Keyboard)
+        segControl = UISegmentedControl(items: ["👥", "📖", "⌨"])
+        segControl.selectedSegmentIndex = 2 // Default to keyboard
+        segControl.translatesAutoresizingMaskIntoConstraints = false
+        segControl.addTarget(self, action: #selector(segmentChanged), for: .valueChanged)
+        addSubview(segControl)
+
+        // Create add button using iOS 26 pattern
+        addButton = rTracker_resource.createActionButton(
+            target: self,
+            action: #selector(addButtonPressed),
+            symbolName: "plus.circle",
+            accId: "textBox_add",
+            symbolSize: 24,
+            fallbackTitle: "Add"
+        ).uiButton!
+        addButton.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(addButton)
+
+        // Create search segmented control (Use/Search)
+        searchSeg = UISegmentedControl(items: ["✔︎", "🔍"])
+        searchSeg.selectedSegmentIndex = 0 // Default to "Use"
+        searchSeg.translatesAutoresizingMaskIntoConstraints = false
+        searchSeg.addTarget(self, action: #selector(searchSegChanged), for: .valueChanged)
+        addSubview(searchSeg)
+
+        // Create or/and segmented control (hidden by default)
+        orAndSeg = UISegmentedControl(items: ["∪", "∩"])
+        orAndSeg.selectedSegmentIndex = 0
+        orAndSeg.isHidden = true
+        orAndSeg.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(orAndSeg)
+
+        // Create clear button using iOS 26 pattern
+        clearButton = rTracker_resource.createStyledButton(
+            symbolName: "xmark.circle",
+            target: self,
+            action: #selector(clearButtonPressed),
+            accId: "textBox_clear",
+            backgroundColor: .clear,
+            symbolColor: .systemRed,
+            symbolSize: 24,
+            fallbackTitle: "❌"
+        ).uiButton!
+        clearButton.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(clearButton)
+    }
+
+    private func setupConstraints() {
+        NSLayoutConstraint.activate([
+            // Main segmented control
+            segControl.leadingAnchor.constraint(equalTo: leadingAnchor),
+            segControl.centerYAnchor.constraint(equalTo: centerYAnchor),
+
+            // Add button - positioned between segControl and search controls
+            addButton.centerXAnchor.constraint(equalTo: centerXAnchor),
+            addButton.centerYAnchor.constraint(equalTo: centerYAnchor),
+            addButton.widthAnchor.constraint(equalToConstant: 32),
+            addButton.heightAnchor.constraint(equalToConstant: 32),
+
+            // Search segmented control
+            searchSeg.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -80),
+            searchSeg.centerYAnchor.constraint(equalTo: centerYAnchor),
+
+            // Or/And segmented control (positioned where clear button is - they're mutually exclusive)
+            orAndSeg.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -10),
+            orAndSeg.centerYAnchor.constraint(equalTo: centerYAnchor),
+
+            // Clear button
+            clearButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -30),
+            clearButton.centerYAnchor.constraint(equalTo: centerYAnchor),
+            clearButton.widthAnchor.constraint(equalToConstant: 30),
+            clearButton.heightAnchor.constraint(equalToConstant: 30)
+        ])
+
+        // Lower constraint priorities to avoid conflicts with picker layout
+        for constraint in constraints {
+            if constraint.priority == UILayoutPriority.required {
+                constraint.priority = UILayoutPriority(999)
+            }
+        }
     }
 
     
-    @IBAction func addButtonPressed(_ sender: Any) {
-        //print("addButton pressed")
+    @objc func addButtonPressed(_ sender: Any) {
         votb.addPickerData()
     }
-    
-    @IBAction func clearButtonPressed(_ sender: UIButton) {
+
+    @objc func clearButtonPressed(_ sender: UIButton) {
         votb.clear()
     }
-    
-    @IBAction func segmentChanged(_ sender: UISegmentedControl) {
-        //print("seg changed")
+
+    @objc func segmentChanged(_ sender: UISegmentedControl) {
         votb.segmentChanged(sender.selectedSegmentIndex)
     }
-    
-    @IBAction func searchSegChanged(_ sender: UISegmentedControl) {
+
+    @objc func searchSegChanged(_ sender: UISegmentedControl) {
         if 0 == searchSeg.selectedSegmentIndex {
             orAndSeg.isHidden = true
             clearButton.isHidden = false
@@ -88,83 +173,52 @@ class CustomAccessoryView: UIView {
     func initAccView() {
         addButton.isHidden = true
         let fsize: CGFloat = 20.0
+
+        // Set up segmented controls with proper font size
         segControl.setTitleTextAttributes([
             .font: UIFont.systemFont(ofSize: fsize)
         ], for: .normal)
-        
-        segControl.accessibilityIdentifier = "tbox-seg-control"
-        segControl.subviews[0].accessibilityLabel = "Contacts"
-        segControl.subviews[0].accessibilityHint = "select to choose from Contacts"
-        segControl.subviews[0].accessibilityIdentifier = "tbox-seg-contacts"
-        
-        segControl.subviews[1].accessibilityLabel = "History"
-        segControl.subviews[1].accessibilityHint = "select to choose lines from previous entries"
-        segControl.subviews[1].accessibilityIdentifier = "tbox-seg-history"
-        
-        segControl.subviews[2].accessibilityLabel = "Keyboard"
-        segControl.subviews[2].accessibilityHint = "select to use keyboard"
-        segControl.subviews[2].accessibilityIdentifier = "tbox-seg-keyboard"
-        
+
         searchSeg.setTitleTextAttributes([
             .font: UIFont.systemFont(ofSize: fsize)
         ], for: .normal)
-        
-        searchSeg.accessibilityIdentifier = "tbox-seg-search"
-        searchSeg.subviews[1].accessibilityLabel = "Use"
-        searchSeg.subviews[1].accessibilityHint = "select to use text for this entry"
-        searchSeg.subviews[1].accessibilityIdentifier = "tbox-mode-use"
 
-        searchSeg.subviews[0].accessibilityLabel = "Search"
-        searchSeg.subviews[0].accessibilityHint = "select to use text for searching previous entries"
-        searchSeg.subviews[0].accessibilityIdentifier = "tbox-mode-srch"
-        
         orAndSeg.setTitleTextAttributes([
             .font: UIFont.systemFont(ofSize: fsize)
         ], for: .normal)
+
+        // Set up accessibility for main segmented control
+        segControl.accessibilityIdentifier = "tbox-seg-control"
         
+        // For UI testing, we need to access segments by their titles or position
+        // The segments can be accessed in tests using their labels or indices
+        segControl.accessibilityLabel = "Text input mode selection"
+        segControl.accessibilityHint = "Choose between contacts, history, or keyboard input"
+
+        // Set up accessibility for search segmented control
+        searchSeg.accessibilityIdentifier = "tbox-seg-search"
+        searchSeg.accessibilityLabel = "Text usage mode"
+        searchSeg.accessibilityHint = "Choose whether to use text for entry or search"
+
+        // Set up accessibility for or/and segmented control
         orAndSeg.accessibilityIdentifier = "tbox-seg-search-mode"
-        orAndSeg.subviews[0].accessibilityLabel = "And"
-        orAndSeg.subviews[0].accessibilityHint = "search for entries with all lines"
-        orAndSeg.subviews[0].accessibilityIdentifier = "tbox-srch-and"
+        orAndSeg.accessibilityLabel = "Search mode"
+        orAndSeg.accessibilityHint = "Choose between AND or OR search"
 
-        orAndSeg.subviews[1].accessibilityLabel = "Or"
-        orAndSeg.subviews[1].accessibilityHint = "search for entries with any of lines"
-        orAndSeg.subviews[1].accessibilityIdentifier = "tbox-srch-or"
+        // Set up button accessibility
+        addButton.accessibilityLabel = "add line"
+        addButton.accessibilityHint = "tap to add selected contact or history line"
+        addButton.accessibilityIdentifier = "tbox-add-sel-line"
 
+        clearButton.accessibilityLabel = "clear all text"
+        clearButton.accessibilityHint = "tap to remove all text"
+        clearButton.accessibilityIdentifier = "tbox-clear"
     }
     
 }  // end of accessoryView
 
 
 class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextViewDelegate {
-    /*{
-
-        UIButton *tbButton;
-    	UITextView *textView;
-    	UIView *accessoryView;
-    	UIButton *addButton;
-    	UISegmentedControl *segControl;
-    	UIPickerView *pv;
-
-    	NSArray *alphaArray;
-    	NSArray *namesArray;
-    	NSArray *historyArray;
-    	NSArray *historyNdx;
-        NSArray *namesNdx;
-
-    	//NSMutableDictionary *peopleDict;
-    	//NSMutableDictionary *historyDict;
-
-    	BOOL showNdx;
-
-    	voDataEdit *devc;
-    	CGRect saveFrame;
-
-        useTrackerController *parentUTC;
-
-    }*/
-
-    
     private var _tbButton: UIButton?
     var tbButton: UIButton? {
         if nil == _tbButton {
@@ -181,8 +235,11 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         }
         return _tbButton
     }
+    private var localCtvovc: configTVObjVC?
+    
     var textView: UITextView?
     var cav: CustomAccessoryView!
+    var shouldBecomeFirstResponder = false
     
     private var _pv: UIPickerView?
     var pv: UIPickerView? {
@@ -361,11 +418,6 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
     }
 
     deinit {
-        //DBGLog(@"dealloc voTextBox");
-
-        //DBGLog(@"tbBtn= %0x  rcount= %d",tbButton,[tbButton retainCount]);
-        // convenience constructor, do not own (enven tho retained???)
-        //foo accessoryView = nil
         cav = nil
         devc = nil
 
@@ -408,23 +460,8 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
     }
 
     @objc func backButtonTapped() {
-        // Perform the 'done' action, like saving data or updating UI
-        // ...
-        /*
-         // disable because don't think needed
-        if 0 == cav.searchSeg.selectedSegmentIndex {
-            let tt = textView?.text.trimmingCharacters(in: .whitespacesAndNewlines)
-            if vo.value != tt {
-                presentSaveAlert()
-                return
-            }
-        }
-         */
-        
-        // Then pop the view controller if needed
         vo.value = vo.value.trimmingCharacters(in: .whitespacesAndNewlines)  // redundant if saveAction was called
         devc?.navigationController?.popViewController(animated: true)
-        
     }
     
     override func dataEditVDidLoad(_ vc: UIViewController) {
@@ -440,12 +477,10 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         textView?.text = vo.value
         textView?.returnKeyType = .default
         textView?.keyboardType = .default // use the default type input method (entire keyboard)
+        textView?.keyboardAppearance = .default // follow system appearance
         textView?.isScrollEnabled = true
-        textView?.isUserInteractionEnabled = true
-        //self.textView.layoutManager.allowsNonContiguousLayout = NO;
+        textView?.isUserInteractionEnabled = self.vo.optDict["otsrc"] ?? "0" != "1"
 
-        //self.textView.contentOffset = CGPointZero;
-        //[self.textView setTextContainerInset:UIEdgeInsetsMake(7, 7, 0, 0)];
         // this will cause automatic vertical resize when the table is resized
         textView?.autoresizingMask = .flexibleHeight
 
@@ -464,11 +499,16 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
 
         keyboardIsShown = false
 
-        if vo.value == "" {
-            textView?.becomeFirstResponder()
-        }
+        // Store whether we should become first responder, but wait for viewDidAppear
+        shouldBecomeFirstResponder = (vo.value == "")
         
-        devc?.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "<", style: .plain, target: self, action: #selector(backButtonTapped))
+        let backButton = UIBarButtonItem(title: "<", style: .plain, target: self, action: #selector(backButtonTapped))
+        if #available(iOS 26.0, *) {
+            backButton.hidesSharedBackground = true  // Remove white container background
+        }
+        devc?.navigationItem.leftBarButtonItem = backButton
+
+        // Save button will be added only when text changes (see textViewDidChange)
 
     }
 
@@ -505,8 +545,11 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
                                                      selector:@selector(keyboardWillHide:)
                                                          name:UIKeyboardWillHideNotification
                                                        //object:self.textView];    //.devc.view.window];	
-                                                       object:self.devc.view.window];	
+                                                       object:self.devc.view.window];
              */
+
+        // Delay keyboard presentation to avoid appearance flicker - defer to viewDidAppear
+        // We'll handle this in the view controller's viewDidAppear for better timing
     }
 
     override func dataEditVWDisappear(_ vc: UIViewController?) {
@@ -581,6 +624,11 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
 
         //DBGLog(@"add picker data %@",str);
         textView?.text = (textView?.text ?? "") + str
+
+        // Manually trigger textViewDidChange to show save button
+        if let textView = textView {
+            textViewDidChange(textView)
+        }
     }
      
     func finishSegChanged1(_ ndx:Int) {
@@ -610,8 +658,8 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         //DBGLog(@"segment changed: %ld",(long)ndx);
 
         if textView?.inputView != nil {
-            // if was showing pickerview
-            pv?.removeFromSuperview() // remove leftover constraints if showed before
+            // if was showing pickerview, clear it properly
+            textView?.inputView = nil
             _pv = nil // force regenerate
         }
 
@@ -674,7 +722,7 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
                     continue
                 }
                 var st = ss.trimmingCharacters(in: .whitespaces)
-                st = rTracker_resource.toSqlStr(st) ?? ""
+                st = rTracker_resource.toSqlStr(st)
                 if 0 < st.count {
                     if cont {
                         sql = sql + (orAnd ? " and " : " or ")
@@ -704,18 +752,24 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
     }
 
     func textViewDidBeginEditing(_ textView: UITextView) {
-        // provide my own Save button to dismiss the keyboard
-        let saveItem = UIBarButtonItem(
-            barButtonSystemItem: .save,
-            target: self,
-            action: #selector(voDataEdit.saveAction(_:)))
-        
-        saveItem.accessibilityLabel = "Save"
-        saveItem.accessibilityHint = "tap to save text to entry"
-        saveItem.accessibilityIdentifier = "tbox-save"
-        
-        devc?.navigationItem.rightBarButtonItem = saveItem
-        
+        // Save button will be added by textViewDidChange when text actually changes
+    }
+
+    func textViewDidChange(_ textView: UITextView) {
+        // Store original text to compare against changes
+        let originalText = vo.value.trimmingCharacters(in: .whitespacesAndNewlines)
+        let currentText = textView.text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Show save button only if text has been modified
+        if currentText != originalText {
+            if devc?.navigationItem.rightBarButtonItem == nil {
+                let saveButton = rTracker_resource.createDoneButton(target: self, action: #selector(saveAction(_:)), accId: "textBox_save")
+                devc?.navigationItem.rightBarButtonItem = saveButton
+            }
+        } else {
+            // Hide save button if text reverted to original
+            devc?.navigationItem.rightBarButtonItem = nil
+        }
     }
 
     /*
@@ -898,6 +952,18 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
     override func voDisplay(_ bounds: CGRect) -> UIView {
         vosFrame = bounds
 
+        _tbButton = nil  // force recreate
+        
+        if vo.optDict["otsrc"] == "1" {
+            if let xrslt = vo.vos?.getOTrslt() {
+                vo.value = xrslt
+            } else {
+                vo.value = ""
+            }
+            // if disable taps cannot see text
+            // addExternalSourceOverlay(to: tbButton!)  // no taps
+        }
+        
         if vo.value == "" {
             tbButton?.setTitle("<add text>", for: .normal)
         } else {
@@ -955,9 +1021,16 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
         return super.cleanOptDictDflts(key)
     }
 
+    @objc func forwardToConfigOtherTrackerSrcView() {
+        localCtvovc?.configOtherTrackerSrcView()
+    }
+    
     override func voDrawOptions(_ ctvovc: configTVObjVC) {
         var frame = CGRect(x: MARGIN, y: ctvovc.lasty , width: 0.0, height: 0.0)
-        var labframe = ctvovc.configLabel("Text box options:", frame: frame, key: "tboLab", addsv: true)
+        var labframe = ctvovc.configLabel("Textbox options:", frame: frame, key: "tboLab", addsv: true)
+        
+        localCtvovc = ctvovc
+        
         frame.origin.y += labframe.size.height + MARGIN
         labframe = ctvovc.configLabel("Use number of lines for graph value:", frame: frame, key: "tbnlLab", addsv: true) // can't do cleanly for function value (can't get linecount in sql and still use for other vtypes)
         frame = CGRect(x:labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
@@ -989,6 +1062,34 @@ class voTextBox: voState, UIPickerViewDelegate, UIPickerViewDataSource, UITextVi
             state: (vo.optDict["tbhi"] == "1") /* default:0 */,
             addsv: true)
 
+        frame.origin.x = MARGIN
+        frame.origin.y += MARGIN + frame.size.height
+        
+        labframe = ctvovc.configLabel("Other Tracker source: ", frame: frame, key: "otsLab", addsv: true)
+        frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
+
+        frame = ctvovc.configSwitch(
+            frame,
+            key: "otsBtn",
+            state: vo.optDict["otsrc"] == "1",
+            addsv: true)
+
+        frame.origin.x = MARGIN
+        frame.origin.y += MARGIN + frame.size.height
+        
+        let source = self.vo.optDict["otTracker"] ?? ""
+        let value = self.vo.optDict["otValue"] ?? ""
+        let str = (!source.isEmpty && !value.isEmpty) ? "\(source):\(value)" : "Configure"
+        
+        frame = ctvovc.configActionBtn(frame, key: "otSelBtn", label: str, target: self, action: #selector(forwardToConfigOtherTrackerSrcView))
+        ctvovc.switchUpdate(okey: "otsrc", newState: vo.optDict["otsrc"] == "1")
+        
+        frame.origin.x = MARGIN
+        frame.origin.y += MARGIN + frame.size.height
+        
+        
+        labframe = ctvovc.configLabel("Other options:", frame: frame, key: "noLab", addsv: true)
+        
         //*/
 
         //	frame.origin.x = MARGIN;

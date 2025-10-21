@@ -1,0 +1,123 @@
+{
+  "fill" : {
+    "linear-gradient" : [
+      "display-p3:0.94228,0.70097,0.47297,1.00000",
+      "display-p3:0.86838,0.58111,0.30968,1.00000"
+    ]
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "hidden-specializations" : [
+            {
+              "value" : false
+            },
+            {
+              "appearance" : "dark",
+              "value" : true
+            },
+            {
+              "appearance" : "tinted",
+              "value" : true
+            }
+          ],
+          "image-name" : "4 footprints 6.svg",
+          "name" : "4 footprints 6"
+        },
+        {
+          "hidden-specializations" : [
+            {
+              "value" : false
+            },
+            {
+              "appearance" : "light",
+              "value" : true
+            }
+          ],
+          "image-name-specializations" : [
+            {
+              "value" : "4 footprints white.svg"
+            },
+            {
+              "appearance" : "dark",
+              "value" : "4 footprints white.svg"
+            }
+          ],
+          "name" : "4 footprints white"
+        },
+        {
+          "hidden-specializations" : [
+            {
+              "appearance" : "tinted",
+              "value" : true
+            }
+          ],
+          "image-name" : "3 red line 6.svg",
+          "name" : "3 red line 6"
+        },
+        {
+          "hidden-specializations" : [
+            {
+              "appearance" : "tinted",
+              "value" : true
+            }
+          ],
+          "image-name" : "2 green line 6.svg",
+          "name" : "2 green line 6"
+        },
+        {
+          "blend-mode-specializations" : [
+            {
+              "value" : "plus-lighter"
+            },
+            {
+              "appearance" : "dark",
+              "value" : "screen"
+            }
+          ],
+          "fill" : "automatic",
+          "glass" : true,
+          "hidden-specializations" : [
+            {
+              "value" : false
+            },
+            {
+              "appearance" : "tinted",
+              "value" : true
+            }
+          ],
+          "image-name" : "1 graph paper 5.svg",
+          "name" : "1 graph paper 5",
+          "opacity-specializations" : [
+            {
+              "value" : 1
+            },
+            {
+              "appearance" : "light",
+              "value" : 0.4
+            },
+            {
+              "appearance" : "dark",
+              "value" : 0.2
+            }
+          ]
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}

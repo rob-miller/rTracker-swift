@@ -25,26 +25,31 @@ import Foundation
 //import SwiftUI
 import UIKit
 
-//#import "/usr/include/sqlite3.h"
-
-
 class trackerList: tObjBase {
-    /*{
-
-    	NSMutableArray *topLayoutNames;
-    	NSMutableArray *topLayoutIDs;
-    	NSMutableArray *topLayoutPriv;
-        NSMutableArray *topLayoutReminderCount;
-    	//trackerObj *tObj;
-
-    }*/
-
+    // MARK: - Singleton
+    
+    static let shared = trackerList()
+    
+    // Private initializer to ensure singleton usage
+    private override init() {
+        super.init()
+        initTDb()
+        //DBGLog("trackerList singleton initialized")
+    }
+    
     var topLayoutNames: [String] = []
     var topLayoutIDs: [Int] = []
     var topLayoutPriv: [Int] = []
     var topLayoutReminderCount: [Int] = []
 
-    //@synthesize tObj;
+    var topLayoutNamesH: [String] = []
+    var topLayoutIDsH: [Int] = []
+    var topLayoutPrivH: [Int] = []
+    var topLayoutReminderCountH: [Int] = []
+    
+    var hiddenDict: [Int:Int] = [:]
+    var streakDict: [Int:Int] = [:]
+
 
     ///***************************
     ///
@@ -61,16 +66,16 @@ class trackerList: tObjBase {
     func initTDb() {
         //int c;
 
-        //DBGLog(@"Initializing top level dtabase!");
+        //DBGLog(@"Initializing top level database!");
         dbName = "topLevel.sqlite3"
         getTDb()
 
-        var sql = "create table if not exists toplevel (rank integer, id integer unique, name text, priv integer, remindercount integer);"
+        var sql = "create table if not exists toplevel (rank integer, id integer unique, name text, priv integer, remindercount integer, hidden integer default 0, streak integer default 0);"
         toExecSql(sql:sql)
-        // assume all old users have updated columns by now
-        //sql = @"alter table toplevel add column remindercount int";  // new column added for reminders
-        //[self toExecSqlIgnErr:sql];
 
+        toAddColumnINE(table: "toplevel", col: "hidden", typ: "INTEGER", dflt: "0")
+        toAddColumnINE(table: "toplevel", col: "streak", typ: "INTEGER", dflt: "0")
+        
         //self.sql = @"select count(*) from toplevel;";
         //DBGLog(@"toplevel at open contains %d entries",[self toQry2Int:sql]);
 
@@ -98,29 +103,15 @@ class trackerList: tObjBase {
                 toExecSql(sql:sql)
                 sql = String(format: "insert into info (name, val) values ('rtdb_version',%i);", RTDB_VERSION) // upgraded now
                 toExecSql(sql:sql)
-                sql = String(format: "insert into info (name, val) values ('demos_version',%i);", demosVer!)
+                sql = String(format: "insert into info (name, val) values ('demos_version',%i);", demosVer)
                 toExecSql(sql:sql)
-                sql = String(format: "insert into info (name, val) values ('samples_version',%i);", samplesVer!)
+                sql = String(format: "insert into info (name, val) values ('samples_version',%i);", samplesVer)
                 toExecSql(sql:sql)
             }
         }
 
-
-        //self.sql = nil;
-    }
-
-    //@property (nonatomic,retain) trackerObj *tObj;
-    override init() {
-        //DBGLog(@"init trackerList");
-        
-        super.init()
-        /*
-        topLayoutNames = []
-        topLayoutIDs = []
-        topLayoutPriv = []
-        topLayoutReminderCount = []
-         */
-        initTDb()
+        sql = "create table if not exists rthealthkit (name text primary key, hkid text not null, custom_unit text default '', disabled integer default 0);"
+        toExecSql(sql:sql)
     }
 
     func dbgtlist() {
@@ -140,8 +131,8 @@ class trackerList: tObjBase {
 
     func loadTopLayoutTable() {
         
-        let sql = String(format: "select id, name, priv, remindercount from toplevel where priv <= %i order by rank;", privacyValue)
-        let idnameprivrc = self.toQry2AryISII(sql: sql)
+        let sql = String(format: "select id, name, priv, remindercount, hidden from toplevel where priv <= %i order by rank;", privacyValue)
+        let idnameprivrc = self.toQry2AryISIII(sql: sql)
         
         safeDispatchSync { [self] in
 
@@ -151,20 +142,33 @@ class trackerList: tObjBase {
             topLayoutPriv.removeAll()
             topLayoutReminderCount.removeAll()
             
-            for (id, name, priv, rc) in idnameprivrc {
+            topLayoutNamesH.removeAll()
+            topLayoutIDsH.removeAll()
+            topLayoutPrivH.removeAll()
+            topLayoutReminderCountH.removeAll()
+            
+            for (id, name, priv, rc, hidden) in idnameprivrc {
                 topLayoutIDs.append(id)
                 topLayoutNames.append(name)
                 topLayoutPriv.append(priv)
                 topLayoutReminderCount.append(rc)
+                if hidden != 1 {
+                    topLayoutIDsH.append(id)
+                    topLayoutNamesH.append(name)
+                    topLayoutPrivH.append(priv)
+                    topLayoutReminderCountH.append(rc)
+                }
+                hiddenDict[id] = hidden
+                streakDict[id] = isTrackerStreaked(id) ? 1 : 0
             }
-            //self.sql = nil;
+
             DBGLog(String("loadTopLayoutTable finished, priv=\(privacyValue) tlt=\(self.topLayoutNames)"))
             //DBGTLIST(self);
         }
     }
 
     func add(toTopLayoutTable tObj: trackerObj, nrank: Int? = nil) {
-        DBGLog(String("\(tObj.trackerName) toid \(tObj.toid)"))
+        DBGLog(String("\(tObj.trackerName ?? "nil") toid \(tObj.toid)"))
 
         topLayoutIDs.append(tObj.toid)
         topLayoutNames.append(tObj.trackerName!)
@@ -180,50 +184,44 @@ class trackerList: tObjBase {
     func confirmToplevelEntry(_ tObj: trackerObj, nrank: Int? = nil) {
         dbgNSAssert(tObj.toid != 0, "confirmTLE: toid=0")
         
-        //self.sql = @"select * from toplevel";
-        //[self toQry2Log];
-        //DBGLog(@"%@ toid %d",tObj.trackerName, tObj.toid);
-        //DBGTLIST(self);
         var sql = "select rank, name, priv, remindercount from toplevel where id = \(tObj.toid)"
         let rslt = toQry2AryISII(sql:sql).first
         let (torank, toname, topriv, toremindercount) = rslt ?? (0, "", 0, 0)
         var rank = (nrank != nil ? nrank! : torank)
 
-        //var sql = String(format: "select rank from toplevel where id=%ld;", Int(tObj.toid))
-        //var rank = toQry2Int(sql:sql) // returns 0 if not found
         if rank == 0 {
             DBGLog("rank not found")
         } else {
             sql = String(format: "select count(*) from toplevel where rank=%li;", rank)
-            if 1 < toQry2Int(sql:sql)! {
+            if 1 < toQry2Int(sql:sql) {
                 DBGLog(String("too many at rank \(rank)"))
                 rank = 0
             }
         }
         if rank == 0 {
             sql = "select max(rank) from toplevel;" // so put at end
-            rank = toQry2Int(sql:sql)! + 1
+            rank = toQry2Int(sql:sql) + 1
             DBGLog(String("rank adjust, set to \(rank)"))
         }
 
         var privVal = Int(tObj.optDict["privacy"] as? String ?? "1") ?? 1
         privVal = (privVal != 0 ? privVal : PRIVDFLT) // default is 1 not 0;
 
-        if let tname = rTracker_resource.toSqlStr(tObj.trackerName) {
-            if torank != rank || toname != tname || topriv != privVal || toremindercount != tObj.enabledReminderCount() {
-                sql = String(format: "insert or replace into toplevel (rank, id, name, priv, remindercount) values (%li, %li, \"%@\", %i, %i);", rank, Int(tObj.toid ), tname, privVal, tObj.enabledReminderCount() )
-                toExecSql(sql:sql)
-            }
-        } else {
-            dbgNSAssert(false, "can't get tracker name for tid \(tObj.toid) name \(tObj.trackerName ?? "nil")")
+        let tname = rTracker_resource.toSqlStr(tObj.trackerName!)
+        if torank != rank || toname != tname || topriv != privVal || toremindercount != tObj.enabledReminderCount() {
+            sql = String(format: "insert or replace into toplevel (rank, id, name, priv, remindercount) values (%li, %li, \"%@\", %i, %i);", rank, Int(tObj.toid ), tname, privVal, tObj.enabledReminderCount() )
+            toExecSql(sql:sql)
         }
+
     }
 
     func reorderDbFromTLT() {
         //DBGTLIST(self);
         
+        // get dbDict of id-> rank for all trackers
         var dbDict = toQry2DictII(sql:"select id, rank from toplevel")  // all trackers even private ones
         
+        // update rank in dbDict for all in TLT (not private trackers, so may have some duplicated ranks)
         var nrank = 1
         for tid in topLayoutIDs {  // update rank for non-private in TLT
             //let orank = dbDict[tid]
@@ -231,46 +229,103 @@ class trackerList: tObjBase {
             nrank += 1
         }
         
-        // with help from gpt4
-        let sortedValues = Array(dbDict.values).sorted()
-        var valueMapping = [Int: Int]()
-        for (newVal, oldVal) in sortedValues.enumerated() {
-            valueMapping[oldVal] = newVal + 1
+        let pairs = dbDict.map { ($0.key, $0.value) }
+        let sortedPairs = pairs.sorted { $0.1 < $1.1 }
+        var r=1
+        for (k, _) in sortedPairs {
+            dbDict[k] = r;
+            r = r+1
         }
 
-        for (tid, orank) in dbDict {
-            let sql = "update toplevel set rank = \(valueMapping[orank]!) where id = \"\(tid)\";"
+        for (tid, rank) in dbDict {
+            let sql = "update toplevel set rank = \(rank) where id = \"\(tid)\";"
             toExecSql(sql:sql) // better if used bind vars, but this keeps access in tObjBase
-            DBGLog(String(" db \(tid) from rank \(orank) to rank \(valueMapping[orank]!)"));
         }
         DBGLog("reorder db done")
         //DBGTLIST(self);
     }
 
     func reloadFromTLT() {
-        // called when deleting tracker from TLT
-        //DBGTLIST(self);
-        var nrank = 0
-        var sql = "delete from toplevel where priv <= \(privacyValue);"
-        toExecSql(sql:sql)
-        for tracker in topLayoutNames {
-            let tid = topLayoutIDs[nrank]
-            let priv = topLayoutPriv[nrank]
-            let rc = topLayoutReminderCount[nrank]
+        // First get all existing entries with higher privacy than current
+        let sql = "select rank from toplevel where priv > \(privacyValue) or hidden == 1"
 
-            nrank += 1  // arrays above 0-indexed, rank in db non-0 so increment here and cover both.
+        let higherPrivEntries = toQry2AryI(sql: sql)
+        
+        // Create a set of ranks that need to be preserved
+        var privateRanks: Set<Int> = []
+        for entry in higherPrivEntries {
+            privateRanks.insert(entry)
+        }
+        
+        var currentRank = 1
+        for i in 0..<topLayoutNames.count {
+            let tid = topLayoutIDs[i]
+            let name = rTracker_resource.toSqlStr(topLayoutNames[i])
+            let priv = topLayoutPriv[i]
+            let rc = topLayoutReminderCount[i]
+            let hidden = hiddenDict[tid] ?? 0  // provavly can't be hidden if not in TLT
+            let streak = streakDict[tid] ?? 0
             
-            //DBGLog(@" %@ id %d to rank %d",tracker,tid,nrank);
-            sql = String(format: "insert into toplevel (rank, id, name, priv,remindercount) values (%i, %ld, \"%@\", %ld, %ld);", nrank, tid, rTracker_resource.toSqlStr(tracker)!, priv, rc) // rank in db always non-0
-            toExecSql(sql:sql) // better if used bind vars, but this keeps access in tObjBase
-
+            // Skip ranks that are used by higher privacy entries
+            while privateRanks.contains(currentRank) {
+                currentRank += 1
+            }
+            
+            // Update or insert entry
+            let upsertSql = """
+            insert or replace into toplevel 
+            (rank, id, name, priv, remindercount, hidden, streak)
+            values 
+            (\(currentRank), \(tid), "\(name)", \(priv), \(rc), \(hidden), \(streak))
+            """
+            toExecSql(sql: upsertSql)
+            currentRank += 1
         }
     }
-
+    
     func getTIDfromIndex(_ ndx: Int) -> Int {
         return topLayoutIDs[ndx]
     }
 
+    func getTIDfromIndexH(_ ndx: Int) -> Int {
+        return topLayoutIDsH[ndx]
+    }
+
+    // check if a tracker is hidden
+    func isTrackerHidden(_ trackerID: Int) -> Bool {
+        return toQry2Int(sql: "select hidden from toplevel where id=\(trackerID)") == 1
+    }
+
+    // hide a tracker
+    func hideTracker(_ trackerID: Int) {
+        toExecSql(sql: "update toplevel set hidden=1 where id=\(trackerID)")
+        hiddenDict[trackerID] = 1
+    }
+
+    // unhide a tracker
+    func unhideTracker(_ trackerID: Int) {
+        toExecSql(sql: "update toplevel set hidden=0 where id=\(trackerID)")
+        hiddenDict[trackerID] = 0
+    }
+    
+    
+    // check if a tracker wants streak count
+    func isTrackerStreaked(_ trackerID: Int) -> Bool {
+        return toQry2Int(sql: "select streak from toplevel where id=\(trackerID)") == 1
+    }
+
+    // enable tracker streak counting
+    func streakTracker(_ trackerID: Int) {
+        toExecSql(sql: "update toplevel set streak=1 where id=\(trackerID)")
+        streakDict[trackerID] = 1
+    }
+
+    // disable tracker streak counting
+    func unstreakTracker(_ trackerID: Int) {
+        toExecSql(sql: "update toplevel set streak=0 where id=\(trackerID)")
+        streakDict[trackerID] = 0
+    }
+    
     func getPrivFromLoadedTID(_ tid: Int) -> Int {
 
         let ndx = topLayoutIDs.firstIndex(of:tid) ?? NSNotFound
@@ -299,8 +354,8 @@ class trackerList: tObjBase {
     }
 
     // return aaray of TIDs which match name, order by rank
-    func getTIDFromNameDb(_ str: String?) -> [Int] {
-        let sql = "select id from toplevel where name=\"\(rTracker_resource.toSqlStr(str) ?? "")\" order by rank"
+    func getTIDfromNameDb(_ str: String) -> [Int] {
+        let sql = "select id from toplevel where name=\"\(rTracker_resource.toSqlStr(str))\" order by rank"
         return toQry2AryI(sql: sql)
     }
 
@@ -377,7 +432,7 @@ class trackerList: tObjBase {
     // MARK: tracker manipulation methods
 
     func reorderTLT(_ fromRow: Int, toRow: Int) {
-        dbgtlist()  // DBGTLIST(self)
+        dbgtlist()
 
         let tName = topLayoutNames[fromRow]
         let tID = topLayoutIDs[fromRow]
@@ -395,27 +450,64 @@ class trackerList: tObjBase {
         topLayoutReminderCount.insert(tRC, at: toRow)
     }
 
-    func copy(toConfig srcTO: trackerObj?) -> trackerObj? {
+    func fixFns(srcTO: trackerObj, dstTO: trackerObj) {
+        // Step 1: Create a mapping from source vid to destination vid
+        var vidMapping: [Int: Int] = [:]
+        
+        // Loop through all value objects in the source tracker
+        for srcVO in srcTO.valObjTable {
+            // Find the corresponding value object in the destination tracker by matching valueName
+            if let dstVO = dstTO.valObjTable.first(where: { $0.valueName == srcVO.valueName }) {
+                // Add to mapping: source vid → destination vid
+                vidMapping[Int(srcVO.vid)] = Int(dstVO.vid)
+            }
+        }
+        
+        // Step 2: Update function strings in the destination tracker
+        for dstVO in dstTO.valObjTable {
+            // Only process function value objects
+            if dstVO.vtype == VOT_FUNC,
+               let funcString = dstVO.optDict["func"] {
+                
+                // Split the function string into components
+                let components = funcString.components(separatedBy: " ")
+                
+                // Process each component - replace vids with their mapped values
+                let updatedComponents = components.map { component -> String in
+                    // Check if this component is a positive number (a vid)
+                    if let num = Int(component), num > 0 {
+                        // If we have a mapping for this vid, use it
+                        if let mappedVid = vidMapping[num] {
+                            return String(mappedVid)
+                        }
+                    }
+                    // Return the component unchanged if it's an operation or unmapped vid
+                    return component
+                }
+                
+                // Reassemble the function string
+                let updatedFuncString = updatedComponents.joined(separator: " ")
+                
+                // Update the function string in the destination value object
+                dstVO.optDict["func"] = updatedFuncString
+            }
+        }
+    }
+    
+    func copy(toConfig srcTO: trackerObj) -> trackerObj {
         //DBGLog(@"copyToConfig: src id= %d %@",srcTO.toid,srcTO.trackerName);
         let newTO = trackerObj(getUnique())
-        //newTO.toid = getUnique()
-        //newTO = newTO.init()
 
-        let oTN = srcTO?.trackerName
-        //NSString *nTN = [[NSString alloc] initWithString:oTN];
-        //newTO.trackerName = nTN;
-        // release as well
+        let oTN = srcTO.trackerName
         newTO.trackerName = oTN
 
-        //NSEnumerator *enumer = [srcTO.valObjTable objectEnumerator];
-        //valueObj *vo;
-        //while (vo = (valueObj *) [enumer nextObject]) {
-        for vo in srcTO?.valObjTable ?? [] {
+        for vo in srcTO.valObjTable {
             let newVO = newTO.copyVoConfig(vo)
             newTO.addValObj(newVO)
         }
-
+        fixFns(srcTO: srcTO, dstTO: newTO)
         newTO.saveConfig()
+        
         //DBGLog(@"copyToConfig: copy id= %d %@",newTO.toid,newTO.trackerName);
 
         return newTO

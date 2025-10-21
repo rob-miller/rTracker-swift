@@ -48,6 +48,7 @@
 //
 
 import UIKit
+import SwiftUI
 
 extension UIView {
     func viewWithAccessibilityIdentifier(_ identifier: String) -> UIView? {
@@ -70,17 +71,18 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
     var vo: valueObj?
     var voOptDictStash: [AnyHashable : Any]?
 
-    var wDict: [String : Any] = [:]
+    var wDict: [String : Any] = [:] // widget dictionary, puts names on UI elements
     
     var lasty: CGFloat = 0.0
     var lastx: CGFloat = 0.0
     var saveFrame = CGRect.zero
     var lfHeight: CGFloat = 0.0
     // UI element properties
-    @IBOutlet var navBar: UINavigationBar!
-    @IBOutlet var toolBar: UIToolbar!
-    @IBOutlet weak var scroll: UIScrollView!
+    var navBar: UINavigationBar!
+    var toolBar: UIToolbar!
+    var scroll: UIScrollView!
     var activeField: UITextField? //just a pointer, no retain
+    var targetTextField: UITextField? = nil  // override for scroll target, default nil
     var processingTfDone = false
     var rDates: [AnyHashable]?
 
@@ -94,7 +96,17 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
     // override init() {
     //    super.init()
     override init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) {
-        super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)
+        super.init(nibName: nil, bundle: nil)
+        processingTfDone = false
+        rDates = []
+    }
+
+    convenience init() {
+        self.init(nibName: nil, bundle: nil)
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
         processingTfDone = false
         rDates = []
     }
@@ -149,15 +161,19 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
     */
 
     @objc func btnChoiceHelp() {
-        if let url = URL(string: "http://rob-miller.github.io/rTracker/rTracker/iPhone/QandA/choices.html") {
-            UIApplication.shared.open(url, options: [:])
-        }
+        rTracker_resource.showContextualHelp(
+            identifiers: ["value_choice"],
+            from: toolBar,
+            in: self
+        )
     }
 
     @objc func btnInfoHelp() {
-        if let url = URL(string: "http://rob-miller.github.io/rTracker/rTracker/iPhone/QandA/info.html") {
-            UIApplication.shared.open(url, options: [:])
-        }
+        rTracker_resource.showContextualHelp(
+            identifiers: ["value_info"],
+            from: toolBar,
+            in: self
+        )
     }
 
     deinit {
@@ -165,6 +181,10 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
     }
 
     override func viewDidLoad() {
+        super.viewDidLoad()
+
+        // Create UI elements programmatically
+        setupViews()
 
         var name: String?
         if vo == nil {
@@ -179,7 +199,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
 
 
         if (name == nil) || (name == "") {
-            let vtypeNames = rTracker_resource.vtypeNames()[vo?.vtype ?? 0]
+            let vtypeNames = ValueObjectType.typeNames[vo?.vtype ?? 0]
             name = "<\(vtypeNames)>"
              // (self.to.votArray)[self.vo.vtype]];
         }
@@ -211,21 +231,8 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         scroll.contentSize = CGSize(width: svsize.width, height: lasty + (3 * MARGIN))
         //[self.view addSubview:self.scroll];
 
-        let doneBtn = UIBarButtonItem(
-            title: "\u{2611}" /* ballot box with check */,
-            style: .plain,
-            target: self,
-            action: #selector(btnDone(_:)))
-
+        let doneBtn = rTracker_resource.createDoneButton(target: self, action: #selector(btnDone(_:)), accId: "configtvo_done")
         doneBtn.accessibilityLabel = "Done"
-        doneBtn.accessibilityIdentifier = "configtvo_done"
-        
-        doneBtn.setTitleTextAttributes(
-            [
-                .font: UIFont.systemFont(ofSize: 28.0)
-            // doesn't work?  ,NSForegroundColorAttributeName: [UIColor greenColor]
-            ],
-            for: .normal)
 
         if vdlConfigVO && vo?.vtype == VOT_FUNC {
             (vo?.vos as? voFunction)?.funcVDL(self, donebutton: doneBtn)
@@ -238,9 +245,9 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
 
             var fnHelpButtonItem: UIBarButtonItem?
             if VOT_CHOICE == vo?.vtype {
-                fnHelpButtonItem = UIBarButtonItem(title: "Help", style: .plain, target: self, action: #selector(btnChoiceHelp))
+                fnHelpButtonItem = rTracker_resource.createHelpInfoButton(target: self, action: #selector(btnChoiceHelp), accId: "configtvo_choiceHelp")
             } else {
-                fnHelpButtonItem = UIBarButtonItem(title: "Help", style: .plain, target: self, action: #selector(btnInfoHelp))
+                fnHelpButtonItem = rTracker_resource.createHelpInfoButton(target: self, action: #selector(btnInfoHelp), accId: "configtvo_infoHelp")
             }
 
             var items: [UIBarButtonItem] = [doneBtn, flexibleSpaceButtonItem]
@@ -268,7 +275,48 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         view.addGestureRecognizer(swipe)
 
 
-        super.viewDidLoad()
+    }
+
+    func setupViews() {
+        view.backgroundColor = .systemBackground
+
+        // Create navigation bar
+        navBar = UINavigationBar()
+        navBar.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(navBar)
+
+        // Create toolbar
+        toolBar = UIToolbar()
+        toolBar.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(toolBar)
+
+        // Create scroll view
+        scroll = UIScrollView()
+        scroll.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(scroll)
+
+        // Set up constraints
+        NSLayoutConstraint.activate([
+            // Navigation bar constraints
+            navBar.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            navBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            navBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+
+            // Scroll view constraints
+            scroll.topAnchor.constraint(equalTo: navBar.bottomAnchor),
+            scroll.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            scroll.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            scroll.bottomAnchor.constraint(equalTo: toolBar.topAnchor),
+
+            // Toolbar constraints
+            toolBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            toolBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            toolBar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+        ])
+
+        // Create a navigation item for the navigation bar
+        let navItem = UINavigationItem(title: "Configure")
+        navBar.setItems([navItem], animated: false)
     }
 
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
@@ -333,25 +381,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
     override func didReceiveMemoryWarning() {
         // Releases the view if it doesn't have a superview.
         super.didReceiveMemoryWarning()
-
-        // Release any cached data, images, etc that aren't in use.
     }
-
-    /*
-    - (void)viewDidUnload {
-        [super viewDidUnload];
-        // Release any retained subviews of the main view.
-        // e.g. self.myOutlet = nil;
-
-    	self.wDict = nil;
-    	self.to = nil;
-    	self.vo = nil;
-
-    	self.toolBar = nil;
-    	self.navBar = nil;
-
-    }
-    */
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         #if DEBUGLOG
@@ -391,7 +421,9 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
     // MARK: keyboard notifications
 
     @objc func keyboardWillShow(_ n: Notification?) {
-        rTracker_resource.willShowKeyboard(n, vwTarg: activeField!, vwScroll: scroll)
+        // Use targetTextField if set, otherwise fall back to activeField
+        let scrollTarget = targetTextField ?? activeField
+        rTracker_resource.willShowKeyboard(n, vwTarg: scrollTarget, vwScroll: scroll)
     }
 
     @objc func keyboardWillHide(_ n: Notification?) {
@@ -418,147 +450,80 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         rlab.font = PrefBodyFont
         rlab.text = text
         rlab.backgroundColor = .clear
-        //rlab.accessibilityIdentifier = key
-        
-        // wDict[key] = rlab
         wDict[key] = rlab
         
         if addsv {
             scroll.addSubview(rlab)
         }
-        //[self.view addSubview:rlab];
 
         let retFrame = rlab.frame
 
         return retFrame
     }
 
-    @objc func checkBtnAction(_ btn: UIButton?) {
-        var okey: String?
-        var dflt: String?
-        var ndflt: String?
-        var img: String?
-        var dfltState = AUTOSCALEDFLT
-
-        if btn == (wDict["nasBtn"] as? UIButton) {
-            okey = "autoscale"
-            dfltState = AUTOSCALEDFLT
-            if ((vo?.optDict)?[okey!] as? String) == "0" {
-                // will switch on
-                removeGraphMinMax()
-                //[self addGraphFromZero];  // ASFROMZERO
-            } else {
-                //[self removeGraphFromZero];
-                addGraphMinMax() // ASFROMZERO
-            }
-        } else if btn == (wDict["csbBtn"] as? UIButton) {
-            okey = "shrinkb"
-            dfltState = SHRINKBDFLT
-        } else if btn == (wDict["cevBtn"] as? UIButton) {
-            okey = "exportvalb"
-            dfltState = EXPORTVALBDFLT
-        } else if btn == (wDict["stdBtn"] as? UIButton) {
-            okey = "setstrackerdate"
-            dfltState = SETSTRACKERDATEDFLT
-        } else if btn == (wDict["sisBtn"] as? UIButton) {
-            okey = "integerstepsb"
-            dfltState = INTEGERSTEPSBDFLT
-        } else if btn == (wDict["sdeBtn"] as? UIButton) {
-            okey = "defaultenabledb"
-            dfltState = DEFAULTENABLEDBDFLT
-        } else if btn == (wDict["sswlBtn"] as? UIButton) {
-            okey = "slidrswlb"
-            dfltState = SLIDRSWLBDFLT
-        } else if btn == (wDict["tbnlBtn"] as? UIButton) {
-            okey = "tbnl"
-            dfltState = TBNLDFLT
-        } else if btn == (wDict["tbniBtn"] as? UIButton) {
-            okey = "tbni"
-            dfltState = TBNIDFLT
-        } else if btn == (wDict["tbhiBtn"] as? UIButton) {
-            okey = "tbhi"
-            dfltState = TBHIDFLT
-        } else if btn == (wDict["ggBtn"] as? UIButton) {
-            okey = "graph"
-            dfltState = GRAPHDFLT
-        } else if btn == (wDict["swlBtn"] as? UIButton) {
-            okey = "nswl"
-            dfltState = NSWLDFLT
-        } else if btn == (wDict["srBtn"] as? UIButton) {
-            okey = "savertn"
-            dfltState = SAVERTNDFLT
-        } else if btn == (wDict["graphLastBtn"] as? UIButton) {
-            okey = "graphlast"
-            dfltState = GRAPHLASTDFLT
-        } else if btn == (wDict["infosaveBtn"] as? UIButton) {
-            okey = "infosave"
-            dfltState = INFOSAVEDFLT
-        } else {
-            dbgNSAssert(false, "ckButtonAction cannot identify btn")
-            okey = "x" // make analyze happy
-        }
-
-        dflt = dfltState ? "1" : "0"
-        ndflt = dfltState ? "0" : "1"
-
-
-        if vo == nil {
-            if to!.optDict[okey!] as? String ?? "" == ndflt {
-                to!.optDict[okey!] = dflt
-                img = dfltState ? "checked.png" : "unchecked.png" // going to default state
-            } else {
-                to!.optDict[okey!] = ndflt
-                img = dfltState ? "unchecked.png" : "checked.png" // going to not default state
-            }
-
-        } else {
-            if (vo!.optDict[okey!]) == ndflt {
-                vo!.optDict[okey!] = dflt
-                img = dfltState ? "checked.png" : "unchecked.png" // going to default state
-            } else {
-                vo!.optDict[okey!] = ndflt
-                img = dfltState ? "unchecked.png" : "checked.png" // going to not default state
-            }
-            
-        }
-        btn?.setImage(UIImage(named: img ?? ""), for: .normal)
-
-    }
-
-    func configCheckButton(_ frame: CGRect, key: String, state: Bool, addsv: Bool) -> CGRect {
-        // checkbox button using my images
-
-        let imageButton = UIButton(type: .custom)
-
-        imageButton.frame = frame
-        imageButton.contentVerticalAlignment = .center
-        imageButton.contentHorizontalAlignment = .right //Center;
-
-        wDict[key] = imageButton
-        imageButton.addTarget(self, action: #selector(checkBtnAction(_:)), for: .touchUpInside)
-
-        imageButton.setImage(
-            UIImage(named: state ? "checked.png" : "unchecked.png"),
-            for: .normal)
-
-        if vo == nil {
-            imageButton.accessibilityIdentifier = "\(to!.trackerName ?? "tnull")_\(key)"
-        } else {
-            imageButton.accessibilityIdentifier = "\(vo!.vos!.tvn())_\(key)"
-        }
+    @objc func configOtherTrackerSrcView() {
+        DBGLog("config other tracker view")
         
-        if addsv {
-            scroll.addSubview(imageButton)
-        }
-
-        return frame
+        let hostingController = UIHostingController(
+            rootView: otViewController(
+                valueName: vo?.valueName ?? "",
+                selectedTracker: vo?.optDict["otTracker"],
+                selectedValue: vo?.optDict["otValue"],
+                otCurrent: vo?.optDict["otCurrent"] ?? (OTCURRDFLT ? "1" : "0") == "1",
+                callerTrackerName: to?.trackerName, // Pass the caller's tracker name
+                onDismiss: { [self] updatedTracker, updatedValue, updatedOtCurrent in
+                    vo?.optDict["otTracker"] = updatedTracker
+                    vo?.optDict["otValue"] = updatedValue
+                    vo?.optDict["otCurrent"] = updatedOtCurrent ? "1" : "0"
+                    if let button = scroll.subviews.first(where: { $0 is UIButton && $0.accessibilityIdentifier == "configtv_otSelBtn" }) as? UIButton {
+                        DBGLog("otSelect view returned: \(updatedTracker ?? "nil") \(updatedValue ?? "nil") optDict is \(vo?.optDict["otTracker"] ?? "nil")  \(vo?.optDict["otValue"] ?? "nil")")
+                        DispatchQueue.main.async {
+                            let source = self.vo?.optDict["otTracker"] ?? ""
+                            let value = self.vo?.optDict["otValue"] ?? ""
+                            let str = (!source.isEmpty && !value.isEmpty) ? "\(source):\(value)" : "Configure"
+                            button.setTitle(str, for: .normal)
+                            button.sizeToFit()
+                        }
+                    }
+                    // Update privacy level based on the other tracker's privacy settings
+                    if let xtName = updatedTracker, !xtName.isEmpty,
+                       let xvName = updatedValue, !xvName.isEmpty {
+                        // Get the other tracker's privacy level
+                        let xto = trackerObj(trackerList.shared.getTIDfromNameDb(xtName)[0])
+                        let xtpriv = xto.getPrivacyValue()
+                        
+                        // Get the other value's privacy level
+                        let xvo = xto.getValObjByName(xvName)
+                        let xvprivStr = xvo?.optDict["privacy"] as? String ?? "\(MINPRIV)"
+                        let xvpriv = Int(xvprivStr) ?? MINPRIV
+                        
+                        // Use the higher privacy level
+                        let newPrivacyLevel = max(xtpriv, xvpriv)
+                        
+                        // Update the privacy text field
+                        if let privTextField = wDict["gpTF"] as? UITextField {
+                            privTextField.text = "\(newPrivacyLevel)"
+                            
+                            // Trigger text field's editing changed event to ensure it recognizes the change
+                            privTextField.sendActions(for: .editingChanged)
+                            
+                            // If you need to explicitly mark it as needing to be saved, you might need to
+                            // add some additional code or a custom method here
+                        }
+                    }
+                }
+            )
+        )
+        hostingController.modalPresentationStyle = .fullScreen
+        hostingController.modalTransitionStyle = .coverVertical
+        
+        // Present the hosting controller
+        present(hostingController, animated: true)
     }
-
     
     func configSwitch(_ frame: CGRect, key: String, state: Bool, addsv: Bool) -> CGRect {
         // Switch control
         let switchControl = UISwitch(frame: frame)
-        // print(switchControl.intrinsicContentSize)
         // Set the switch state
         switchControl.isOn = state
 
@@ -583,6 +548,21 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         return frame
     }
 
+    // ui updates for switch changes
+    func switchUpdate(okey: String, newState: Bool) {
+        if (okey == "ahksrc") {
+            // number apple Health data source switch, enable config button depending on switch state
+            if let button = scroll.subviews.first(where: { $0 is UIButton && $0.accessibilityIdentifier == "configtv_ahSelBtn" }) as? UIButton {
+                button.isEnabled = newState
+            }
+        } else if (okey == "otsrc") {
+            // other tracker data source switch, enable config button depending on switch state
+            if let button = scroll.subviews.first(where: { $0 is UIButton && $0.accessibilityIdentifier == "configtv_otSelBtn" }) as? UIButton {
+                button.isEnabled = newState
+            }
+        }
+    }
+    
     // The action method for the switch
     @objc func switchAction(_ sender: UISwitch) {
         // Handle the switch action here
@@ -590,15 +570,61 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         // Update your model or perform an action based on the switch's state
         DBGLog("Switch for \(key ?? "") is now \(sender.isOn ? "ON" : "OFF")")
         
-        var okey: String?
-        var dflt: String?
-        var ndflt: String?
-        //var img: String?
-        var dfltState = AUTOSCALEDFLT
+        // If turning on Apple Health, turn off Other Tracker
+        if sender == (wDict["ahsBtn"] as? UISwitch) && sender.isOn {
+            if let otSwitch = wDict["otsBtn"] as? UISwitch, otSwitch.isOn {
+                // Simply turn off the other tracker switch
+                // Its switchAction will be called automatically and update everything
+                otSwitch.isOn = false
+                switchAction(otSwitch)
+            }
+        }
+        // If turning on Other Tracker, turn off Apple Health
+        else if sender == (wDict["otsBtn"] as? UISwitch) && sender.isOn {
+            if let ahSwitch = wDict["ahsBtn"] as? UISwitch, ahSwitch.isOn {
+                // Simply turn off the Apple Health switch
+                // Its switchAction will be called automatically and update everything
+                ahSwitch.isOn = false
+                switchAction(ahSwitch)
+            }
+        }
+        
+        // Table-driven mapping for switch handling
+        let switchMappings: [(switchKey: String, okey: String, dfltState: Bool)] = [
+            ("nasBtn", "autoscale", AUTOSCALEDFLT),
+            ("csbBtn", "shrinkb", SHRINKBDFLT),
+            ("cevBtn", "exportvalb", EXPORTVALBDFLT),
+            ("stdBtn", "setstrackerdate", SETSTRACKERDATEDFLT),
+            ("sisBtn", "integerstepsb", INTEGERSTEPSBDFLT),
+            ("sswlBtn", "slidrswlb", SLIDRSWLBDFLT),
+            ("tbnlBtn", "tbnl", TBNLDFLT),
+            ("tbniBtn", "tbni", TBNIDFLT),
+            ("tbhiBtn", "tbhi", TBHIDFLT),
+            ("ggBtn", "graph", GRAPHDFLT),
+            ("swlBtn", "nswl", NSWLDFLT),
+            ("ahsBtn", "ahksrc", AHKSRCDFLT),
+            ("otsBtn", "otsrc", OTSRCDFLT),
+            ("srBtn", "savertn", SAVERTNDFLT),
+            ("calOnlyLastBtn", "calOnlyLast", CALONLYLASTDFLT),
+            ("infosaveBtn", "infosave", INFOSAVEDFLT),
+            ("hrsminsBtn", "hrsmins", HRSMINSDFLT)
+        ]
 
+        var okey: String?
+        var dfltState: Bool?
+        
+        // Find matching switch in table
+        for mapping in switchMappings {
+            if sender == (wDict[mapping.switchKey] as? UISwitch) {
+                okey = mapping.okey
+                dfltState = mapping.dfltState
+                break
+            }
+        }
+        
+        // Handle special cases
         if sender == (wDict["nasBtn"] as? UISwitch) {
-            okey = "autoscale"
-            dfltState = AUTOSCALEDFLT
+            // valueObj autoscale special handling
             if ((vo?.optDict)?[okey!] as? String) == "0" {
                 // will switch on
                 removeGraphMinMax()
@@ -607,92 +633,61 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
                 //[self removeGraphFromZero];
                 addGraphMinMax() // ASFROMZERO
             }
-        } else if sender == (wDict["csbBtn"] as?  UISwitch) {
-            okey = "shrinkb"
-            dfltState = SHRINKBDFLT
-        } else if sender == (wDict["cevBtn"] as?  UISwitch) {
-            okey = "exportvalb"
-            dfltState = EXPORTVALBDFLT
-        } else if sender == (wDict["stdBtn"] as?  UISwitch) {
-            okey = "setstrackerdate"
-            dfltState = SETSTRACKERDATEDFLT
-        } else if sender == (wDict["sisBtn"] as?  UISwitch) {
-            okey = "integerstepsb"
-            dfltState = INTEGERSTEPSBDFLT
-        } else if sender == (wDict["sdeBtn"] as?  UISwitch) {
-            okey = "defaultenabledb"
-            dfltState = DEFAULTENABLEDBDFLT
-        } else if sender == (wDict["sswlBtn"] as?  UISwitch) {
-            okey = "slidrswlb"
-            dfltState = SLIDRSWLBDFLT
-        } else if sender == (wDict["tbnlBtn"] as?  UISwitch) {
-            okey = "tbnl"
-            dfltState = TBNLDFLT
-        } else if sender == (wDict["tbniBtn"] as?  UISwitch) {
-            okey = "tbni"
-            dfltState = TBNIDFLT
-        } else if sender == (wDict["tbhiBtn"] as?  UISwitch) {
-            okey = "tbhi"
-            dfltState = TBHIDFLT
-        } else if sender == (wDict["ggBtn"] as?  UISwitch) {
-            okey = "graph"
-            dfltState = GRAPHDFLT
-        } else if sender == (wDict["swlBtn"] as?  UISwitch) {
-            okey = "nswl"
-            dfltState = NSWLDFLT
-        } else if sender == (wDict["srBtn"] as?  UISwitch) {
-            okey = "savertn"
-            dfltState = SAVERTNDFLT
-        } else if sender == (wDict["graphLastBtn"] as?  UISwitch) {
-            okey = "graphlast"
-            dfltState = GRAPHLASTDFLT
-        } else if sender == (wDict["infosaveBtn"] as?  UISwitch) {
-            okey = "infosave"
-            dfltState = INFOSAVEDFLT
-        } else {
+        } else if sender == (wDict["strkBtn"] as? UISwitch) {
+            // tracker enable streak reporting
+            if sender.isOn {
+                trackerList.shared.streakTracker(to!.toid)
+            } else {
+                trackerList.shared.unstreakTracker(to!.toid)
+            }
+        }
+        
+        if okey == nil && sender != (wDict["strkBtn"] as? UISwitch) {
             dbgNSAssert(false, "ckButtonAction cannot identify switch")
-            okey = "x" // make analyze happy
         }
 
-        dflt = dfltState ? "1" : "0"
-        ndflt = dfltState ? "0" : "1"
-
-        var newState : Bool = false
-        
-        if vo == nil {
-            if to!.optDict[okey!] as? String ?? "" == ndflt {
-                to!.optDict[okey!] = dflt
-                newState = dfltState ? true : false // going to default state
-            } else {
-                to!.optDict[okey!] = ndflt
-                newState = dfltState ? false : true // going to not default state
-            }
-
-        } else {
-            if (vo!.optDict[okey!]) == ndflt {
-                vo!.optDict[okey!] = dflt
-                newState = dfltState ? true : false // going to default state
-            } else {
-                vo!.optDict[okey!] = ndflt
-                newState = dfltState ? false : true // going to not default state
-            }
+        if let okey = okey, let dfltState = dfltState {
+            let dflt = dfltState ? "1" : "0"
+            let ndflt = dfltState ? "0" : "1"
+            var newState : Bool = false
             
+            if vo == nil {
+                if to!.optDict[okey] as? String ?? "" == ndflt {
+                    to!.optDict[okey] = dflt
+                    newState = dfltState ? true : false // going to default state
+                } else {
+                    to!.optDict[okey] = ndflt
+                    newState = dfltState ? false : true // going to not default state
+                }
+                
+            } else {
+                if (vo!.optDict[okey]) == ndflt {
+                    vo!.optDict[okey] = dflt
+                    newState = dfltState ? true : false // going to default state
+                } else {
+                    vo!.optDict[okey] = ndflt
+                    newState = dfltState ? false : true // going to not default state
+                }
+                
+            }
+            switchUpdate(okey:okey, newState:newState)
+            dbgNSAssert(newState == sender.isOn, "state mismatch on switch for key \(okey)")
         }
-        
-        dbgNSAssert(newState == sender.isOn, "state mismatch on switch for key \(okey!)")
     }
 
     
     func configActionBtn(_ pframe: CGRect, key: String?, label: String?, target: Any?, action: Selector) -> CGRect {
         // button consisting of title only which starts an action like 'database info' or 'set reminders'
+        // doesn't use rtracker-resource ios26 buttons because more bespoke, title only buttons without obvious sf symbol
 
         let button = UIButton(type: .roundedRect)
         var frame = pframe
         button.titleLabel?.font = PrefBodyFont
         if let font = button.titleLabel?.font {
-            frame.size.width = (label?.size(withAttributes: [
+            frame.size = label?.size(withAttributes: [
                 NSAttributedString.Key.font: font
-            ]).width ?? 0.0) + 4 * SPACE
+            ]) ?? CGSize.zero
+            frame.size.width += 4 * SPACE
         }
 
         if frame.origin.x == -1.0 {
@@ -700,8 +695,6 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         }
         button.frame = frame
         button.setTitle(label, for: .normal)
-        //imageButton.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
-        //imageButton.contentHorizontalAlignment = UIControlContentHorizontalAlignmentRight; //Center;
 
         if let key {
             wDict[key] = button
@@ -716,33 +709,58 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         return frame
     }
 
+    
+    
     @objc func tfDone(_ tf: UITextField?) {
         if true == processingTfDone {
             return
         }
         processingTfDone = true
 
+        // Table-driven mapping for text field handling
+        let tfMappings: [(tfKey: String, okey: String, nkey: String?)] = [
+            ("nminTF", "gmin", "nmaxTF"),
+            ("nmaxTF", "gmax", nil),
+            ("sminTF", "smin", "smaxTF"),
+            ("smaxTF", "smax", "sdfltTF"),
+            ("sdfltTF", "sdflt", nil),
+            ("gpTF", "privacy", nil),
+            ("gyTF", "yline1", nil),
+            ("gmdTF", "graphMaxDays", nil),
+            ("deTF", "dfltEmail", nil),
+            ("fr0TF", "frv0", nil),
+            ("fr1TF", "frv1", nil),
+            ("fnddpTF", "fnddp", nil),
+            ("numddpTF", "numddp", nil),
+            ("bvalTF", "boolval", nil),
+            ("ivalTF", "infoval", nil),
+            ("iurlTF", "infourl", nil),
+            (CTFKEY, LCKEY, nil),
+            ("classifyTF1", "classify_1", "classifyTF2"),
+            ("classifyTF2", "classify_2", "classifyTF3"),
+            ("classifyTF3", "classify_3", "classifyTF4"),
+            ("classifyTF4", "classify_4", "classifyTF5"),
+            ("classifyTF5", "classify_5", "classifyTF6"),
+            ("classifyTF6", "classify_6", "classifyTF7"),
+            ("classifyTF7", "classify_7", nil)
+        ]
+
         var okey: String? = nil
         var nkey: String? = nil
-        if tf == (wDict["nminTF"] as? UITextField) {
-            okey = "gmin"
-            nkey = "nmaxTF"
-        } else if tf == (wDict["nmaxTF"] as? UITextField) {
-            okey = "gmax"
-            nkey = nil
-        } else if tf == (wDict["sminTF"] as? UITextField) {
-            okey = "smin"
-            nkey = "smaxTF"
-        } else if tf == (wDict["smaxTF"] as? UITextField) {
-            okey = "smax"
-            nkey = "sdfltTF"
-        } else if tf == (wDict["sdfltTF"] as? UITextField) {
-            okey = "sdflt"
-            nkey = nil
-        } else if tf == (wDict["gpTF"] as? UITextField) {
-            okey = "privacy"
-            nkey = nil
-
+        
+        // Find matching text field in table
+        for mapping in tfMappings {
+            if tf == (wDict[mapping.tfKey] as? UITextField) {
+                okey = mapping.okey
+                nkey = mapping.nkey
+                break
+            }
+        }
+        
+        dbgNSAssert(okey != nil, "mtfDone cannot identify tf: \(tf?.accessibilityIdentifier ?? "unknown")")
+        
+        // Handle special privacy validation
+        if tf == (wDict["gpTF"] as? UITextField) {
             let currPriv = privacyValue
             var newPriv = Int(tf?.text ?? "") ?? 1
             if newPriv > currPriv {
@@ -757,43 +775,8 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
                 let msg = "Setting a privacy level below \(PRIVDFLT) is disallowed."
                 rTracker_resource.alert("Privacy setting too low", msg: msg, vc: self)
             }
-        } else if tf == (wDict["gyTF"] as? UITextField) {
-            okey = "yline1"
-            nkey = nil
-        } else if tf == (wDict["gmdTF"] as? UITextField) {
-            okey = "graphMaxDays"
-            nkey = nil
-        } else if tf == (wDict["deTF"] as? UITextField) {
-            okey = "dfltEmail"
-            nkey = nil
-        } else if tf == (wDict["fr0TF"] as? UITextField) {
-            okey = "frv0"
-            nkey = nil
-        } else if tf == (wDict["fr1TF"] as? UITextField) {
-            okey = "frv1"
-            nkey = nil
-        } else if tf == (wDict["fnddpTF"] as? UITextField) {
-            okey = "fnddp"
-            nkey = nil
-        } else if tf == (wDict["numddpTF"] as? UITextField) {
-            okey = "numddp"
-            nkey = nil
-        } else if tf == (wDict["bvalTF"] as? UITextField) {
-            okey = "boolval"
-            nkey = nil
-        } else if tf == (wDict["ivalTF"] as? UITextField) {
-            okey = "infoval"
-            nkey = nil
-        } else if tf == (wDict["iurlTF"] as? UITextField) {
-            okey = "infourl"
-            nkey = nil
-        } else if tf == (wDict[CTFKEY] as? UITextField) {
-            okey = LCKEY
-            nkey = nil
-        } else {
-            //dbgNSAssert(0,@"mtfDone cannot identify tf");
-            okey = "x" // make analyze happy
         }
+
 
         if vo == nil {
             // tracker config
@@ -805,8 +788,8 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
             vo!.optDict[okey!] = tf?.text
         }
 
-        if let nkey {
-            (wDict[nkey] as! UITextField).becomeFirstResponder()
+        if let nkey, let nextField = wDict[nkey] as? UITextField {
+            nextField.becomeFirstResponder()
         } else {
             tf?.resignFirstResponder()
         }
@@ -877,12 +860,9 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         let myPickerView = UIPickerView(frame: .zero)
         frame.size = myPickerView.sizeThatFits(.zero)
         frame.size.width = view.frame.size.width - (2 * MARGIN)
-        frame.origin.y += frame.size.height / 4 // because origin of picker is centre line
         myPickerView.frame = frame
-        //frame.size.height -= (frame.size.height/4);
 
         myPickerView.autoresizingMask = .flexibleWidth
-        // no effect after ios7 myPickerView.showsSelectionIndicator = YES;	// note this is default to NO
 
         // this view controller is the data source and delegate
         myPickerView.delegate = caller as? UIPickerViewDelegate
@@ -894,7 +874,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         } else {
             myPickerView.accessibilityIdentifier = "\(vo!.vos!.tvn())_\(key!)"
         }
-        DBGLog("print picker acc id: \(myPickerView.accessibilityIdentifier!)")
+        DBGLog("picker acc id: \(myPickerView.accessibilityIdentifier!)")
         scroll.addSubview(myPickerView)
 
         return frame
@@ -918,17 +898,6 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
     }
 
     func addGraphMinMax() {
-        /*
-        	[UIView beginAnimations:nil context:NULL];
-        	[UIView setAnimationBeginsFromCurrentState:YES];
-        	[UIView setAnimationDuration:kAnimationDuration];
-             */
-        /*
-        	[self.view addSubview:(self.wDict)[@"nminLab"]];
-        	[self.view addSubview:(self.wDict)[@"nminTF"]];
-        	[self.view addSubview:(self.wDict)[@"nmaxLab"]];
-        	[self.view addSubview:(self.wDict)[@"nmaxTF"]];
-        	*/
 
         UIView.animate(withDuration: 0.2, animations: { [self] in
             if let aWDict = wDict["nminLab"] as? UIView {
@@ -1018,9 +987,10 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
 
     @objc func notifyReminderView() {
         DBGLog("notify reminder view!")
-        let nrvc = notifyReminderViewController(nibName: "notifyReminderViewController", bundle: nil)
+        let nrvc = notifyReminderViewController(nibName: nil, bundle: nil)
         nrvc.tracker = to
-        nrvc.modalTransitionStyle = .flipHorizontal
+        nrvc.modalPresentationStyle = .fullScreen
+        nrvc.modalTransitionStyle = .coverVertical
         deregisterForKeyboard()
         present(nrvc, animated: true) {
             nrvc.dismissalHandler = { [weak self] in
@@ -1077,7 +1047,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         sql = "select count(*) from voConfig"
         let itemCount = to?.toQry2Int(sql:sql) ?? 0
 
-        titleStr = String(format: "tracker number %ld\n%d items\n%d date entries\n%d data points", Int(to?.toid ?? 0), itemCount, dateEntries, dataPoints)
+        titleStr = String(format: "tracker number %ld\n%d values\n%d date entries\n%d data points", Int(to?.toid ?? 0), itemCount, dateEntries, dataPoints)
 
         sql = "select count(*) from (select * from voData where id not in (select id from voConfig))"
         let orphanDatapoints = to?.toQry2Int(sql:sql) ?? 0
@@ -1166,6 +1136,10 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
     //}
 
     func drawGeneralToOpts() {
+        guard let to = to else {
+            return
+        }
+            
         var frame = CGRect(x: MARGIN, y: lasty, width: 0.0, height: 0.0)
 
         var labframe = configLabel("save returns to tracker list:", frame: frame, key: "srLab", addsv: true)
@@ -1177,13 +1151,12 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         frame = configSwitch(
             frame,
             key: "srBtn",
-            state: !(to!.optDict["savertn"] as? String ?? "" == "0"),  // default is true "1"
+            state: !(to.optDict["savertn"] as? String ?? "" == "0"),  // default is true "1"
             addsv: true)
 
         //-- privacy level label
 
         frame.origin.x = MARGIN
-        //frame.origin.x += frame.size.width + MARGIN + SPACE;
         frame.origin.y += MARGIN + frame.size.height
         labframe = configLabel("Privacy level:", frame: frame, key: "gpLab", addsv: true)
 
@@ -1204,18 +1177,12 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
             action: nil,
             num: true,
             place: "\(PRIVDFLT)",
-            text: (to?.optDict)?["privacy"] as? String,
+            text: to.optDict["privacy"] as? String,
             addsv: true)
-
-        //TODO: privacy values when password not set up....
-        // if password not set could disable privacy setting here but have to pass pwset bool all over
-        //  alternatively, don't allow setting privacy val higher than current?
-        // ((UITextField*) [self.wDict objectForKey:@"gpTF"]).enabled = NO;
 
         //-- graph max _ days label
 
         frame.origin.x = MARGIN
-        //frame.origin.x += frame.size.width + MARGIN + SPACE;
         frame.origin.y += MARGIN + frame.size.height
         labframe = configLabel("Graph limit:", frame: frame, key: "glLab", addsv: true)
 
@@ -1229,7 +1196,7 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         frame.size.width = tfWidth
         frame.size.height = minLabelHeight(lfHeight)
 
-        var gMaxDays = (to?.optDict)?["graphMaxDays"] as? String
+        var gMaxDays = to.optDict["graphMaxDays"] as? String
         if gMaxDays == "0" {
             gMaxDays = ""
         }
@@ -1247,26 +1214,22 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         //-- graph max _ days label 2  
 
         frame.origin.x += tfWidth + SPACE
-        //labframe =
         frame = configLabel("days", frame: frame, key: "gl2Lab", addsv: true)
 
 
         //-- default email label
 
         frame.origin.x = MARGIN
-        //frame.origin.x += frame.size.width + MARGIN + SPACE;
         frame.origin.y += MARGIN + frame.size.height
         labframe = configLabel("Default email:", frame: frame, key: "deLab", addsv: true)
 
         //-- default email _ textfield
 
         frame.origin.x += labframe.size.width + SPACE
-
-        //tfWidth = [@"" sizeWithFont:PrefBodyFont].width;
         frame.size.width = view.frame.size.width - (2 * SPACE) - labframe.size.width - MARGIN
         frame.size.height = minLabelHeight(lfHeight)
 
-        let dfltEmail = (to?.optDict)?["dfltEmail"] as? String
+        let dfltEmail = to.optDict["dfltEmail"] as? String
 
         frame = configTextField(
             frame,
@@ -1279,13 +1242,29 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
             addsv: true)
 
 
+        //-- streak enable
+        
+        
+        frame.origin.x = MARGIN
+        frame.origin.y += MARGIN + frame.size.height
+        labframe = configLabel("Streak counter:", frame: frame, key: "gpLab", addsv: true)
+
+        frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
+        
+        frame = configSwitch(
+            frame,
+            key: "strkBtn",
+            state: trackerList.shared.isTrackerStreaked(to.toid),
+            addsv: true)
+
+        
         if nil == vo {
 
             frame.origin.x = MARGIN
             //frame.origin.x += frame.size.width + MARGIN + SPACE;
             frame.origin.y += MARGIN + frame.size.height
 
-            if nil != to?.dbName {
+            if nil != to.dbName {
 
                 // reminder config button:
 
@@ -1294,7 +1273,6 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
                 // dbInfo values button:
 
                 frame.origin.x = MARGIN
-                //frame.origin.x += frame.size.width + MARGIN + SPACE;
                 frame.origin.y += MARGIN + frame.size.height
 
                 frame = configActionBtn(frame, key: nil, label: "database info", target: self, action: #selector(dbInfoBtn))
@@ -1302,14 +1280,12 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
                 // 'reset reminders' button
 
                 frame.origin.x = MARGIN
-                //frame.origin.x += frame.size.width + MARGIN + SPACE;
                 frame.origin.y += MARGIN + frame.size.height
 
                 frame = configActionBtn(frame, key: nil, label: "set reminders", target: self, action: #selector(setRemindersBtn))
             } else {
 
                 frame.origin.y += MARGIN + frame.size.height
-                //labframe =
                 frame = configLabel("(Save to enable reminders)", frame: frame, key: "erLab", addsv: true)
             }
         }
@@ -1338,9 +1314,6 @@ class configTVObjVC: UIViewController, UITextFieldDelegate {
         drawGeneralToOpts()
     }
 
-    required init?(coder aDecoder: NSCoder) {
-        super.init(coder: aDecoder)
-    }
 
 }
 

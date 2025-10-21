@@ -103,47 +103,75 @@ class ppwV: UIView, UITextFieldDelegate {
     }
 
     private var _topTF: UITextField?
-    var topTF: UITextField? {
+    var topTF: UITextField {
         if nil == _topTF {
             _topTF = UITextField(frame: genFrame(0.4))
             //[topTF setHidden:TRUE];
-            _topTF?.backgroundColor = .systemBackground
-            _topTF?.returnKeyType = .done
-            _topTF?.autocapitalizationType = .none
-            _topTF?.clearButtonMode = .whileEditing
-            _topTF?.delegate = self
-            _topTF?.layer.cornerRadius = 4
-            _topTF?.borderStyle = .line
-            _topTF?.accessibilityIdentifier = "ppwtf"
+            _topTF!.backgroundColor = .systemBackground
+            _topTF!.returnKeyType = .done
+            _topTF!.autocapitalizationType = .none
+            _topTF!.clearButtonMode = .whileEditing
+            _topTF!.delegate = self
+            _topTF!.layer.cornerRadius = 4
+            _topTF!.borderStyle = .line
+            _topTF!.accessibilityIdentifier = "ppwtf"
 
             if let _topTF {
                 addSubview(_topTF)
             }
         }
-        return _topTF
+        return _topTF!
     }
 
     private var _cancelBtn: UIButton?
     var cancelBtn: UIButton? {
         if nil == _cancelBtn {
-            let ttl = " Cancel "
-            _cancelBtn = UIButton(type: .roundedRect)
-            _cancelBtn?.setTitle(ttl, for: .normal)
-            var f = CGRect.zero
-            f.origin.x = 0.4 * frame.size.width
-            f.origin.y = 0.65 * frame.size.height
-            f.size = ttl.size(withAttributes: [
-                NSAttributedString.Key.font: PrefBodyFont
-            ])
-            _cancelBtn?.frame = f
-            //DBGLog(@"cancel frame: x: %f  y: %f  w: %f  h: %f",f.origin.x,f.origin.y,f.size.width,f.size.height);
-            _cancelBtn?.addTarget(self, action: #selector(cancelp), for: .touchDown)
+            _cancelBtn = rTracker_resource.createCancelButton(target: self, action: #selector(cancelp), accId: "ppwv_cancel").uiButton
+
+            // Use button's intrinsic content size and position properly
+            let buttonSize = _cancelBtn?.intrinsicContentSize ?? CGSize.zero
+            let x = (0.35 * frame.size.width) - (buttonSize.width / 2.0)  // Slightly left of center
+            let y = 0.65 * frame.size.height
+
+            _cancelBtn?.frame = CGRect(
+                x: x,
+                y: y,
+                width: buttonSize.width,
+                height: buttonSize.height
+            )
 
             if let _cancelBtn {
                 addSubview(_cancelBtn)
             }
         }
         return _cancelBtn
+    }
+
+    private var _confirmBtn: UIButton?
+    var confirmBtn: UIButton? {
+        if nil == _confirmBtn {
+            _confirmBtn = rTracker_resource.createDoneButton(target: self, action: #selector(confirmChangePassword), accId: "ppwv_confirm", preferYellow: false).uiButton
+
+            // Use button's intrinsic content size and position properly
+            let buttonSize = _confirmBtn?.intrinsicContentSize ?? CGSize.zero
+            let x = (0.65 * frame.size.width) - (buttonSize.width / 2.0)  // Slightly right of center
+            let y = 0.65 * frame.size.height
+
+            _confirmBtn?.frame = CGRect(
+                x: x,
+                y: y,
+                width: buttonSize.width,
+                height: buttonSize.height
+            )
+
+            // Initially hidden - only shown during password change
+            _confirmBtn?.isHidden = true
+
+            if let _confirmBtn {
+                addSubview(_confirmBtn)
+            }
+        }
+        return _confirmBtn
     }
 
     //,saveFrame;
@@ -159,13 +187,15 @@ class ppwV: UIView, UITextFieldDelegate {
         safeDispatchSync({
             frame = pv.frame
         })
-        DBGLog(String("ppwV parent: x=\(frame.origin.x) y=\(frame.origin.y) w=\(frame.size.width) h=\(frame.size.height)"))
+        //DBGLog(String("ppwV parent: x=\(frame.origin.x) y=\(frame.origin.y) w=\(frame.size.width) h=\(frame.size.height)"))
 
         //frame.origin.x = 0.0
         //frame.origin.y = 372.0
-        frame.size.width = 320.0
-        frame.size.height = 130.0
-        DBGLog(String("ppwV: x=\(frame.origin.x) y=\(frame.origin.y) w=\(frame.size.width) h=\(frame.size.height)"))
+
+        // Use dynamic dimensions based on parent view
+        frame.size.width = pv.frame.size.width > 0 ? pv.frame.size.width : 320.0
+        frame.size.height = 130.0  // Keep height as is for now - contains label + text field + button
+        //DBGLog(String("ppwV: x=\(frame.origin.x) y=\(frame.origin.y) w=\(frame.size.width) h=\(frame.size.height)"))
 
         //tbh = par.navigationController!.toolbar.frame.height
         //topy = pv.frame.size.height - (frame.size.height + tbh)
@@ -213,7 +243,7 @@ class ppwV: UIView, UITextFieldDelegate {
                 name: UIResponder.keyboardWillHideNotification,
                 object: window)
             ObservingKeyboardNotification = true
-            DBGLog("*** watching keyboard notifications")
+            //DBGLog("*** watching keyboard notifications")
         } else {
             NotificationCenter.default.removeObserver(
                 self,
@@ -225,7 +255,7 @@ class ppwV: UIView, UITextFieldDelegate {
                 name: UIResponder.keyboardWillHideNotification,
                 object: window)
             ObservingKeyboardNotification = false
-            DBGLog("*** STOP watching keyboard notifications")
+            //DBGLog("*** STOP watching keyboard notifications")
         }
     }
 
@@ -256,6 +286,9 @@ class ppwV: UIView, UITextFieldDelegate {
         isHidden = false
         DBGLog(String("show: topy= \(topy)  f= \(f.origin.x) \(f.origin.y) \(f.size.width) \(f.size.height)"))
 
+        // Ensure ppwV appears on top of privacyV and other views
+        parentView?.bringSubviewToFront(self)
+
         f.origin.y = topy - frame.size.height
 
         toggleKeyboardNotifications(true)
@@ -279,7 +312,7 @@ class ppwV: UIView, UITextFieldDelegate {
             //[UIView setAnimationDuration:kAnimationDuration];
             UIView.animate(withDuration: 0.2, animations: { [self] in
                 hide()
-                topTF?.resignFirstResponder()
+                topTF.resignFirstResponder()
             })
         } else {
 
@@ -287,7 +320,7 @@ class ppwV: UIView, UITextFieldDelegate {
 
             //	[self.topLabel setHidden:TRUE];
             //	[self.topTF setHidden:TRUE];
-            topTF?.resignFirstResponder()
+            topTF.resignFirstResponder()
         }
         //if (animated) {
         //	[UIView commitAnimations];
@@ -303,33 +336,33 @@ class ppwV: UIView, UITextFieldDelegate {
         ok = okState
         cancel = cancelState
         //[self.topLabel setHidden:FALSE];
-        topTF?.text = ""
+        topTF.text = ""
         //[self.topTF setHidden:FALSE];
         //[self.cancelBtn setHidden:FALSE];
     }
 
     func showPassRqstr() {
 
-        //[UIView beginAnimations:nil context:NULL];
-        //[UIView setAnimationDuration:kAnimationDuration];
+        // Ensure ppwV appears on top before animation starts
+        parentView?.bringSubviewToFront(self)
 
         UIView.animate(withDuration: 0.2, animations: {
             self.show()
         }) {(_) in
             // Code to be executed after the animation completes
-            self.topTF?.becomeFirstResponder()
+            self.topTF.becomeFirstResponder()
         }
-            
-
-        //[UIView commitAnimations];
     }
 
     func checkPass(_ okState: UInt, cancel cancelState: UInt) {
-        //DBGLog(@"ppwv check pass");
+        DBGLog("ppwv check pass - single button mode")
         setUpPass(okState, cancel: cancelState)
         topLabel?.text = "Please enter password:"
-        topTF?.addTarget(self, action: #selector(testp), for: .editingDidEnd)
+        topTF.addTarget(self, action: #selector(testp), for: .editingDidEnd)
         cancelBtn?.addTarget(self, action: #selector(cancelp), for: .touchDown)
+
+        // Hide confirm button in check pass mode
+        confirmBtn?.isHidden = true
 
         showPassRqstr()
     }
@@ -337,15 +370,17 @@ class ppwV: UIView, UITextFieldDelegate {
     let SetPassTxt = "Please set a password:"
 
     func createPass(_ okState: UInt, cancel cancelState: UInt) {
-        DBGLog("ppwv create pass")
+        DBGLog("ppwv create pass - single button mode")
         setUpPass(okState, cancel: cancelState)
 
         topLabel?.text = SetPassTxt
-        topTF?.addTarget(self, action: #selector(setp), for: .editingDidEnd)
+        topTF.addTarget(self, action: #selector(setp), for: .editingDidEnd)
         cancelBtn?.addTarget(self, action: #selector(cancelp), for: .touchDown)
 
-        showPassRqstr()
+        // Hide confirm button in create pass mode
+        confirmBtn?.isHidden = true
 
+        showPassRqstr()
     }
 
     //#pragma change password
@@ -357,29 +392,68 @@ class ppwV: UIView, UITextFieldDelegate {
     }
 
     @objc func changePAction() {
-        //[self.topTF resignFirstResponder];
-        //DBGLog(@"change p to .%@.",self.topTF.text);
-        if !dbTestPass(topTF?.text) {
-            // skip if the same (spurious editingdidend event on start)
-            setp()
+        // Only dismiss keyboard - do NOT save password
+        // Password is only saved when user explicitly taps confirm button
+        topTF.resignFirstResponder()
+        DBGLog("changePAction: keyboard dismissed, password not saved")
+    }
+
+    @objc func confirmChangePassword() {
+        DBGLog("confirmChangePassword: user confirmed password change")
+
+        let passwordText = topTF.text ?? ""
+        let trimmedText = passwordText.trimmingCharacters(in: .whitespaces)
+
+        // Check if field is empty - don't do anything
+        if trimmedText.isEmpty {
+            DBGLog("confirmChangePassword: empty field, no action taken")
+            // Don't show any message, don't call setp(), don't reposition
+            // Just clear field and dismiss keyboard silently
+            topTF.text = ""
+            topTF.resignFirstResponder()
+            return
+        }
+
+        // Check if password has actually changed (non-empty password)
+        if !dbTestPass(passwordText) {
+            // Password is different, save it
+            setp() // This calls the existing save logic
             topLabel?.text = "password changed"
+
+            // Clear the text field after successful save
+            topTF.text = ""
+
+            // Reset label after delay
             perform(#selector(cpSetTopLabel), with: nil, afterDelay: 1.0)
+        } else {
+            // Password is the same as existing, no change needed
+            DBGLog("confirmChangePassword: password unchanged, clearing field")
+            topTF.text = ""
+            topTF.resignFirstResponder()
         }
     }
 
     func changePass(_ okState: UInt, cancel cancelState: UInt) {
-        //DBGLog(@"ppwv change pass");
+        DBGLog("ppwv change pass - setting up two-button interface")
         setUpPass(okState, cancel: cancelState)
         cpSetTopLabel()
-        topTF?.removeTarget(self, action: nil, for: .editingDidEnd)
-        topTF?.addTarget(self, action: #selector(changePAction), for: .editingDidEnd)
 
-        //[UIView beginAnimations:nil context:NULL];
-        //[UIView setAnimationDuration:kAnimationDuration];
+        // Set up text field to only dismiss keyboard on done, not save password
+        topTF.removeTarget(self, action: nil, for: .editingDidEnd)
+        topTF.addTarget(self, action: #selector(changePAction), for: .editingDidEnd)
+
+        // Set up cancel button (already configured in cancelBtn property)
+        cancelBtn?.removeTarget(self, action: nil, for: .touchDown)
+        cancelBtn?.addTarget(self, action: #selector(cancelp), for: .touchDown)
+
+        // Show and configure confirm button for password change mode
+        confirmBtn?.isHidden = false
+        confirmBtn?.removeTarget(self, action: nil, for: .touchDown)
+        confirmBtn?.addTarget(self, action: #selector(confirmChangePassword), for: .touchDown)
+
         UIView.animate(withDuration: 0.2, animations: { [self] in
             show()
         })
-        //[UIView commitAnimations];
     }
 
     // MARK: -
@@ -390,7 +464,7 @@ class ppwV: UIView, UITextFieldDelegate {
         tob?.toExecSql(sql:sql)
         sql = "select count(*) from priv0 where key=0;"
         if tob?.toQry2Int(sql:sql) != 0 {
-            DBGLog("password exists")
+            //DBGLog("password exists")
             return true
         } else {
             DBGLog("password does not exist")
@@ -402,18 +476,21 @@ class ppwV: UIView, UITextFieldDelegate {
     }
 
     func dbTestPass(_ `try`: String?) -> Bool {
+        
+        guard let `try` = `try` else { return false }
+        
         let sql = "select val from priv0 where key=0;"
         // no empty or whitespace only passwords
-        if !((`try`?.trimmingCharacters(in: .whitespaces).count ?? 0) > 0) {
+        if !((`try`.trimmingCharacters(in: .whitespaces).count) > 0) {
             return false
         }
 
-        let dbPass = rTracker_resource.fromSqlStr(tob?.toQry2Str(sql:sql))
+        let dbPass = rTracker_resource.fromSqlStr(tob!.toQry2Str(sql:sql))
         if dbPass == "" {
             return false // if here then dbquery failed
         }
 
-        if `try` == rTracker_resource.fromSqlStr(tob?.toQry2Str(sql:sql)) {
+        if `try` == rTracker_resource.fromSqlStr(tob!.toQry2Str(sql:sql)) {
             return true
         } else {
             return false
@@ -425,7 +502,7 @@ class ppwV: UIView, UITextFieldDelegate {
             return // no empty or whitespace-only passwords
         }
 
-        let sql = "insert or replace into priv0 (key,val) values (0,'\(rTracker_resource.toSqlStr(pass) ?? "")');"
+        let sql = "insert or replace into priv0 (key,val) values (0,'\(rTracker_resource.toSqlStr(pass!))');"
         tob?.toExecSql(sql:sql)
     }
 
@@ -438,12 +515,12 @@ class ppwV: UIView, UITextFieldDelegate {
     // MARK: button Actions
 
     @objc func setp() {
-        DBGLog(String("enter tf= .\(topTF?.text ?? "")."))
-        if !((topTF?.text?.trimmingCharacters(in: .whitespaces).count ?? 0) > 0) {
+        DBGLog(String("enter tf= .\(topTF.text)."))
+        if !((topTF.text?.trimmingCharacters(in: .whitespaces).count ?? 0) > 0) {
             // "" not valid password, or cancel
             nextState = cancel
         } else {
-            dbSetPass(topTF?.text)
+            dbSetPass(topTF.text)
             nextState = ok
         }
         if (topLabel?.text != ChangePassTxt) && (topLabel?.text != SetPassTxt) {
@@ -457,20 +534,40 @@ class ppwV: UIView, UITextFieldDelegate {
     }
 
     @objc func cancelp() {
-        topTF?.text = ""
-        topTF?.resignFirstResponder() // closing topTF triggers setp action above
+        DBGLog("cancelp: clearing password field without saving")
+
+        // Clear the text field
+        topTF.text = ""
+
+        // Remove ALL targets to ensure clean state
+        topTF.removeTarget(nil, action: nil, for: .allEvents)
+
+        // Dismiss keyboard
+        topTF.resignFirstResponder()
+
+        // Hide confirm button if visible (for change password mode)
+        confirmBtn?.isHidden = true
+
+        // Hide ppwV with animation
+        hidePPWV(animated: true)
+
+        // Set nextState to cancel and trigger parent action
+        nextState = cancel
+        let imp = parent!.method(for: parentAction)
+        let funcp = unsafeBitCast(imp, to: (@convention(c) (AnyObject, Selector) -> Void).self)
+        funcp(parent!, parentAction!)
     }
 
     @objc func testp() {
         //DBGLog(@"testp: %@",self.topTF.text);
-        if dbTestPass(topTF?.text) {
+        if dbTestPass(topTF.text) {
             nextState = ok
         } else {
             nextState = cancel
             hide()
         }
 
-        topTF?.resignFirstResponder() // ???
+        topTF.resignFirstResponder() // ???
 
         //[self.parent performSelector:self.parentAction];
         let imp = parent!.method(for: parentAction)

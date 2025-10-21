@@ -150,7 +150,7 @@ class notifyReminder: NSObject {
         //DBGLog(@"init trackerObj id: %d",tid);
         //[self initReminderTable];
         loadRid(String(format: "rid=%d and tid=%ld", inRid?.intValue ?? 0, Int(to!.toid)), to: to!)
-        DBGLog("\(self)")
+        //DBGLog("\(self)")
         
     }
     
@@ -178,7 +178,7 @@ class notifyReminder: NSObject {
     }
     
     deinit {
-        DBGLog("nr dealloc");
+        //DBGLog("nr dealloc");
         // do not remove here as may cancel out of changes
         //UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["\(rid)"])
 
@@ -232,8 +232,7 @@ class notifyReminder: NSObject {
         var sql = "select rid, monthDays, weekDays, everyMode, everyVal, start, until, times, flags, tid, vid, saveDate, msg from reminders where \(sqlWhere ?? "")"
         //let arr = [Int](repeating: 0, count: 12)
         var flags: UInt = 0
-        let ias = to.toQry2I12aS1(sql: sql)
-        let (arr, str) = ias!
+        let (arr, str) = to.toQry2I12aS1(sql: sql)
         
         //DBGLog(@"read msg: %@",tmp);
         if 0 != arr[0] {
@@ -269,7 +268,7 @@ class notifyReminder: NSObject {
         
         //sql = nil;
         
-        DBGLog(String(describing: self))
+        //DBGLog(String(describing: self))
     }
     
     func dictFromNR() -> [String : Any]? {
@@ -521,7 +520,7 @@ class notifyReminder: NSObject {
                     }
                 }
             }
-            DBGLog("rid array = \(ridArray)")
+            //DBGLog("rid array = \(ridArray)")
             callback(ridArray)
         }
     }

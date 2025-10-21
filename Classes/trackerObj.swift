@@ -24,14 +24,25 @@
 import Foundation
 import UIKit
 
+protocol RefreshProgressDelegate: AnyObject {
+    func updateFullRefreshProgress(step: Int, phase: String?, totalSteps: Int?, addSteps: Int?, threshold: Int?, completed: Bool)
+}
+
+extension RefreshProgressDelegate {
+    func updateFullRefreshProgress(step: Int = 1, phase: String? = nil, totalSteps: Int? = nil, addSteps: Int? = nil, threshold: Int? = nil, completed: Bool = false) {
+        updateFullRefreshProgress(step: step, phase: phase, totalSteps: totalSteps, addSteps: addSteps, threshold: threshold, completed: completed)
+    }
+}
+
 // to config checkbutton default states
 let SAVERTNDFLT = true
 
 // to config textfield default values
-// #define PRIVDFLT		0  //note: already in valObj.h
+// #define PRIVDFLT        0  //note: already in valObj.h
 
 // max days for graph, 0= no limit
 let GRAPHMAXDAYSDFLT = 0
+
 
 class trackerObj: tObjBase {
 
@@ -56,15 +67,23 @@ class trackerObj: tObjBase {
             }
         }
     }
+    
+    weak var refreshDelegate: RefreshProgressDelegate?
+    
     var trackerDate: Date?
-
+    var lastDbDate: Int = 0
+    
     var optDict: [String : Any] = [:]  // trackerObj level optDict in dtabase as text : any
 
     var valObjTable: [valueObj] = []
+    var valObjTableH: [valueObj] = []
 
     var reminders: [notifyReminder] = []
     var reminderNdx = 0
     let recalcFnLock = AtomicTestAndSet()  //(initialValue: false)
+    
+    // Cache for other tracker objects to avoid repeated instantiation
+    private var otTrackerCache: [String: trackerObj] = [:]
     
     private var _maxLabel = CGSize.zero
     var maxLabel: CGSize {
@@ -94,7 +113,7 @@ class trackerObj: tObjBase {
     var nextColor: Int {
         let rv = _nextColor
         _nextColor += 1
-        if _nextColor >= rTracker_resource.colorSet().count {
+        if _nextColor >= rTracker_resource.colorSet.count {
             _nextColor = 0
         }
         return rv
@@ -151,42 +170,12 @@ class trackerObj: tObjBase {
     var goRecalculate = false
     var swipeEnable = false
     var changedDateFrom = 0
+   
     var csvHeaderDict: [String : [String]] = [:]
     var csvChoiceDict: [String : Int] = [:]
 
-    func initTDb() {
-        var c: Int
-        var sql = "create table if not exists trkrInfo (field text, val text, unique ( field ) on conflict replace);"
-        toExecSql(sql:sql)
-        sql = "select count(*) from trkrInfo;"
-        c = super.toQry2Int(sql:sql)!
-        if c == 0 {
-            // init clean db
-            sql = "create table if not exists voConfig (id int, rank int, type int, name text, color int, graphtype int, priv int, unique (id) on conflict replace);"
-            toExecSql(sql:sql)
-            sql = "create table if not exists voInfo (id int, field text, val text, unique(id, field) on conflict replace);"
-            toExecSql(sql:sql)
-            sql = "create table if not exists voData (id int, date int, val text, unique(id, date) on conflict replace);"
-            toExecSql(sql:sql)
-            sql = "create index if not exists vodndx on voData (date);"
-            toExecSql(sql:sql)
-            sql = "create table if not exists trkrData (date int unique on conflict replace, minpriv int);"
-            toExecSql(sql:sql)
-        }
-        //self.sql = nil;
-    }
-
-    func confirmDb() {
-        dbgNSAssert(super.toid != 0, "tObj confirmDb toid=0")
-        if dbName == nil {
-            dbName = String(format: "trkr%ld.sqlite3", super.toid)
-            //self.dbName = [[NSString alloc] initWithFormat:@"trkr%d.sqlite3",super.toid];
-            getTDb()
-            initTDb()
-        }
-        initReminderTable() // outside because added later
-    }
-
+    var loadingDbData = false
+    
     override init() {
         togd = nil
         super.init()
@@ -197,12 +186,6 @@ class trackerObj: tObjBase {
         valObjTable = []
         _nextColor = 0
 
-        /*  move to utc
-        		[[NSNotificationCenter defaultCenter] addObserver:self 
-        												 selector:@selector(trackerUpdated:) 
-        													 name:rtValueUpdatedNotification 
-        												   object:nil];
-        		*/
         //DBGLog(@"init trackerObj New");
         goRecalculate = false
         swipeEnable = true
@@ -238,39 +221,878 @@ class trackerObj: tObjBase {
         return true
     }
 
-    func sortVoTable(byArray arr: [AnyHashable]?) {
-        var dict: [AnyHashable : Any] = [:]
-        var ndx1 = 0
-        var ndx2 = 0
-        var c = 0
-        var c2 = 0
-        //let vo: valueObj? = nil
+    func countOTsteps(otSelf: Bool) -> Int {
+        var otCount = 0
+        var maxMissingCount = 0
+        
+        // Load OT dates if needed
+        loadOTdates()
+        
+        // Count missing dates for each otsrc valueObj individually
         for vo in valObjTable {
-            dict[NSNumber(value: vo.vid)] = NSNumber(value: ndx1)
-            ndx1 += 1
-        }
-
-        c = valObjTable.count
-        c2 = arr?.count ?? 0
-        ndx1 = 0; ndx2 = 0
-        while ndx1 < c && ndx2 < c2 {
-            let currVid = valObjTable[ndx1].vid
-            let targVid = (arr?[ndx2] as? valueObj)?.vid ?? 0
-            //DBGLog(@"ndx2: %d  targVid:%d",ndx2,targVid);
-            if currVid != targVid {
-                let targNdx = Int((dict[NSNumber(value: targVid)] as? NSNumber)?.uintValue ?? 0)
-                valObjTable.swapAt(ndx1, targNdx)
-                dict[NSNumber(value: currVid)] = NSNumber(value: targNdx)
-                dict[NSNumber(value: targVid)] = NSNumber(value: ndx1)
+            if vo.optDict["otsrc"] ?? "0" != "0" {
+                let otTracker = vo.optDict["otTracker"]
+                if (otSelf && otTracker == trackerName) || (!otSelf && otTracker != trackerName) {
+                    otCount += 1
+                    
+                    // Count missing date entries for this specific valueObj
+                    let missingDatesSql = """
+                        SELECT count(*) FROM trkrData 
+                        WHERE NOT EXISTS (
+                            SELECT 1 FROM voOTstatus 
+                            WHERE voOTstatus.date = trkrData.date 
+                            AND voOTstatus.id = \(vo.vid)
+                        )
+                        """
+                    let missingCount = toQry2Int(sql: missingDatesSql)
+                    
+                    // Track the maximum missing count across all valueObjs
+                    if missingCount > maxMissingCount {
+                        maxMissingCount = missingCount
+                    }
+                }
             }
-            ndx1 += 1; ndx2 += 1
+        }
+        
+        let totalOTSteps = otCount * maxMissingCount
+        if otCount > 0 {
+            DBGLog("countOTsteps: Found \(otCount) OT valueObjs, max missing dates per valueObj: \(maxMissingCount) = \(totalOTSteps) total steps")
+        }
+        return totalOTSteps
+    }
+    
+    // MARK: - Debug helper method
+    func debugPrintTrackerData(forDates dates: [Int], prefix: String = "TRACKER_DATA") {
+        #if DEBUGLOG
+        for date in dates {
+            let dateObj = Date(timeIntervalSince1970: TimeInterval(date))
+            var dataEntries: [String] = []
+            
+            // Get all valueObjs that have data for this date
+            for vo in valObjTable {
+                let sql = "SELECT val FROM voData WHERE id = \(vo.vid) AND date = \(date)"
+                let val = toQry2Str(sql: sql)
+                if !val.isEmpty {
+                    dataEntries.append("\(vo.valueName ?? "vid:\(vo.vid)"):\(val)")
+                }
+            }
+            
+            if dataEntries.isEmpty {
+                DBGLog("\(prefix): \(dateObj) - NO DATA")
+            } else {
+                DBGLog("\(prefix): \(dateObj) - \(dataEntries.joined(separator: ", "))")
+            }
+        }
+        #endif
+    }
+    
+    func countFNsteps() -> Int {
+        var fnCount = 0
+        var maxMissingCount = 0
+        
+        // Count missing dates for each function valueObj individually
+        for vo in valObjTable {
+            if vo.vtype == VOT_FUNC {
+                fnCount += 1
+                
+                // Count missing date entries for this specific function valueObj
+                let fnCheckSQL = """
+                SELECT count(*) FROM trkrData 
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM voFNstatus 
+                    WHERE voFNstatus.date = trkrData.date 
+                    AND voFNstatus.id = \(vo.vid)
+                )
+                """
+                let missingCount = toQry2Int(sql: fnCheckSQL)
+                
+                // Track the maximum missing count across all function valueObjs
+                if missingCount > maxMissingCount {
+                    maxMissingCount = missingCount
+                }
+            }
+        }
+        
+        if fnCount > 0 {
+            if maxMissingCount > 0 {
+                DBGLog("have \(fnCount) fn valueObjs, max missing dates per valueObj: \(maxMissingCount)")
+            } else {
+                DBGLog("have \(fnCount) fn valueObjs but no missing data entries")
+            }
         }
 
+        return maxMissingCount  // Return maximum missing count across all function valueObjs
+    }
+    
+    func loadHKdata(forDate date: Int? = nil, dispatchGroup: DispatchGroup? = nil, completion: (() -> Void)? = nil) -> Bool {
+        DBGLog("STATE: start LoadHKdata")
+        dispatchGroup?.enter()
+        let localGroup = DispatchGroup()
+        var rslt = false
+        var hkValueObjIDs: [Int] = []
 
+        // Extract HealthKit valueObjs first
+        var hkValueObjs: [valueObj] = []
+        var timeSrcVo: valueObj? = nil
+        let timeSrcVid = optDict["ahkTimeSrc"] as? String  // String(vid) or nil
 
+        for vo in valObjTable {
+            if vo.optDict["ahksrc"] ?? "0" != "0" {
+                rslt = true
+                hkValueObjIDs.append(vo.vid)
+                localGroup.enter()  // leave when voNumber.loadHKdata completes
 
+                // Check if this is the time source
+                if let timeSrcVid = timeSrcVid, String(vo.vid) == timeSrcVid {
+                    timeSrcVo = vo
+                    DBGLog("ahkTimeSrc: Identified time source '\(vo.valueName ?? "unnamed")' (vid:\(vo.vid))")
+                } else {
+                    hkValueObjs.append(vo)
+                }
+            }
+        }
+
+        // Reorder: time source FIRST, then others
+        if let timeSrcVo = timeSrcVo {
+            hkValueObjs.insert(timeSrcVo, at: 0)
+            DBGLog("ahkTimeSrc: Time source will process FIRST")
+        }
+
+        // Sequential processing helper function
+        func processHKValueObjSequentially(valueObjs: [valueObj], index: Int) {
+            guard index < valueObjs.count else {
+                // All done - the localGroup.notify will handle final processing
+                return
+            }
+            
+            let vo = valueObjs[index]
+            
+            // Create a custom completion handler to chain the next call
+            let originalDispatchGroup = localGroup
+            let customGroup = DispatchGroup()
+            customGroup.enter()
+            
+            // Process current valueObj
+            vo.vos?.loadHKdata(forDate: date, dispatchGroup: customGroup)
+            
+            // When current completes, process next one
+            customGroup.notify(queue: .global()) {
+                originalDispatchGroup.leave()  // Signal completion to main group
+                processHKValueObjSequentially(valueObjs: valueObjs, index: index + 1)
+            }
+        }
+
+        // Move processing to background queue to avoid blocking main thread
+        DispatchQueue.global().async {
+            // Start sequential processing
+            processHKValueObjSequentially(valueObjs: hkValueObjs, index: 0)
+        }
+        // Waiting for all voNumber hk operations to complete, then mark any missing hkStatus as noData
+        localGroup.notify(queue: .main) {
+            DBGLog("All \(hkValueObjIDs.count) voNumber HK operations completed")
+            // processing multiple
+            if hkValueObjIDs.count > 1 {
+                // Convert Int array to comma-separated string for SQL
+                let hkVidsList = hkValueObjIDs.map { String($0) }.joined(separator: ",")
+                
+                #if DEBUGLOG
+                //---------------------------------------------------------
+                let countMissingSQL = """
+                SELECT COUNT(*) FROM (
+                    SELECT d.date, v.id as vid
+                    FROM 
+                        (SELECT DISTINCT date FROM voHKstatus WHERE id IN (\(hkVidsList))) d,
+                        (SELECT DISTINCT id FROM voHKstatus WHERE id IN (\(hkVidsList))) v
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM voHKstatus 
+                        WHERE voHKstatus.id = v.id
+                        AND voHKstatus.date = d.date
+                    )
+                )
+                """
+                let missingCount = self.toQry2Int(sql: countMissingSQL)
+                DBGLog("need to add \(missingCount) noData records")
+                //---------------------------------------------------------
+                #endif
+                
+                // This query finds all combinations of (HK valueObj ID, date with HK data)
+                // where a voHKstatus entry doesn't exist, and creates entries for them
+                let ensureStatusSQL = """
+                            INSERT INTO voHKstatus (id, date, stat)
+                            SELECT vid, date, \(hkStatus.noData.rawValue)
+                            FROM (
+                                SELECT d.date, v.id as vid
+                                FROM 
+                                    (SELECT DISTINCT date FROM voHKstatus WHERE id IN (\(hkVidsList))) d,
+                                    (SELECT DISTINCT id FROM voHKstatus WHERE id IN (\(hkVidsList))) v
+                                WHERE NOT EXISTS (
+                                    SELECT 1 FROM voHKstatus 
+                                    WHERE voHKstatus.id = v.id
+                                    AND voHKstatus.date = d.date
+                                )
+                            )
+                            """
+                //DBGLog(ensureStatusSQL)
+                self.toExecSql(sql: ensureStatusSQL)
+                //DBGLog("Added voHKstatus entries for all dates in trkrData for all HK valueObjs")
+            }
+            
+            completion?()
+            dispatchGroup?.leave()
+        }
+        return rslt
     }
 
+    /// Merges incoming dates (e.g., from HealthKit) with existing tracker dates to determine which dates need new records.
+    ///
+    /// Performs calendar-day-based matching to separate incoming dates into two categories:
+    /// - **newDates**: Dates on calendar days with no existing trkrData records (need new records created)
+    /// - **matchedDates**: Existing trkrData timestamps that fall on same calendar days as incoming dates (need data refresh)
+    ///
+    /// **Special Handling for Today:**
+    /// - Skips most recent incoming date if it's today/future AND no saved record exists AND before aggregation time
+    /// - Prevents creating empty entries for live data that's already displayed via processHealthQuery
+    /// - Allows processing if after aggregation time or existing record found
+    ///
+    /// - Parameters:
+    ///   - inDates: Incoming timestamps to merge (typically from HealthKit or other external sources)
+    ///   - set12: If true, adjusts newDates to 12:00 noon and caps future dates to current time (default: true).  False when called for loadOTdata.
+    ///   - aggregationTime: Optional time when daily aggregation occurs (e.g., sleep data at 12:00 PM)
+    /// - Returns: Tuple containing (newDates: dates needing new records, matchedDates: existing dates to refresh)
+    func mergeDates(inDates:[TimeInterval], set12: Bool = true, aggregationTime: DateComponents? = nil) -> (newDates: Set<TimeInterval>, matchedDates: Set<TimeInterval>) {
+        let existingDatesQuery = "SELECT date FROM trkrData order by date DESC"
+
+        let existingDatesArr = toQry2AryI(sql: existingDatesQuery)  // for debug to look at
+
+        let calendar = Calendar.current
+        var newDates: Set<TimeInterval> = []
+        var matchedDates: Set<TimeInterval> = []
+        
+        // Pre-compute existing dates by day components for O(1) lookups instead of O(n) nested loops
+        var existingDatesByDay: [DateComponents: [TimeInterval]] = [:]
+        for timestamp in existingDatesArr {
+            let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
+            let dayComponents = calendar.dateComponents([.year, .month, .day], from: date)
+            existingDatesByDay[dayComponents, default: []].append(TimeInterval(timestamp))
+        }
+
+        /*
+         // Filter dates that don't match within ±4 hours of existing dates
+         let fourHours: TimeInterval = 4 * 60 * 60
+         let newDates = hkDates.filter { hkDate in
+         !existingDates.contains { abs(hkDate - Double($0)) <= fourHours }
+         }
+         */
+        // Separate inDates into two categories:
+        // 1. newDates: dates that are not on the same calendar day as any existing dates
+        // 2. matchedDates: existing trkrData dates that match inDates on the same calendar day
+        // Skip only the most recent inDate if it matches today (because today's data shown live via processHealthQuery)
+        // but do show if after aggregation time or if we already have a saved record for today
+
+        // this doesn't skip last date for loadOTdata because HK
+        let mostRecentInDate = inDates.max()
+
+        // Pre-calculate today's record check once to avoid repeated database queries
+        let todayStart = calendar.startOfDay(for: Date())
+        let todayEnd = calendar.date(byAdding: .day, value: 1, to: todayStart)!
+        let checkSql = "SELECT COUNT(*) FROM trkrData WHERE date >= \(Int(todayStart.timeIntervalSince1970)) AND date < \(Int(todayEnd.timeIntervalSince1970))"
+        let hasRecordForToday = toQry2Int(sql: checkSql) > 0
+
+        DBGLog("mergeDates: processing \(inDates.count) inDates, mostRecent=\(mostRecentInDate.map { i2ltd(Int($0)) } ?? "nil"), hasRecordForToday=\(hasRecordForToday)")
+
+        for inDate in inDates {
+            let inDateObj = Date(timeIntervalSince1970: inDate)
+            let isToday = inDate >= todayStart.timeIntervalSince1970 && inDate < todayEnd.timeIntervalSince1970
+            #if HKDEBUG
+            DBGLog("  Processing inDate: \(i2ltd(Int(inDate))) isToday=\(isToday) isMostRecent=\(inDate == mostRecentInDate)")
+            #endif
+
+            if inDate == mostRecentInDate {
+                DBGLog("mostRecentInDate = \(i2ltd(Int(inDate)))")
+            }
+            // Skip only the most recent inDate if it is today or future AND we have no saved record for today
+            if inDate == mostRecentInDate && inDate >= todayStart.timeIntervalSince1970 {
+                DBGLog("    → This IS mostRecentInDate and is today/future - checking aggregation time")
+
+                let now = Date()
+
+                // Check if current time is after the aggregation time
+                let isAfterAggregationTime: Bool
+                if let aggregationTime = aggregationTime,
+                   let aggregationHour = aggregationTime.hour,
+                   let aggregationMinute = aggregationTime.minute {
+                    let aggregationSecond = aggregationTime.second ?? 0  // seconds generally not provided
+                    if let aggregationTimeToday = calendar.date(bySettingHour: aggregationHour, minute: aggregationMinute, second: aggregationSecond, of: inDateObj) {
+                        isAfterAggregationTime = now >= aggregationTimeToday
+                        //DBGLog("Current time \(now) vs aggregation time today \(aggregationTimeToday): isAfterAggregationTime = \(isAfterAggregationTime)")
+                    } else {
+                        isAfterAggregationTime = false
+                    }
+                } else {
+                    isAfterAggregationTime = false
+                }
+                
+                if isAfterAggregationTime {
+                    // After aggregation time - system would have auto-created records, so don't skip
+                    // (This handles sleep data at 12:00 PM when current time is 2:00 PM)
+                } else {
+                    //DBGLog(" but before aggregation time")
+
+                    // Before aggregation time - use pre-calculated record check for today
+                    if !hasRecordForToday {
+                        DBGLog("    → SKIPPED (before aggregation, no saved record)")
+                        // No saved record for today yet - skip to avoid creating empty entry
+                        continue
+                    }
+                }
+                // Has saved record for today or we're after aggregation time - proceed to refresh HealthKit data for it
+            }
+            
+            // Check if this inDate matches any existing date using O(1) lookup
+            let inDateDayComponents = calendar.dateComponents([.year, .month, .day], from: inDateObj)
+            
+            if let matchingTimestamps = existingDatesByDay[inDateDayComponents] {
+                // Found match(es) - add all existing timestamps for this day to matchedDates
+                for existingTimestamp in matchingTimestamps {
+                    matchedDates.insert(existingTimestamp)
+                }
+            } else {
+                // No match found, this is a new date
+                DBGLog("    → Adding to newDates (no existing match in trkrData)")
+                newDates.insert(inDate)
+            }
+        }
+        
+        if (set12) {
+            DBGLog("Before 12:00 adjustment: newDates = \(newDates.map { i2ltd(Int($0)) })")
+
+            // set all times to 12:00 noon
+            let adjustedDates = Set(newDates.map { inDate in
+                var components = calendar.dateComponents([.year, .month, .day], from: Date(timeIntervalSince1970: inDate))
+                components.hour = 12
+                components.minute = 0
+                components.second = 0
+                return calendar.date(from: components)?.timeIntervalSince1970 ?? inDate
+            })
+
+            DBGLog("After 12:00 adjustment: adjustedDates = \(adjustedDates.map { i2ltd(Int($0)) })")
+
+            // restrict any times in future to now
+            let now = Date()
+            newDates = Set(adjustedDates.map { timeInterval -> TimeInterval in
+                let ndate = Date(timeIntervalSince1970: timeInterval)
+                if ndate > now {
+                    DBGLog("  Date \(i2ltd(Int(timeInterval))) is FUTURE, changing to now \(i2ltd(Int(now.timeIntervalSince1970)))")
+                    return now.timeIntervalSince1970 // Change to the current time
+                }
+                // If not in the future, keep the original time
+                return timeInterval
+            })
+
+            DBGLog("After future restriction: newDates = \(newDates.map { i2ltd(Int($0)) })")
+        }
+        
+        return (newDates: newDates, matchedDates: matchedDates)
+    }
+    
+    private func getCurrentTimeSlot(for date: Date, intervalHours: Int, calendar: Calendar) -> Int {
+        let dayStart = calendar.startOfDay(for: date)
+        let timeInterval = date.timeIntervalSince(dayStart)
+        let currentHour = Int(timeInterval / 3600) // Convert seconds to hours
+        return currentHour / intervalHours // Which slot (0-based)
+    }
+    
+    /// Generates intra-day time slots from HealthKit dates for high-frequency data collection.
+    ///
+    /// Converts daily HealthKit date entries into multiple time slots per day based on the specified frequency
+    /// (e.g., hourly, every 2h, every 4h, etc.). Performs **exact timestamp matching** against existing trkrData
+    /// records to determine which slots need creation vs refresh.
+    ///
+    /// **Current Time Slot Handling for Today:**
+    /// - Skips ONLY the current time slot if no existing records exist for today
+    /// - Creates all earlier time slots for today (e.g., at 3 PM, creates slots for 12 PM, 1 PM, 2 PM but not 3 PM)
+    /// - Allows current slot processing if any saved record exists for today
+    /// - Filters out all future time slots from results
+    ///
+    /// - Parameters:
+    ///   - hkDates: HealthKit dates to expand into time slots
+    ///   - frequency: Frequency string determining slot interval (e.g., "every_1h", "every_4h", "twice_daily")
+    ///   - aggregationTime: Optional aggregation time (passed through if frequency doesn't match time slot pattern)
+    /// - Returns: Tuple containing (newDates: slots needing new records, matchedDates: existing slots to refresh)
+    func generateTimeSlots(from hkDates: [TimeInterval], frequency: String, aggregationTime: DateComponents? = nil) -> (newDates: Set<TimeInterval>, matchedDates: Set<TimeInterval>) {
+        let existingDatesQuery = "SELECT date FROM trkrData order by date DESC"
+        let existingDatesArr = toQry2AryI(sql: existingDatesQuery)
+        let existingDates = Set(existingDatesArr.map { TimeInterval($0) })
+
+        let calendar = Calendar.current
+        var timeSlots: Set<TimeInterval> = []
+        var matchedDates: Set<TimeInterval> = []
+        
+        // Determine interval based on frequency
+        let intervalHours: Int
+        let slotsPerDay: Int
+        
+        switch frequency {
+        case "every_1h":
+            intervalHours = 1
+            slotsPerDay = 24
+        case "every_2h":
+            intervalHours = 2
+            slotsPerDay = 12
+        case "every_4h":
+            intervalHours = 4
+            slotsPerDay = 6
+        case "every_6h":
+            intervalHours = 6
+            slotsPerDay = 4
+        case "every_8h":
+            intervalHours = 8
+            slotsPerDay = 3
+        case "twice_daily":
+            intervalHours = 12
+            slotsPerDay = 2
+        default:
+            return mergeDates(inDates: hkDates, aggregationTime: aggregationTime) // fallback to daily
+        }
+        
+        // Get unique days from HealthKit data
+        let uniqueDays = Set(hkDates.map { hkDate in
+            let date = Date(timeIntervalSince1970: hkDate)
+            return calendar.startOfDay(for: date)
+        })
+        
+        // Pre-calculate today's record check once to avoid repeated database queries
+        let todayStart = calendar.startOfDay(for: Date())
+        let todayEnd = calendar.date(byAdding: .day, value: 1, to: todayStart)!
+        let checkSql = "SELECT COUNT(*) FROM trkrData WHERE date >= \(Int(todayStart.timeIntervalSince1970)) AND date < \(Int(todayEnd.timeIntervalSince1970))"
+        let hasAnyRecordForToday = toQry2Int(sql: checkSql) > 0
+        
+        // Generate time slots for each day with granular current-slot handling
+        for dayStart in uniqueDays {
+            let isToday = calendar.isDateInToday(dayStart)
+            let currentSlot = isToday ? getCurrentTimeSlot(for: Date(), intervalHours: intervalHours, calendar: calendar) : -1
+            
+            // Generate slots for this day
+            for slot in 0..<slotsPerDay {
+                let slotTime = calendar.date(byAdding: .hour, value: slot * intervalHours, to: dayStart)!
+                let slotTimeInterval = slotTime.timeIntervalSince1970
+                
+                // Skip only the current time slot for today if no existing record for today (allows historical slots to be generated)
+                if isToday && slot == currentSlot {
+                    if !hasAnyRecordForToday {
+                        continue // Skip only this current slot
+                    }
+                }
+                
+                if existingDates.contains(slotTimeInterval) {
+                    // This time slot already exists - add to matched dates
+                    matchedDates.insert(slotTimeInterval)
+                } else {
+                    // This time slot doesn't exist - add to new time slots
+                    timeSlots.insert(slotTimeInterval)
+                }
+            }
+        }
+
+        // Filter out future dates from both sets
+        let now = Date()
+        let filteredTimeSlots = Set(timeSlots.filter { Date(timeIntervalSince1970: $0) <= now })
+        let filteredMatchedDates = Set(matchedDates.filter { Date(timeIntervalSince1970: $0) <= now })
+
+        return (newDates: filteredTimeSlots, matchedDates: filteredMatchedDates)
+    }
+    
+    func loadOTdates(forDate date: Int? = nil) {
+        // instantiate trkrData dates for external trackers
+        for vo in self.valObjTable {
+            guard vo.optDict["otsrc"] ?? "0" != "0",
+                  let otTracker = vo.optDict["otTracker"],
+                  let otValue = vo.optDict["otValue"] else { continue }
+            
+            guard let xto = getCachedOTTracker(name: otTracker) else {
+                DBGErr("Failed to load other tracker: \(otTracker)")
+                continue
+            }
+            
+            let xvid: Int
+            if otValue != OTANYNAME {
+                let tempxvid = xto.toQry2Int(sql: "select id from voConfig where name = '\(otValue)'")
+                if tempxvid == 0 {
+                    DBGErr("no xvid for other tracker \(otTracker) valueObj \(otValue)")
+                    continue
+                }
+                xvid = tempxvid
+            } else {
+                xvid = -1
+            }
+            //let sql = "select max(date) from voOTstatus where id = \(Int(vo.vid)) and stat = \(otStatus.otData.rawValue)"
+            let sql = "select max(date) from voOTstatus where id = \(Int(vo.vid))" // like hk and fn, don't update noData entries except for single-date refresh
+            
+            let lastDate = toQry2Int(sql: sql)
+            
+            if (otTracker != self.trackerName) {
+                let selStr: String
+                if otValue == OTANYNAME {
+                    selStr = "trkrData where"
+                } else {
+                    selStr = "voData where id = \(xvid) and"
+                }
+                
+                var myDates: [Int]
+                
+                // get all local tracker dates to populate
+                if let specificDate = date {
+                    // If a specific date is provided, only query that date and if it exists
+                    myDates = xto.toQry2AryI(sql: "select date from \(selStr) date = \(specificDate)")
+                } else {
+                    // Original implementation - get all dates after lastDate
+                    myDates = xto.toQry2AryI(sql: "select date from \(selStr) date > \(lastDate) order by date asc")
+                }
+                
+                let newDates = self.mergeDates(inDates: myDates.map { TimeInterval($0) }, set12:false).newDates
+                
+                // Insert the new dates into trkrData
+                // trkrData is 'on conflict replace'
+                // but should only be adding new dates
+                let priv = max(MINPRIV, vo.vpriv)  // priv needs to be at least minpriv if vpriv = 0
+
+                for newDate in newDates {
+                    let sql = "insert into trkrData (date, minpriv) values (\(Int(newDate)), \(priv))"
+                    toExecSql(sql: sql)
+                }
+                
+                DBGLog("Inserted \(newDates.count) new dates into trkrData.")
+            }
+        }
+    }
+    
+    // MARK: - OT Cache Management
+    
+    internal func getCachedOTTracker(name: String) -> trackerObj? {
+        // Check if already cached
+        if let cachedTracker = otTrackerCache[name] {
+            return cachedTracker
+        }
+        
+        // Get TID for the tracker name
+        let tidArray = trackerList.shared.getTIDfromNameDb(name)
+        guard !tidArray.isEmpty else {
+            DBGErr("No tracker found with name: \(name)")
+            return nil
+        }
+        
+        let tid = tidArray[0]
+        
+        // Create new tracker instance
+        let newTracker = trackerObj(tid)
+        
+        // Cache it for future use
+        otTrackerCache[name] = newTracker
+        
+        DBGLog("Cached new OT tracker: \(name) (TID: \(tid))")
+        return newTracker
+    }
+    
+    func loadOTdata(forDate date: Int? = nil, otSelf: Bool = false, dispatchGroup: DispatchGroup?, completion: (() -> Void)? = nil) -> Bool {
+        // For full refresh operations, check if progress bar should be initialized
+        if refreshDelegate != nil {
+            
+            let phaseText = otSelf ? "Loading self-referencing data" : "Loading data from other trackers"
+
+            // Non-self OT data - check if progress bar should be initialized
+            let otSteps = countOTsteps(otSelf:otSelf)
+            let threshold = 25  // OT queries fast and only update progressBar every 5 steps
+            
+            refreshDelegate?.updateFullRefreshProgress(step: 0, phase: phaseText, totalSteps: otSteps, threshold: threshold)
+            
+        }
+        
+        dispatchGroup?.enter()
+        
+        // Key change: Create a dedicated queue for OT processing
+        let otProcessingQueue = DispatchQueue(label: "com.rtracker.otProcessing", qos: .userInitiated)
+        
+        var rslt = false
+        var otValueObjCount = 0
+        let localGroup = DispatchGroup()
+        
+        // Count OT value objects first for progress tracking
+        for vo in valObjTable {
+            guard vo.optDict["otsrc"] ?? "0" != "0",
+                  let otTracker = vo.optDict["otTracker"] else { continue }
+            if (otSelf && otTracker == trackerName) ||
+               (!otSelf && otTracker != trackerName) {
+                otValueObjCount += 1
+                rslt = true
+            }
+        }
+        if otValueObjCount > 0 {
+            DBGLog("OT value objects to process: \(otValueObjCount)")
+        }
+        
+        // Start background processing
+        otProcessingQueue.async { [weak self] in
+            guard let self = self else {
+                dispatchGroup?.leave()
+                completion?()
+                return
+            }
+            self.toExecSql(sql:"BEGIN TRANSACTION")  // trackerObj load OT dates and data
+            loadOTdates(forDate: date)
+                    
+            // Track processed values for progress updates
+            var processedCount = 0
+            
+            // Process each value object in the background
+            for vo in self.valObjTable {
+                guard vo.optDict["otsrc"] ?? "0" != "0",
+                      let otTracker = vo.optDict["otTracker"] else { continue }
+                
+                if (otSelf && otTracker == self.trackerName) ||
+                   (!otSelf && otTracker != self.trackerName) {
+                    
+                    vo.vos?.loadOTdata(forDate: date, dispatchGroup: localGroup)
+                    
+                    // Update progress periodically
+                    processedCount += 1
+                    
+                    // Batch updates to avoid overwhelming the main thread
+                    if processedCount % 5 == 0 || processedCount == otValueObjCount {
+                        self.refreshDelegate?.updateFullRefreshProgress(step: processedCount)
+                        // Small yield to give main thread breathing room
+                        Thread.sleep(forTimeInterval: 0.01)
+                    }
+                }
+            }
+            self.toExecSql(sql:"COMMIT")  // trackerObj loadOTdata
+
+            // Final updates on main thread
+            DispatchQueue.main.async {
+                // Update progress after all OtherTracker processing is done
+                self.refreshDelegate?.updateFullRefreshProgress()
+                // Call completion and leave dispatch group
+                completion?()
+                dispatchGroup?.leave()
+            }
+        }
+        
+        return rslt
+    }
+    // Helper class to track processing state
+    private class ProcessingState {
+        var currentDate: Int
+        var datesProcessed = 0
+        let totalDates: Int
+        
+        init(startDate: Int, totalDates: Int) {
+            self.currentDate = startDate
+            self.totalDates = totalDates
+        }
+    }
+
+    private func processFnDataForDate(progressState: ProcessingState) {
+        autoreleasepool {
+            #if FUNCTIONDBG
+            DBGLog("Processing date \(progressState.currentDate) (\(Date(timeIntervalSince1970: TimeInterval(progressState.currentDate))))")
+            #endif
+            // Load data for this date and process functions
+            _ = self.loadData(progressState.currentDate)  // does nothing if date not in db, so leaves current gui settings
+            
+            for vo in self.valObjTable {
+                if vo.vtype == VOT_FUNC {
+                    #if FUNCTIONDBG
+                    DBGLog("Calling setFNrecalc() for vid=\(vo.vid) before processing date \(progressState.currentDate)")
+                    #endif
+                    vo.vos?.setFNrecalc()  // do not use cached values
+                    vo.vos?.setFnVal(progressState.currentDate)
+                }
+            }
+            
+            // Update progress
+            progressState.datesProcessed += 1
+            if progressState.datesProcessed % 5 == 0 {
+                self.refreshDelegate?.updateFullRefreshProgress(step: 5)
+                // Small yield to give main thread breathing room
+                Thread.sleep(forTimeInterval: 0.01)
+            }
+        }
+    }
+
+    private func processFnData(forDate date: Int? = nil, dispatchGroup: DispatchGroup? = nil, forceAll: Bool = false, completion: (() -> Void)? = nil) -> Bool {
+        // Diagnostic step 1: Verify delegate is set
+
+        // For full refresh operations, check if progress bar should be initialized
+        refreshDelegate?.updateFullRefreshProgress(step: 0, phase: "Computing functions", totalSteps: countFNsteps(), threshold: 15)  // threshold 15 as only update every 5 steps
+        
+        //let localGroup = DispatchGroup()
+        var rslt = false
+        
+        // Check if we have any functions
+        for vo in valObjTable {
+            if VOT_FUNC == vo.vtype {
+                rslt = true
+                break
+            }
+        }
+        if !rslt {
+            completion?()
+            return rslt
+        }
+        DBGLog("[\(Date())] processFnData called - refreshDelegate is \(refreshDelegate != nil ? "SET" : "NOT SET!")")
+
+        let currDate = Int(trackerDate?.timeIntervalSince1970 ?? 0)
+        
+        // Determine start date and collect dates needing processing
+        var nextDate: Int
+        var missingHistoricalDates: [Int] = []
+        var actualDatesToProcess = 0
+        
+        //let sql = "select max(date) from voFNstatus where stat = \(fnStatus.fnData.rawValue)"
+        let sql = "select max(date) from voFNstatus" // allow .noData - must full refresh to recalculate or do individually
+        let maxProcessedDate = toQry2Int(sql: sql)
+
+        // forceAll does what it says, all from first date
+        // specified date does just the single date
+        // otherwise called from useTracker viewDidLoad, go from max date in voFNstatus through now.  also do any missing historical dates
+
+        if forceAll || maxProcessedDate == 0 || (optDict["dirtyFns"] as? String) == "1" {
+            nextDate = firstDate()
+            actualDatesToProcess = getDateCount()
+            DBGLog("computing all functions \(actualDatesToProcess) dates  forceAll=\(forceAll), nextDate=\(nextDate) (\(Date(timeIntervalSince1970: TimeInterval(nextDate))))")
+        } else if let specifiedDate = date {
+            nextDate = specifiedDate
+            actualDatesToProcess = 1
+            DBGLog("processFnData: specifiedDate=\(specifiedDate) (\(Date(timeIntervalSince1970: TimeInterval(specifiedDate)))), nextDate=\(nextDate)")
+        } else {
+            // Check for historical dates missing voFNstatus entries for any function valueObj
+            let historicalSQL = """
+            SELECT DISTINCT trkrData.date FROM trkrData 
+            WHERE trkrData.date <= \(maxProcessedDate)
+            AND EXISTS (
+                SELECT 1 FROM voConfig 
+                WHERE voConfig.type = \(VOT_FUNC)
+                AND NOT EXISTS (
+                    SELECT 1 FROM voFNstatus 
+                    WHERE voFNstatus.date = trkrData.date 
+                    AND voFNstatus.id = voConfig.id
+                )
+            )
+            ORDER BY trkrData.date ASC
+            """
+            missingHistoricalDates = toQry2AryI(sql: historicalSQL)
+            
+            // Set nextDate to continue from after max processed date
+            trackerDate = Date(timeIntervalSince1970: TimeInterval(maxProcessedDate))
+            nextDate = postDate()
+            
+            // Count future dates to process
+            let futureDatesSQL = """
+            SELECT count(*) FROM trkrData 
+            WHERE date > \(maxProcessedDate)
+            AND minpriv <= \(privacyValue)
+            """
+            let futureDatesCount = toQry2Int(sql: futureDatesSQL)
+            
+            actualDatesToProcess = missingHistoricalDates.count + futureDatesCount
+            
+            DBGLog("Found \(missingHistoricalDates.count) historical dates missing function status, \(futureDatesCount) future dates to process")
+            
+        }
+        
+        if nextDate == 0 && missingHistoricalDates.isEmpty {
+            // no data yet for this tracker so do not generate a 0 value in database
+            completion?()
+            return rslt
+        }
+        
+        dispatchGroup?.enter()
+        
+        // Create a dedicated queue for function processing
+        let functionProcessingQueue = DispatchQueue(label: "com.rtracker.functionProcessing", qos: .userInitiated)
+        
+        // Create a state object to track progress with accurate count
+        let progressState = ProcessingState(startDate: nextDate, totalDates: actualDatesToProcess)
+        
+        // Start background processing
+        functionProcessingQueue.async { [weak self] in
+            guard let self = self else {
+                dispatchGroup?.leave()
+                completion?()
+                return
+            }
+
+            if date != nil {
+                // Single date mode - only process the specified date
+                DBGLog(" Processing single specified date \(Date(timeIntervalSince1970: TimeInterval(progressState.currentDate)))")
+                self.processFnDataForDate(progressState: progressState)
+            } else {
+                            
+                if missingHistoricalDates.count > 0 {
+                    // Process historical dates missing function status if called with no specified date
+                    DBGLog("Processing \(missingHistoricalDates.count) historical dates")
+                    self.toExecSql(sql: "BEGIN TRANSACTION")  // trackerObj processing historical fns
+                    for historicalDate in missingHistoricalDates {
+                        progressState.currentDate = historicalDate
+                        self.processFnDataForDate(progressState: progressState)
+                    }
+                    self.toExecSql(sql: "COMMIT")  // trackerObj processing historical fns
+                    // Restore currentDate to nextDate for Phase 2
+                    progressState.currentDate = nextDate
+                }
+
+                // Multi-date mode - process all dates from current point forward
+                DBGLog("Processing future dates from \(Date(timeIntervalSince1970: TimeInterval(progressState.currentDate)))")
+                self.toExecSql(sql: "BEGIN TRANSACTION")  // trackerObj processing future date fns
+                while (progressState.currentDate != 0)  {
+                    self.processFnDataForDate(progressState: progressState)
+                    // Move to next date
+                    progressState.currentDate = self.postDate()
+                }
+                self.toExecSql(sql: "COMMIT")  // trackerObj processing future date fns
+            }
+            
+            
+            // Final cleanup on main thread
+            DispatchQueue.main.async {
+                // Clean up and trim function values
+                for vo in self.valObjTable {
+                    vo.vos?.doTrimFnVals()
+                }
+                
+                // Restore current date
+                _ = self.loadData(currDate)  // does nothing if no db data for currDate
+                
+                // Clear dirty flag
+                self.optDict.removeValue(forKey: "dirtyFns")
+                let sql = "delete from trkrInfo where field='dirtyFns';"
+                self.toExecSql(sql: sql)
+
+                completion?()
+                dispatchGroup?.leave()
+            }
+        }
+        
+        return rslt
+    }
+
+    func loadFNdata(forDate date: Int? = nil, dispatchGroup: DispatchGroup?, completion: (() -> Void)? = nil) -> Bool {
+        return processFnData(forDate: date, dispatchGroup: dispatchGroup, forceAll: false, completion: completion)
+    }
+
+    func sortVoTable(byArray arr: [AnyHashable]?) {
+        guard let arr = arr as? [valueObj], !arr.isEmpty else { return }
+        
+        // Create dictionary mapping vid to target index
+        let targetIndices = Dictionary(uniqueKeysWithValues: arr.enumerated().map { ($0.element.vid, $0.offset) })
+        
+        // Sort valObjTable based on target indices
+        valObjTable.sort { vo1, vo2 in
+            let idx1 = targetIndices[vo1.vid] ?? Int.max
+            let idx2 = targetIndices[vo2.vid] ?? Int.max
+            return idx1 < idx2
+        }
+    }
+    
     func voSet(fromDict vo: valueObj?, dict: [AnyHashable : Any]?) {
         vo?.setOptDict((dict?["optDict"] as? [String : String])!)
         vo?.vpriv = (dict?["vpriv"] as? NSNumber)?.intValue ?? 0
@@ -322,6 +1144,8 @@ class trackerObj: tObjBase {
             regex = try NSRegularExpression(pattern: "^recover\\d+$", options: [])
         } catch {
         }
+
+        toExecSql(sql:"BEGIN TRANSACTION")  // trackerObj confirmTOdict
 
         for voDict in newValObjs ?? [] {
             guard let voDict = voDict as? [AnyHashable : Any] else {
@@ -403,6 +1227,8 @@ class trackerObj: tObjBase {
             rTracker_resource.bumpProgressBar()
         }
 
+        toExecSql(sql:"COMMIT")  // trackerObj confirmTOdict
+
         sortVoTable(byArray: newVOs)
 
     }
@@ -425,7 +1251,7 @@ class trackerObj: tObjBase {
 
         dbgNSAssert(super.toid != 0, "tObj load toid=0")
 
-        DBGLog(String("tObj loadConfig toid:\(super.toid) name:\(trackerName)"))
+        //DBGLog(String("tObj loadConfig toid:\(super.toid)"))
 
         //var s1: [AnyHashable] = []
         //var s2: [AnyHashable] = []
@@ -443,8 +1269,11 @@ class trackerObj: tObjBase {
         setToOptDictDflts()
         _ = loadReminders() // required here as can't distinguish did not load vs. deleted all
 
-        DBGLog(String("to optdict: \(optDict)"))
+        //DBGLog(String("to optdict: \(optDict)"))
 
+        sql = "select max(date) from trkrData"
+        lastDbDate = toQry2Int(sql:sql)
+        
         //self.trackerName = [self.optDict objectForKey:@"name"];
 
         let w = CGFloat(Double(optDict["width"] as? Double ?? 0))
@@ -466,6 +1295,7 @@ class trackerObj: tObjBase {
             valObjTable.append(vo)
         }
 
+        
         for vo in valObjTable {
             sql = String(format: "select field, val from voInfo where id=%ld;", vo.vid)
             ssa = toQry2ArySS(sql: sql)
@@ -484,10 +1314,16 @@ class trackerObj: tObjBase {
         }
 
         //[self nextColor];  // inc safely past last used color
-        if nextColor >= rTracker_resource.colorSet().count {
+        if nextColor >= rTracker_resource.colorSet.count {
             _nextColor = 0
         }
 
+        valObjTableH = []
+        for vo in valObjTable {
+            if vo.optDict["hidden"] != "1" {
+                valObjTableH.append(vo)
+            }
+        }
 
 
         //sql = nil;
@@ -495,13 +1331,11 @@ class trackerObj: tObjBase {
         trackerDate = nil
         trackerDate = Date()
         rescanMaxLabel()
-
-
-
-
+        
+        DBGLog("loaded \(trackerName ?? "nil") \(dbName ?? "nil") \(valObjTable.count) valObjs \(reminders.count) reminders")
     }
 
-    // 
+    //
     // load tracker config, valObjs from supplied dictionary
     // self.trackerName from dictionary:optDict:trackerName
     //
@@ -516,11 +1350,7 @@ class trackerObj: tObjBase {
 
         //self.trackerName = [self.optDict objectForKey:@"name"];
 
-        DBGLog(String("tObj loadConfigFromDict toid:\(super.toid) name:\(trackerName)"))
-
-        //CGFloat w = [[self.optDict objectForKey:@"width"] floatValue];
-        //CGFloat h = [[self.optDict objectForKey:@"height"] floatValue];
-        //self.maxLabel = (CGSize) {w,h};
+        DBGLog(String("tObj loadConfigFromDict toid:\(super.toid) name:\(trackerName ?? "nil")"))
 
         let voda = dict["valObjTable"] as? [AnyHashable]
         for vod in voda ?? [] {
@@ -528,7 +1358,7 @@ class trackerObj: tObjBase {
                 continue
             }
             let vo = valueObj(dict: self, dict: vod)
-            DBGLog(String("add vo \(vo.valueName)"))
+            DBGLog(String("add vo \(vo.valueName ?? "nil")"))
             valObjTable.append(vo)
         }
 
@@ -542,6 +1372,13 @@ class trackerObj: tObjBase {
             vo.vos?.loadConfig() // loads from vo optDict
         }
 
+        valObjTableH = []
+        for vo in valObjTable {
+            if vo.optDict["hidden"] != "1" {
+                valObjTableH.append(vo)
+            }
+        }
+        
         let rda = dict["reminders"] as? [AnyHashable]
         for rd in rda ?? [] {
             guard let rd = rd as? [AnyHashable : Any] else {
@@ -552,7 +1389,7 @@ class trackerObj: tObjBase {
         }
 
         //[self nextColor];  // inc safely past last used color
-        if _nextColor >= rTracker_resource.colorSet().count {
+        if _nextColor >= rTracker_resource.colorSet.count {
             _nextColor = 0
         }
 
@@ -560,7 +1397,208 @@ class trackerObj: tObjBase {
 
         trackerDate = nil
         trackerDate = Date()
-        DBGLog(String("loadConfigFromDict finished loading \(trackerName)"))
+        //DBGLog(String("loadConfigFromDict finished loading \(trackerName)"))
+    }
+    
+    func streakCount() -> Int {
+        
+        // Check if most recent entry is too old (streak should be broken)
+
+        let now = Date()
+        let mostRecentQuery = "SELECT MAX(date) FROM trkrData"
+        let mostRecentTimestamp = toQry2Int(sql: mostRecentQuery)
+        
+        if mostRecentTimestamp > 0 {
+            let mostRecentDate = Date(timeIntervalSince1970: TimeInterval(mostRecentTimestamp))
+            let timeSinceLastEntry = now.timeIntervalSince(mostRecentDate)
+            let daysSinceLastEntry = timeSinceLastEntry / (24.0 * 60.0 * 60.0)
+            
+            if daysSinceLastEntry > 1.5 {
+                return 0
+            }
+        } else {
+            return 0
+        }
+
+        /*
+        
+        // Step 1: Debug raw data from trkrData
+        DBGLog("=== STREAK DEBUG: Raw trkrData entries ===")
+        let rawDataQuery = "SELECT date, datetime(date, 'unixepoch') as readable_date FROM trkrData ORDER BY date DESC LIMIT 10"
+        let rawData = toQry2AryIS(sql: rawDataQuery)
+        for (date, readableDate) in rawData {
+            DBGLog("Raw entry - Unix timestamp: \(date), Human readable: \(readableDate)")
+        }
+        
+        // Step 1.5: Check if most recent entry is too old (streak should be broken)
+        DBGLog("=== STREAK DEBUG: Current time vs most recent entry ===")
+        let now = Date()
+        let nowTimestamp = Int(now.timeIntervalSince1970)
+        DBGLog("Current time: \(now) (timestamp: \(nowTimestamp))")
+        
+        let mostRecentQuery = "SELECT MAX(date) FROM trkrData"
+        let mostRecentTimestamp = toQry2Int(sql: mostRecentQuery)
+        
+        if mostRecentTimestamp > 0 {
+            let mostRecentDate = Date(timeIntervalSince1970: TimeInterval(mostRecentTimestamp))
+            let timeSinceLastEntry = now.timeIntervalSince(mostRecentDate)
+            let daysSinceLastEntry = timeSinceLastEntry / (24.0 * 60.0 * 60.0)
+            
+            DBGLog("Most recent entry: \(mostRecentDate) (timestamp: \(mostRecentTimestamp))")
+            DBGLog("Time since last entry: \(timeSinceLastEntry) seconds = \(daysSinceLastEntry) days")
+            
+            if daysSinceLastEntry > 1.5 {
+                DBGLog("*** STREAK BROKEN: Last entry is \(daysSinceLastEntry) days old (> 1.5 days) ***")
+                DBGLog("=== STREAK DEBUG: Final result = 0 (streak expired) ===")
+                return 0
+            } else {
+                DBGLog("Streak still active: Last entry is only \(daysSinceLastEntry) days old (<= 1.5 days)")
+            }
+        } else {
+            DBGLog("No entries found in trkrData")
+            return 0
+        }
+        
+        // Step 2: Debug daily_entries CTE
+        DBGLog("=== STREAK DEBUG: Daily entries (after grouping) ===")
+        let dailyEntriesQuery = """
+            SELECT
+                date(datetime(date, 'unixepoch')) as entry_date,
+                count(*) as entries_count
+            FROM trkrData
+            GROUP BY entry_date
+            ORDER BY entry_date DESC
+            LIMIT 15
+        """
+        let dailyEntries = toQry2ArySI(sql: dailyEntriesQuery)
+        for (entryDate, count) in dailyEntries {
+            DBGLog("Daily entry: \(entryDate), Count: \(count)")
+        }
+        
+        // Step 3: Debug date_gaps CTE
+        DBGLog("=== STREAK DEBUG: Date gaps calculation ===")
+        let dateGapsQuery = """
+            WITH daily_entries AS (
+                SELECT
+                    date(datetime(date, 'unixepoch')) as entry_date
+                FROM trkrData
+                GROUP BY entry_date
+            )
+            SELECT
+                entry_date,
+                COALESCE(CAST(julianday(entry_date) -
+                julianday(lag(entry_date, 1) OVER (ORDER BY entry_date)) AS TEXT), 'NULL') as gap_text
+            FROM daily_entries
+            ORDER BY entry_date DESC
+            LIMIT 15
+        """
+        let dateGaps = toQry2ArySS(sql: dateGapsQuery) // Using SS since gap might be null for first entry
+        for (entryDate, gapStr) in dateGaps {
+            let gap = gapStr == "NULL" ? "NULL (first entry)" : gapStr
+            DBGLog("Date: \(entryDate), Gap from previous: \(gap)")
+        }
+        
+        // Step 4: Debug streak_groups CTE
+        DBGLog("=== STREAK DEBUG: Streak groups ===")
+        let streakGroupsQuery = """
+            WITH daily_entries AS (
+                SELECT
+                    date(datetime(date, 'unixepoch')) as entry_date
+                FROM trkrData
+                GROUP BY entry_date
+            ),
+            date_gaps AS (
+                SELECT
+                    entry_date,
+                    julianday(entry_date) -
+                    julianday(lag(entry_date, 1) OVER (ORDER BY entry_date)) as gap
+                FROM daily_entries
+                ORDER BY entry_date DESC
+            )
+            SELECT
+                entry_date,
+                COALESCE(CAST(gap AS TEXT), 'NULL') as gap_text,
+                CASE WHEN gap > 1.5 THEN 1 ELSE 0 END as is_break,
+                sum(CASE WHEN gap > 1.5 THEN 1 ELSE 0 END)
+                    OVER (ORDER BY entry_date DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as streak_group
+            FROM date_gaps
+            ORDER BY entry_date DESC
+            LIMIT 20
+        """
+        let streakGroups = toQry2ArySSSI(sql: streakGroupsQuery)
+        for (entryDate, gapStr, isBreakStr, streakGroup) in streakGroups {
+            DBGLog("Date: \(entryDate), Gap: \(gapStr), IsBreak: \(isBreakStr), StreakGroup: \(streakGroup)")
+        }
+        
+        // Step 5: Debug final count for group 0
+        DBGLog("=== STREAK DEBUG: Group 0 count (current streak) ===")
+        let group0CountQuery = """
+            WITH daily_entries AS (
+                SELECT
+                    date(datetime(date, 'unixepoch')) as entry_date
+                FROM trkrData
+                GROUP BY entry_date
+            ),
+            date_gaps AS (
+                SELECT
+                    entry_date,
+                    julianday(entry_date) -
+                    julianday(lag(entry_date, 1) OVER (ORDER BY entry_date)) as gap
+                FROM daily_entries
+                ORDER BY entry_date DESC
+            ),
+            streak_groups AS (
+                SELECT
+                    entry_date,
+                    sum(CASE WHEN gap > 1.5 THEN 1 ELSE 0 END)
+                        OVER (ORDER BY entry_date DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as streak_group
+                FROM date_gaps
+            )
+            SELECT entry_date, streak_group
+            FROM streak_groups
+            WHERE streak_group = 0
+            ORDER BY entry_date DESC
+        """
+        let group0Entries = toQry2ArySI(sql: group0CountQuery)
+        DBGLog("Entries in current streak (group 0):")
+        for (entryDate, streakGroup) in group0Entries {
+            DBGLog("  \(entryDate) (group \(streakGroup))")
+        }
+        
+        // Original query unchanged
+         */
+        let queryStreak = """
+            WITH daily_entries AS (
+                SELECT 
+                    date(datetime(date, 'unixepoch')) as entry_date,
+                    date(datetime(date, 'unixepoch')) as calendar_date
+                FROM trkrData
+                GROUP BY entry_date
+            ),
+            date_gaps AS (
+                SELECT 
+                    entry_date,
+                    julianday(entry_date) - 
+                    julianday(lag(entry_date, 1) OVER (ORDER BY entry_date)) as gap
+                FROM daily_entries
+                ORDER BY entry_date DESC
+            ),
+            streak_groups AS (
+                SELECT 
+                    entry_date,
+                    sum(CASE WHEN gap > 1.5 THEN 1 ELSE 0 END) 
+                        OVER (ORDER BY entry_date DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as streak_group
+                FROM date_gaps
+            )
+            SELECT count(*) as streak_count
+            FROM streak_groups
+            WHERE streak_group = 0
+        """
+        
+        let result = toQry2Int(sql: queryStreak)
+        DBGLog("=== STREAK DEBUG: Final result = \(result) ===")
+        
+        return result
     }
 
     // delete default settings from vo.optDict to save space
@@ -598,7 +1636,7 @@ class trackerObj: tObjBase {
             optDict["rt_build"] = Bundle.main.infoDictionary?["CFBundleVersion"] as? String
             saveToOptDict()
 
-            DBGLog("tracker init version info")
+            DBGLog("tracker init version info set to \(String(describing: optDict["rt_version"])), build \(String(describing: optDict["rt_build"]))")
         }
     }
 
@@ -655,13 +1693,13 @@ class trackerObj: tObjBase {
     }
 
     // create minimal valobj in db tables to handle column in CSV data that does not match existing valObj
-    func createVOinDb(_ name: String?, inVid: Int) -> Int {
+    func createVOinDb(_ name: String, inVid: Int) -> Int {
         var vid: Int
         var sql: String
         if 0 != inVid {
             sql = "select count(*) from voConfig where id=\(inVid)"
-            if 0 < toQry2Int(sql:sql)! {
-                sql = "update voConfig set name=\"\(name ?? "")\" where id=\(inVid)"
+            if 0 < toQry2Int(sql:sql) {
+                sql = "update voConfig set name=\"\(name)\" where id=\(inVid)"
                 toExecSql(sql:sql)
                 return inVid
             }
@@ -672,9 +1710,9 @@ class trackerObj: tObjBase {
         }
         sql = "select max(rank) from voConfig"
 
-        let rank = toQry2Int(sql:sql)! + 1
+        let rank = toQry2Int(sql:sql) + 1
 
-        sql = String(format: "insert into voConfig (id, rank, type, name, color, graphtype,priv) values (%ld, %ld, %d, '%@', %d, %d, %d);", vid, rank, 0, rTracker_resource.toSqlStr(name) ?? "", 0, 0, MINPRIV)
+        sql = String(format: "insert into voConfig (id, rank, type, name, color, graphtype,priv) values (%ld, %ld, %d, '%@', %d, %d, %d);", vid, rank, 0, rTracker_resource.toSqlStr(name), 0, 0, MINPRIV)
         toExecSql(sql:sql)
 
         return vid
@@ -687,7 +1725,7 @@ class trackerObj: tObjBase {
             return rslt
         }
 
-        let vot = rTracker_resource.vtypeNames().firstIndex(of: vots ?? "") ?? NSNotFound // [self.votArray indexOfObject:vots];
+        let vot = ValueObjectType(stringValue: vots ?? "")?.rawValue ?? NSNotFound // [self.votArray indexOfObject:vots];
         if NSNotFound == vot {
             return rslt
         }
@@ -706,7 +1744,7 @@ class trackerObj: tObjBase {
 
         var voc = -1 // default to VOT_CHOICE: choice color is -1 for no color as need to check optdict
         if VOT_CHOICE != vot {
-            voc = rTracker_resource.colorNames().firstIndex(of: vocs ?? "") ?? NSNotFound
+            voc = rTracker_resource.colorNames.firstIndex(of: vocs ?? "") ?? NSNotFound
             if NSNotFound == voc {
                 return rslt
             }
@@ -746,7 +1784,7 @@ class trackerObj: tObjBase {
         saveToOptDict()
 
         var vids: [String] = []
-        // put valobjs in state for saving 
+        // put valobjs in state for saving
         for vo in valObjTable {
             if vo.vid <= 0 {
                 let old = vo.vid
@@ -757,8 +1795,9 @@ class trackerObj: tObjBase {
         }
 
         // remove previous data - input rtrk may renumber and then some vids become obsolete -- if reading rtrk have done jumpMaxPriv
-        var sql = "delete from voConfig where priv <=\(privacyValue) and id not in (\(vids.joined(separator: ",")))" // 18.i.2014 don't wipe all in case user quits before we finish
+        toExecSql(sql:"BEGIN TRANSACTION")  // trackerObj saveConfig
 
+        var sql = "delete from voConfig where priv <=\(privacyValue) and id not in (\(vids.joined(separator: ",")))" // 18.i.2014 don't wipe all in case user quits before we finish
 
         toExecSql(sql:sql)
 
@@ -772,18 +1811,21 @@ class trackerObj: tObjBase {
             for vo in valObjTable {
                 //DBGLog(@"  vo %@  id %ld", vo.valueName, (long)vo.vid);
                 let priv: Int = Int(vo.optDict["privacy"] ?? "") ?? PRIVDFLT
-                let sql = String(format: "insert or replace into voConfig (id, rank, type, name, color, graphtype,priv) values (%ld, %d, %ld, '%@', %ld, %ld, %d);", vo.vid, i, vo.vtype, rTracker_resource.toSqlStr(vo.valueName)!, vo.vcolor, vo.vGraphType, priv)
+                let sql = String(format: "insert or replace into voConfig (id, rank, type, name, color, graphtype, priv) values (%ld, %d, %ld, '%@', %ld, %ld, %d);", vo.vid, i, vo.vtype, rTracker_resource.toSqlStr(vo.valueName!), vo.vcolor, vo.vGraphType, priv)
                 toExecSql(sql:sql)
 
                 saveVoOptdict(vo)
+                i += 1
             }
-            i += 1
+
 
             reminders2db()
             setReminders()
 
             UIApplication.shared.isIdleTimerDisabled = false
         })
+
+        toExecSql(sql:"COMMIT")  // trackerObj saveConfig
     }
 
     func saveChoiceConfigs() {
@@ -804,9 +1846,6 @@ class trackerObj: tObjBase {
     func getValObj(_ qVid: Int) -> valueObj? {
         var rvo: valueObj? = nil
 
-        //NSEnumerator *e = [self.valObjTable objectEnumerator];
-        //valueObj *vo;
-        //while (vo = (valueObj *) [e nextObject]) {
         for vo in valObjTable {
             if vo.vid == qVid {
                 rvo = vo
@@ -815,50 +1854,62 @@ class trackerObj: tObjBase {
         }
 
         if rvo == nil {
+            // won't find if privacy restricted
             DBGLog(String("tObj getValObj failed to find vid \(qVid)"))
         }
         return rvo
     }
 
-    func loadData(_ iDate: Int) -> Bool {
+    func getValObjByName(_ qName: String) -> valueObj? {
+        var rvo: valueObj? = nil
+
+        for vo in valObjTable {
+            if vo.valueName == qName {
+                rvo = vo
+                break
+            }
+        }
+
+        if rvo == nil {
+            DBGLog(String("tObj getValObj failed to find vname \(qName)"))
+        }
+        return rvo
+    }
+    
+    func loadData(_ iDate: Int, derivedOnly: Bool = false) -> Bool {
 
         let qDate = Date(timeIntervalSince1970: TimeInterval(iDate))
         // DBGLog(@"trackerObj loadData for date %@",qDate);
         // don't leave thread, need values reset here: dispatch_async(dispatch_get_main_queue(), ^(void){
-        resetData()
+
         var sql = String(format: "select count(*) from trkrData where date = %ld and minpriv <= %d;", iDate, privacyValue)
         let c = toQry2Int(sql:sql)
         if c != 0 {
-            trackerDate = qDate // from convenience method above, so do the retain
-            //var i1: [AnyHashable] = []
-            //var s1: [AnyHashable] = []
+            resetData(derivedOnly: derivedOnly)
+            trackerDate = qDate
             sql = String(format: "select id, val from voData where date = %ld;", iDate)
             let isa = toQry2AryIS(sql: sql)
 
-            //let e1 = (i1 as NSArray).objectEnumerator()
-            //let e3 = (s1 as NSArray).objectEnumerator()
-            //var vid: Int
-            //while let tid = e1.nextObject() {
-            for (vid, e3) in isa {
-                //vid = (tid as? NSNumber)?.intValue ?? 0
-                let newVal = e3 // read csv may gen bad id, keep enumerators even
+            for (vid, dbVal) in isa {
                 let vo = getValObj(vid)
-                //dbgNSAssert1(vo,@"tObj loadData no valObj with vid %d",vid);
+
                 if let vo {
+                    // Skip if derivedOnly is true and this vo is not a derived data source
+                    if derivedOnly && !vo.isDerived() {
+                        continue
+                    }
+                    
                     // no vo if privacy restricted
                     //DBGLog(@"vo id %ld newValue: %@",(long)vid,newVal);
 
                     if (VOT_CHOICE == vo.vtype) || (VOT_SLIDER == vo.vtype) {
-                        vo.useVO = ("" == newVal) ? false : true // enableVO disableVO
+                        vo.useVO = ("" == dbVal) ? false : true // enableVO disableVO
                     } else {
                         vo.useVO = true
                     }
-                    vo.value = newVal // results not saved for func so not in db table to be read
-                    //vo.retrievedData = YES;
+                    vo.value = dbVal
                 }
             }
-
-            //self.sql = nil;
 
             return true
         } else {
@@ -880,1337 +1931,34 @@ class trackerObj: tObjBase {
             changedDateFrom = 0
         }
 
-        DBGLog(String("tObj saveData \(trackerName) date \(trackerDate)"))
+        DBGLog(String("tObj saveData \(trackerName) date \(trackerDate!)"))
 
-        var haveData = false
         let tdi = Int(trackerDate?.timeIntervalSince1970 ?? 0) // scary! added (int) cast 6.ii.2013 !!!
         var minPriv = BIGPRIV
 
         for vo in valObjTable {
             dbgNSAssert((vo.vid >= 0), "tObj saveData vo.vid <= 0")
             if VOT_INFO != vo.vtype || ("1" == vo.optDict["infosave"]) {
-                //if (vo.vtype != VOT_FUNC) { // no fn results data kept
+                
                 DBGLog(String("  vo \(vo.valueName)  id \(vo.vid) val \(vo.value)"))
-                if vo.value == "" {
-                    sql = String(format: "delete from voData where id = %ld and date = %d;", vo.vid, tdi)
-                } else {
-                    haveData = true
-                    minPriv = Int(min(vo.vpriv, minPriv))
-                    sql = String(format: "insert or replace into voData (id, date, val) values (%ld, %d,'%@');", vo.vid, tdi, rTracker_resource.toSqlStr(vo.value) ?? "")
-                }
-                toExecSql(sql:sql)
-
-                //}
+                minPriv = Int(min(vo.vpriv, minPriv))
+                insertTrackerVodata(vid: vo.vid, date: tdi, val: rTracker_resource.toSqlStr(vo.value), vo:vo)
+                
             }
         }
 
-        if haveData {
-            sql = String(format: "insert or replace into trkrData (date,minpriv) values (%d,%ld);", tdi, minPriv)
-            toExecSql(sql:sql)
-        } else {
-            sql = "select count(*) from voData where date=\(tdi);"
-            let r = toQry2Int(sql:sql)
-            if r == 0 {
-                sql = "delete from trkrData where date=\(tdi);"
-                toExecSql(sql:sql)
-            }
-        }
-
-        // cleanup empty values added 28 jan 2014
-        sql = "select count(*) from voData where val=''"
-        let ndc = toQry2Int(sql:sql)!
-        if 0 < ndc {
-            DBGWarn(String("deleting \(ndc) empty values from tracker \(super.toid)"))
-            sql = "delete from voData where val=''"
-            toExecSql(sql:sql)
-        }
-
+        sql = String(format: "insert or replace into trkrData (date,minpriv) values (%d,%ld);", tdi, minPriv)
+        toExecSql(sql:sql)
+        
+        // might have inserted blank voData or trkrData with no voData entries, so clean up
+        // confirm only matching trkrData and voData (and support) entries, no voData entries of ''
+        cleanDb()
+        
         setReminders()
-
-        //self.sql = nil;
     }
 
-    // MARK: -
-    //#pragma write tracker as rtrk or plist+csv for iTunes
-
-    func getTmpPath(_ ext: String) -> String {
-        // return URL for trackerName file with passed extension
-        guard let trackerName = trackerName else { return "" }
-        let fpatho = rTracker_resource.ioFilePath(nil, access: false, tmp: true)
-        try? FileManager.default.createDirectory(atPath: fpatho, withIntermediateDirectories: false, attributes: nil)
-        let fname = (rTracker_resource.sanitizeFileNameString(trackerName)) + ext
-        //NSString *fname = [ self.trackerName stringByAppendingString:extension];
-        let fpath = URL(fileURLWithPath: fpatho).appendingPathComponent(fname).path
-        return fpath
-    }
-
-    /*
-    func csvTmpPath() -> String? {
-        return getTmpPath(rTracker_resource.getRtcsvOutput() ? RTCSVext : CSVext)
-    }
-
-    func rtrkTmpPath() -> String? {
-        return getTmpPath(".rtrk")
-    }
-     */
     
-    func writeTmpCSV() -> URL? {
-        let fpath = getTmpPath(rTracker_resource.getRtcsvOutput() ? RTCSVext : CSVext)
-        FileManager.default.createFile(atPath: fpath, contents: nil, attributes: nil)
-        let nsfh = FileHandle(forWritingAtPath: fpath)
-        writeTrackerCSV(nsfh)
-        nsfh?.closeFile()
-
-        return URL(fileURLWithPath:fpath)
-    }
-
-    func writeTmpRtrk(_ withData: Bool) -> URL? {
-        var tData: [AnyHashable : Any] = [:]
-
-        if withData {
-            // save current trackerDate (NSDate->int)
-            let currDate = Int(trackerDate?.timeIntervalSince1970 ?? 0)
-            var nextDate = firstDate()
-
-            var ndx: Float = 1.0
-            let all = Float(getDateCount())
-
-            repeat {
-                _ = loadData(nextDate)
-                var vData: [AnyHashable : Any] = [:]
-                for vo in valObjTable {
-                    vData[String(format: "%ld", vo.vid)] = vo.value
-                    //DBGLog(@"genRtrk data: %@ for %@",vo.value,[NSString stringWithFormat:@"%d",vo.vid]);
-                }
-                tData["\(Int(trackerDate?.timeIntervalSinceReferenceDate ?? 0))"] = vData // copyItems: true
-
-                //DBGLog(@"genRtrk vData: %@ for %@",vData,self.trackerDate);
-                //DBGLog(@"genRtrk: tData= %@",tData);
-                rTracker_resource.setProgressVal(ndx / all)
-                ndx += 1.0
-                nextDate = postDate()
-            } while (nextDate != 0) // iterate through dates
-
-            // restore current date
-            _ = loadData(currDate)
-        }
-        // configDict not optional -- always need tid for load of data
-        let rtrkDict: [String: Any] = [
-            "tid": "\(self.toid)",
-            "trackerName": self.trackerName!,
-            "configDict": self.dictFromTO(),
-            "dataDict": tData
-        ]
-
-        let fp = getTmpPath(RTRKext)
-        if !(((rtrkDict as NSDictionary?)?.write(toFile: fp, atomically: true)) ?? false) {
-            DBGErr(String("problem writing file \(fp)"))
-            return nil
-        } else {
-            //[rTracker_resource protectFile:fp];
-        }
-
-        return URL(fileURLWithPath:fp)
-    }
-
-    func saveToItunes() -> Bool {
-        var result = true
-        var fname = "\(trackerName ?? "")_out.csv"
-
-        var fpath = rTracker_resource.ioFilePath(fname, access: true)
-        FileManager.default.createFile(atPath: fpath, contents: nil, attributes: nil)
-        let nsfh = FileHandle(forWritingAtPath: fpath)
-
-        //[nsfh writeData:[@"hello, world." dataUsingEncoding:NSUTF8StringEncoding]];
-
-        writeTrackerCSV(nsfh)
-        nsfh?.closeFile()
-
-
-        fname = "\(trackerName ?? "")_out.plist"
-        fpath = rTracker_resource.ioFilePath(fname, access: true)
-
-        if !(((dictFromTO() as NSDictionary?)?.write(toFile: fpath, atomically: true)) ?? false) {
-
-            DBGErr(String("problem writing file \(fname)"))
-            result = false
-            
-            /*
-            let foo = dictFromTO() as NSDictionary?
-            do {
-                let plistData = try PropertyListSerialization.data(fromPropertyList: (dictFromTO() as NSDictionary?), format: .xml, options: 0)
-                try plistData.write(to: URL(fileURLWithPath: fpath))
-            } catch {
-                print("Error writing plist to file: \(error)")
-            }
-             */
-
-        } else {
-            //[rTracker_resource protectFile:fpath];
-        }
-
-        //[nsfh release];
-        return result
-    }
-
-    func dictFromTO() -> [String : Any] {
-        var vodma: [[String:Any]] = []
-        for vo in valObjTable {
-            if let dict = vo.dictFromVO() {
-                vodma.append(dict)
-            }
-        }
-        let voda = vodma
-
-        var rdma: [[String:Any]] = []
-        for nr in reminders {
-            if let dict = nr.dictFromNR() {
-                rdma.append(dict)
-            }
-        }
-        let rda = rdma
-
-        return [
-            "tid": NSNumber(value: super.toid),
-            "optDict": optDict,
-            "reminders": rda,
-            "valObjTable": voda
-        ]
-
-    }
-
-    //- (NSDictionary *) genRtrk:(BOOL)withData;
-
-    // import data for a tracker -- direct in db so privacy not observed
-    func loadDataDict(_ dataDict: [String : [String : String]]) {
-        rTracker_resource.stashProgressBarMax(dataDict.count)
-
-        for dateIntStr in dataDict.keys {
-            let tdate = Date(timeIntervalSinceReferenceDate: TimeInterval(Double(dateIntStr)!))
-            let tdi = Int(tdate.timeIntervalSince1970)
-            let vdata = dataDict[dateIntStr]
-            var mp = BIGPRIV
-            for vids in vdata!.keys {
-                let vid = Int(vids)
-                let vo = getValObj(vid!)
-                //NSString *val = [vo.vos mapCsv2Value:[vdata objectForKey:vids]];
-                let val = vdata![vids]
-                let sql = String(format: "insert or replace into voData (id, date, val) values (%ld,%d,'%@');", vid!, tdi, rTracker_resource.toSqlStr(val)!)
-                toExecSql(sql:sql)
-
-                if (vo?.vpriv ?? 0) < mp {
-                    mp = vo?.vpriv ?? 0
-                }
-            }
-            let sql = String(format: "insert or replace into trkrData (date, minpriv) values (%d,%ld);", tdi, mp)
-            toExecSql(sql:sql)
-            rTracker_resource.bumpProgressBar()
-        }
-    }
-
-    // MARK: -
-    // MARK: read & write tracker data as csv
-
-    func csvSafe(_ instr: String?) -> String? {
-        var instr = instr
-        //instr = [instr stringByReplacingOccurrencesOfString:@"\n" withString:@" "];
-        instr = instr?.replacingOccurrences(of: "\n", with: "\r")
-        instr = instr?.replacingOccurrences(of: "\"", with: "\"\"")
-        instr = "\"\(instr ?? "")\""
-        if "\"(null)\"" == instr {
-            instr = "\"\""
-        }
-        return instr
-    }
-
-    func str(toDate str: String?) -> Date? {
-
-        return dateFormatter?.date(from: str ?? "")
-
-    }
-
-    func str(toDateOnly str: String?) -> Date? {
-
-        return dateOnlyFormatter?.date(from: str ?? "")
-
-    }
-
-    func date(toStr dat: Date?) -> String? {
-
-        //return [[self.dateFormatter stringFromDate:dat] stringByReplacingOccurrencesOfString:@" at " withString:@" "];
-        if let dat {
-            return dateFormatter?.string(from: dat)
-        }
-        return nil
-
-    }
-
-    func getDateCount() -> Int {
-        let sql = "select count(*) from trkrData where minpriv <= \(privacyValue);"
-        let rv = toQry2Int(sql:sql)!
-        //self.sql = nil;
-        return rv
-    }
-
-    func writeTrackerCSV(_ nsfh: FileHandle?) {
-
-        //[nsfh writeData:[self.trackerName dataUsingEncoding:NSUTF8StringEncoding]];
-
-        // write column titles
-
-        var outString = "\"\(TIMESTAMP_LABEL)\""
-        for vo in valObjTable {
-            dbgNSAssert((vo.vid >= 0), "tObj writeTrackerCSV vo.vid <= 0")
-            //DBGLog(@"wtxls:  vo %@  id %d val %@", vo.valueName, vo.vid, vo.value);
-            //[nsfh writeData:[vo.valueName dataUsingEncoding:NSUnicodeStringEncoding]];
-            if VOT_INFO != vo.vtype || ("1" == vo.optDict["infosave"]) {
-                outString = outString + ",\(csvSafe(vo.valueName) ?? "")"
-            }
-        }
-        outString = outString + "\n"
-        if let data = outString.data(using: .utf8) {
-            nsfh?.write(data)
-        }
-
-        if rTracker_resource.getRtcsvOutput() {
-            var haveChoice = false
-            outString = ""
-            for vo in valObjTable {
-                //DBGLog(@"vname= %@",vo.valueName);
-                if VOT_INFO != vo.vtype || ("1" == vo.optDict["infosave"]) {
-                    haveChoice = haveChoice || (vo.vtype == VOT_CHOICE)
-                    var voStr: String? = nil
-                    let vtypeNames = rTracker_resource.vtypeNames()[vo.vtype]
-                    voStr = String(format: "%@:%@:%ld", vtypeNames, (vo.vcolor > -1 ? rTracker_resource.colorNames()[vo.vcolor] : ""), vo.vid)
-                    
-                    outString = outString + ",\(csvSafe(voStr) ?? "")"
-                }
-            }
-            outString = outString + "\n"
-            if let data = outString.data(using: .utf8) {
-                nsfh?.write(data)
-            }
-            if haveChoice {
-                for i in 0..<CHOICES {
-                    outString = "\"\""
-                    for vo in valObjTable {
-                        //DBGLog(@"vname= %@",vo.valueName);
-                        if VOT_INFO != vo.vtype || ("1" == vo.optDict["infosave"]) {
-                            var voStr = ""
-                            if vo.vtype == VOT_CHOICE {
-                                voStr = ((vo.optDict)["c\(i)"]) ?? ""
-                                // got "" if no choice at this position, "" is valid place holder so write
-                            }
-                            outString = outString + ",\(csvSafe(voStr) ?? "")"
-                        }
-                    }
-                    outString = outString + "\n"
-                    if let data = outString.data(using: .utf8) {
-                        nsfh?.write(data)
-                    }
-                }
-            }
-        }
-
-
-        // save current trackerDate (NSDate->int)
-        let currDate = Int(trackerDate?.timeIntervalSince1970 ?? 0)
-        var nextDate = firstDate()
-
-        DBGLog(String("starting CSV output \(nextDate) to \(currDate)"))
-        var ndx: Float = 1.0
-        let all = Float(getDateCount())
-
-        repeat {
-            autoreleasepool {
-                //DBGLog(@"date= %d",nextDate);
-                _ = loadData(nextDate)
-                // write data - each vo gets routine to write itself -- function results too
-                outString = "\"\(date(toStr: trackerDate) ?? "")\""
-                for vo in valObjTable {
-                    if VOT_INFO != vo.vtype || ("1" == vo.optDict["infosave"]) {
-                        outString = outString + ","
-                        //if (VOT_CHOICE == vo.vtype) {
-                        if let val = vo.csvValue() {
-                            outString = outString + (csvSafe(val) ?? "")
-                        }
-                        //} else {
-                        //outString = [outString stringByAppendingString:[self csvSafe:vo.value]];
-                        //}
-                    }
-                }
-                outString = outString + "\n"
-                DBGLog(String("\(nextDate): \(outString)"))
-
-                if let data = outString.data(using: .utf8) {
-                    nsfh?.write(data)
-                }
-                rTracker_resource.setProgressVal(ndx / all)
-                ndx += 1.0
-                
-                nextDate = postDate()
-            }
-        } while (nextDate != 0) // iterate through dates
-
-        // restore current date
-        _ = loadData(currDate)
-    }
-
-    //- (void)applicationWillTerminate:(NSNotification *)notification;
-
-    // MARK: -
-    // MARK: read in from export
-
-    @objc func receiveRecord(_ aRecord: [String : String]) {
-        DBGLog(String("input csv: \(aRecord)"))
-        guard let tsStr = aRecord[TIMESTAMP_KEY] else {
-            csvReadFlags |= CSVNOTIMESTAMP
-            return
-        }
-        var sql: String
-
-        var ts: Date? = nil
-        var its = 0
-
-        if "" != tsStr {
-            ts = str(toDate: tsStr)
-            if nil == ts {
-                // try without time spec
-                ts = str(toDateOnly: aRecord[TIMESTAMP_KEY])
-            }
-            if nil == ts {
-                csvReadFlags |= CSVNOREADDATE
-                if nil == csvProblem {
-                    csvProblem = tsStr
-                }
-                DBGLog(String("failed reading timestamp \(tsStr)"))
-                return
-            }
-            trackerDate = ts
-            DBGLog(String("ts str: \(aRecord[TIMESTAMP_KEY]!)   ts read: \(ts!)"))
-            its = Int(ts?.timeIntervalSince1970 ?? 0)
-        }
-
-        var gotData = false
-        var mp = BIGPRIV
-        for (key, val) in aRecord {
-            DBGLog(String("processing csv record: key= \(key) value= \(val)"))
-            if key != TIMESTAMP_KEY {
-                // not timestamp
-
-                // get voName and rank from aRecord item's dictionary key
-
-                var voName: String
-                var voRank: Int
-                var valobjID: Int = 0
-                var valobjPriv: Int = -1
-                var valobjType: Int = -1
-                let csvha: [String]? = csvHeaderDict[key]
-                if nil == csvha {
-                    let keyComponents = key.components(separatedBy: ":")
-                    (voName, voRank) = (keyComponents[0], Int(keyComponents[1]) ?? 0)
-                    
-                    sql = "select id, priv, type from voConfig where name='\(rTracker_resource.toSqlStr(voName) ?? "")';"
-                    (valobjID, valobjPriv, valobjType) = toQry2IntIntInt(sql: sql)!
-                    if its != 0 {  // if no timestamp this is config data, so do not put in csvHeaderDict yet
-                        csvHeaderDict[key] = [voName, String(voRank), String(valobjID), String(valobjPriv), String(valobjType)]
-                    }
-                } else {
-                    voName = csvha![0]
-                    voRank = Int(csvha![1])!
-                    valobjID = Int(csvha![2])!
-                    valobjPriv = Int(csvha![3])!
-                    valobjType = Int(csvha![4])!
-                }
-
-                DBGLog(String("name=\(voName) rank=\(voRank) val/config=\(val) id=\(valobjID) priv=\(valobjPriv) type=\(valobjType)"))
-
-                var configuredValObj = false
-                if 0 == its {
-                    // no timestamp for tracker config data, but still use variable settings from nil == csvha case above
-                    // voType : color : vid
-                    let valComponents = val.components(separatedBy: ":")
-                    let c = valComponents.count
-                    let inVot = valComponents[0]
-                    var inVcolor: String?
-                    var inVid = 0
-                    if c>1 {
-                        inVcolor = valComponents[1]
-                        if c > 2 {
-                            inVid = Int(valComponents[2])!
-                        }
-                    }
-
-                    if (0 == valobjID) {
-                        // no vo exists with this name so create and configure (reading rtcsv)
-
-                        valobjID = createVOinDb(voName, inVid: inVid)
-                        csvReadFlags |= CSVCREATEDVO
-                        //}
-                        configuredValObj = configVOinDb(valobjID, vots: inVot, vocs: inVcolor, rank: voRank)
-                        if configuredValObj {
-                            csvReadFlags |= CSVCONFIGVO
-                        }
-                        DBGLog(String("created new / updated valObj with id=\(valobjID) name= \(voName) type= \(inVot) color= \(inVcolor ?? "not set") rank = \(voRank)"))
-                        
-                        let vo = valueObj(fromDB: self, in_vid: valobjID)
-                        valObjTable.append(vo)
-
-                    } else if (inVid == valobjID) {
-                        // input vid matches database valobjid for this name, mark as already configured (processing rtcsv line with :'s)
-                        configuredValObj = true
-                    }
-                }
-                //[idDict setObject:[NSNumber numberWithInt:valobjID] forKey:key];
-
-                if !configuredValObj {
-                    var val2Store = rTracker_resource.toSqlStr(val)
-
-                    if "" != val2Store {
-                        // could still be config data for choice or bool, timestamp not needed
-                        if (VOT_CHOICE == valobjType) || (VOT_BOOLEAN == valobjType) {
-                            if let vo = getValObj(valobjID) {
-                                val2Store = vo.vos!.mapCsv2Value(val2Store!) // updates dict val for bool; for choice maps to choice number, adds choice to dict if needed
-                                saveVoOptdict(vo)
-                            }
-                        }
-                        // rtm TODO: should add function def string to rtcsv data
-                    }
-                    if its != 0 {
-                        // if have date - then not config data
-                        if "" == val2Store {
-                            sql = String(format: "delete from voData where id=%ld and date=%d", valobjID, its) // added jan 2014
-                        } else {
-                            if valobjPriv < mp {
-                                mp = valobjPriv // only fields with data
-                            }
-                            gotData = true
-                            sql = String(format: "insert or replace into voData (id, date, val) values (%ld,%d,'%@');", valobjID, its, val2Store!)
-                        }
-                        toExecSql(sql:sql)
-
-                        csvReadFlags |= CSVLOADRECORD
-                    }
-                }
-            }
-        }
-
-        if its != 0 {
-            if gotData {
-                sql = String(format: "insert or replace into trkrData (date, minpriv) values (%d,%ld);", its, mp)
-                toExecSql(sql:sql)
-            }
-        }
-
-        //[rTracker_resource bumpProgressBar];
-    }
-
-    // MARK: -
-    //#pragma save / load / remove temp tracker data file
-    // save temp version of data only
-
-    func saveTempTrackerData() {
-        var saveData: [AnyHashable] = []
-        for vo in valObjTable {
-            if VOT_FUNC != vo.vtype {
-                saveData.append(vo.value)
-            }
-        }
-        var fp = getTmpPath(TmpTrkrData)
-        if !((saveData as NSArray).write(toFile: fp, atomically: true)) {
-            DBGErr(String("problem writing file \(fp)"))
-        } else {
-            //[rTracker_resource protectFile:fp];
-        }
-
-        var saveNames: [AnyHashable] = []
-        for vo in valObjTable {
-            if VOT_FUNC != vo.vtype {
-                saveNames.append(vo.valueName ?? "")
-            }
-        }
-        fp = getTmpPath(TmpTrkrNames)
-        if !((saveNames as NSArray).write(toFile: fp, atomically: true)) {
-            DBGErr(String("problem writing file \(fp)"))
-        } else {
-            //[rTracker_resource protectFile:fp];
-        }
-    }
-
-    // read temp version of data only
-    func loadTempTrackerData() -> Bool {
-
-        let checkNames = NSArray(contentsOfFile: getTmpPath(TmpTrkrNames)) as? [AnyHashable]
-        if 0 == (checkNames?.count ?? 0) {
-            return false
-        }
-        var enumerator = (checkNames as NSArray?)?.objectEnumerator()
-        for vo in valObjTable {
-            if VOT_FUNC != vo.vtype {
-                if vo.valueName != enumerator?.nextObject() as? String {
-                    removeTempTrackerData()
-                    return false
-                }
-            }
-        }
-
-        let loadData = NSArray(contentsOfFile: getTmpPath(TmpTrkrData)) as? [AnyHashable]
-        if 0 == (loadData?.count ?? 0) {
-            return false
-        }
-        enumerator = (loadData as NSArray?)?.objectEnumerator()
-        for vo in valObjTable {
-            if VOT_FUNC != vo.vtype {
-                vo.value = enumerator?.nextObject() as? String ?? ""
-            }
-        }
-        return true
-    }
-
-    func removeTempTrackerData() {
-        _ = rTracker_resource.deleteFile(atPath: getTmpPath(TmpTrkrData))
-        _ = rTracker_resource.deleteFile(atPath: getTmpPath(TmpTrkrNames))
-    }
-
-    // MARK: -
-    // MARK: modify tracker object <-> db
-
-    func resetData() {
-        trackerDate = nil
-        trackerDate = Date()
-
-        for vo in valObjTable {
-            vo.resetData()
-            //[vo.value setString:@""];
-        }
-    }
-
-    func updateValObj(_ valObj: valueObj) -> Bool {
-
-        //NSEnumerator *enumer = [self.valObjTable objectEnumerator];
-        //valueObj *vo;
-        //while ( vo = (valueObj *) [enumer nextObject]) {
-        for vo in valObjTable {
-            if vo.vid == valObj.vid {
-                //*vo = *valObj; // indirection cannot be to an interface in non-fragile ABI
-                vo.vtype = valObj.vtype
-                vo.valueName = valObj.valueName // property retain should keep these all ok w/o leaks
-                //[vo.valueName setString:valObj.valueName];  // valueName not mutableString
-                vo.value = valObj.value
-                vo.display = valObj.display
-                return true
-            }
-        }
-        return false
-    }
-
-    func rescanMaxLabel() {
-
-        var lsize = CGSize(width: 0.0, height: 0.0)
-
-        //NSEnumerator *enumer = [self.valObjTable objectEnumerator];
-        //valueObj *vo;
-        //while ( vo = (valueObj *) [enumer nextObject]) {
-        for vo in valObjTable {
-            let tsize = vo.getLabelSize()
-            //DBGLog(@"rescanMaxLabel: name= %@ w=%f  h= %f",vo.valueName,tsize.width,tsize.height);
-            if (VOT_INFO != vo.vtype) && (VOT_CHOICE != vo.vtype) && (VOT_SLIDER != vo.vtype) {
-
-                if tsize.width > lsize.width {
-                    lsize = tsize
-                    // bug in xcode 4.2
-                    //if (lsize.width == lsize.height) {
-                    //    lsize.height = 18.0f;
-                    //}
-                }
-            }
-            if tsize.height > lsize.height {
-                // still need height for trackers with only choices and/or sliders
-                lsize.height = tsize.height
-            }
-
-            /*
-                     if (   (VOT_INFO == vo.vtype)
-                     || (VOT_CHOICE == vo.vtype)
-                     || (VOT_SLIDER == vo.vtype)
-                     ) {
-                     lsize.width = 0.0;  // don't include info, choice, slider labels in maxWidth calculation
-                     }
-                     */
-        }
-        let kww5 = ceil(rTracker_resource.getKeyWindowWidth() / 3.0)
-        if lsize.width < kww5 {
-            lsize.width = kww5
-        }
-
-        let screenSize = UIScreen.main.bounds.size
-
-        //#define PrefBodyFont [UIFont preferredFontForTextStyle:UIFontTextStyleBody]
-        //CGFloat maxWidth = screenSize.width - (2*MARGIN) - [@"<enter number>" sizeWithAttributes:@{NSFontAttributeName: [UIFont systemFontOfSize:20.0]}].width;
-        let maxWidth = screenSize.width - (2 * MARGIN) - "<enter number>".size(withAttributes: [
-            NSAttributedString.Key.font: UIFont.preferredFont(forTextStyle: .body)
-        ]).width
-        if lsize.width > maxWidth {
-            lsize.width = maxWidth
-        }
-
-        //DBGLog(@"lsize.width %f maxWidth %f ss.width %f",lsize.width,maxWidth,screenSize.width);
-        //DBGLog(@"maxLabel set: width %f  height %f",lsize.width, lsize.height);
-
-        //[self.optDict setObject:[NSNumber numberWithFloat:lsize.width] forKey:@"width"];
-        //[self.optDict setObject:[NSNumber numberWithFloat:lsize.height] forKey:@"height"];
-
-        maxLabel = lsize
-    }
-
-    func addValObj(_ valObj: valueObj) {
-        DBGLog(String("addValObj to \(trackerName) id= \(super.toid) : adding _\(valObj.valueName)_ id= \(Int(valObj.vid)), total items now \(UInt(valObjTable.count))"))
-
-        // check if toid already exists, then update
-        if !updateValObj(valObj) {
-            valObjTable.append(valObj)
-        }
-
-        rescanMaxLabel()
-    }
-
-    func deleteTrackerDB() {
-        deleteTDb()
-    }
-
-    func deleteTrackerRecordsOnly() {
-        var sql = "delete from trkrData;"
-        toExecSql(sql:sql)
-        sql = "delete from voData;"
-        toExecSql(sql:sql)
-        //self.sql = nil;
-    }
-
-    func deleteCurrEntry() {
-        let eDate = Int(trackerDate?.timeIntervalSince1970 ?? 0)
-        var sql = "delete from trkrData where date = \(eDate);"
-        toExecSql(sql:sql)
-        sql = "delete from voData where date = \(eDate);"
-        toExecSql(sql:sql)
-
-        //self.sql = nil;
-    }
-
-    //load reminder data into trackerObj array from db
-    func loadReminders() -> notifyReminder? {
-        reminders.removeAll()
-        //var rids: [AnyHashable] = []
-        let sql = "select rid from reminders order by rid"
-        let rids = toQry2AryI(sql: sql)
-        DBGLog(String("toid \(super.toid) has \(rids.count) reminders in db"))
-        if 0 < rids.count {
-            for rid in rids {
-                let tnr = notifyReminder(NSNumber(value:rid), to: self)
-                reminders.append(tnr)
-            }
-            reminderNdx = 0
-            return reminders[0]
-        } else {
-            reminderNdx = -1
-            return nil
-        }
-    }
-
-    func reminders2db() {
-        var sql = "delete from reminders where rid not in ("
-        var started = false
-        for nr in reminders {
-            let fmt = started ? ",%d" : "%d"
-            sql = sql + String(format: fmt, nr.rid)
-            started = true
-        }
-        sql = sql + ")"
-        toExecSql(sql:sql)
-        for nr in reminders {
-            nr.save(self)
-        }
-    }
-
-    func haveNextReminder() -> Bool {
-        return reminderNdx < (reminders.count - 1)
-    }
-
-    func nextReminder() -> notifyReminder? {
-        if haveNextReminder() {
-            reminderNdx += 1
-            return reminders[reminderNdx]
-        }
-        return nil
-    }
-
-    func havePrevReminder() -> Bool {
-        return 0 < reminderNdx
-    }
-
-    func prevReminder() -> notifyReminder? {
-        if havePrevReminder() {
-            reminderNdx -= 1
-            return reminders[reminderNdx]
-        }
-        return nil
-    }
-
-    func haveCurrReminder() -> Bool {
-        return -1 != reminderNdx
-    }
-
-    func currReminder() -> notifyReminder? {
-        if haveCurrReminder() {
-            return reminders[reminderNdx]
-        }
-        return nil
-    }
-
-    func deleteReminder() {
-        if haveCurrReminder() {
-            //[(notifyReminder*) [self.reminders objectAtIndex:self.reminderNdx] delete:self];
-            reminders.remove(at: reminderNdx)
-            let last = reminders.count - 1
-            if reminderNdx > last {
-                reminderNdx = last
-            }
-        }
-    }
-
-    func add(_ newNR: notifyReminder?) {
-        if let newNR {
-            reminders.append(newNR)
-        }
-        if -1 == reminderNdx {
-            reminderNdx = 0
-        }
-    }
-
-    func save(_ saveNR: notifyReminder?) {
-        if 0 == saveNR?.rid {
-            saveNR?.rid = getUnique() // problem: this is only unique for this tracker, iOS UNUserNotificationCenter needs unique id for rTracker - use tid-rid
-            reminderNdx += 1
-        }
-        if 0 == saveNR?.saveDate {
-            saveNR?.saveDate = Int(Date().timeIntervalSince1970)
-        } else {
-            DBGLog(String("saveDate says \(Date(timeIntervalSince1970: TimeInterval(saveNR?.saveDate ?? 0)))"))
-        }
-        //[saveNR save:self];
-        if reminderNdx == reminders.count {
-            reminders.append(saveNR!)
-        } else {
-            reminders[reminderNdx] = saveNR!  // .setObject(saveNR, atIndexedSubscript: reminderNdx)
-        }
-
-
-        #if REMINDERDBG
-        /*
-        let today = Date()
-        let gregorian = Calendar(identifier: .gregorian)
-        // setReminder(saveNR, today: today, gregorian: gregorian)
-         */
-        #endif
-    }
-
-    func initReminderTable() {
-        let sql = "create table if not exists reminders (rid int, monthDays int, weekDays int, everyMode int, everyVal int, start int, until int, flags int, times int, msg text, tid int, vid int, saveDate int, soundFileName text, unique(rid) on conflict replace)"
-        toExecSql(sql:sql)
-        // assume all old databsese updated by now.
-        //sql = @"alter table reminders add column saveDate int";  // because versions released before reminders enabled but this was still called
-        //[self toExecSqlIgnErr:sql];
-        //sql = @"alter table reminders add column soundFileName text";  // because versions released before reminders enabled but this was still called
-        //[self toExecSqlIgnErr:sql];
-        //sql = nil;
-    }
-
-    // from ios docs date and time programming guide - Determining Temporal Differences
-    func unitsWithinEra(from startDate: Date, to endDate: Date, calUnit: Calendar.Component, calendar: Calendar) -> Int {
-        let startDay = calendar.ordinality(of: calUnit, in: .era, for: startDate) ?? 0
-        let endDay = calendar.ordinality(of: calUnit, in: .era, for: endDate) ?? 0
-        return endDay - startDay
-    }
-
-    func weekMonthDaysIsToday(_ nr: notifyReminder?, todayComponents: DateComponents?) -> Bool {
-        if (0 != nr?.weekDays) && (0 == (Int(nr?.weekDays ?? 0) & (0x01 << ((todayComponents?.weekday ?? 0) - 1)))) {
-            // weekday mode but not today
-            return false
-        } else if (0 != nr?.monthDays) && (0 == (Int(nr?.monthDays ?? 0) & (0x01 << ((todayComponents?.day ?? 0) - 1)))) {
-            // monthday mode but not today
-            return false
-        }
-        return true
-    }
-    
-    func weekDaysAdjustedDate(baseDate: Date, weekDayBits: UInt8, timeSet: [Int]) -> Date? {
-        let calendar = Calendar.current
-
-        var dayAdd = 0
-        while dayAdd < 8 {
-            var components = calendar.dateComponents([.year, .month, .day], from: baseDate)
-            components.day! += dayAdd
-
-            if let adjustedDate = calendar.date(from: components) {
-                let updatedComponents = calendar.dateComponents([.weekday], from: adjustedDate)
-                
-                //print(updatedComponents)
-                if (weekDayBits & (0x01 << (updatedComponents.weekday! - 1))) != 0 {
-                    for startInt in timeSet {
-                        let startHour = startInt / 60
-                        let startMinute = startInt % 60
-
-                        components = calendar.dateComponents([.year, .month, .day], from: adjustedDate)
-                        components.hour = startHour
-                        components.minute = startMinute
-                        components.second = 0
-                        
-                        if let newDate = calendar.date(from: components), newDate > baseDate {
-                            return newDate
-                        }
-                    }
-                }
-            }
-            
-            dayAdd += 1
-        }
-
-        return nil
-    }
-
-
-    func monthDaysAdjustedDate(baseDate: Date, monthDayBits: UInt32, timeSet: [Int]) -> Date? {
-        let calendar = Calendar.current
-
-        //var nextDate: Date?
-        var monthAdd = 0
-        while monthAdd < 2 {
-            for day in 1...31 {
-                if (monthDayBits & (0x01 << (day - 1))) != 0 {
-                    for startInt in timeSet {
-                        let startHour = startInt / 60
-                        let startMinute = startInt % 60
-
-                        var components = calendar.dateComponents([.year, .month, .day], from: baseDate)
-                        components.month! += monthAdd
-                        components.hour = startHour
-                        components.minute = startMinute
-                        components.second = 0
-                        components.day = day
-                        
-                        guard let newDate = calendar.date(from: components) else { continue }
-                        let checkMonth = components.month! > 12 ? components.month! - 12 : components.month!
-                        if calendar.component(.month, from: newDate) != checkMonth {
-                            // month rolled over without monthAdd, that's wrong
-                            continue
-                        }
-                        
-                        if newDate > baseDate {
-                            // nextDate = newDate
-                            // break
-                            return newDate
-                        }
-                    }
-                }
-            }
-            monthAdd += 1
-        }
-
-        //return nextDate
-        return nil
-    }
-
-    //
-    // convert options set in notifyReminder to single target datetime for next reminder to fire
-    //
-    // 3rd 5th 7th 10th day of each month
-    // every n hrs / days / weeks / months  <-- not directly supported but 'delay' below uses same values, so variable refer to 'every'
-    // n mins / hrs / days / weeks / months delay from last save
-    //  if days / weeks / months can set at time
-
-    func getNextreminderDate(_ nr: notifyReminder?) -> Date? {
-        guard nr != nil else {
-            return nil
-        }
-        var sql: String
-        // ensure we can set notifications or all pointless
-        rTracker_resource.setNotificationsEnabled()
-        
-        // get single start time or list of times between start/until and equal interfals or random
-        var timeSet:[Int] = []
-        if !nr!.untilEnabled {
-            timeSet.append(nr!.start)
-        } else {
-            if nr!.timesRandom {  // random
-                var step = (nr!.until - nr!.start) / nr!.times
-                step = step == 0 ? 1 : step
-                var fin = nr!.start
-                while fin < nr!.until {
-                    let rnd = Double.random(in: 0...1)
-                    let adjust = Int( d(step) * rnd)
-                    timeSet.append(fin + adjust)
-                    fin += step
-                }
-            } else {  // equal intervals
-                var step = (nr!.until - nr!.start) / (nr!.times - 1)
-                step = step == 0 ? 1 : step
-                var fin = nr!.start
-                while fin <= nr!.until {
-                    timeSet.append(fin)
-                    fin += step
-                }
-            }
-            if timeSet.count != nr!.times {
-                DBGWarn("reminders count [\(nr!.timesRandom ? "random" : "equal intervals")] wrong \(timeSet.count) should be \(nr!.times)")
-            }
-        }
-
-        // start from now
-        let todayNow = Date()
-        var baseDate = todayNow
-        
-        // adjust forward if there is a saved 'start from' date
-        let saveDate = Date(timeIntervalSince1970: TimeInterval(nr!.saveDate)) // default to when reminder created, but will be startFrom if set
-        baseDate = saveDate > baseDate ? saveDate : baseDate
-
-        // delay from last tracker/valobj entry
-        if nr?.fromLast ?? false {
-            var lastEntryDate:Date = Date.distantPast
-            
-            if nr?.vid != 0 {
-                sql = String(format: "select date from voData where id=%ld order by date desc limit 1", Int(nr?.vid ?? 0))
-            } else {
-                sql = "select date from voData order by date desc limit 1"
-            }
-            let lastInt = toQry2Int(sql:sql)!
-            if lastInt != 0 {
-                lastEntryDate = Date(timeIntervalSince1970: TimeInterval(lastInt))
-                var addUnits = nr?.everyVal ?? 0
-                let evm = nr?.everyMode  // default is minutes
-                switch(evm) {
-                case UInt8(EV_WEEKS):
-                    addUnits *= 7
-                    fallthrough
-                case UInt8(EV_DAYS):
-                    addUnits *= 24
-                    fallthrough
-                case UInt8(EV_HOURS):
-                    addUnits *= 60
-                    lastEntryDate = Calendar.current.date(byAdding: .minute, value: addUnits, to: lastEntryDate) ?? lastEntryDate
-                case UInt8(EV_MONTHS):
-                    lastEntryDate = Calendar.current.date(byAdding: .month, value: addUnits, to: lastEntryDate) ?? lastEntryDate
-                default:
-                    break
-                }
-            }
-            baseDate = lastEntryDate > baseDate ? lastEntryDate : baseDate
-            
-            if let wdb = nr?.weekDays {
-                //  alternate to delay above is set of calendar days
-                if let nextWeekDays = weekDaysAdjustedDate(baseDate: baseDate, weekDayBits: wdb, timeSet: timeSet) {
-                    baseDate = nextWeekDays > baseDate ? nextWeekDays : baseDate
-                }
-            }
-                
-        } else if let mdb = nr?.monthDays {
-            //  alternate to delay above is set of calendar days
-            if let nextMonthDays = monthDaysAdjustedDate(baseDate: baseDate, monthDayBits: mdb, timeSet: timeSet) {
-                baseDate = nextMonthDays > baseDate ? nextMonthDays : baseDate
-            }
-        }
-        
-        return baseDate > todayNow ? baseDate : nil
-    }
-    
-    func setReminder(_ nr: notifyReminder?) {
-        if let nextDate = getNextreminderDate(nr) {
-            nr?.schedule(nextDate)
-            DBGLog(String("finish setReminder targDate= \(DateFormatter.localizedString(from: nextDate, dateStyle: .full, timeStyle: .short))  now= \(DateFormatter.localizedString(from: Date(), dateStyle: .full, timeStyle: .short))"))
-        }
-        DBGLog(String("done "))
-
-    }
-
-    //
-    // remove all reminders set for this tracker.
-    //
-    // with change from UILocalNotification to UNNotification, could be more efficient
-    // - just delete each matching notification with matching rid
-    // or
-    // - rely on setting notification with same ID updating previous notification
-    //
-    // but keeping old algorithm seems more robust against database being out of sync with previously set reminders
-    // and would mean more code changes elsewhere.
-    //
-
-    func clearScheduledReminders() {
-        let center = UNUserNotificationCenter.current()
-        //NSMutableArray *toRemove = [notifyReminder getRidArray:center tid:self.toid];
-        notifyReminder.useRidArray(center, tid: super.toid, callback: { toRemove in
-            let rmIdStrs = toRemove.map { "\(super.toid)-\($0)" }
-            center.removePendingNotificationRequests(withIdentifiers: rmIdStrs)
-            DBGLog("removed identifiers \(rmIdStrs)")
-        })
-    }
-
-    func setReminders() {
-
-        // delete all reminders for this tracker
-        clearScheduledReminders()
-        // create unUserNotif here with access to nr data and tracker data
-
-        _ = loadReminders()
-        for nr in reminders {
-            if nr.reminderEnabled {
-                setReminder(nr)
-            }
-        }
-        //[gregorian release];
-    }
-
-    func confirmReminders() {
-
-        let center = UNUserNotificationCenter.current()
-        //NSMutableArray *ridSet = [notifyReminder getRidArray:center tid:self.toid];
-        notifyReminder.useRidArray(center, tid: super.toid, callback: { [self] ridSet in
-            _ = loadReminders()
-            for nr in reminders {
-                if nr.reminderEnabled && !(ridSet.contains( String(nr.rid))) {
-                    //[self setReminder:nr today:today gregorian:gregorian];
-                    setReminder(nr)
-                }
-            }
-        })
-        //[gregorian release];
-    }
-
-    func enabledReminderCount() -> Int {
-        var c = 0
-
-        _ = loadReminders()
-        for nr in reminders {
-            if nr.reminderEnabled {
-                c += 1
-            }
-        }
-
-        return c
-    }
-
-    // MARK: -
-    // MARK: query tracker methods
-
-    func dateNearest(_ targ: Int) -> Int {
-        var sql = String(format: "select date from trkrData where date <= %ld and minpriv <= %d order by date desc limit 1;", targ, privacyValue)
-        var rslt = toQry2Int(sql:sql)!
-        if 0 == rslt {
-            sql = String(format: "select date from trkrData where date > %ld and minpriv <= %d order by date desc limit 1;", targ, privacyValue)
-            rslt = toQry2Int(sql:sql)!
-        }
-        //self.sql = nil;
-        return rslt
-    }
-
-    func prevDate() -> Int {
-        let sql = "select date from trkrData where date < \(Int(trackerDate?.timeIntervalSince1970 ?? 0)) and minpriv <= \(privacyValue) order by date desc limit 1;"
-        let rslt = toQry2Int(sql:sql)!
-        DBGLog(String("curr: \(trackerDate) prev: \(Date(timeIntervalSince1970: TimeInterval(rslt)))"))
-        //self.sql = nil;
-        return rslt
-    }
-
-    func postDate() -> Int {
-        let sql = "select date from trkrData where date > \(Int(trackerDate?.timeIntervalSince1970 ?? 0)) and minpriv <= \(privacyValue) order by date asc limit 1;"
-        let rslt = toQry2Int(sql:sql)!
-        //self.sql = nil;
-        return rslt
-    }
-
-    func lastDate() -> Int {
-        let sql = "select date from trkrData where minpriv <= \(privacyValue) order by date desc limit 1;"
-        let rslt = toQry2Int(sql:sql)!
-        //self.sql = nil;
-        return rslt
-    }
-
-    func firstDate() -> Int {
-        let sql = "select date from trkrData where minpriv <= \(privacyValue) order by date asc limit 1;"
-        let rslt = toQry2Int(sql:sql)!
-        //self.sql = nil;
-        return rslt
-    }
-
-    func voGetName(forVID vid: Int) -> String? {
-        for vo in valObjTable {
-            if vo.vid == vid {
-                return vo.valueName
-            }
-        }
-        DBGLog(String("voGetNameForVID \(vid) failed"))
-        //return [NSString stringWithFormat:@"vid %d not found",vid];
-        return "not configured yet"
-    }
-
-    func voGetType(forVID vid: Int) -> Int {
-        for vo in valObjTable {
-            if vo.vid == vid {
-                return vo.vtype
-            }
-        }
-        DBGLog(String("voGetNameForVID \(vid) failed"))
-        //return [NSString stringWithFormat:@"vid %d not found",vid];
-        return -1
-    }
-
-    /*  precludes musltiple vo with same name
-    - (NSInteger) voGetVIDforName:(NSString *)vname {
-    	for (valueObj *vo in self.valObjTable) {
-    		if ([vo.valueName isEqualToString:vname])
-    			return vo.vid;
-    	}
-    	DBGLog(@"voGetVIDNameForName failed for name %@",vname);
-    	//return [NSString stringWithFormat:@"vid %d not found",vid];
-        return 0;
-    }<#(NSUInteger)#>
-    */
-
-    func updateVIDinFns(_ old: Int, new: Int) {
-        let oldstr = String(format: "%ld", old)
-        let newstr = String(format: "%ld", new)
-        for vo in valObjTable {
-            if VOT_FUNC == vo.vtype {
-                var fnstr = vo.optDict["func"]
-
-                var fMarray: [String]? = nil
-                if let componentsSeparated = fnstr?.components(separatedBy: " ") {
-                    fMarray = componentsSeparated
-                }
-                var c: Int
-                c = fMarray?.count ?? 0
-                for i in 0..<c {
-                    if oldstr == fMarray?[i] {
-                        fMarray?[i] = newstr
-                    }
-                }
-                fnstr = fMarray?.joined(separator: " ")
-                vo.optDict["func"] = fnstr
-
-
-                let sql = String(format: "update voInfo set val='%@' where id=%ld and field='func'", fnstr ?? "", vo.vid) // keep consistent
-                toExecSql(sql:sql)
-            }
-        }
-
-    }
-
-    func voVIDisUsed(_ vid: Int) -> Bool {
-        for vo in valObjTable {
-            if vo.vid == vid {
-                return true
-            }
-        }
-        return false
-    }
-
-    func voUpdateVID(_ vo: valueObj?, newVID: Int) {
-
-        if vo?.vid == newVID {
-            return
-        }
-
-        for tvo in valObjTable {
-            if tvo.vid == newVID {
-                voUpdateVID(tvo, newVID: getUnique())
-            }
-        }
-
-        // need to update at least voData, will write voInfo, voConfing out later but lets stay consistent
-        var sql = String(format: "update voData set id=%ld where id=%ld", newVID, Int(vo?.vid ?? 0))
-        toExecSql(sql:sql)
-        sql = String(format: "update voInfo set id=%ld where id=%ld", newVID, Int(vo?.vid ?? 0))
-        toExecSql(sql:sql)
-        sql = String(format: "update voConfig set id=%ld where id=%ld", newVID, Int(vo?.vid ?? 0))
-        toExecSql(sql:sql)
-        sql = String(format: "update reminders set vid=%ld where vid=%ld", newVID, Int(vo?.vid ?? 0))
-        toExecSql(sql:sql)
-
-        //self.sql = nil;
-
-
-        updateVIDinFns(vo?.vid ?? 0, new: newVID)
-        DBGLog(String("changed \(Int(vo?.vid ?? 0)) to \(newVID)"))
-        vo?.vid = newVID
-    }
-
-    func voHasData(_ vid: Int) -> Bool {
-        let sql = "select count(*) from voData where id=\(vid);"
-        let rslt = toQry2Int(sql:sql)
-        //self.sql = nil;
-
-        if rslt == 0 {
-            return false
-        }
-        return true
-    }
-
-    func checkData() -> Bool {
-        // does a contained valObj have stored data?
-        for vo in valObjTable {
-            if voHasData(vo.vid) {
-                return true
-            }
-        }
-        return false
-    }
-
-    func hasData() -> Bool {
-        // is there a date entry in trkrData matching current trackerDate ?
-        let sql = "select count(*) from trkrData where date=\(Int(trackerDate?.timeIntervalSince1970 ?? 0))"
-        let r = toQry2Int(sql:sql)
-        //self.sql = nil;
-        return r != 0
-    }
-
-    func countEntries() -> Int {
-        let sql = "select count(*) from trkrData;"
-        let r = toQry2Int(sql:sql)!
-        //self.sql = nil;
-        return r
-    }
-
-    func noCollideDate(_ ptestDate: Int) -> Int {
-        var going = true
-        var sql: String
-        var testDate = ptestDate
-        while going {
-            sql = "select count(*) from trkrData where date=\(testDate)"
-            if toQry2Int(sql:sql) == 0 {
-                going = false
-            } else {
-                testDate += 1
-            }
-        }
-        //self.sql = nil;
-        return testDate
-    }
-
-    func change(_ newDate: Date?) {
-        if 0 == changedDateFrom {
-            changedDateFrom = Int(trackerDate?.timeIntervalSince1970 ?? 0)
-        }
-        let ndi = noCollideDate(Int(newDate?.timeIntervalSince1970 ?? 0))
-        //int odi = (int) [self.trackerDate timeIntervalSince1970];
-        //self.sql = [NSString stringWithFormat:@"update trkrData set date=%d where date=%d;",ndi,odi];
-        //[self toExecSql:sql];
-        //self.sql = [NSString stringWithFormat:@"update voData set date=%d where date=%d;",ndi,odi];
-        //[self toExecSql:sql];
-        //self.sql=nil;
-        trackerDate = Date(timeIntervalSince1970: TimeInterval(ndi)) // might have changed to avoid collision
-    }
-
     // MARK: value data updated event handling
-
-    // handle rtValueUpdatedNotification
-    // sends rtTrackerUpdatedNotification
 
     @objc func trackerUpdated(_ n: Notification?) {
         #if DEBUGLOG
@@ -2235,11 +1983,9 @@ class trackerObj: tObjBase {
 
         let newVO = valueObj(parentOnly: srcVO.parentTracker)
         newVO.vid = getUnique()
-        //newVO.parentTracker = srcVO.parentTracker
+
         newVO.vtype = srcVO.vtype
         newVO.valueName = srcVO.valueName
-        //newVO.valueName = [[NSString alloc] initWithString:srcVO.valueName];  
-        //[newVO.valueName release];
 
         for (key, val) in srcVO.optDict {
             newVO.optDict[key] = val
@@ -2252,61 +1998,21 @@ class trackerObj: tObjBase {
     // MARK: utility methods
 
     func describe() {
+#if DEBUGLOG
         DBGLog(String("tracker id \(super.toid) name \(trackerName ?? "") dbName \(dbName ?? "")"))
         DBGLog(
             String("db ver \(optDict["rtdb_version"] ?? "") fn ver \(optDict["rtfn_version"] ?? "") created by rt ver \(optDict["rt_version"] ?? "") build \(optDict["rt_build"] ?? "")"))
-        //NSEnumerator *enumer = [self.valObjTable objectEnumerator];
-        //valueObj *vo;
-        //while ( vo = (valueObj *) [enumer nextObject]) {
+
         for vo in valObjTable {
             vo.describe(false)
         }
-
-
-
-
+        let count = toQry2Int(sql: "select count(*) from trkrData")
+        DBGLog(String("tracker \(trackerName ?? "") has \(count) data entries"))
+#endif
     }
 
-    func setFnVals() {
-        let currDate = Int(trackerDate?.timeIntervalSince1970 ?? 0)
-        var nextDate = firstDate()
-
-        if 0 == nextDate {
-            // no data yet for this tracker so do not generate a 0 value in database
-            return
-        }
-
-        var ndx: Float = 1.0
-        let all = Float(getDateCount())
-
-        repeat {
-            _ = loadData(nextDate)
-            for vo: valueObj in valObjTable {
-                if VOT_FUNC == vo.vtype {
-                    vo.vos?.setFnVals(nextDate)
-                }
-            }
-
-            //safeDispatchSync(^{
-            //dispatch_async(dispatch_get_main_queue(), ^{
-            rTracker_resource.setProgressVal(ndx / all)
-            //});
-            ndx += 1.0
-            nextDate = postDate()
-        } while (nextDate != 0) // iterate through dates
-
-        for vo in valObjTable {
-            if VOT_FUNC == vo.vtype {
-                vo.vos?.doTrimFnVals()
-            }
-        }
-
-        // restore current date
-        _ = loadData(currDate)
-    }
 
     func recalculateFns() {
-        // deprecated ios10 if (0 != OSAtomicTestAndSet(0, &(_recalcFnLock))) {
         DBGLog("try atomic set recalcFnLock")
         if recalcFnLock.testAndSet(newValue: true) {
             // wasn't 0 before, so we didn't get lock, so leave because shake handling already in process
@@ -2316,13 +2022,14 @@ class trackerObj: tObjBase {
         DBGLog(String("tracker id \(super.toid) name \(trackerName) dbname \(dbName) recalculateFns"))
 
         rTracker_resource.setProgressVal(0.0)
-        setFnVals()
+        for vo in valObjTable {
+            if vo.vtype == VOT_FUNC {
+                vo.vos?.clearFNdata()  // wipe db values so vo.value read forced to update
+            }
+        }
+        _ = processFnData(forceAll: true)
 
         if goRecalculate {
-            optDict.removeValue(forKey: "dirtyFns")
-            let sql = "delete from trkrInfo where field='dirtyFns';"
-            toExecSql(sql:sql)
-
             goRecalculate = false
         }
 
@@ -2345,7 +2052,3 @@ class trackerObj: tObjBase {
 
 }
 
-//#import <stdlib.h>
-//#import <NSNotification.h>
-
-//#import <libkern/OSAtomic.h>  // deprecated ios 10

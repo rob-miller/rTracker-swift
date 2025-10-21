@@ -46,6 +46,8 @@
 //
 
 import UIKit
+import ZIPFoundation
+
 
 let SegmentEdit = 0
 let SegmentCopy = 1
@@ -64,8 +66,9 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
     }
     */
     var tlist: trackerList?
-    // UI element properties 
-    @IBOutlet var tableView: UITableView!
+    // UI element properties (now created programmatically)
+    var tableView: UITableView!
+    var modeSegment: UISegmentedControl!
     var deleteIndexPath: IndexPath? // remember row to delete if user confirms in checkTrackerDelete alert
 
     deinit {
@@ -75,89 +78,370 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
     // MARK: -
     // MARK: view support
 
+    
+    // Helper to create a ZIP file
+    func createZipFile(at zipURL: URL, withFilesMatching pattern: String, in directory: URL) throws {
+        // Remove existing ZIP file if it exists
+        if FileManager.default.fileExists(atPath: zipURL.path) {
+            try FileManager.default.removeItem(at: zipURL)
+        }
+
+        // Create a ZIP archive with the throwing initializer
+        let archive: Archive
+        do {
+            archive = try Archive(url: zipURL, accessMode: .create)
+        } catch {
+            throw NSError(domain: "ZIPFoundationError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Unable to create archive: \(error.localizedDescription)"])
+        }
+
+        // Get matching files - filter based on extension pattern to match the actual files created
+        let files = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
+            .filter { file in
+                // Match the extension based on pattern
+                if pattern == "*.csv" {
+                    return file.pathExtension == "csv" || file.pathExtension == "rtcsv"
+                } else if pattern == "*.rtrk" {
+                    return file.pathExtension == "rtrk"
+                }
+                return false
+            }
+        
+        // Log found files for debugging
+        DBGLog("Found \(files.count) files matching pattern \(pattern)")
+        for file in files {
+            DBGLog("Adding to ZIP: \(file.lastPathComponent)")
+        }
+
+        // Add files to the ZIP archive
+        for file in files {
+            try archive.addEntry(with: file.lastPathComponent, fileURL: file)
+        }
+    }
+
+    
+    // Helper to present the file browser
+    func presentFileBrowser(for fileURL: URL) {
+        let documentPicker = UIDocumentPickerViewController(forExporting: [fileURL])
+        documentPicker.modalPresentationStyle = .formSheet
+        self.present(documentPicker, animated: true)
+    }
+    
     @objc func startExport() {
         autoreleasepool {
             tlist?.exportAll()
+            
             safeDispatchSync({ [self] in
                 rTracker_resource.finishProgressBar(view, navItem: navigationItem, disable: true)
             })
         }
     }
+    
+    @objc func startExportZip() {
+        guard let tlist = self.tlist else {
+            DBGLog("tlist is nil")
+            return
+        }
+        guard let zipOption = self.zipOption,
+               zipOption == .shareCsvZip || zipOption == .shareRtrkZip else {
+             DBGLog("Invalid or nil zipOption")
+             return
+        }
+        autoreleasepool {
+            // this part is tlist?.exportAll()
+            var ndx: Float = 1.0
+            jumpMaxPriv() // reasonable to do this now with default encryption enabled
 
+            let sql = "select id from toplevel" // ignore current (self) list because subject to privacy
+            let idSet = tlist.toQry2AryI(sql: sql)
+            let all = Float(idSet.count)
+
+            for tid in idSet {
+                let to = trackerObj(tid)
+                if zipOption == .shareCsvZip {
+                    _ = to.writeTmpCSV()
+                } else {
+                    _ = to.writeTmpRtrk(true)
+                }
+
+                rTracker_resource.setProgressVal(ndx / all)
+                ndx += 1.0
+            }
+
+            restorePriv()
+            
+            // this part generates the .zip file
+            let fpatho = rTracker_resource.ioFilePath(nil, access: false, tmp: true)
+            let fpathu = URL(fileURLWithPath: fpatho)
+            try? FileManager.default.createDirectory(atPath: fpatho, withIntermediateDirectories: false, attributes: nil)
+            let zipFileName, fpattern: String
+            if zipOption == .shareCsvZip {
+                zipFileName = "rTracker_exportAll_Csv.zip"
+                fpattern = "*.csv"
+            } else {
+                zipFileName = "rTracker_exportAll_Rtrk.zip"
+                fpattern = "*.rtrk"
+            }
+            
+            // Log the temporary directory for debugging
+            DBGLog("Temporary directory path: \(fpatho)")
+            
+            // List files in the directory to verify what's there
+            do {
+                let contents = try FileManager.default.contentsOfDirectory(atPath: fpatho)
+                DBGLog("Files in temporary directory before ZIP creation: \(contents)")
+            } catch {
+                DBGLog("Error listing directory contents: \(error.localizedDescription)")
+            }
+
+            let zipFileURL = URL(fileURLWithPath: fpatho).appendingPathComponent(zipFileName)
+            
+            do {
+                try createZipFile(at: zipFileURL, withFilesMatching: fpattern, in: fpathu)
+                
+                // Verify ZIP file size after creation
+                let attributes = try FileManager.default.attributesOfItem(atPath: zipFileURL.path)
+                let fileSize = attributes[FileAttributeKey.size] as? UInt64 ?? 0
+                DBGLog("Zip file created at: \(zipFileURL) with size: \(fileSize) bytes")
+            } catch {
+                DBGLog("Failed to create zip file: \(error.localizedDescription)")
+            }
+            
+            safeDispatchSync({ [self] in
+                rTracker_resource.finishProgressBar(view, navItem: navigationItem, disable: true)
+                
+                // Present the file browser for sharing
+                //presentFileBrowser(for: zipFileURL)
+                
+                let activityViewController = UIActivityViewController(activityItems: [zipFileURL], applicationActivities: nil)
+                activityViewController.completionWithItemsHandler = { activityType, completed, returnedItems, activityError in
+                    // Ensure temporary files are cleaned up
+                    do {
+                        // Get the contents of the temp directory
+                        let fileURLs = try FileManager.default.contentsOfDirectory(at: fpathu, includingPropertiesForKeys: nil)
+                        
+                        // Iterate and remove each file
+                        for fileURL in fileURLs {
+                            try FileManager.default.removeItem(at: fileURL)
+                        }
+                        
+                        DBGLog("All files in the temp directory have been removed.")
+                    } catch {
+                        DBGLog("Failed to clear temp directory: \(error.localizedDescription)")
+                    }
+                }
+                
+                self.present(activityViewController, animated: true)
+            })
+        }
+    }
+    
     @objc func btnExport() {
 
         DBGLog("export all")
         let navframe = navigationController?.navigationBar.frame
-        rTracker_resource.alert("exporting trackers", msg: "_out.csv and _out.plist files are being saved to the rTracker Documents directory on this device\(rTracker_resource.getRtcsvOutput() ? " in rtCSV format" : "").  Access them through iTunes/Finder on your PC/Mac, or with a program like iExplorer from Macroplant.com.  Import by changing the names to _in.csv and _in.plist, and read about .rtcsv file import capabilities in the help pages.\n\nNote: All private (hidden) data has been saved to output files.", vc: self)
+        
+        rTracker_resource.alert("exporting trackers",
+                                msg: "_out.csv and _out.plist files are being saved to the rTracker Documents directory on this device\(rTracker_resource.getRtcsvOutput() ? " in rtCSV format" : "").  Access them through iTunes/Finder on your PC/Mac, or with a program like iExplorer from Macroplant.com.  Import by changing the names to _in.csv and _in.plist, and read about .rtcsv file import capabilities in the help pages.\n\nNote: All private (hidden) data has been saved to output files.",
+                                vc: self) 
+         
         rTracker_resource.startProgressBar(view, navItem: navigationItem, disable: true, yloc: (navframe?.size.height ?? 0.0) + (navframe?.origin.y ?? 0.0))
 
         Thread.detachNewThreadSelector(#selector(startExport), toTarget: self, with: nil)
     }
 
-    func getExportBtn() -> UIBarButtonItem? {
+    func doExportZip() {
+        DBGLog("export zip")
+        let navframe = navigationController?.navigationBar.frame
+        rTracker_resource.startProgressBar(view, navItem: navigationItem, disable: true, yloc: (navframe?.size.height ?? 0.0) + (navframe?.origin.y ?? 0.0))
+
+        Thread.detachNewThreadSelector(#selector(startExportZip), toTarget: self, with: nil)
+    }
+    
+    /*
+    func getExportFilesBtn() -> UIBarButtonItem? {
         var exportBtn: UIBarButtonItem?
         exportBtn = UIBarButtonItem(
-            title: "Export all",
+            title: "Export all to app directory",
             style: .plain,
             target: self,
             action: #selector(btnExport))
+        if #available(iOS 26.0, *) {
+            exportBtn?.hidesSharedBackground = true  // Remove white container background
+        }
         
         exportBtn!.accessibilityIdentifier = "exportAll"
         exportBtn!.accessibilityLabel = "Export All"
         exportBtn!.accessibilityHint = "tap to save all trackers in rTracker's Documents folder"
         return exportBtn
     }
+     */
 
-    // Implement viewDidLoad to do additional setup after loading the view, typically from a nib.
+      // Menu options
+      enum MenuOption: String {
+          case exportAll = "Export all to App directory"
+          case shareCsvZip = "Share all .csv as .zip file"
+          case shareRtrkZip = "Share all .rtrk with data as .zip file"
+          case cancel = "Cancel"
+      }
+    
+    var zipOption: MenuOption? = nil
+    
+    func handleMenuOption(_ option: MenuOption) {
+        zipOption = option
+        switch option {
+        case .exportAll:
+            btnExport()
+        case .shareCsvZip:
+            fallthrough
+        case .shareRtrkZip:
+            doExportZip()
+        case .cancel:
+            break
+        }
+    }
+    
+    
+    
+    @objc func btnMenu() {
+        let alert = UIAlertController(title: "export all", message: nil, preferredStyle: .actionSheet)
+        
+        let options: [MenuOption] = [.shareCsvZip, .shareRtrkZip, .exportAll]
+        
+        
+        for option in options {
+            let action = UIAlertAction(title: option.rawValue, style: .default) { [self] _ in
+                handleMenuOption(option)
+            }
+            alert.addAction(action)
+        }
+        
+        alert.addAction(UIAlertAction(title: MenuOption.cancel.rawValue, style: .cancel, handler: nil))
+        
+        present(alert, animated: true)
+    }
+    
+    var _menuBtn: UIBarButtonItem?
+    var menuBtn: UIBarButtonItem {
+        if _menuBtn == nil {
+            _menuBtn = UIBarButtonItem(
+                barButtonSystemItem: .action,
+                target: self,
+                action: #selector(btnMenu))
+            if #available(iOS 26.0, *) {
+                _menuBtn!.hidesSharedBackground = true  // Remove white container background
+            }
+            
+            _menuBtn!.accessibilityLabel = "Share Menu"
+            _menuBtn!.accessibilityHint = "tap to show sharing options"
+            _menuBtn!.accessibilityIdentifier = "trkrListMenu"
+        }
+        
+        return _menuBtn!
+    }
+    
+    
+    // Implement viewDidLoad to do additional setup after loading the view, now fully programmatic.
     override func viewDidLoad() {
 
         title = "Edit trackers"
 
-        /*
-         #else
-            // wipe orphans
-        	UIBarButtonItem *exportBtn = [[UIBarButtonItem alloc]
-        								  initWithTitle:@"wipe orphans"
-        								  style:UIBarButtonItemStylePlain
-        								  target:self
-        								  action:@selector(btnWipeOrphans)];
-
-        #endif
-        */
-        //NSArray *tbArray = [NSArray arrayWithObjects: exportBtn, nil];
-        //self.toolbarItems = tbArray;
         navigationController?.setToolbarHidden(true, animated: false)
-        navigationItem.setRightBarButton(getExportBtn(), animated: false)
+        navigationItem.setRightBarButton(menuBtn, animated: false)
 
         // doesn't work? navigationItem.backBarButtonItem!.accessibilityIdentifier = "configTlistReturn"
-        
-        let bg = UIImageView(image: rTracker_resource.get_background_image(self))
-        bg.tag = BGTAG
-        view.addSubview(bg)
-        view.sendSubviewToBack(bg)
-        rTracker_resource.setViewMode(self)
 
+        // MARK: - UI Setup: Segmented Control
+        modeSegment = UISegmentedControl(items: ["modify", "copy", "move/del"])
+        modeSegment.translatesAutoresizingMaskIntoConstraints = false
+        modeSegment.selectedSegmentIndex = 0
+        modeSegment.addTarget(self, action: #selector(modeChoice(_:)), for: .valueChanged)
+        modeSegment.accessibilityIdentifier = "configTlistMode"
+
+        // iOS 26 compatibility for segmented control
+        if #available(iOS 26.0, *) {
+            // Apply comprehensive glass effect styling to prevent ghosting
+            modeSegment.backgroundColor = UIColor.clear
+            modeSegment.layer.backgroundColor = UIColor.clear.cgColor
+
+            // Apply to all subviews to prevent white background artifacts
+            for subview in modeSegment.subviews {
+                subview.layer.backgroundColor = UIColor.clear.cgColor
+                subview.backgroundColor = UIColor.clear
+            }
+
+            // Ensure no visual effects are applied that could cause ghosting
+            modeSegment.layer.masksToBounds = true
+            modeSegment.clipsToBounds = true
+        }
+
+        view.addSubview(modeSegment)
+
+        // MARK: - UI Setup: Table View
+        tableView = UITableView(frame: .zero, style: .plain)
+        tableView.translatesAutoresizingMaskIntoConstraints = false
+        tableView.delegate = self
+        tableView.dataSource = self
         tableView.separatorStyle = .none
         tableView.separatorColor = .clear
         tableView.backgroundColor = .clear
+        view.addSubview(tableView)
+
+        // MARK: - Constraints
+        NSLayoutConstraint.activate([
+            // Segmented control: 10pt margins, 28pt from top safe area (matching XIB)
+            modeSegment.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 28),
+            modeSegment.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 10),
+            modeSegment.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -10),
+
+            // Table view: 10pt margins, 16pt below segmented control, 10pt from bottom (matching XIB)
+            tableView.topAnchor.constraint(equalTo: modeSegment.bottomAnchor, constant: 16),
+            tableView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 10),
+            tableView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -10),
+            tableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -10)
+        ])
+
+        // Set up background and view mode early for proper rendering
+        let bg = UIImageView(image: rTracker_resource.get_background_image(self))
+        bg.tag = BGTAG
+        bg.translatesAutoresizingMaskIntoConstraints = false
+        view.insertSubview(bg, at: 0) // Insert at index 0 to ensure it's behind everything
+
+        // Constrain background to fill entire view
+        NSLayoutConstraint.activate([
+            bg.topAnchor.constraint(equalTo: view.topAnchor),
+            bg.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            bg.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            bg.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
+
+        rTracker_resource.setViewMode(self)
 
         let swipe = UISwipeGestureRecognizer(target: self, action: #selector(addTrackerController.handleViewSwipeRight(_:)))
         swipe.direction = .right
         view.addGestureRecognizer(swipe)
-        
-        modeSegment.accessibilityIdentifier = "configTlistMode"
-        
-        modeSegment.subviews[2].accessibilityIdentifier = "tlistModify"
-        modeSegment.subviews[2].accessibilityLabel = "Modify"
-        modeSegment.subviews[2].accessibilityHint = "select tracker to modify"
 
-        modeSegment.subviews[0].accessibilityIdentifier = "tlistCopy"
-        modeSegment.subviews[0].accessibilityLabel = "Copy"
-        modeSegment.subviews[0].accessibilityHint = "selected tracker will be duplicated at bottom of list"
+        // Set accessibility properties for each segment by accessing the individual segments
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
 
-        modeSegment.subviews[1].accessibilityIdentifier = "tlistMoveDel"
-        modeSegment.subviews[1].accessibilityLabel = "Move or Delete"
-        modeSegment.subviews[1].accessibilityHint = "re-order or delete trackers"
+            if let editSegment = self.modeSegment.subviews.indices.contains(SegmentEdit) ? self.modeSegment.subviews[SegmentEdit] : nil {
+                editSegment.accessibilityIdentifier = "tlistModify"
+                editSegment.accessibilityLabel = "Modify"
+                editSegment.accessibilityHint = "select tracker to modify"
+            }
+
+            if let copySegment = self.modeSegment.subviews.indices.contains(SegmentCopy) ? self.modeSegment.subviews[SegmentCopy] : nil {
+                copySegment.accessibilityIdentifier = "tlistCopy"
+                copySegment.accessibilityLabel = "Copy"
+                copySegment.accessibilityHint = "selected tracker will be duplicated at bottom of list"
+            }
+
+            if let moveDeleteSegment = self.modeSegment.subviews.indices.contains(SegmentMoveDelete) ? self.modeSegment.subviews[SegmentMoveDelete] : nil {
+                moveDeleteSegment.accessibilityIdentifier = "tlistMoveDel"
+                moveDeleteSegment.accessibilityLabel = "Move or Delete"
+                moveDeleteSegment.accessibilityHint = "re-order or delete trackers"
+            }
+        }
 
         super.viewDidLoad()
     }
@@ -211,6 +495,11 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
     override func viewWillDisappear(_ animated: Bool) {
         DBGLog("ctlc: viewWillDisappear")
 
+        // iOS 26 fix: Clear any pending animations on segmented control to prevent ghosting
+        if #available(iOS 26.0, *) {
+            modeSegment.layer.removeAllAnimations()
+        }
+
         tlist?.updateShortcutItems()
 
         //self.tlist = nil;
@@ -218,14 +507,13 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
         super.viewWillDisappear(animated)
     }
 
+
     //- (IBAction) btnExport;
 
     // MARK: -
     // MARK: button press action methods
 
-    @IBOutlet weak var modeSegment: UISegmentedControl!
-    
-    @IBAction func modeChoice(_ sender: UISegmentedControl) {
+    @objc func modeChoice(_ sender: UISegmentedControl) {
         selSegNdx = sender.selectedSegmentIndex
         switch selSegNdx {
         case SegmentEdit:
@@ -249,8 +537,6 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
         let row = deleteIndexPath?.row ?? 0
         DBGLog(String("checkTrackerDelete: will delete row \(UInt(row)) "))
         tlist?.deleteTrackerAllRow(row)
-        //[self.deleteTableView deleteRowsAtIndexPaths:[NSArray arrayWithObject:self.deleteIndexPath]
-        //					   withRowAnimation:UITableViewRowAnimationFade];
         tableView.deleteRows(
             at: [deleteIndexPath].compactMap { $0 },
             with: .fade)
@@ -276,17 +562,8 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
             delTrackerRecords()
             tableView.reloadRows(at: [deleteIndexPath].compactMap { $0 }, with: .right)
         }
-
         deleteIndexPath = nil
-
     }
-
-    /*
-    - (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
-        [self handleCheckTrackerDelete:buttonIndex];
-    }
-
-    */
 
     // MARK: -
     // MARK: Table view methods
@@ -303,7 +580,10 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
     // Customize the appearance of table view cells.
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         //DBGLog(@"rvc table cell at index %d label %@",[indexPath row],[self.tlist.topLayoutNames objectAtIndex:[indexPath row]]);
-
+        
+        let row = indexPath.row
+        let toid = tlist?.getTIDfromIndex(row) ?? 0
+        
         var cellIdentifier: String
         if selSegNdx == SegmentMoveDelete {
             cellIdentifier = "DeleteCell"
@@ -313,9 +593,11 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
 
         let cell = tableView.dequeueReusableCell(withIdentifier: cellIdentifier) ?? UITableViewCell(style: .default, reuseIdentifier: cellIdentifier)
         cell.backgroundColor = .clear
-
+        if tlist?.isTrackerHidden(toid) ?? false {
+            cell.backgroundColor = hiddenColor
+        }
         // Configure the cell.
-        let row = indexPath.row
+
         cell.textLabel?.text = tlist!.topLayoutNames[row]
         cell.textLabel?.textColor = .label
         cell.accessibilityIdentifier = "configt_\(cell.textLabel!.text!)"
@@ -349,70 +631,115 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
         tlist?.reorderDbFromTLT()
 
     }
+    
+    // Implement the swipe actions method to show both delete and hide/unhide
+    func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+        // Only show swipe actions when in Move/Delete mode
+        guard selSegNdx == SegmentMoveDelete else {
+            return nil
+        }
+        
+        // Get tracker ID for this row
+        let row = indexPath.row
+        let toid = tlist?.getTIDfromIndex(row) ?? 0
+        
+        // Create delete action
+        let deleteAction = UIContextualAction(style: .destructive, title: "Delete") { [weak self] (action, view, completion) in
+            self?.tableView(tableView, commit: .delete, forRowAt: indexPath)
+            completion(true)
+        }
+        deleteAction.backgroundColor = .systemRed
+        //deleteAction.accessibilityIdentifier = "deleteTracker_\(tlist?.topLayoutNames[row] ?? "")"
+        deleteAction.image = UIImage(systemName: "trash")
+        deleteAction.accessibilityLabel = "Delete"
+        deleteAction.accessibilityHint = "delete this tracker or just its records"
+
+        
+        // Check if tracker is hidden
+        let isHidden = tlist?.isTrackerHidden(toid) ?? false
+        
+        // Create hide/unhide action
+        let hideAction = UIContextualAction(style: .normal, title: isHidden ? "Reveal" : "Hide") { [weak self] (action, view, completion) in
+            if isHidden {
+                self?.tlist?.unhideTracker(toid)
+            } else {
+                self?.tlist?.hideTracker(toid)
+            }
+            tableView.reloadRows(at: [indexPath], with: .automatic)
+            completion(true)
+        }
+        hideAction.backgroundColor = isHidden ? .systemGreen : .systemBlue
+        hideAction.image = UIImage(systemName: isHidden ? "eye" : "eye.slash")
+        //hideAction.accessibilityIdentifier = isHidden ? "revealTracker_\(tlist?.topLayoutNames[row] ?? "")" : "hideTracker_\(tlist?.topLayoutNames[row] ?? "")"
+        hideAction.accessibilityLabel = isHidden ? "Reveal" : "Hide"
+        hideAction.accessibilityHint = isHidden ? "unhide this tracker" : "hide this tracker from normal view"
+
+        
+        // Configure swipe action
+        let configuration = UISwipeActionsConfiguration(actions: [deleteAction, hideAction])
+        configuration.performsFirstActionWithFullSwipe = false
+        
+        return configuration
+    }
 
     func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
-        deleteIndexPath = indexPath
+        // Only handle delete case, hide/unhide is handled by swipe actions
+        if editingStyle == .delete {
+            deleteIndexPath = indexPath
+            
+            let tname = (tlist?.topLayoutNames)?[indexPath.row] as? String
+            
+            let toid = tlist?.getTIDfromIndex(indexPath.row) ?? 0
+            let to = trackerObj(toid)
+            let entries = to.countEntries()
 
-        let tname = (tlist?.topLayoutNames)?[indexPath.row] as? String
+            let title = "Delete tracker \(tname ?? "")"
+            var msg: String?
+            let btn0 = "Cancel"
+            let btn1 = "Delete tracker"
+            var btn2: String?
 
-        let toid = tlist?.getTIDfromIndex(indexPath.row) ?? 0
-        let to = trackerObj(toid)
-        let entries = to.countEntries()
-
-        let title = "Delete tracker \(tname ?? "")"
-        var msg: String?
-        let btn0 = "Cancel"
-        let btn1 = "Delete tracker"
-        var btn2: String?
-
-        if entries == 0 {
-            msg = "Tracker \(tname ?? "") has no records."
-            btn2 = nil
-        } else {
-            btn2 = "Remove records only"
-            if entries == 1 {
-                msg = "Tracker \(tname ?? "") has 1 record."
+            if entries == 0 {
+                msg = "Tracker \(tname ?? "") has no records."
+                btn2 = nil
             } else {
-                msg = "Tracker \(tname ?? "") has \(entries) records."
+                btn2 = "Remove records only"
+                if entries == 1 {
+                    msg = "Tracker \(tname ?? "") has 1 record."
+                } else {
+                    msg = "Tracker \(tname ?? "") has \(entries) records."
+                }
             }
-        }
 
-        let alert = UIAlertController(
-            title: title,
-            message: msg,
-            preferredStyle: .alert)
+            let alert = UIAlertController(
+                title: title,
+                message: msg,
+                preferredStyle: .alert)
 
-        let cancelAction = UIAlertAction(title: btn0, style: .default, handler: { [self] action in
-            handleCheckTrackerDelete(0)
-        })
-        let deleteAction = UIAlertAction(title: btn1, style: .default, handler: { [self] action in
-            handleCheckTrackerDelete(1)
-        })
-        alert.addAction(cancelAction)
-        alert.addAction(deleteAction)
-
-        if let btn2 {
-            let deleteRecordsAction = UIAlertAction(title: btn2, style: .default, handler: { [self] action in
-                handleCheckTrackerDelete(2)
+            let cancelAction = UIAlertAction(title: btn0, style: .default, handler: { [self] action in
+                handleCheckTrackerDelete(0)
             })
-            alert.addAction(deleteRecordsAction)
+            let deleteAction = UIAlertAction(title: btn1, style: .default, handler: { [self] action in
+                handleCheckTrackerDelete(1)
+            })
+            alert.addAction(cancelAction)
+            alert.addAction(deleteAction)
+
+            if let btn2 {
+                let deleteRecordsAction = UIAlertAction(title: btn2, style: .default, handler: { [self] action in
+                    handleCheckTrackerDelete(2)
+                })
+                alert.addAction(deleteRecordsAction)
+            }
+            
+            
+            present(alert, animated: true)
+            
         }
-
-
-        present(alert, animated: true)
-
-
-
-
     }
 
     // Override to support row selection in the table view.
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-
-        // Navigation logic may go here -- for example, create and push another view controller.
-        // AnotherViewController *anotherViewController = [[AnotherViewController alloc] initWithNibName:@"AnotherView" bundle:nil];
-        // [self.navigationController pushViewController:anotherViewController animated:YES];
-        // [anotherViewController release];
 
         let row = indexPath.row
         //DBGLog(@"configTList selected row %d : %@", row, [self.tlist.topLayoutNames objectAtIndex:row]);
@@ -421,14 +748,38 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
             let toid = tlist?.getTIDfromIndex(row) ?? 0
             DBGLog(String("will config toid \(toid)"))
 
-            let atc = addTrackerController(nibName: "addTrackerController", bundle: nil)
+            let atc = addTrackerController()
             atc.tlist = tlist
             let tto = trackerObj(toid)
             atc.tempTrackerObj = tto
             atc.ttoRank = tlist!.toQry2Int(sql:"select rank from toplevel where id = '\(toid)'") // save to put temp tracker at this rank
             tto.removeTempTrackerData() // ttd array no longer valid if make any changes, can't be sure from here so wipe it
 
-            navigationController?.pushViewController(atc, animated: true)
+            // iOS 26 fix: Handle navigation animation translucency issue
+            if #available(iOS 26.0, *) {
+                // iOS 26: Use cross-fade transition to avoid translucency bug
+                UIView.animate(withDuration: 0.25, delay: 0, options: [.curveEaseInOut], animations: { [weak self] in
+                    // Fade out current view
+                    self?.view.alpha = 0.3
+                }) { [weak self] _ in
+                    // Push new controller without animation
+                    self?.navigationController?.pushViewController(atc, animated: false)
+
+                    // Start with new view slightly faded and fade it in fully
+                    atc.view.alpha = 0.6
+
+                    // Restore current view alpha in case we return
+                    self?.view.alpha = 1.0
+
+                    // Fade in new view
+                    UIView.animate(withDuration: 0.5, delay: 0, options: [.curveEaseInOut]) {
+                        atc.view.alpha = 1.0
+                    }
+                }
+            } else {
+                // Pre-iOS 26: Use standard animation that works correctly
+                navigationController?.pushViewController(atc, animated: true)
+            }
             //[atc.tempTrackerObj release]; // rtm 05 feb 2012 +1 alloc/init, +1 atc.temptto retain
         } else if selSegNdx == SegmentCopy {
             let toid = tlist?.getTIDfromIndex(row) ?? 0

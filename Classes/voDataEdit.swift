@@ -71,7 +71,7 @@ class voDataEdit: UIViewController, UITextViewDelegate {
 
         if let vo {
             // valueObj data edit - voTextBox, voImage
-            DBGLog("vde view did load")
+            //DBGLog("vde view did load")
             title = vo.valueName
             vo.vos?.dataEditVDidLoad(self)
             textView = (vo.vos as? voTextBox)?.textView
@@ -88,8 +88,9 @@ class voDataEdit: UIViewController, UITextViewDelegate {
             //self.textView.text = self.vo.value;
             textView?.returnKeyType = .default
             textView?.keyboardType = .default // use the default type input method (entire keyboard)
+            textView?.keyboardAppearance = .default // follow system appearance
             textView?.isScrollEnabled = true
-            textView?.isUserInteractionEnabled = true
+            textView?.isUserInteractionEnabled = self.vo?.optDict["otsrc"] ?? "0" != "1"
 
             // this will cause automatic vertical resize when the table is resized
             textView?.autoresizingMask = .flexibleHeight
@@ -106,7 +107,7 @@ class voDataEdit: UIViewController, UITextViewDelegate {
 
             keyboardIsShown = false
 
-            textView?.becomeFirstResponder()
+            // Keyboard presentation now handled in viewDidAppear for better timing
         }
 
     }
@@ -130,11 +131,28 @@ class voDataEdit: UIViewController, UITextViewDelegate {
             name: UIResponder.keyboardWillHideNotification,
             object: view.window)
 
-
-        //[self.navigationController setToolbarHidden:NO animated:NO];
-
         super.viewWillAppear(animated)
 
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+
+        // Handle keyboard presentation for both voTextBox and generic paths
+        // Use longer delay for subsequent visits to ensure proper appearance timing
+        let shouldShowKeyboard = (vo != nil && (vo?.vos as? voTextBox)?.shouldBecomeFirstResponder == true) ||
+                                (vo == nil && textView != nil && textView?.text == "")
+
+        if shouldShowKeyboard {
+            // Longer delay for subsequent visits to avoid appearance flicker
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+                self?.textView?.becomeFirstResponder()
+                // Clear the flag for voTextBox case
+                if let votb = self?.vo?.vos as? voTextBox {
+                    votb.shouldBecomeFirstResponder = false
+                }
+            }
+        }
     }
 
     override func viewWillDisappear(_ animated: Bool) {
@@ -145,119 +163,101 @@ class voDataEdit: UIViewController, UITextViewDelegate {
             self,
             name: UIResponder.keyboardWillChangeFrameNotification /* UIKeyboardWillShowNotification */,
             object: nil)
-        //--object:self.textView];    // nil]; //self.devc.view.window];
-        //object:self.devc.view.window];
+
         NotificationCenter.default.removeObserver(
             self,
             name: UIResponder.keyboardWillHideNotification,
             object: nil)
-        //object:self.textView];    // nil];   // self.devc.view.window];
-        //object:self.devc.view.window];
-
 
         super.viewWillDisappear(animated)
     }
 
     class func getInitTVF(_ vc: UIViewController) -> CGRect {
         var frame = vc.view.frame
-        let frame2 = vc.navigationController!.navigationBar.frame
-        DBGLog(String("nvb rect: \(frame2)"))
-        let frame3 = vc.navigationController!.toolbar.frame
-        DBGLog(String("tb rect: \(frame3))"))
 
-        frame.origin.y += frame2.size.height  + frame2.origin.y 
-        frame.size.height -= frame.origin.y + frame3.size.height
+        //let frame2 = vc.navigationController!.navigationBar.frame
+        //DBGLog(String("nvb rect: \(frame2)"))
+        //let frame3 = vc.navigationController!.toolbar.frame
+        //DBGLog(String("tb rect: \(frame3))"))
 
-        DBGLog(String("initTVF rect: \(frame.origin.x) \(frame.origin.y) \(frame.size.width) \(frame.size.height)"))
+        // Use safe area insets for more reliable layout
+        let safeArea = vc.view.safeAreaInsets
+        //DBGLog(String("safe area: top=\(safeArea.top) bottom=\(safeArea.bottom)"))
+
+        // Calculate frame based on safe area and navigation bar
+        frame.origin.y = safeArea.top
+        frame.size.height = vc.view.frame.height - safeArea.top - safeArea.bottom
+
+        //DBGLog(String("initTVF rect: \(frame.origin.x) \(frame.origin.y) \(frame.size.width) \(frame.size.height)"))
         return frame
     }
 
     @objc func keyboardWillShow(_ aNotification: Notification?) {
         DBGLog("votb keyboardwillshow")
 
-        if keyboardIsShown {
-            return
-        }
-
         let userInfo = aNotification?.userInfo
         let keyboardRect = userInfo![UIResponder.keyboardFrameEndUserInfoKey] as! CGRect // ?.cgRectValue
-        DBGLog(String("keyboard rect: \(keyboardRect.origin.x) \(keyboardRect.origin.y) \(keyboardRect.size.width) \(keyboardRect.size.height)"))
+        //DBGLog(String("keyboard rect: \(keyboardRect.origin.x) \(keyboardRect.origin.y) \(keyboardRect.size.width) \(keyboardRect.size.height)"))
 
+        // Calculate new frame for text view
         var frame = voDataEdit.getInitTVF(self)
         frame.size.height -= keyboardRect.size.height
-        //UIView *iav = ((voTextBox*)self.vo.vos).textView.inputAccessoryView;
-        //CGRect avframe = iav.frame;
-        let avframe = textView?.inputAccessoryView?.frame
-        DBGLog(String("acc view frame rect: \(avframe!.origin.x) \(avframe!.origin.y) \(avframe!.size.width) \(avframe!.size.height)"))
 
-        frame.size.height += avframe?.size.height ?? 0.0
+        // Add back accessory view height if present
+        if let avframe = textView?.inputAccessoryView?.frame {
+            //DBGLog(String("acc view frame rect: \(avframe.origin.x) \(avframe.origin.y) \(avframe.size.width) \(avframe.size.height)"))
+            frame.size.height += avframe.size.height
+        }
 
-        DBGLog(String("keyboard TVF: \(frame.origin.x) \(frame.origin.y) \(frame.size.width) \(frame.size.height)"))
+        //DBGLog(String("keyboard TVF: \(frame.origin.x) \(frame.origin.y) \(frame.size.width) \(frame.size.height)"))
 
-        UIView.animate(withDuration: 0.2, animations: { [self] in
-            textView?.frame = frame
-            if let selectedRange = textView?.selectedRange {
-                textView?.scrollRangeToVisible(selectedRange)
-            }
-        })
+        // Only animate if frame actually changes to avoid conflicts during rapid transitions
+        if !frame.equalTo(textView?.frame ?? .zero) {
+            UIView.animate(withDuration: 0.2, animations: { [self] in
+                textView?.frame = frame
+                if let selectedRange = textView?.selectedRange {
+                    textView?.scrollRangeToVisible(selectedRange)
+                }
+            })
+        }
 
         keyboardIsShown = true
-
     }
 
     @objc func keyboardWillHide(_ aNotification: Notification?) {
-        DBGLog("votb keyboardwillhide")
+        //DBGLog("votb keyboardwillhide")
 
-        // the keyboard is hiding reset the table's height
-        //CGRect keyboardRect = [[[aNotification userInfo] objectForKey:UIKeyboardFrameEndUserInfoKey] CGRectValue];
-        //NSTimeInterval animationDuration = [[aNotification userInfo][UIKeyboardAnimationDurationUserInfoKey] doubleValue];
-        //CGRect frame = self.devc.view.frame;
-        //frame.size.height += keyboardRect.size.height;
-        //[UIView beginAnimations:@"ResizeForKeyboard" context:nil];
-        //[UIView setAnimationDuration:animationDuration];
-        UIView.animate(withDuration: 0.2, animations: { [self] in
-            textView?.frame = voDataEdit.getInitTVF(self)
-        })
-        //[UIView commitAnimations];
+        let fullFrame = voDataEdit.getInitTVF(self)
 
+        // Only animate if frame actually changes to avoid conflicts during rapid transitions
+        if !fullFrame.equalTo(textView?.frame ?? .zero) {
+            UIView.animate(withDuration: 0.2, animations: { [self] in
+                textView?.frame = fullFrame
+            })
+        }
 
         keyboardIsShown = false
     }
 
     @objc func saveAction(_ sender: Any?) {
-        DBGLog("save me")
-        //[self.saveClass performSelector:self.saveSelector withObject:@"FOOOO" afterDelay:(NSTimeInterval)0];
-        saveClass!.perform(saveSelector!, with: textView?.text, afterDelay: TimeInterval(0))
+        //DBGLog("save me")
+
+        if self.vo?.optDict["otsrc"] ?? "0" != "1" {
+            saveClass!.perform(saveSelector!, with: textView?.text, afterDelay: TimeInterval(0))
+        }
         dismiss(animated: true)
     }
 
     func textViewDidBeginEditing(_ textView: UITextView) {
-        // provide my own Save button to dismiss the keyboard
-        let saveItem = UIBarButtonItem(
-            barButtonSystemItem: .save,
-            target: self,
-            action: #selector(saveAction(_:)))
-        navigationItem.rightBarButtonItem = saveItem
+        // Save button is set up in voTextBox.dataEditVDidLoad for voTextBox cases
+        // No need to create one here - back button handles navigation
     }
 
+    /*
     func textViewShouldBeginEditing(_ aTextView: UITextView) -> Bool {
-
-        /*
-             You can create the accessory view programmatically (in code), in the same nib file as the view controller's main view, or from a separate nib file. This example illustrates the latter; it means the accessory view is loaded lazily -- only if it is required.
-             */
-        /*
-            if (self.textView.inputAccessoryView == nil) {
-                [[NSBundle mainBundle] loadNibNamed:@"voTBacc" owner:self options:nil];
-                // Loading the AccessoryView nib file sets the accessoryView outlet.
-                self.textView.inputAccessoryView = self.accessoryView;
-                // After setting the accessory view for the text view, we no longer need a reference to the accessory view.
-                self.accessoryView = nil;
-                self.addButton.hidden = YES;
-                CGFloat fsize = 20.0;
-                [self.segControl setTitleTextAttributes:@{NSFontAttributeName: [UIFont systemFontOfSize:fsize]} forState:UIControlStateNormal];
-                [self.setSearchSeg setTitleTextAttributes:@{NSFontAttributeName: [UIFont systemFontOfSize:fsize]} forState:UIControlStateNormal];
-            }
-            */
+        if vo?.optDict["otsrc"] ?? "0" != "0" {
+            return false
+        }
         return true
     }
 
@@ -265,35 +265,11 @@ class voDataEdit: UIViewController, UITextViewDelegate {
         aTextView.resignFirstResponder()
         return true
     }
-
-    /*
-     // needs more work to adjust text box size / display point as rotated view is very short
-
-    // Override to allow orientations other than the default portrait orientation.
-    - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
-        // Return YES for supported orientations
-        return (interfaceOrientation != UIInterfaceOrientationPortraitUpsideDown);
-    }
-    */
-
+*/
     override func didReceiveMemoryWarning() {
         // Releases the view if it doesn't have a superview.
         super.didReceiveMemoryWarning()
-
-        // Release any cached data, images, etc that aren't in use.
     }
-
-    /*
-    - (void)viewDidUnload {
-    	DBGLog(@"vde view did unload");
-
-        [super viewDidUnload];
-        // Release any retained subviews of the main view.
-        // e.g. self.myOutlet = nil;
-    	[self.vo.vos dataEditVDidUnload];
-    	self.vo = nil;
-    }
-    */
 
     deinit {
 
@@ -301,8 +277,6 @@ class voDataEdit: UIViewController, UITextViewDelegate {
         if vo != nil {
             vo = nil
         }
-        //[vo release];
-
 
         NotificationCenter.default.removeObserver(self)
         

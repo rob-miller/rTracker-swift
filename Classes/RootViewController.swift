@@ -31,12 +31,12 @@ import UIKit
 //  - ??? export button ???
 //
 //  Created by Robert Miller on 16/03/2010.
-//  Copyright Robert T. Miller 2010. All rights reserved.
+//  Copyright Robert T. Miller 2010-2025. All rights reserved.
 //
 
 ///************
 /// RootViewController.swift
-/// Copyright 2010-2021 Robert T. Miller
+/// Copyright 2010-2025 Robert T. Miller
 /// Licensed under the Apache License, Version 2.0 (the "License");
 /// you may not use this file except in compliance with the License.
 /// You may obtain a copy of the License at
@@ -53,47 +53,32 @@ import UIKit
 //  rTracker
 //
 //  Created by Robert Miller on 16/03/2010.
-//  Copyright Robert T. Miller 2010. All rights reserved.
+//  Copyright Robert T. Miller 2010-2025. All rights reserved.
 //
 
 import UserNotifications
 
 import Foundation
 import AVFoundation
+import ZIPFoundation
+import Contacts
+import SwiftUI
 
 extension Notification.Name {
     static let notifyOpenTracker = Notification.Name("notifyOpenTracker")
-}
-
-extension Notification.Name {
     static let notifyOpenTrackerInApp = Notification.Name("notifyOpenTrackerInApp")
-}
-
-extension Notification.Name {
     static let notifyPrivacyLockdown = Notification.Name("notifyPrivacyLockdown")
 }
 
 public class RootViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, UNUserNotificationCenterDelegate {
+    static let shared = RootViewController()
     var tableView: UITableView?
-    
-    //var _privacyObj: privacyV?
-    //var int32_t: _Atomic?
+
     var initialPrefsLoad = false
     var readingFile = false
 
-    //var refreshLock: Bool = false
     let loadFilesLock = AtomicTestAndSet()  // (initialValue: false)
-    
-    //var aAdSupport: adSupport?
-    //loadInputFiles
-    //refreshView
-    //animated
-    //refreshEditBtn
-    //tname
-    //tid
-    //rejectable
-    //nsnTid
-    //pendingNotificationCount
+
 
     // MARK: -
     // MARK: load CSV files waiting for input
@@ -108,9 +93,11 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     var stashAnimated = false
     var audioPlayer: AVAudioPlayer?
     var tldStashedTID = -1
-    
-    //openUrlLock, inputURL,
+    var backupZipOption: configTlistController.MenuOption? = nil
 
+    let SUPPLY_DEMOS = 0
+    let SUPPLY_SAMPLES = 1
+    
     // MARK: -
     // MARK: core object methods and support
 
@@ -122,7 +109,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     var _tlist: trackerList?
     var tlist: trackerList {
         if _tlist == nil {
-            _tlist = trackerList()  // Create the trackerList instance
+            _tlist = trackerList.shared  // Create the trackerList instance
             
             // Use the newly created _tlist to recover orphans and load the layout
             if _tlist!.recoverOrphans() {
@@ -134,739 +121,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     }
 
 
-    //
-    // original code:
-    //-------------------
-    //  Created by Matt Gallagher on 2009/11/30.
-    //  Copyright 2009 Matt Gallagher. All rights reserved.
-    //
-    //  Permission is given to use this source code file, free of charge, in any
-    //  project, commercial or otherwise, entirely at your risk, with the condition
-    //  that any redistribution (in part or whole) of source code must retain
-    //  this copyright and permission notice. Attribution in compiled projects is
-    //  appreciated but not required.
-    //-------------------
-
-    func doCSVLoad(_ csvString: String?, to: trackerObj?, fname: String?) {
-
-        DBGLog(String("start csv parser \(to!.trackerName) to-toid: \(to!.toid)"))
-        let parser = CSVParser(string: csvString, separator: ",", hasHeader: true, fieldNames: nil)
-        to?.csvProblem = nil
-        to?.csvReadFlags = 0
-        parser.parseRows(forReceiver: to, selector: #selector(trackerObj.receiveRecord(_:))) // receiveRecord in trackerObj.m
-        DBGLog(String("csv parser done \(to!.trackerName) to-toid: \(to!.toid)"))
-
-        to?.loadConfig()
-
-        if (to?.csvReadFlags ?? 0) & (CSVCREATEDVO | CSVCONFIGVO | CSVLOADRECORD) != 0 {
-
-            to?.goRecalculate = true
-            to?.recalculateFns() // updates fn vals in database
-            to?.goRecalculate = false
-            DBGLog(String("functions recalculated \(to?.trackerName)") )
-
-            to?.saveChoiceConfigs() // in case csv data had unrecognised choices
-
-            DBGLog("csv loaded:")
-            #if DEBUGLOG
-            to?.describe()
-            #endif
-        }
-        if (to?.csvReadFlags ?? 0) & CSVNOTIMESTAMP != 0 {
-            rTracker_resource.alert("No timestamp column", msg: "The file \(fname ?? "") has been rejected by the CSV loader as it does not have '\(TIMESTAMP_LABEL)' as the first column.", vc: self)
-            //[rTracker_resource finishActivityIndicator:self.view navItem:nil disable:NO];
-            return
-        } else if (to?.csvReadFlags ?? 0) & CSVNOREADDATE != 0 {
-            rTracker_resource.alert("Date format problem", msg: "Some records in the file \(fname ?? "") were ignored because timestamp dates like '\(to?.csvProblem ?? "")' are not compatible with your device's calendar settings (\(to?.dateFormatter?.string(from: Date()) ?? "")).  Please modify the file or change your international locale preferences in System Settings and try again.", vc: self)
-            //[rTracker_resource finishActivityIndicator:self.view navItem:nil disable:NO];
-            return
-        }
-
-        rTracker_resource.setProgressVal((Float(csvReadCount)) / (Float(csvLoadCount)))
-
-        csvReadCount += 1
-
-    }
-
-    func startLoadActivityIndicator(_ str: String?) {
-        rTracker_resource.startActivityIndicator(view, navItem: nil, disable: false, str: str)
-    }
-
-    func is_rtcsv(_ url: URL) -> Bool {
-        do {
-            // Read the content of the file
-            let content = try String(contentsOf: url, encoding: .utf8)
-            // Split the content into lines
-            let lines = content.split(separator: "\n")
-            
-            // Ensure there's at least a second line
-            guard lines.count >= 2 else { return false }
-            
-            // Extract the second line
-            let secondLine = String(lines[1])
-            
-            // Check if the second line starts with a comma
-            guard secondLine.starts(with: ",") else { return false }
-            
-            // Define the regular expression pattern for matching the fields
-            let pattern = "^,(\"[a-zA-Z]+:[a-zA-Z]*:[0-9]+\"(?:,\"[a-zA-Z]+:[a-zA-Z]*:[0-9]+\")*)$"
-            
-            // Create a regular expression with the pattern
-            let regex = try NSRegularExpression(pattern: pattern)
-            
-            // Perform the regex match on the second line
-            let matches = regex.matches(in: secondLine, range: NSRange(secondLine.startIndex..., in: secondLine))
-            
-            // If there is at least one match, the line is valid
-            return !matches.isEmpty
-        } catch {
-            // If there's an error reading the file or processing the regex, return false
-            print(error.localizedDescription)
-            return false
-        }
-    }
     
-    func loadTrackerCsvFiles() {
-        let localFileManager = FileManager.default
-        var newRtcsvTracker = false
-        
-        var docsDir = rTracker_resource.ioFilePath(nil, access: true)
-        var directoryURL = URL(fileURLWithPath: docsDir)
-        var enumerator = localFileManager.enumerator(at: directoryURL, includingPropertiesForKeys: [.isDirectoryKey], options: [])
-        
-        var files: [URL] = []
-        while let url = enumerator?.nextObject() as? URL {
-            files.append(url)
-        }
-        
-        docsDir = rTracker_resource.ioFilePath("Inbox", access: true)
-        directoryURL = URL(fileURLWithPath: docsDir)
-        enumerator = localFileManager.enumerator(at: directoryURL, includingPropertiesForKeys: [.isDirectoryKey], options: [])
-        while let url = enumerator?.nextObject() as? URL {
-            files.append(url)
-        }
-        
-        safeDispatchSync { [self] in
-            jumpMaxPriv()
-            tlist.loadTopLayoutTable()  // runs on main queue
-            DispatchQueue.global(qos: .userInitiated).async { [self] in  // all this in background queue
-                
-                for fileUrl in files {
-                    //let fullPath = URL(fileURLWithPath: docsDir).appendingPathComponent(fileName)
-                    var to: trackerObj? = nil
-                    let fname = fileUrl.lastPathComponent
-                    var tname: String? = nil
-                    var validMatch = false
-                    var loadObj: String?
-                    
-                    switch fileUrl.pathExtension {
-                    case "csv":
-                        if fname.hasSuffix("_in.csv") {
-                            loadObj = "_in.csv"
-                            validMatch = true
-                        } else if fileUrl.pathComponents.contains("Inbox") {
-                            loadObj = ".csv"
-                            validMatch = true
-                        }
-                    case "rtcsv":
-                        if fname.hasSuffix("_in.rtcsv") {
-                            loadObj = "_in.rtcsv"
-                            validMatch = true
-                        } else {
-                            loadObj = ".rtcsv"  // accept _in above, already know it has .rtcsv extension
-                            validMatch = true
-                        }
-                    default:
-                        continue
-                    }
-                    
-                    if validMatch {
-                        tname = String(fname.dropLast(loadObj!.count))
-                        let tid = tlist.getTIDfromName(tname)
-                        let isRtcsv = is_rtcsv(fileUrl)
-                        if tid != 0 {
-                            to = trackerObj(tid)
-                            DBGLog("found existing tracker tid \(tid) with matching name for _in.[rt]csv file")
-                        } else if isRtcsv {
-                            to = trackerObj()
-                            to?.trackerName = tname
-                            to?.toid = tlist.getUnique()
-                            to?.saveConfig()
-                            tlist.add(toTopLayoutTable: to!)
-                            newRtcsvTracker = true
-                            DBGLog("created new tracker for rtcsv, id= \(to!.toid)")
-                        } else {
-                            rTracker_resource.alert("No matching tracker", msg: "No 'tname' tracker found for \(fname), and the file does not conform to rtCSV format.", vc: self)
-                            _ = rTracker_resource.deleteFile(atPath: fileUrl.path)
-                        }
-                        
-                        if let to = to {
-                            safeDispatchSync { [self] in
-                                rTracker_resource.startActivityIndicator(self.view, navItem: nil, disable: false, str: "loading \(tname ?? "")...")
-                                UIApplication.shared.isIdleTimerDisabled = true
-                                //print("activity indicator \(tname ?? "tname nil")")
-                            }
-                            do {
-                                
-                                let csvString = try String(contentsOfFile: fileUrl.path, encoding: .utf8)
-                                //jumpMaxPriv()  just needed to get in tracker list above
-                                self.doCSVLoad(csvString, to: to, fname: fname)
-                                //print("back from csv load \(tname ?? "tname nil")")
-                                //restorePriv()
-                                
-                                do {
-                                    let fm = FileManager.default  // Swift 6 needs more local filemanager here 
-                                    try fm.removeItem(at: fileUrl)
-                                } catch {
-                                    DBGWarn("Error deleting file \(fname): \(error)")
-                                }
-                                DispatchQueue.main.async { [self] in
-
-                                    UIApplication.shared.isIdleTimerDisabled = false
-                                    // Stop activity indicator and any other UI updates
-                                    rTracker_resource.finishActivityIndicator(view, navItem: nil, disable: false)
-                                    //print("stop activity indicator \(tname ?? "tname nil")")
-                                }
-                            } catch {
-                                DispatchQueue.main.async {
-                                    UIApplication.shared.isIdleTimerDisabled = false
-                                    DBGWarn("Error processing file \(fname): \(error)")
-                                    rTracker_resource.finishActivityIndicator(self.view, navItem: nil, disable: false)
-                                    //print("error stop activity indicator \(tname ?? "tname nil")")
-                                }
-                            }
-                        }
-                    }
-                }
-                // still on background queue
-                restorePriv()
-                tlist.loadTopLayoutTable()  // runs on main queue
-                safeDispatchSync {
-                    refreshToolBar(true)
-                }
-                
-            }  // end of background queue
-        }  // end of main queue
-
-        if newRtcsvTracker {
-            refreshViewPart2()
-        }
-    }
-
-
-    // load a tracker from NSDictionary generated by trackerObj:dictFromTO()
-    //    [consists of tid, optDict and valObjTable]
-    //    if trackerName match
-    //      if different tid
-    //         change tid of existing to input new
-    //      merge new trackerObj:
-    //         update vids as needed
-    //         add valObjs as needed
-    //    else
-    //      if existing tid match
-    //         move existing to new tid
-    //      add new tracker
-    //
-    //  added nov 2012
-    //
-    func loadTrackerDict(_ tdict: [String : Any], tname: String?) -> Int {
-
-        // get input tid
-        let newTID = tdict["tid"] as! Int  // rejectable if not there, better than crash but still wrong
-        DBGLog(String("load input: \(tname) tid \(newTID)"))
-
-        let newTIDi = newTID
-        var matchTID = -1
-        let tida = tlist.getTIDFromNameDb(tname)
-
-        // find tracker with same name and tid, or just same name
-        for tid in tida {
-            if (-1 == matchTID) || (tid == newTID) {
-                matchTID = tid
-            }
-        }
-
-        DBGLog(String("matchTID= \(matchTID)"))
-
-        var inputTO: trackerObj?
-        if -1 != matchTID {
-            // found tracker with same name and maybe same tid
-            if !loadingDemos {
-                rTracker_resource.stashTracker(matchTID) // make copy of current tracker so can reject newTID later
-                tldStashedTID = matchTID
-            }
-            tlist.updateTID(matchTID, new: newTIDi) // change existing tracker tid to match new (restore if we discard later)
-
-            inputTO = trackerObj(newTIDi) // load up existing tracker config
-
-            inputTO?.confirmTOdict(tdict) // merge valObjs
-            inputTO?.prevTID = matchTID
-            inputTO?.saveConfig() // write to db -- probably redundant as confirmTOdict writes to db as well
-
-            DBGLog(String("updated \(tname)"))
-
-            //DBGLog(@"skip load plist file as already have %@",tname);
-        } else {
-            // new tracker coming in
-            tlist.fixDictTID(tdict) // move any existing TIDs out of way
-            inputTO = trackerObj(dict: tdict) // create new tracker with input data
-            inputTO?.prevTID = matchTID
-            inputTO?.saveConfig() // write to db
-            tlist.add(toTopLayoutTable: inputTO!) // insert in top list
-            DBGLog(String("loaded new \(tname)"))
-            tldStashedTID = -1
-        }
-
-
-        return newTIDi
-    }
-
-    // MARK: -
-    // MARK: load .plists and .rtrks for input trackers
-
-    func handleOpenFileURL(_ url: URL, tname: String?) -> Int {
-        var tname = tname
-        var tdict: [String : Any] = [:]
-        var dataDict: [String : [String : String]]? = nil
-        var tid: Int
-
-        DBGLog(String("open url \(url)"))
-
-        jumpMaxPriv()
-        if nil != tname {
-            // if tname set it is just a plist
-            tdict = (NSDictionary(contentsOf: url) as Dictionary? as! [String : Any])
-        } else {
-            // else is an rtrk
-            var rtdict: [String : Any] = [:]
-
-            rtdict = NSDictionary(contentsOf: url) as Dictionary? as! [String : Any]
-            /*
-             "trackerName" : String
-             "dataDict" : [String : [String : String] ]
-             "tid" : String
-             "configDict" :
-                ["reminders: : []],
-                ["tid" : int],
-                ["optDict", Any] =>
-                    ["height" : Double]
-                    ["graphMaxDays" : String]
-                    ["rt_version" : String]
-                    ["prevTID" : String]
-                    ["privacy" : String]
-                    ["rt_build" : String]
-                    ["rtdb_version" : String]
-                    ["savertn" : String]
-                    ["width : Double]
-                    ["name" : String]
-                ["valObjTable" : Any] =>
-                    ["vcolor" : Int]
-                    ["vGraphType" : Int]
-                    ["vpriv" : Int]
-                    ["valueName" : String]
-                    ["vid" : Int]
-                    ["vtype" : Int]
-                    ["optDict" : [String : String]
-             */
-
-            tname = rtdict["trackerName"] as? String
-            tdict = (rtdict["configDict"] ?? [:]) as! [String : Any]
-            dataDict = rtdict["dataDict"] as? [String : [String : String]]
-            //let ttid: Int? = Int(tdict["tid"] as? String ?? "")
-            let ttid = tdict["tid"] as! Int
-            if loadingDemos {
-                tlist.deleteTrackerAllTID(ttid, name: tname) // wipe old demo tracker otherwise starts to look ugly
-            }
-        }
-
-        //DBGLog(@"ltd enter dict= %lu",(unsigned long)[tdict count]);
-        tid = loadTrackerDict(tdict, tname: tname)
-
-        if nil != dataDict {
-            let to = trackerObj(tid)
-
-            to.loadDataDict(dataDict!) // vids ok because confirmTOdict updated as needed
-            to.goRecalculate = true
-            to.recalculateFns() // updates fn vals in database
-            to.goRecalculate = false
-            to.saveChoiceConfigs() // in case input data had unrecognised choices
-
-            DBGLog("datadict loaded for open file url:")
-            #if DEBUGLOG
-            to.describe()
-            #endif
-        }
-
-        DBGLog("ltd/ldd finish")
-
-        restorePriv()
-        DBGLog(String("removing file \(url.path)"))
-        _ = rTracker_resource.deleteFile(atPath: url.path)
-
-        return tid
-    }
-    
-    func loadTrackerPlistFiles() -> Bool {
-        DBGLog("loadTrackerPlistFiles")
-        var rtrkTid = 0
-
-        let docsDir = rTracker_resource.ioFilePath(nil, access: true)
-        let localFileManager = FileManager.default
-
-        var filesToProcess: [URL] = []
-
-        let directoryURL = URL(fileURLWithPath: docsDir)
-        let enumerator = FileManager.default.enumerator(at: directoryURL, includingPropertiesForKeys: [.isDirectoryKey], options: [])
-
-        while let url = enumerator?.nextObject() as? URL {
-            do {
-                let resourceValues = try url.resourceValues(forKeys: [.isDirectoryKey])
-                if !resourceValues.isDirectory! {
-                    if url.lastPathComponent.hasSuffix("_in.plist") {
-                        filesToProcess.append(url)
-                    } else if url.pathExtension == "rtrk" {
-                        filesToProcess.append(url)
-                    }
-                }
-            } catch {
-                DBGLog("Error retrieving resource values for file: \(url.path), error: \(error)")
-            }
-        }
-
-        for file in filesToProcess {
-            let fname = file.lastPathComponent
-            DBGLog("process input: \(fname)")
-
-            let newTarget = (file.path + "_reading").replacingOccurrences(of: "Documents/Inbox/", with: "Documents/")
-            DBGLog("newTarget= \(newTarget)")
-            do {
-                try localFileManager.moveItem(atPath: file.path, toPath: newTarget)
-            } catch {
-                DBGErr("Error on move \(file) to \(newTarget): \(error)")
-            }
-
-            readingFile = true
-
-            safeDispatchSync { [self] in
-                UIApplication.shared.isIdleTimerDisabled = true
-
-                if fname.hasSuffix("_in.plist") {
-                    rtrkTid = handleOpenFileURL(URL(fileURLWithPath: newTarget), tname: String(fname.prefix(fname.count - 9)))
-                    rTracker_resource.rmStashedTracker(tldStashedTID)  // if there was name match, we stashed it as rejectable, so dump the stash copy now because they said to load the file
-                    tldStashedTID = -1
-                } else {
-                    rtrkTid = handleOpenFileURL(URL(fileURLWithPath: newTarget), tname: nil)
-                    stashedTIDs.append(NSNumber(value: rtrkTid))
-                }
-
-                UIApplication.shared.isIdleTimerDisabled = false
-            }
-
-            /*
-            if fname.hasSuffix("_in.plist") {
-                rTracker_resource.rmStashedTracker(0)
-            } else {
-                stashedTIDs.append(NSNumber(value: rtrkTid))
-            }
-             */
-            readingFile = false
-            rTracker_resource.setProgressVal(Float(plistReadCount) / Float(plistLoadCount))
-            plistReadCount += 1
-        }
-
-        return (rtrkTid != 0)
-    }
-
-    @objc func doLoadCsvFiles() {
-        if loadingCsvFiles {
-            return
-        }
-        loadingCsvFiles = true
-        autoreleasepool {
-
-            loadTrackerCsvFiles()
-            safeDispatchSync({ [self] in
-                // csv file load done, close activity indicators
-                rTracker_resource.finishProgressBar(view, navItem: navigationItem, disable: true)
-                rTracker_resource.finishActivityIndicator(view, navItem: navigationItem, disable: false)
-            })
-            
-            // rtmx reorderDbFromTLT here ?
-
-            // give up lock
-            //refreshLock = false
-            DBGLog("release atomic loadFilesLock")
-            _ = loadFilesLock.testAndSet(newValue: false)
-            loadingCsvFiles = false
-            DispatchQueue.main.async(execute: { [self] in
-                refreshToolBar(true)
-            })
-            DBGLog(String("csv data loaded, UI enabled, CSV lock off stashedTIDs= \(stashedTIDs)"))
-
-            if 0 < stashedTIDs.count {
-                doRejectableTracker()
-            }
-        }
-
-        // thread finished
-    }
-
-    func refreshViewPart2() {
-        //DBGLog(@"entry");
-        // rtmx 
-        tlist.confirmToplevelTIDs()
-        tlist.loadTopLayoutTable()
-        DispatchQueue.main.async(execute: { [self] in
-            tableView!.reloadData()
-            refreshEditBtn()
-            refreshToolBar(true)
-            view.setNeedsDisplay()
-        })
-        // no effect [self.tableView setNeedsDisplay];
-    }
-
-    @objc func doLoadInputfiles() {
-        if loadingInputFiles {
-            return
-        }
-        if loadingCsvFiles {
-            return
-        }
-        loadingInputFiles = true
-        autoreleasepool {
-
-            if InstallDemos {
-                _ = loadDemos(true)
-                InstallDemos = false
-            }
-
-            if InstallSamples {
-                _ = loadSamples(true)
-                InstallSamples = false
-            }
-
-            if loadTrackerPlistFiles() {
-                // this thread now completes updating rvc display of trackerList as next step is load csv data and trackerlist won't change (unless rtrk files)
-                tlist.loadTopLayoutTable() // called again in refreshviewpart2, but need for re-order to set ranks
-                tlist.reorderDbFromTLT()
-            }
-
-            safeDispatchSync({ [self] in
-                //[rTracker_resource finishProgressBar:self.view navItem:self.navigationItem disable:YES];
-                if csvLoadCount != 0 {
-                    rTracker_resource.finishActivityIndicator(view, navItem: nil, disable: false) // finish 'loading trackers' spinner
-                    //[rTracker_resource startActivityIndicator:self.view navItem:nil disable:NO str:@"loading data..."];
-                }
-            })
-            refreshViewPart2()
-
-            Thread.detachNewThreadSelector(#selector(doLoadCsvFiles), toTarget: self, with: nil)
-
-            loadingInputFiles = false
-            DBGLog("load plist thread finished, lock off, UI enabled, dispatched CSV load")
-        }
-        // end of this thread, refreshLock still on, userInteraction disabled, activityIndicator still spinning and doLoadCsvFiles is in charge
-    }
-
-    func countInputFiles(_ targ_ext: String?, Inbox: Bool = false) -> Int {
-        var retval = 0
-
-        var docsDir = rTracker_resource.ioFilePath(nil, access: true)
-        if Inbox {
-            docsDir = rTracker_resource.ioFilePath("Inbox", access: true)
-        }
-        let localFileManager = FileManager.default
-
-
-        //let files = try localFileManager.contentsOfDirectory(atPath: docsDir)
-        let directoryURL = URL(fileURLWithPath: docsDir)
-        let enumerator = localFileManager.enumerator(at: directoryURL, includingPropertiesForKeys: [.isDirectoryKey], options: [])
-        
-        var files: [String] = []
-        while let url = enumerator?.nextObject() as? URL {
-            files.append(url.lastPathComponent)
-        }
-        for file in files {
-            if file.hasSuffix(targ_ext ?? "") {
-                DBGLog("existsInputFiles: match on \(file)")
-                retval += 1
-            }
-        }
-
-
-        return retval
-    }
-
-
-    func loadInputFiles() {
-        DBGLog("loadInputFiles")
-        if loadingInputFiles {
-            return
-        }
-        if loadingCsvFiles {
-            return
-        }
-        //if (!self.openUrlLock) {
-        csvLoadCount = countInputFiles("_in.csv")
-        plistLoadCount = countInputFiles("_in.plist")
-        var rtrkLoadCount = countInputFiles(".rtrk")
-        csvLoadCount += countInputFiles(".rtcsv")
-        rtrkLoadCount += countInputFiles(".rtrk", Inbox: true)
-        csvLoadCount += countInputFiles(".csv", Inbox: true)
-        csvLoadCount += countInputFiles(".rtcsv", Inbox: true)
-
-        // handle rtrks as plist + csv, just faster if only has data or only has tracker def
-        csvLoadCount += rtrkLoadCount
-        plistLoadCount += rtrkLoadCount
-
-        if InstallSamples {
-            plistLoadCount += loadSamples(false)
-        }
-        if InstallDemos {
-            plistLoadCount += loadDemos(false)
-        }
-
-        // set rvc:static numerators for progress bars
-        csvReadCount = 1
-        plistReadCount = 1
-
-        if 0 < (plistLoadCount + csvLoadCount) {
-            tableView!.scrollRectToVisible(CGRect(x: 0, y: 0, width: 1, height: 1), animated: true) // ScrollToTop so can see bars
-            rTracker_resource.startActivityIndicator(view, navItem: nil, disable: false, str: "loading trackers...")
-            rTracker_resource.startProgressBar(view, navItem: navigationItem, disable: true, yloc: 0.0)
-
-            Thread.detachNewThreadSelector(#selector(doLoadInputfiles), toTarget: self, with: nil)
-            // lock stays on, userInteraction disabled, activityIndicator spinning,   give up and doLoadInputFiles() is in charge
-
-            DBGLog("returning main thread, lock on, UI disabled, activity spinning,  files to load")
-            return
-        }
-        //}
-
-        // if here (did not return above), no files to load, this thread set the lock and refresh is done now
-
-        refreshViewPart2()
-        //refreshLock = false
-        DBGLog("release atomic loadFilesLock")
-        _ = loadFilesLock.testAndSet(newValue: false)
-        DBGLog("finished, no files to load - lock off")
-
-        return
-    }
-
-    let SUPPLY_DEMOS = 0
-    let SUPPLY_SAMPLES = 1
-
-    func loadSuppliedTrackers(_ doLoad: Bool, set: Int) -> Int {
-        // loads sample tracker plist files which are slurped in as dicts.  demo tracker is .rtrk (rtcsv) file and loaded differently
-        let bundle = Bundle.main
-        var paths: [AnyHashable]?
-        if SUPPLY_DEMOS == set {
-            paths = bundle.paths(forResourcesOfType: "plist", inDirectory: "demoTrackers")
-        } else {
-            paths = bundle.paths(forResourcesOfType: "plist", inDirectory: "sampleTrackers")
-        }
-        var count = 0
-
-        /* copy plists over version
-             NSString *docsDir = [rTracker_resource ioFilePath:nil access:YES];
-             NSFileManager *dfltManager = [NSFileManager defaultManager];
-             */
-
-        //DBGLog(@"paths %@",paths  );
-
-
-        for p in paths ?? [] {
-            guard let p = p as? String else {
-                continue
-            }
-
-            if doLoad {
-                // load now into trackerObj - needs progressBar
-                let tdict = NSDictionary(contentsOfFile: p) as Dictionary? as! [String : Any]
-                tlist.fixDictTID(tdict)
-                let newTracker = trackerObj(dict: tdict)
-
-                tlist.deConflict(newTracker) // add _n to trackerName so we don't overwrite user's existing if any .. could just merge now?
-
-                newTracker.saveConfig()
-                tlist.add(toTopLayoutTable: newTracker)
-
-                rTracker_resource.setProgressVal((Float(plistReadCount)) / (Float(plistLoadCount)))
-                plistReadCount += 1
-
-                DBGLog(String("finished loadSample on \(p)"))
-            }
-            count += 1
-        }
-
-        if doLoad {
-            var sql: String
-            if SUPPLY_DEMOS == set {
-                sql = String(format: "insert or replace into info (val, name) values (%i,'demos_version')", DEMOS_VERSION)
-            } else {
-                sql = String(format: "insert or replace into info (val, name) values (%i,'samples_version')", SAMPLES_VERSION)
-            }
-            tlist.toExecSql(sql:sql)
-        }
-
-        return count
-
-    }
-
-    func loadSamples(_ doLoad: Bool) -> Int {
-        // called when handlePrefs decides is needed, copies plist files to documents dir
-        // also called with doLoad=NO to just count
-        // returns count
-
-        let count = loadSuppliedTrackers(doLoad, set: SUPPLY_SAMPLES)
-
-        return count
-    }
-
-    func loadDemos(_ doLoad: Bool) -> Int {
-
-        //return [self loadSuppliedTrackers:doLoad set:SUPPLY_DEMOS];
-        //var newp: String?
-        let bundle = Bundle.main
-        let paths = bundle.paths(forResourcesOfType: "rtrk", inDirectory: "demoTrackers")
-        let urls = paths.map { URL(fileURLWithPath: $0) }
-        
-        let fm = FileManager.default
-        let documentsURL = fm.urls(for: .documentDirectory, in: .userDomainMask).first!
-        
-        var count = 0
-
-        loadingDemos = true
-        for p in urls {
-            if doLoad {
-                let file = p.lastPathComponent
-                //newp = [rTracker_resource ioFilePath:[NSString stringWithFormat:@"Inbox/%@",file] access:YES];
-                //newp = rTracker_resource.ioFilePath("\(file)", access: true)
-
-                let destinationURL = documentsURL.appendingPathComponent(file)
-
-                do {
-                    try fm.copyItem(atPath: p.path, toPath: destinationURL.path)  // FileManager.default.copyItem(atPath: p.absoluteString, toPath: newp ?? "")
-
-                    _ = handleOpenFileURL(URL(fileURLWithPath: destinationURL.path), tname: nil)
-                    //DBGLog(@"stashedTIDs= %@",self.stashedTIDs);
-                } catch let err {
-                    DBGErr(String("Error copying file: \(p.path) to \(destinationURL.path) error: \(err)"))
-                    count -= 1
-                }
-            }
-            count += 1
-        }
-        if doLoad && count != 0 {
-            let sql = String(format: "insert or replace into info (val, name) values (%i,'demos_version')", DEMOS_VERSION)
-            tlist.toExecSql(sql:sql)
-        }
-        loadingDemos = false
-        return count
-    }
-
-    // MARK: -
     // MARK: view support
 
     func scrollState() {
@@ -882,14 +137,77 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
     func refreshToolBar(_ animated: Bool) {
         //DBGLog(@"refresh tool bar, noshow= %d",(PVNOSHOW == self.privacyObj.showing));
+
+        // Check if health button should be hidden
+        let hideHealthButton = UserDefaults.standard.bool(forKey: "hide_health_button_when_enabled")
+        var shouldShowHealthBtn = true
+
+        if hideHealthButton {
+            // Check if all health sources are authorized (heart.fill state)
+            let tl = trackerList.shared
+            let sql = "SELECT disabled FROM rthealthkit"
+            let statuses = tl.toQry2AryI(sql: sql)
+
+            if statuses.count > 0 {
+                let activeStatuses = statuses.filter { $0 != 4 }
+                if !activeStatuses.isEmpty && activeStatuses.allSatisfy({ $0 == 1 || $0 == 3 }) {
+                    shouldShowHealthBtn = false
+                }
+            }
+        }
+
+        // Check if privacy button should be hidden
+        let hidePrivacyButton = UserDefaults.standard.bool(forKey: "hide_privacy_button")
+        let shouldShowPrivacyBtn = !hidePrivacyButton
+
 #if TESTING
-        setToolbarItems(
-            [out2inBtn, xprivBtn, tstBtn, flexibleSpaceButtonItem, helpBtn, privateBtn].compactMap { $0 },
-            animated: animated)
+        // Testing code compiles in debug builds, but only shows UI when launched by UI tests
+        if ProcessInfo.processInfo.arguments.contains("--uitesting") {
+            var items: [UIBarButtonItem?] = [out2inBtn, xprivBtn, tstBtn, kbBtn]
+            if shouldShowHealthBtn {
+                items.append(healthBtn)
+            }
+            items.append(flexibleSpaceButtonItem)
+            if shouldShowPrivacyBtn {
+                items.append(privateBtn)
+            }
+            setToolbarItems(items.compactMap { $0 }, animated: animated)
+        } else {
+            var items: [UIBarButtonItem?] = []
+            if shouldShowHealthBtn {
+                items.append(healthBtn)
+            }
+            #if DEBUGLOG
+            items.append(debugResetBtn)  // Add debug reset button in debug builds
+            #endif
+            items.append(flexibleSpaceButtonItem)
+            if shouldShowPrivacyBtn {
+                items.append(privateBtn)
+            }
+            setToolbarItems(items.compactMap { $0 }, animated: animated)
+        }
 #else
-        setToolbarItems(
-            [flexibleSpaceButtonItem, helpBtn, privateBtn].compactMap { $0 },
-            animated: animated)
+        var items: [UIBarButtonItem?] = []
+        DBGLog("refreshToolBar: Setting up toolbar items")
+        if shouldShowHealthBtn {
+            DBGLog("refreshToolBar: Adding health button")
+            items.append(healthBtn)
+        } else {
+            DBGLog("refreshToolBar: Health button hidden")
+        }
+        #if DEBUGLOG
+        DBGLog("refreshToolBar: Adding debug reset button")
+        items.append(debugResetBtn)  // Add debug reset button in debug builds
+        #endif
+        items.append(flexibleSpaceButtonItem)
+        if shouldShowPrivacyBtn {
+            DBGLog("refreshToolBar: Adding privacy button")
+            items.append(privateBtn)
+        } else {
+            DBGLog("refreshToolBar: Privacy button hidden")
+        }
+        DBGLog("refreshToolBar: Final toolbar items count = \(items.count)")
+        setToolbarItems(items.compactMap { $0 }, animated: animated)
 #endif
     }
     
@@ -898,7 +216,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         // set up the window title, try to get owner's name
 
         let devname = UIDevice.current.name  // this no longer works from iOS 16, need an 'entitlement'
-        DBGLog("name = \(devname)");
+        //DBGLog("name = \(devname)");
         let words = devname.components(separatedBy: " ")
         let bname = Bundle.main.infoDictionary?["CFBundleName"] as? String // @"rTracker";  default title
         var rtitle = bname
@@ -945,7 +263,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         }
         
         title = rtitle
-        DBGLog("title= \(rtitle!)")
+        DBGLog("\(rtitle!) running on \(devname)")
     }
 
 
@@ -996,14 +314,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         //tableView!.reloadData() // redundant but waiting for countScheduledReminders to complete
         //view.setNeedsDisplay()
     }
-/*
-    @objc func handlePrivacyLockdown(_ notification: Notification) {
-        DispatchQueue.main.async(execute: {
-            _ = self.privacyObj.lockDown() // hiding is handled after startup - viewDidAppear() below
-            self.tableView?.reloadData()
-        })
-    }
- */
+
     func setViewMode() {
         rTracker_resource.setViewMode(self)
         if #available(iOS 13.0, *) {
@@ -1030,13 +341,10 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         //DBGLog(@"rvc: viewDidLoad privacy= %d",[privacyObj getPrivacyValue]);
 
         //refreshLock = false
-        DBGLog("release atomic loadFilesLock")
+        //DBGLog("release atomic loadFilesLock")
         _ = loadFilesLock.testAndSet(newValue: false)
         readingFile = false
 
-        //let vsize = rTracker_resource.get_visible_size(self)
-        //let vsize = rTracker_resource.getVisibleSize(of: self)
-        
         navigationItem.rightBarButtonItem = addBtn
         navigationItem.leftBarButtonItem = editBtn
         
@@ -1087,6 +395,16 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
             tlist.updateShortcutItems()
         }
         
+        // Pre-initialize rtHealthKit if user has previously authorized HealthKit
+        // This prevents threading violations when countHKstepsQuick runs on background thread
+        let sql = "select count(*) from rthealthkit"
+        if tlist.toQry2Int(sql: sql) > 0 {
+            _ = rtHealthKit.shared
+            #if DEBUGLOG
+            DBGLog("Pre-initialized rtHealthKit.shared - user has previous HealthKit authorization")
+            #endif
+        }
+        
         refreshView()
     }
 
@@ -1108,14 +426,13 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
     func refreshEditBtn() {
 
-        if tlist.topLayoutNames.count == 0 {
+        if tlist.topLayoutNamesH.count == 0 {
             if navigationItem.leftBarButtonItem != nil {
                 navigationItem.leftBarButtonItem = nil
             }
         } else {
             if navigationItem.leftBarButtonItem == nil {
                 navigationItem.leftBarButtonItem = editBtn
-                //[editBtn release];
             }
         }
 
@@ -1123,13 +440,18 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
     func samplesNeeded() -> Bool {
         let rslt = tlist.toQry2Int(sql:"select val from info where name = 'samples_version'")
-        DBGLog(String("samplesNeeded if \(SAMPLES_VERSION) != \(rslt)"))
+        if SAMPLES_VERSION != rslt {
+            DBGLog(String("samples Needed"))
+        }
         return SAMPLES_VERSION != rslt
     }
 
     func demosNeeded() -> Bool {
         let rslt = tlist.toQry2Int(sql:"select val from info where name = 'demos_version'")
-        DBGLog(String("demosNeeded if \(DEMOS_VERSION) != \(rslt)"))
+        if DEMOS_VERSION != rslt {
+            DBGLog(String("demos Needed"))
+        }
+ 
         #if !RELEASE
         //rslt=0;
         if 0 == rslt {
@@ -1157,6 +479,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         rTracker_resource.setToldAboutSwipe(sud.bool(forKey: "toldAboutSwipe"))
         rTracker_resource.setToldAboutSwipe2(sud.bool(forKey: "toldAboutSwipe2"))
         rTracker_resource.setToldAboutNotifications(sud.bool(forKey: "toldAboutNotifications"))
+        rTracker_resource.setToldToBackup(sud.bool(forKey: "toldToBackup"))
         rTracker_resource.setAcceptLicense(sud.bool(forKey: "acceptLicense"))
 
         //DBGLog(@"entry prefs-- resetPass: %d  reloadsamples: %d",resetPassPref,reloadSamplesPref);
@@ -1179,9 +502,10 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                 InstallDemos = true
             }
         }
-
-        DBGLog(String("InstallSamples \(InstallSamples)  InstallDemos \(InstallDemos)"))
-
+        if InstallSamples || InstallDemos {
+            DBGLog(String("InstallSamples \(InstallSamples)  InstallDemos \(InstallDemos)"))
+        }
+        
         if resetPassPref {
             sud.set(false, forKey: "reset_password_pref")
         }
@@ -1192,40 +516,16 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         initialPrefsLoad = false
 
         sud.synchronize()
-        /*
-        #if DEBUGLOG
-            resetPassPref = [sud boolForKey:@"reset_password_pref"];
-            reloadSamplesPref = [sud boolForKey:@"reload_sample_trackers_pref"];
-
-            DBGLog(@"exit prefs-- resetPass: %d  reloadsamples: %d",resetPassPref,reloadSamplesPref);
-        #endif
-        */
     }
 
-    /*
-     refreshView:
-       loadInputFiles:
-         if files to load
-            thread:
-              load demos, samples, plist files
-              refreshViewPart2
-              thread:
-                load csv files
-                if rtcsv (might add trackers)
-                   refreshViewPart2
-         else
-            refreshViesPart2
-      */
     func refreshView() {
-
-        // deprecated ios 10 - if (0 != OSAtomicTestAndSet(0, &(_refreshLock))) {
-        DBGLog("try atomic set loadFilesLock")
+        //DBGLog("try atomic set loadFilesLock")
         if loadFilesLock.testAndSet(newValue: true) {
             // wasn't false before, so we didn't get lock, so leave because refresh already in process
             return
         }
-        DBGLog("got atomic set")
-        //DBGLog(@"refreshView");
+        //DBGLog("got atomic set")
+
         scrollState()
 
         handlePrefs()
@@ -1303,22 +603,11 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         // for don't wait / no completion handler
     }
     
-    /*
-    @objc func doOpenTrackerOCRejectable(_ nsnTid: NSNumber?) {
-        openTracker(nsnTid?.intValue ?? 0, rejectable: true)
-    }
-     */
-    
     func doOpenTracker(_ tid: Int) {
         DispatchQueue.main.async { let tid = tid
             self.openTracker(tid, rejectable: false)
         }
     }
-    /*
-    @objc func doOpenTrackerOC(_ nsnTid: Int) {
-        openTracker(nsnTid, rejectable: false)
-    }
-*/
     
     func doRejectableTracker() {
         //DBGLog(@"stashedTIDs= %@",self.stashedTIDs);
@@ -1326,9 +615,6 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         doOpenTrackerRejectable(nsntid) {
             self.stashedTIDs.removeLast()
         }
-        
-        // performSelector(onMainThread: #selector(doOpenTrackerOCRejectable(_:)), with: nsntid, waitUntilDone: true)
-        // stashedTIDs.removeLast()
     }
 
     public override func viewDidAppear(_ animated: Bool) {
@@ -1386,13 +672,19 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     }
 
 
-
     public override func viewWillDisappear(_ animated: Bool) {
-        DBGLog("rvc viewWillDisappear")
+            //DBGLog("rvc viewWillDisappear")
 
-        UIApplication.shared.applicationIconBadgeNumber = pendingNotificationCount()
-        super.viewWillDisappear(animated)
-    }
+            // Update badge count using ios 17 new API
+            let count = pendingNotificationCount()
+            UNUserNotificationCenter.current().setBadgeCount(count) { error in
+                if let error = error {
+                    DBGLog("Failed to set badge count: \(error.localizedDescription)")
+                }
+            }
+            
+            super.viewWillDisappear(animated)
+        }
 
     public override func didReceiveMemoryWarning() {
         // Releases the view if it doesn't have a superview.
@@ -1401,93 +693,134 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         // Release any cached data, images, etc that aren't in use.
 
         super.didReceiveMemoryWarning()
-
-
-
-
     }
 
     // MARK: -
     // MARK: button accessor getters
 
     func privBtnSetImg(_ pbtn: UIButton?, noshow: Bool) {
-        //BOOL shwng = (self.privacyObj.showing == PVNOSHOW); 
+        //BOOL shwng = (self.privacyObj.showing == PVNOSHOW);
         let minprv = privacyValue > MINPRIV
-        let btnImg = noshow
-            ? (minprv ? "shadeview-button-7.png" : "closedview-button-7.png")
-            : (minprv ? "shadeview-button-blue-7.png" : "closedview-button-blue-7.png")
 
-        DispatchQueue.main.async(execute: {
-            pbtn?.setImage(UIImage(named: btnImg), for: .normal)
-        })
+        if #available(iOS 26.0, *) {
+            // iOS 26: Always show filled sunglasses (green or red based on minprv)
+            // Unlocked state (clear sunglasses) is handled separately in privateBtn getter
+            let symbolName = privacyIcon + ".fill"
+            let symbolColor: UIColor = minprv ? .systemRed : .systemGreen
+
+            let symSize = UIImage.SymbolConfiguration(pointSize: 22, weight: .regular)
+            let image = UIImage(systemName: symbolName)?
+                .applyingSymbolConfiguration(symSize)?
+                .withTintColor(symbolColor, renderingMode: .alwaysOriginal)
+
+            DispatchQueue.main.async(execute: {
+                if var config = pbtn?.configuration {
+                    config.image = image
+                    pbtn?.configuration = config
+                }
+            })
+        } else {
+            // Pre-iOS 26: Use existing PNG image logic
+            let btnImg = noshow
+                ? (minprv ? "shadeview-button-7.png" : "closedview-button-7.png")
+                : (minprv ? "shadeview-button-blue-7.png" : "closedview-button-blue-7.png")
+
+            DispatchQueue.main.async(execute: {
+                pbtn?.setImage(UIImage(named: btnImg), for: .normal)
+            })
+        }
     }
 
     var _privateBtn: UIBarButtonItem?
     var privateBtn: UIBarButtonItem {
-        //
         if _privateBtn == nil {
-            let pbtn = UIButton()
-            pbtn.setImage(
-                UIImage(named: "closedview-button-7.png"),
-                for: .normal)
-            pbtn.frame = CGRect(x: 0, y: 0, width: (pbtn.currentImage?.size.width ?? 0.0) * 1.5, height: pbtn.currentImage?.size.height ?? 0.0)
-            pbtn.addTarget(self, action: #selector(btnPrivate), for: .touchUpInside)
-            _privateBtn = UIBarButtonItem(
-                customView: pbtn)
-            privBtnSetImg(_privateBtn!.customView as? UIButton, noshow: true)
-            
+            // Create initial button with green sunglasses.fill / closedview PNG
+            _privateBtn = rTracker_resource.createStyledButton(
+                symbolName: privacyIcon + ".fill",
+                target: self,
+                action: #selector(btnPrivate),
+                accId: "privacy",
+                symbolColor: .systemGreen,
+                legacyImageName: "closedview-button-7.png"
+            )
             _privateBtn!.accessibilityLabel = "Privacy"
             _privateBtn!.accessibilityHint = "tap to show privacy filter"
-            _privateBtn!.accessibilityIdentifier = "privacy"
+
+            // Update initial state
+            privBtnSetImg(_privateBtn!.customView as? UIButton, noshow: true)
         } else {
+            // Update button state based on privacy status
             var noshow = true
             if _privacyObj != nil {
                 noshow = PVNOSHOW == privacyObj.showing
             }
+
             if !(noshow) && (PWKNOWPASS == privacyObj.pwState) {
-                //DBGLog(@"unlock btn");
-                (_privateBtn!.customView as? UIButton)?.setImage(
-                    UIImage(named: "fullview-button-blue-7.png"),
-                    for: .normal)
+                // Special case: unlocked - use black sunglasses outline on iOS 26, fullview PNG on legacy
+                if #available(iOS 26.0, *) {
+                    let symSize = UIImage.SymbolConfiguration(pointSize: 22, weight: .regular)
+                    let image = UIImage(systemName: privacyIcon)?
+                        .applyingSymbolConfiguration(symSize)?
+                        .withTintColor(.label, renderingMode: .alwaysOriginal)
+
+                    DispatchQueue.main.async(execute: {
+                        if var config = (self._privateBtn!.customView as? UIButton)?.configuration {
+                            config.image = image
+                            (self._privateBtn!.customView as? UIButton)?.configuration = config
+                        }
+                    })
+                } else {
+                    //DBGLog(@"unlock btn");
+                    (_privateBtn!.customView as? UIButton)?.setImage(
+                        UIImage(named: "fullview-button-blue-7.png"),
+                        for: .normal)
+                }
             } else {
+                // Standard locked/hidden states
                 //DBGLog(@"lock btn");
                 privBtnSetImg(_privateBtn!.customView as? UIButton, noshow: noshow)
             }
         }
 
-
         return _privateBtn!
     }
 
-    var _helpBtn: UIBarButtonItem?
-    var helpBtn: UIBarButtonItem {
-        if _helpBtn == nil {
-            _helpBtn = UIBarButtonItem(
-                title: "Help",
-                style: .plain,
-                target: self,
-                action: #selector(btnHelp))
-            
-            _helpBtn!.accessibilityLabel = "Help"
-            _helpBtn!.accessibilityHint = "tap visit rTracker help web pages"
-            _helpBtn!.accessibilityIdentifier = "help"
+    var _healthBtn: UIBarButtonItem?
+    var healthBtn: UIBarButtonItem {
+        if _healthBtn == nil {
+            _healthBtn = rTracker_resource.createHealthButton(target: self, action: #selector(btnHealth), accId: "health")
+            _healthBtn!.accessibilityLabel = "Apple Health"
+            _healthBtn!.accessibilityHint = "tap to view Apple Health status and manage permissions"
         }
-        return _helpBtn!
+        return _healthBtn!
     }
+
+#if DEBUGLOG
+    var _debugResetBtn: UIBarButtonItem?
+    var debugResetBtn: UIBarButtonItem {
+        if _debugResetBtn == nil {
+            DBGLog("Creating debug reset button")
+            _debugResetBtn = rTracker_resource.createActionButton(
+                target: self,
+                action: #selector(btnDebugReset),
+                symbolName: "arrow.counterclockwise.circle",
+                accId: "debugReset",
+                tintColor: .systemOrange,
+                fallbackSystemItem: .refresh)
+            _debugResetBtn!.accessibilityLabel = "Reset Welcome Flags"
+            _debugResetBtn!.accessibilityHint = "Debug: Reset toldToBackup and shownWelcomeSheet"
+            DBGLog("Debug reset button created successfully")
+        }
+        return _debugResetBtn!
+    }
+#endif
 
     var _addBtn: UIBarButtonItem?
     var addBtn: UIBarButtonItem {
         if _addBtn == nil {
-            _addBtn = UIBarButtonItem(
-                barButtonSystemItem: .add,
-                target: self,
-                action: #selector(btnAddTracker))
-
-            _addBtn!.style = UIBarButtonItem.Style.done
-            
+            _addBtn = rTracker_resource.createActionButton(target: self, action: #selector(btnAddTracker), symbolName: "plus", accId: "add", tintColor: .systemBlue, fallbackSystemItem: .add)
             _addBtn!.accessibilityLabel = "Add"
             _addBtn!.accessibilityHint = "tap create a new tracker"
-            _addBtn!.accessibilityIdentifier = "add"
         }
         return _addBtn!
     }
@@ -1495,17 +828,9 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     var _editBtn: UIBarButtonItem?
     var editBtn: UIBarButtonItem {
         if _editBtn == nil {
-            _editBtn = UIBarButtonItem(
-                barButtonSystemItem: .edit,
-                target: self,
-                action: #selector(btnEdit))
-
-            _editBtn!.style = UIBarButtonItem.Style.plain
-            
+            _editBtn = rTracker_resource.createSettingsButton(target: self, action: #selector(btnEdit), accId: "edit")
             _editBtn!.accessibilityLabel = "Edit"
             _editBtn!.accessibilityHint = "tap modify existing trackers"
-            _editBtn!.accessibilityIdentifier = "edit"
-            
         }
         return _editBtn!
     }
@@ -1529,7 +854,10 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                 title: "out2in",
                 style: .plain,
                 target: self,
-                action: #selector(btnOut2in))
+                action: #selector(btnOut2in)) //#selector(btnOut2in))  // rtm change back!!!!
+            if #available(iOS 26.0, *) {
+                _out2inBtn!.hidesSharedBackground = true  // Remove white container background
+            }
             
             _out2inBtn!.accessibilityLabel = "out2in"
             //_out2inBtn!.accessibilityIdentifier = "out2in"
@@ -1546,6 +874,9 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                 style: .plain,
                 target: self,
                 action: #selector(btnXpriv))
+            if #available(iOS 26.0, *) {
+                _xprivBtn!.hidesSharedBackground = true  // Remove white container background
+            }
             
             _xprivBtn!.accessibilityLabel = "xpriv"
             //_xprivBtn!.accessibilityIdentifier = "xpriv"
@@ -1561,26 +892,35 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                 style: .plain,
                 target: self,
                 action: #selector(btnTst))
-            
+            if #available(iOS 26.0, *) {
+                _tstBtn!.hidesSharedBackground = true  // Remove white container background
+            }
+
             _tstBtn!.accessibilityLabel = "tst"
             //_tstBtn!.accessibilityIdentifier = "tst"
         }
         return _tstBtn!
     }
-    #endif
-    
-    /*
-     - (UIBarButtonItem *) multiGraphBtn {
-    	if (multiGraphBtn == nil) {
-    		multiGraphBtn = [[UIBarButtonItem alloc]
-    					  initWithTitle:@"Multi-Graph"
-    					  style:UIBarButtonItemStylePlain
-    					  target:self
-    					  action:@selector(btnMultiGraph)];
-    	}
-    	return multiGraphBtn;
+
+    var _kbBtn: UIBarButtonItem?
+    var kbBtn: UIBarButtonItem {
+        if _kbBtn == nil {
+            _kbBtn = UIBarButtonItem(
+                title: "kb",
+                style: .plain,
+                target: self,
+                action: #selector(btnKb))
+            if #available(iOS 26.0, *) {
+                _kbBtn!.hidesSharedBackground = true  // Remove white container background
+            }
+
+            _kbBtn!.accessibilityLabel = "kb"
+            //_kbBtn!.accessibilityIdentifier = "kb"
+        }
+        return _kbBtn!
     }
-    */
+    #endif
+
 
     // MARK: -
 
@@ -1604,7 +944,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
             for i in 0..<notifications.count {
                 let oneEvent = notifications[i]
                 let userInfoCurrent = oneEvent.content.userInfo
-                DBGLog(String("\(i) uic: \(userInfoCurrent)"))
+                //DBGLog(String("\(i) uic: \(userInfoCurrent)"))
                 if let tidNumber = userInfoCurrent["tid"] as? NSNumber {
                     let tid = tidNumber.intValue
 
@@ -1628,7 +968,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
             return
         }
 
-        let atc = addTrackerController(nibName: "addTrackerController", bundle: nil)
+        let atc = addTrackerController()
         atc.tlist = tlist
         navigationController?.pushViewController(atc, animated: true)
         //[rTracker_resource myNavPushTransition:self.navigationController vc:atc animOpt:UIViewAnimationOptionTransitionCurlUp];
@@ -1646,7 +986,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         }
         
         var ctlc: configTlistController?
-        ctlc = configTlistController(nibName: "configTlistController", bundle: nil)
+        ctlc = configTlistController()
         ctlc?.tlist = tlist
         if let ctlc {
             navigationController?.pushViewController(ctlc, animated: true)
@@ -1657,6 +997,50 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         DBGLog("btnMultiGraph was pressed!")
     }
 
+    @objc func btnHealth() {
+        DBGLog("Health button pressed")
+        let healthStatusView = HealthStatusViewController(showConfigInstructions: true)
+        let hostingController = UIHostingController(rootView: healthStatusView)
+        hostingController.modalPresentationStyle = .pageSheet
+        present(hostingController, animated: true, completion: nil)
+    }
+
+#if DEBUGLOG
+    @objc func btnDebugReset() {
+        DBGLog("Debug reset button pressed - clearing welcome sheet and backup flags")
+
+        let alert = UIAlertController(
+            title: "Reset Welcome/Backup Flags",
+            message: "This will remove UserDefaults keys:\n• acceptLicense\n• shownWelcomeSheet\n• toldToBackup\n• toldAboutNotifications\n\nSimulates fresh install. Restart to test.",
+            preferredStyle: .alert)
+
+        let resetAction = UIAlertAction(
+            title: "Reset",
+            style: .destructive,
+            handler: { action in
+                let sud = UserDefaults.standard
+
+                // Only remove from UserDefaults - simulates fresh install where keys don't exist
+                sud.removeObject(forKey: "acceptLicense")
+                sud.removeObject(forKey: "shownWelcomeSheet")
+                sud.removeObject(forKey: "toldToBackup")
+                sud.removeObject(forKey: "toldAboutNotifications")
+                sud.synchronize()
+
+                DBGLog("Reset complete: removed acceptLicense, shownWelcomeSheet, toldToBackup, and toldAboutNotifications from UserDefaults")
+
+                rTracker_resource.alert("Flags Reset", msg: "Keys removed from UserDefaults. Restart the app to test fresh install scenario (with license acceptance).", vc: self)
+            })
+
+        let cancelAction = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
+
+        alert.addAction(resetAction)
+        alert.addAction(cancelAction)
+
+        present(alert, animated: true)
+    }
+#endif
+
     @objc func btnPrivate() {
         tableView!.scrollRectToVisible(CGRect(x: 0, y: 0, width: 1, height: 1), animated: true) // ScrollToTop
         privacyObj.togglePrivacySetter()
@@ -1665,15 +1049,9 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         }
     }
 
-    @objc func btnHelp() {
-
-        //[[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"http://rob-miller.github.io/rTracker/rTracker/iPhone/userGuide/"]];  // deprecated ios 9
-        if let url = URL(string: "http://rob-miller.github.io/rTracker/rTracker/iPhone/userGuide/") {
-            UIApplication.shared.open(url, options: [:])
-        }
-    }
 
     #if TESTING
+    @objc func btnOut2inx() {}
     @objc func btnOut2in() {
         DBGLog("out2in pressed")
         
@@ -1711,6 +1089,63 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         refreshView()
         //tableView?.reloadData()
     }
+
+    @objc func btnKb() {
+        DBGLog("kb pressed - adding Kate Bell contact")
+
+        let contactStore = CNContactStore()
+
+        // Request authorization
+        contactStore.requestAccess(for: .contacts) { granted, error in
+            if let error = error {
+                DBGErr("Error requesting contacts access: \(error)")
+                return
+            }
+
+            guard granted else {
+                DBGWarn("Contacts access not granted")
+                return
+            }
+
+            // Check if Kate Bell already exists
+            let predicate = CNContact.predicateForContacts(matchingName: "Kate Bell")
+            let keysToFetch = [CNContactGivenNameKey, CNContactFamilyNameKey] as [CNKeyDescriptor]
+
+            do {
+                let existingContacts = try contactStore.unifiedContacts(matching: predicate, keysToFetch: keysToFetch)
+                if !existingContacts.isEmpty {
+                    DBGLog("Kate Bell contact already exists")
+                    return
+                }
+
+                // Create Kate Bell contact
+                let contact = CNMutableContact()
+                contact.givenName = "Kate"
+                contact.familyName = "Bell"
+
+                // Add phone number
+                let phoneNumber = CNLabeledValue(
+                    label: CNLabelPhoneNumberiPhone,
+                    value: CNPhoneNumber(stringValue: "(555) 564-8583"))
+                contact.phoneNumbers = [phoneNumber]
+
+                // Add email
+                let email = CNLabeledValue(
+                    label: CNLabelWork,
+                    value: "kate-bell@mac.com" as NSString)
+                contact.emailAddresses = [email]
+
+                // Save the contact
+                let saveRequest = CNSaveRequest()
+                saveRequest.add(contact, toContainerWithIdentifier: nil)
+                try contactStore.execute(saveRequest)
+
+                DBGLog("Successfully added Kate Bell contact")
+            } catch {
+                DBGErr("Error adding Kate Bell contact: \(error)")
+            }
+        }
+    }
     #endif
     /*
     func btnPay() {
@@ -1718,6 +1153,302 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
     }
      */
+
+    // MARK: -
+    // MARK: Backup methods
+
+    @objc func startBackupExportZip() {
+        guard let backupZipOption = self.backupZipOption,
+              backupZipOption == .shareRtrkZip else {
+            DBGLog("Invalid or nil backupZipOption")
+            return
+        }
+
+        autoreleasepool {
+            // Export all trackers to .rtrk format
+            var ndx: Float = 1.0
+            jumpMaxPriv()
+
+            let sql = "select id from toplevel"
+            let idSet = tlist.toQry2AryI(sql: sql)
+            let all = Float(idSet.count)
+
+            for tid in idSet {
+                let to = trackerObj(tid)
+                _ = to.writeTmpRtrk(true)
+
+                rTracker_resource.setProgressVal(ndx / all)
+                ndx += 1.0
+            }
+
+            restorePriv()
+
+            // Create the .zip file
+            let fpatho = rTracker_resource.ioFilePath(nil, access: false, tmp: true)
+            let fpathu = URL(fileURLWithPath: fpatho)
+            try? FileManager.default.createDirectory(atPath: fpatho, withIntermediateDirectories: false, attributes: nil)
+            let zipFileName = "rTracker_exportAllRtrk.zip"
+            let fpattern = "*.rtrk"
+
+            DBGLog("Temporary directory path: \(fpatho)")
+
+            // List files in the directory to verify what's there
+            do {
+                let contents = try FileManager.default.contentsOfDirectory(atPath: fpatho)
+                DBGLog("Files in temporary directory before ZIP creation: \(contents)")
+            } catch {
+                DBGLog("Error listing directory contents: \(error.localizedDescription)")
+            }
+
+            let zipFileURL = URL(fileURLWithPath: fpatho).appendingPathComponent(zipFileName)
+
+            do {
+                // Create ZIP using helper method from configTlistController
+                try createZipFile(at: zipFileURL, withFilesMatching: fpattern, in: fpathu)
+
+                // Verify ZIP file size after creation
+                let attributes = try FileManager.default.attributesOfItem(atPath: zipFileURL.path)
+                let fileSize = attributes[FileAttributeKey.size] as? UInt64 ?? 0
+                DBGLog("Zip file created at: \(zipFileURL) with size: \(fileSize) bytes")
+            } catch {
+                DBGLog("Failed to create zip file: \(error.localizedDescription)")
+            }
+
+            safeDispatchSync({ [self] in
+                rTracker_resource.finishProgressBar(view, navItem: navigationItem, disable: true)
+
+                // Present the activity view controller for sharing
+                let activityViewController = UIActivityViewController(activityItems: [zipFileURL], applicationActivities: nil)
+                activityViewController.completionWithItemsHandler = { activityType, completed, returnedItems, activityError in
+                    // Clean up temporary files
+                    do {
+                        let fileURLs = try FileManager.default.contentsOfDirectory(at: fpathu, includingPropertiesForKeys: nil)
+                        for fileURL in fileURLs {
+                            try FileManager.default.removeItem(at: fileURL)
+                        }
+                        DBGLog("All files in the temp directory have been removed.")
+                    } catch {
+                        DBGLog("Failed to clear temp directory: \(error.localizedDescription)")
+                    }
+                }
+
+                self.present(activityViewController, animated: true)
+            })
+        }
+    }
+
+    // Helper to create a ZIP file (copied from configTlistController)
+    func createZipFile(at zipURL: URL, withFilesMatching pattern: String, in directory: URL) throws {
+        // Remove existing ZIP file if it exists
+        if FileManager.default.fileExists(atPath: zipURL.path) {
+            try FileManager.default.removeItem(at: zipURL)
+        }
+
+        // Create a ZIP archive with the throwing initializer
+        let archive: Archive
+        do {
+            archive = try Archive(url: zipURL, accessMode: .create)
+        } catch {
+            throw NSError(domain: "ZIPFoundationError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Unable to create archive: \(error.localizedDescription)"])
+        }
+
+        // Get matching files
+        let files = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
+            .filter { file in
+                if pattern == "*.rtrk" {
+                    return file.pathExtension == "rtrk"
+                }
+                return false
+            }
+
+        DBGLog("Found \(files.count) files matching pattern \(pattern)")
+        for file in files {
+            DBGLog("Adding to ZIP: \(file.lastPathComponent)")
+        }
+
+        // Add files to the ZIP archive
+        for file in files {
+            try archive.addEntry(with: file.lastPathComponent, fileURL: file)
+        }
+    }
+
+    func doBackupNow() {
+        DBGLog("Starting backup export")
+        backupZipOption = .shareRtrkZip
+
+        let navframe = navigationController?.navigationBar.frame
+        rTracker_resource.startProgressBar(view, navItem: navigationItem, disable: true, yloc: (navframe?.size.height ?? 0.0) + (navframe?.origin.y ?? 0.0))
+
+        Thread.detachNewThreadSelector(#selector(startBackupExportZip), toTarget: self, with: nil)
+    }
+
+    func hasOnlyDemoTrackers() -> Bool {
+        DBGLog("=== hasOnlyDemoTrackers() CALLED ===")
+
+        // Known demo/sample tracker names from screenshot - EXACT strings with icons
+        // Note: Some emojis include variant selectors (U+FE0F) for display style
+        let demoTrackerNames = [
+            "🚗 Car",
+            "☕️🍷 Drinks",  // Coffee has U+FE0F variant selector
+            "🚴 Exercise",
+            "📋 Weight stats",
+            "👣rTracker demo"  // No space between emoji and "rTracker"
+        ]
+
+        // Get all tracker names (including hidden)
+        let allTrackerNames = tlist.topLayoutNamesH
+
+        DBGLog("Total trackers found: \(allTrackerNames.count)")
+        for (index, name) in allTrackerNames.enumerated() {
+            DBGLog("Tracker[\(index)]: '\(name)'")
+        }
+
+        // If no trackers, treat as new user
+        if allTrackerNames.isEmpty {
+            DBGLog("No trackers - returning TRUE (new user)")
+            return true
+        }
+
+        // Check if ALL trackers are demos
+        for trackerName in allTrackerNames {
+            if !demoTrackerNames.contains(trackerName) {
+                DBGLog("Found NON-DEMO tracker: '\(trackerName)'")
+                DBGLog("Returning FALSE (has custom trackers)")
+                return false  // Found custom tracker
+            }
+        }
+
+        DBGLog("All trackers are demos - returning TRUE")
+        return true  // All trackers are demos
+    }
+
+    func hasSignificantUserData() -> Bool {
+        // If user has created custom trackers, they have significant data
+        if !hasOnlyDemoTrackers() {
+            return true
+        }
+
+        // User only has demo trackers - check if they've added 2+ records to any demo
+        // (excluding rTracker demo which has pre-installed records)
+        let demoTrackersToCheck = [
+            "🚗 Car",
+            "☕🍷 Drinks",
+            "🚴 Exercise",
+            "📋 Weight stats"
+        ]
+
+        // Map tracker names to IDs
+        let allTrackerNames = tlist.topLayoutNamesH
+        let allTrackerIDs = tlist.topLayoutIDsH
+
+        for (index, trackerName) in allTrackerNames.enumerated() {
+            // Only check the 4 empty demo trackers
+            if demoTrackersToCheck.contains(trackerName) {
+                let tid = allTrackerIDs[index]
+                let tracker = trackerObj(tid)
+
+                // Count records in this tracker
+                let sql = "SELECT COUNT(*) FROM trkrData"
+                let recordCount = tracker.toQry2Int(sql: sql)
+
+                // If 2 or more records, user has significant data
+                if recordCount >= 2 {
+                    return true
+                }
+            }
+        }
+
+        // User has only demos with 0-1 records - not significant
+        return false
+    }
+
+    func presentWelcomeSheet(completion: (() -> Void)? = nil) {
+        DBGLog("=== presentWelcomeSheet() CALLED ===")
+
+        let welcomeMessage = """
+        Explore the sample trackers, then tap the ➕ button to create your own.
+
+        Trackers can include numbers, sliders, text, choices, functions and more.
+
+        A ❤️ means the feature is powered by Apple Health.  Number values can be configured in settings ⚙️ to read values from Apple Health.
+
+        Once a tracker has more than 3 records, tap its 📈 button to view charts and graphs.
+
+        Pull to refresh a tracker to get the latest data from Apple Health, re-load from linked tracker values, and recalculate functions.
+
+        rTracker data is private to your device and never shared without your instruction.
+        """
+
+        DBGLog("Creating welcome alert")
+        let alert = UIAlertController(
+            title: "Welcome to rTracker!",
+            message: welcomeMessage,
+            preferredStyle: .alert)
+
+        let action = UIAlertAction(
+            title: "Get Started",
+            style: .default,
+            handler: { action in
+                DBGLog("Welcome sheet Get Started tapped")
+
+                // Set welcome sheet version
+                rTracker_resource.setShownWelcomeSheet(WELCOME_SHEET_VERSION)
+                UserDefaults.standard.set(WELCOME_SHEET_VERSION, forKey: "shownWelcomeSheet")
+
+                // Mark as told about backup - welcome sheet users manage their own backups
+                rTracker_resource.setToldToBackup(true)
+                UserDefaults.standard.set(true, forKey: "toldToBackup")
+
+                UserDefaults.standard.synchronize()
+                DBGLog("Welcome sheet flags saved: shownWelcomeSheet=\(WELCOME_SHEET_VERSION), toldToBackup=true")
+
+                // Call completion handler after welcome sheet is dismissed
+                completion?()
+            })
+
+        alert.addAction(action)
+        DBGLog("Presenting welcome alert")
+        present(alert, animated: true)
+    }
+
+    func presentBackupRequester(completion: (() -> Void)? = nil) {
+        let alert = UIAlertController(
+            title: "Backup Your Data",
+            message: "This is a new version of rTracker with many new features and probably new bugs as well. Please backup all your trackers to ensure you don't lose any data.\n\nThis full backup functionality is available by tapping the main window settings ⚙️ and then using the share menu 📤.\n\nBe sure to try the new Apple HealthKit ❤️ source option for number values, and the new charts!",
+            preferredStyle: .alert)
+
+        let backupAction = UIAlertAction(
+            title: "Backup Now",
+            style: .default,
+            handler: { [weak self] action in
+                rTracker_resource.setToldToBackup(true)
+                UserDefaults.standard.set(true, forKey: "toldToBackup")
+                UserDefaults.standard.synchronize()
+
+                self?.doBackupNow()
+
+                // Call completion after backup action
+                completion?()
+            })
+
+        let skipAction = UIAlertAction(
+            title: "Skip",
+            style: .cancel,
+            handler: { action in
+                rTracker_resource.setToldToBackup(true)
+                UserDefaults.standard.set(true, forKey: "toldToBackup")
+                UserDefaults.standard.synchronize()
+
+                // Call completion after skip
+                completion?()
+            })
+
+        alert.addAction(backupAction)
+        alert.addAction(skipAction)
+
+        present(alert, animated: true)
+    }
+
     // MARK: -
     // MARK: Table view methods
     
@@ -1731,13 +1462,13 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
     // Customize the number of rows in the table view.
     public func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return tlist.topLayoutNames.count
+        return tlist.topLayoutNamesH.count
     }
 
     func pendingNotificationCount() -> Int {
         var erc = 0
         var src = 0
-        for nsn in tlist.topLayoutReminderCount {
+        for nsn in tlist.topLayoutReminderCountH {
             erc += nsn
         }
         for (tid, _) in scheduledReminderCounts {
@@ -1748,9 +1479,6 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
         return erc > src ? erc - src : 0
     }
-
-    // Customize the appearance of table view cells.
-    //DBGLog(@"rvc table cell at index %d label %@",[indexPath row],[tlist.topLayoutNames objectAtIndex:[indexPath row]]);
 
     static let tableViewCellIdentifier = "Cell"
 
@@ -1763,24 +1491,27 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
             cell?.backgroundColor = .clear // clear here so table background shows through
         }
 
+        
+        // Remove any existing streak badge (when cells are reused)
+        if let existingBadge = cell?.contentView.viewWithTag(1001) {
+            existingBadge.removeFromSuperview()
+        }
+        
         // Configure the cell.
         let row = indexPath.row
-        if row >= tlist.topLayoutIDs.count {
-            DBGErr("getting toplevel cell for row \(row) but only \(tlist.topLayoutIDs.count) in tlist")
+        if row >= tlist.topLayoutIDsH.count {
+            DBGErr("getting toplevel cell for row \(row) but only \(tlist.topLayoutIDsH.count) in tlist")
             return cell!
         }
-        let tid = tlist.topLayoutIDs[row]
+        let tid = tlist.topLayoutIDsH[row]
         let cellLabel = NSMutableAttributedString()
 
-        let erc = tlist.topLayoutReminderCount[row]
+        let erc = tlist.topLayoutReminderCountH[row]
         let src = scheduledReminderCounts[tid] ?? 0
 
-        DBGLog(String("src: \(src)  erc:  \(erc) \(tlist.topLayoutNames[row]) (\(tid))"))
-        //NSString *formatString = @"%@";
-        //UIColor *bg = [UIColor clearColor];
+        //DBGLog(String("src: \(src)  erc:  \(erc) \(tlist.topLayoutNamesH[row]) (\(tid))"))
+
         if erc != src {
-            //formatString = @"> %@";
-            //bg = [UIColor redColor];
             cellLabel.append(
                 NSAttributedString(
                     string: "➜ ",
@@ -1789,21 +1520,77 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                         .font: UIFont.boldSystemFont(ofSize: UIFont.labelFontSize)
                     ]))
         }
-        //DBGLog(@"erc= %d  src= %d",erc,src);
-        //[cellLabel appendAttributedString:
-        // [[NSAttributedString alloc]initWithString:(self.tlist.topLayoutNames)[row] attributes:@{NSForegroundColorAttributeName: [UIColor blackColor]}]] ;
-        cellLabel.append(NSAttributedString(string: tlist.topLayoutNames[row]))
+        cellLabel.append(NSAttributedString(string: tlist.topLayoutNamesH[row]))
 
         cell?.textLabel?.attributedText = cellLabel
         cell?.accessibilityIdentifier = "trkr_\(cellLabel.string)"
+        
+        // Only add streak badge if streak tracking is enabled for this tracker
+        if tlist.isTrackerStreaked(tid) {
+            // Get current streak count
+            let to = trackerObj(tid)
+            let streakCount = to.streakCount()
+            DBGLog("streak count for \(to.trackerName ?? "nil") is \(streakCount)")
+            // Only show streak badge if there's an active streak
+            if streakCount > 0 {
+                addStreakBadge(to: cell!, count: streakCount, shouldAnimate: false)
+            }
+        }
+        
         return cell!
     }
 
+    private func addStreakBadge(to cell: UITableViewCell, count: Int, shouldAnimate: Bool) {
+        // Create container view for badge
+        let badgeContainer = UIView()
+        badgeContainer.tag = 1001 // Tag to find it later
+        badgeContainer.translatesAutoresizingMaskIntoConstraints = false
+        badgeContainer.backgroundColor = UIColor.systemOrange.withAlphaComponent(0.2)
+        badgeContainer.layer.cornerRadius = 12
+        cell.contentView.addSubview(badgeContainer)
+        
+        // Create flame icon
+        let flameLabel = UILabel()
+        flameLabel.text = "🔥"
+        flameLabel.font = UIFont.systemFont(ofSize: 14)
+        flameLabel.translatesAutoresizingMaskIntoConstraints = false
+        badgeContainer.addSubview(flameLabel)
+        
+        // Create count label
+        let countLabel = UILabel()
+        countLabel.text = "\(count)"
+        countLabel.font = UIFont.boldSystemFont(ofSize: 12)
+        countLabel.textColor = .systemOrange
+        countLabel.translatesAutoresizingMaskIntoConstraints = false
+        badgeContainer.addSubview(countLabel)
+        
+        // Layout constraints
+        NSLayoutConstraint.activate([
+            badgeContainer.trailingAnchor.constraint(equalTo: cell.contentView.trailingAnchor, constant: -16),
+            badgeContainer.centerYAnchor.constraint(equalTo: cell.contentView.centerYAnchor),
+            
+            flameLabel.leadingAnchor.constraint(equalTo: badgeContainer.leadingAnchor, constant: 6),
+            flameLabel.centerYAnchor.constraint(equalTo: badgeContainer.centerYAnchor),
+            
+            countLabel.leadingAnchor.constraint(equalTo: flameLabel.trailingAnchor, constant: 2),
+            countLabel.trailingAnchor.constraint(equalTo: badgeContainer.trailingAnchor, constant: -6),
+            countLabel.centerYAnchor.constraint(equalTo: badgeContainer.centerYAnchor)
+        ])
+        
+        // Animate if needed
+        if shouldAnimate {
+            badgeContainer.transform = CGAffineTransform(scaleX: 0.1, y: 0.1)
+            UIView.animate(withDuration: 0.3, delay: 0, usingSpringWithDamping: 0.6, initialSpringVelocity: 0.5, options: [], animations: {
+                badgeContainer.transform = CGAffineTransform.identity
+            })
+        }
+    }
+    
     public func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         var tn: String?
         let row = indexPath.row
         if NSNotFound != row {
-            tn = tlist.topLayoutNames[row]
+            tn = tlist.topLayoutNamesH[row]
         } else {
             tn = "Sample"
         }
@@ -1814,8 +1601,8 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     }
 
     func exceedsPrivacy(_ tid: Int) -> Bool {
-        DBGLog("curr priv \(privacyValue)  tid \(tid)  tid priv \(tlist.getPrivFromLoadedTID(tid))")
-        return privacyValue < (tlist.getPrivFromLoadedTID(tid))
+        let rslt = privacyValue < (tlist.getPrivFromLoadedTID(tid))
+        return rslt
     }
 
     func openTracker(_ tid: Int, rejectable: Bool) {
@@ -1835,7 +1622,8 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         }
 
         let to = trackerObj(tid)
-        to.describe()
+        // debug only
+        // to.describe()
 
         let utc = useTrackerController()
         utc.tracker = to
@@ -1860,30 +1648,8 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
             }
         }
         
-        //NSUInteger row = [indexPath row];
-        //DBGLog(@"selected row %d : %@", row, [self.tlist.topLayoutNames objectAtIndex:row]);
-        
-        //print("Navigation controller: \(String(describing: self.navigationController))")
-        //print("Top controller: \(String(describing: self.navigationController?.topViewController))")
-        
         tableView.cellForRow(at: indexPath)?.isSelected = false
-        openTracker(tlist.getTIDfromIndex(indexPath.row), rejectable: false)
+        openTracker(tlist.getTIDfromIndexH(indexPath.row), rejectable: false)
 
     }
 }
-
-/*
- {
-
-	trackerList *tlist;
-	privacyV *privacyObj;
-    int32_t refreshLock;
-    BOOL initialPrefsLoad;
-    NSNumber *stashedPriv;
-    //BOOL openUrlLock;
-    //NSURL *inputURL;
-    BOOL readingFile;
-    NSMutableArray *stashedTIDs;
-    NSMutableDictionary *scheduledReminderCounts;
-}
-*/

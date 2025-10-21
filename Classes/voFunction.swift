@@ -79,6 +79,12 @@ let FN1ARGELAPSEDDAYS = FN1ARGELAPSEDWEEKS - 1
 let FN1ARGELAPSEDHOURS = FN1ARGELAPSEDDAYS - 1
 let FN1ARGELAPSEDMINS = FN1ARGELAPSEDHOURS - 1
 let FN1ARGELAPSEDSECS = FN1ARGELAPSEDMINS - 1
+let FN1ARGDELAY = FN1ARGELAPSEDSECS - 1
+let FN1ARGROUND = FN1ARGDELAY - 1
+let FN1ARGCLASSIFY = FN1ARGROUND - 1
+let FN1ARGNOT = FN1ARGCLASSIFY - 1
+let FN1ARGFLOOR = FN1ARGNOT - 1
+let FN1ARGCEILING = FN1ARGFLOOR - 1
 
 let FNNEW1ARGLAST = FNNEW1ARGFIRST - 100
 
@@ -90,6 +96,21 @@ func isFn1ArgElapsed(_ i: Int) -> Bool {
 }
 
 let FNNEW2ARGFIRST = FNNEW1ARGLAST - 10
+
+// Add logical operators
+let FN2ARGAND = FNNEW2ARGFIRST - 1
+let FN2ARGOR = FN2ARGAND - 1
+let FN2ARGXOR = FN2ARGOR - 1
+let FN2ARGEQUALTO = FN2ARGXOR - 1
+let FN2ARGNOTEQUAL = FN2ARGEQUALTO - 1
+// Add comparison operators
+let FN2ARGGREATER = FN2ARGNOTEQUAL - 1
+let FN2ARGLESS = FN2ARGGREATER - 1
+let FN2ARGGREATEREQUAL = FN2ARGLESS - 1
+let FN2ARGLESSEQUAL = FN2ARGGREATEREQUAL - 1
+let FN2ARGMIN2 = FN2ARGLESSEQUAL - 1
+let FN2ARGMAX2 = FN2ARGMIN2 - 1
+
 let FNNEW2ARGLAST = FNNEW2ARGFIRST - 100
 
 func isFn2ArgOp(_ i: Int) -> Bool {
@@ -105,8 +126,14 @@ func isFnTimeOp(_ i: Int) -> Bool {
     ((i <= FNTIMEFIRST) && (i >= FNTIMELAST)) || ((i <= FNNEWTIMEFIRST) && (i >= FNNEWTIMELAST))
 }
 
+let FNNEWOTHERFIRST = FNNEWTIMELAST - 10
 
-let FNFIN = FNNEWTIMELAST
+let FNBEFORE = FNNEWOTHERFIRST - 1
+let FNAFTER = FNBEFORE - 1
+
+let FNNEWOTHERLAST = FNNEWOTHERFIRST - 100
+
+let FNFIN = FNNEWOTHERLAST
 
 func isFn(_ i: Int) -> Bool {
     (i <= FNSTART) && (i >= FNFIN)
@@ -115,25 +142,25 @@ func isFn(_ i: Int) -> Bool {
 let FNCONSTANT_TITLE = "constant"
 
 
-let ARG1FNS = [FN1ARGDELTA,FN1ARGSUM,FN1ARGPOSTSUM,FN1ARGPRESUM,FN1ARGAVG,FN1ARGMIN,FN1ARGMAX,FN1ARGCOUNT,FN1ARGONRATIO,FN1ARGNORATIO,FN1ARGELAPSEDWEEKS,FN1ARGELAPSEDDAYS,FN1ARGELAPSEDHOURS,FN1ARGELAPSEDMINS,FN1ARGELAPSEDSECS]
-let ARG1STRS = ["change_in","sum","post-sum","pre-sum","avg","min","max","count","old/new","new/old","elapsed_weeks","elapsed_days","elapsed_hrs","elapsed_mins","elapsed_secs"]
-let ARG1CNT = 15
+let ARG1FNS = [FN1ARGDELTA,FN1ARGSUM,FN1ARGPOSTSUM,FN1ARGPRESUM,FN1ARGAVG,FN1ARGMIN,FN1ARGMAX,FN1ARGCOUNT,FN1ARGONRATIO,FN1ARGNORATIO,FN1ARGELAPSEDWEEKS,FN1ARGELAPSEDDAYS,FN1ARGELAPSEDHOURS,FN1ARGELAPSEDMINS,FN1ARGELAPSEDSECS,FN1ARGDELAY, FN1ARGROUND, FN1ARGCLASSIFY, FN1ARGNOT, FN1ARGFLOOR, FN1ARGCEILING]
+let ARG1STRS = ["change_in","sum","post-sum","pre-sum","avg","min","max","count","old/new","new/old","elapsed_weeks","elapsed_days","elapsed_hrs","elapsed_mins","elapsed_secs", "delay", "round", "classify", "!", "⌊", "⌈"]
+let ARG1CNT = ARG1FNS.count
 
-let ARG2FNS = [FN2ARGPLUS,FN2ARGMINUS,FN2ARGTIMES,FN2ARGDIVIDE]
-let ARG2STRS = ["+","-","*","/"]
-let ARG2CNT = 4
+let ARG2FNS = [FN2ARGPLUS,FN2ARGMINUS,FN2ARGTIMES,FN2ARGDIVIDE, FN2ARGAND, FN2ARGOR, FN2ARGXOR, FN2ARGEQUALTO, FN2ARGNOTEQUAL, FN2ARGGREATER, FN2ARGLESS, FN2ARGGREATEREQUAL, FN2ARGLESSEQUAL, FN2ARGMIN2, FN2ARGMAX2]
+let ARG2STRS = ["+","-","*","/", "&", "|", "^", "==", "!=", ">", "<", ">=", "<=", "><", "<>"]
+let ARG2CNT = ARG2FNS.count
 
 let PARENFNS = [FNPARENOPEN, FNPARENCLOSE]
 let PARENSTRS = ["(", ")"]
-let PARENCNT = 2
+let PARENCNT = PARENFNS.count
 
 let TIMEFNS = [FNTIMEWEEKS,FNTIMEDAYS,FNTIMEHRS,FNTIMEMINS,FNTIMESECS]
 let TIMESTRS = ["weeks","days","hours","minutes","seconds"]
-let TIMECNT = 5
+let TIMECNT = TIMEFNS.count
 
-let OTHERFNS = [FNCONSTANT]
-let OTHERSTRS = [FNCONSTANT_TITLE]
-let OTHERCNT = 1
+let OTHERFNS = [FNCONSTANT, FNBEFORE, FNAFTER]
+let OTHERSTRS = [FNCONSTANT_TITLE, "before", "after"]
+let OTHERCNT = OTHERFNS.count
 
 let TOTFNCNT = ARG1CNT + ARG2CNT + PARENCNT + TIMECNT + OTHERCNT
 
@@ -155,11 +182,49 @@ func ISCALFREP(_ x: Int) -> Bool {
 
 let MAXFREP = 11
 
+// Dictionary mapping FREP constants to picker labels
+// CRITICAL: Order must match (FREP_value * -1) - 1 = array index
+let FREP_LABELS: [Int: String] = [
+    FREPENTRY:   "entry",       // -1 → index 0
+    FREPHOURS:   "hours",       // -2 → index 1
+    FREPDAYS:    "days",        // -3 → index 2
+    FREPWEEKS:   "weeks",       // -4 → index 3
+    FREPMONTHS:  "months",      // -5 → index 4
+    FREPYEARS:   "years",       // -6 → index 5
+    FREPCDAYS:   "cal days",    // -7 → index 6
+    FREPCWEEKS:  "cal weeks",   // -8 → index 7
+    FREPCMONTHS: "cal months",  // -9 → index 8
+    FREPCYEARS:  "cal years",   // -10 → index 9
+    FREPNONE:    "<none>"       // -11 → index 10
+]
+
+// Helper to get label from FREP value using the formula
+func frepToLabel(_ frepValue: Int) -> String {
+    return FREP_LABELS[frepValue] ?? "entry"
+}
+
+// Helper to get label from epTitles index
+func epIndexToLabel(_ index: Int) -> String? {
+    // Reverse the formula: FREP_value = (index + 1) * -1
+    let frepValue = (index + 1) * -1
+    return FREP_LABELS[frepValue]
+}
+
+// Helper function to convert picker label to help identifier
+func pickerLabelToHelpIdentifier(_ label: String) -> String {
+    // Remove < and >, replace spaces with underscores, prepend endpoint_
+    let cleaned = label.replacingOccurrences(of: "<", with: "")
+                      .replacingOccurrences(of: ">", with: "")
+                      .replacingOccurrences(of: " ", with: "_")
+    return "endpoint_\(cleaned)"
+}
+
 let FNSEGNDX_OVERVIEW = 0
 let FNSEGNDX_RANGEBLD = 1
 let FNSEGNDX_FUNCTBLD = 2
 
 // end functions 
+
 
 // MARK: -
     // MARK: core object methods and support
@@ -167,28 +232,9 @@ let FNSEGNDX_FUNCTBLD = 2
 
 class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
 
-    /*{
-    	configTVObjVC *ctvovcp;
-
-    	NSInteger fnSegNdx;				// overview, range, or fn definition page in configTVObjVC
-    	NSArray *epTitles;				// available range endpoints: valueObjs or offsets (hour, month, ...)
-    	NSMutableArray *fnTitles;		// 
-    	NSMutableArray *fnArray;		// ordered array of symbols (valObj [vid] or operation [<0]) to compute, <=> optDict:@"func"
-    	//NSMutableArray *fnStrs;			// valueObj names or predefined operation names (map to symbols, vids in nfArray)
-        NSArray *fn2args;
-    	NSInteger currFnNdx;			// index as we compute the function
-
-        UILabel *rlab;
-
-        NSArray *votWoSelf;             // myTracker's valobjtable without reference to self for picking endpoints
-    }*/
-
-    //@property (nonatomic,retain) NSMutableArray *fnStrs;
-
     private var _fnStrDict: [NSNumber : String]?
     var fnStrDict: [NSNumber : String] {
         if nil == _fnStrDict {
-            let fnTokArr = PARENFNS + OTHERFNS
             let fnStrArr = ARG1STRS + ARG2STRS + TIMESTRS + PARENSTRS + OTHERSTRS
             var fnTokNSNarr: [NSNumber] = []
 
@@ -201,31 +247,12 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             for tmop in fnTimeOps {
                 fnTokNSNarr.append(NSNumber(value:tmop))
             }
-            for tok in fnTokArr {
+            for tok in PARENFNS {
                 fnTokNSNarr.append(NSNumber(value:tok))
             }
-            /*
-            var j = 0
-            for i in 0..<ARG1CNT {
-                fnTokNSNarr[j] = NSNumber(value:fn1args[i])
-                j += 1
+            for tok in fnOtherOps {
+                fnTokNSNarr.append(NSNumber(value:tok))
             }
-            for i in 0..<ARG2CNT {
-                fnTokNSNarr[j] = NSNumber(value:fn2args[i])
-                j += 1
-            }
-            for i in 0..<TIMECNT {
-                fnTokNSNarr[j] = NSNumber(value:fnTimeOps[i])
-                j += 1
-            }
-            for i in 0..<(PARENCNT + OTHERCNT) {
-                fnTokNSNarr[j] = NSNumber(value:fnTokArr[i])
-                j += 1
-            }
-             */
-            //fnStrDict = [NSDictionary dictionaryWithObjects:fnStrArr forKeys:fnTokNSNarr count:TOTFNCNT];
-            //_fnStrDict = NSDictionary(objects:fnStrArr as [String], forKeys:fnTokNSNarr as [NSCopying], count: TOTFNCNT) as Dictionary
-            //_fnStrDict = Dictionary(uniqueKeysWithValues: zip(fnStrArr, fnTokNSNarr))
             _fnStrDict = Dictionary(uniqueKeysWithValues: zip(fnTokNSNarr, fnStrArr))
         }
         return _fnStrDict!
@@ -235,17 +262,6 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
     var fn1args: [Int] {
         if nil == _fn1args {
             _fn1args = Array(ARG1FNS[..<ARG1CNT]) // copyItems: true
-            /*
-            //let fn1argToks = ARG1FNS
-            var fn1argsArr: [Int] = []
-            var i: Int
-            for i in 0..<ARG1CNT {
-                fn1argsArr[i] = ARG1FNS[i]
-            }
-            if let fn1argsArr {
-                _fn1args = Array(fn1argsArr[..<ARG1CNT]) // copyItems: true
-            }
-             */
         }
         return _fn1args!
     }
@@ -254,16 +270,6 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
     var fn2args: [Int] {
         if nil == _fn2args {
             _fn2args = Array(ARG2FNS[..<ARG2CNT]) // copyItems: true
-            /*
-            let fn2argToks = [ARG2FNS]
-            let fn2argsArr: [NSNumber]? = nil
-            var i: Int
-            for i in 0..<ARG2CNT {
-                fn2argsArr?[i] = NSNumber(value: fn2argToks[i])
-            }
-            if let fn2argsArr {
-                _fn2args = Array(fn2argsArr[..<ARG2CNT]) // copyItems: true
-            } */
         }
 
         return _fn2args!
@@ -273,39 +279,30 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
     var fnTimeOps: [Int] {
         if nil == _fnTimeOps {
             _fnTimeOps = Array(TIMEFNS[..<TIMECNT]) // copyItems: true
-            /*
-            let fnTimeOpToks = [TIMEFNS]
-            let fnTimeOpsArr: [NSNumber]? = nil
-            var i: Int
-            for i in 0..<TIMECNT {
-                fnTimeOpsArr?[i] = NSNumber(value: fnTimeOpToks[i])
-            }
-            if let fnTimeOpsArr {
-                _fnTimeOps = Array(fnTimeOpsArr[..<TIMECNT]) // copyItems: true
-            }*/
         }
         return _fnTimeOps!
     }
+
+    private var _fnOtherOps: [Int]?
+    var fnOtherOps: [Int] {
+        if nil == _fnOtherOps {
+            _fnOtherOps = Array(OTHERFNS[..<OTHERCNT]) // copyItems: true
+        }
+        return _fnOtherOps!
+    }
+
     var ctvovcp: configTVObjVC?
     var fnSegNdx = 0
 
     private var _epTitles: [String]?
     var epTitles: [String] {
         if _epTitles == nil {
-            // n.b.: tied to FREP symbol defns in voFunctions.h
-            _epTitles = [
-                "entry",
-                "hours",
-                "days",
-                "weeks",
-                "months",
-                "years",
-                "cal days",
-                "cal weeks",
-                "cal months",
-                "cal years",
-                "<none>"
-            ]
+            // Build array where index = (FREP_value * -1) - 1
+            _epTitles = []
+            for i in 0..<MAXFREP {
+                let frepValue = (i + 1) * -1
+                _epTitles!.append(FREP_LABELS[frepValue] ?? "unknown")
+            }
         }
         return _epTitles!
     }
@@ -323,7 +320,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         }
     }
 
-    private var _fnArray: [NSNumber]?
+    var _fnArray: [NSNumber]?
     var fnArray: [NSNumber] {
         if _fnArray == nil {
             _fnArray = []
@@ -350,21 +347,17 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
     private var _votWoSelf: [valueObj]?
     var votWoSelf: [valueObj] {
         if nil == _votWoSelf {
-            //if (0 > self.vo.vid) {  // temporary vo waiting for save so not included in tracker's vo table
-            //  -> no, could be editinging an already existing entry
-            //    votWoSelf = [NSArray arrayWithArray:MyTracker.valObjTable];
-            //} else {
-            //_votWoSelf = []
             var tvot: [valueObj] = [] // (repeating: 0, count: MyTracker?.valObjTable?.count ?? 0)
             for tvo in MyTracker.valObjTable {
-                if tvo.vid != vo.vid {
+                // Only add if:
+                // 1. It's not the current valueObj (vo)
+                // 2. It's not referencing current tracker as its otTracker
+                if tvo.vid != vo.vid && tvo.optDict["otTracker"] != MyTracker.trackerName {
                     tvot.append(tvo as valueObj)
                 }
             }
-            //votWoSelf = [NSArray arrayWithArray:tvot];
+
             _votWoSelf = tvot
-            // not needed? [tvot release];
-            //}
             /*
                     DBGLog(@"instantiate votWoSelf:");
                     DBGLog(@"self.vo vid=%d  name= %@",self.vo.vid,self.vo.valueName);
@@ -377,12 +370,14 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         return _votWoSelf!
     }
 
-    //@property (nonatomic, retain) NSNumber *foo;
+    private var lastEpd0: Int = -1
+    private var lastCalcValue: String = ""
+    private var fnDirty = false
+
     func saveFnArray() {
         // note this converts NSNumbers to NSStrings
         // works because NSNumber returns an NSString for [description]
 
-        //[self.vo.optDict setObject:[self.fnArray componentsJoinedByString:@" "] forKey:@"func"];
         // don't save an empty string
         let fnas = fnArray.map { String(describing: $0) }
         let ts = fnas.joined(separator: " ")
@@ -471,121 +466,6 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             timeStyle: .short)
     }
     
-    /*
-     can't find to in scope????
-     
-     
-    // import Foundation
-    // gpt-4 rewrite:
-    func getEpDate(_ ndx: Int, maxdate: TimeInterval) -> TimeInterval {
-        let key = String(format: "frep%d", ndx)
-        var ep: Int?
-        let nep = vo.optDict[key]
-        ep = (nep != nil ? Int(nep!) : nil)
-        var epDate: TimeInterval = 0
-        var sql: String = ""
-        if nep == nil || ep == FREPENTRY {
-            // also FREPDFLT  -- no value specified
-            // use last entry            sql = String(format: "select date from trkrData where date < %ld order by date desc limit 1;", maxdate)
-            epDate = to.toQry2Int(sql: sql)!
-        } else if ep! >= 0 {
-            sql = String(format: "select date from voData where id=%ld and date < %ld and val <> 0 and val <> '' order by date desc limit 1;", ep!, maxdate)
-            epDate = to.toQry2Int(sql: sql)!
-        } else {
-            // ep is (offset * -1)+1 into epTitles, with optDict:frv0 multiplier
-            let vkey = String(format: "frv%d", ndx)
-            var ival = Int(vo.optDict[vkey]!)! * (ndx != 0 ? 1 : -1) // negative offset if ep0
-            var gregorian = Calendar(identifier: .gregorian)
-            gregorian.locale = Locale.current
-            var offsetComponents = DateComponents()
-            
-            switch ep {
-            case FREPNONE :
-                break
-            case FREPHOURS :
-                offsetComponents.hour = ival
-            case FREPCDAYS :
-                ival += (ndx != 0 ? 0 : 1)  // for -1 calendar day, we want offset -0 day and normalize to previous midnight below
-                offsetComponents.day = ival
-            case FREPDAYS :
-                offsetComponents.day = ival
-            case FREPCWEEKS :
-                ival += (ndx != 0 ? 0 : 1)
-                offsetComponents.weekOfYear = ival
-            case FREPWEEKS :
-                offsetComponents.weekOfYear = ival
-            case FREPCMONTHS :
-                ival += (ndx != 0 ? 0 : 1)
-                offsetComponents.month = ival
-            case FREPMONTHS :
-                offsetComponents.month = ival
-            case FREPCYEARS :
-                ival += (ndx != 0 ? 0 : 1)
-                offsetComponents.year = ival
-            case FREPYEARS :
-                offsetComponents.year = ival
-            default:
-                dbgNSAssert(false, "getEpDate: failed to identify ep \(ep!)")
-            }
-            
-            if let targ = gregorian.date(byAdding: offsetComponents, to: Date(timeIntervalSince1970: maxdate)) {
-                var unitFlags = Set<Calendar.Component>()
-                
-                switch ep {
-                    // if calendar week, we need to get to beginning of week as per calendar
-                case FREPCWEEKS :
-                    if let beginOfWeek = gregorian.dateInterval(of: .weekOfYear, for: targ)?.start {
-                        let tz = TimeZone.current
-                        var targ = beginOfWeek.addingTimeInterval(TimeInterval(tz.secondsFromGMT(for: beginOfWeek)))
-                    }
-                    fallthrough
-                case FREPCDAYS :
-                    unitFlags.insert(.day)
-                    fallthrough
-                case FREPCMONTHS :
-                    unitFlags.insert(.month)
-                    fallthrough
-                case FREPCYEARS :
-                    unitFlags.insert(.year)
-                    let components = gregorian.dateComponents(unitFlags, from: targ)
-                    if let targ = gregorian.date(from: components) {
-                        epDate = targ.timeIntervalSince1970
-                    }
-                default:
-                    break
-                }
-            }
-        }
-        return epDate
-    }
-    */
-    /*
-     also this gpt-4 code for start of week:
-     
-     import Foundation
-
-     var calendar = Calendar.current
-     calendar.timeZone = TimeZone.current  // Use the current TimeZone
-     let targ = Date() // Replace with your actual date
-
-     // Get the DateComponents for the targ date.
-     var components = calendar.dateComponents([.year, .month, .weekOfYear, .weekday], from: targ)
-
-     // Set the weekday to the first day of the week.
-     // In many Western calendars, Sunday is considered the first day of the week.
-     components.weekday = calendar.firstWeekday
-
-     // Get the date for the start of the week.
-     if let startOfWeek = calendar.date(from: components) {
-         // Reset to the start of the day.
-         let startOfDay = calendar.startOfDay(for: startOfWeek)
-         print("Start of the week: \(startOfDay)")
-     } else {
-         print("Could not find the start of the week.")
-     }
-     
-     */
-    
     func getEpDate(_ ndx: Int, maxdate: Int) -> Int {
         let key = "frep\(ndx)"
         var ep: Int?
@@ -599,16 +479,24 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         if nep == nil || ep == FREPENTRY {
             // also FREPDFLT  -- no value specified
             // use last entry
-            sql = String(format: "select date from trkrData where date < %ld order by date desc limit 1;", maxdate)
-            epDate = to.toQry2Int(sql:sql)!
+            sql = """
+            SELECT max(date) FROM trkrData 
+            WHERE date < \(maxdate)
+            AND date NOT IN (SELECT date FROM ignoreRecords)
+            """
+            epDate = to.toQry2Int(sql:sql)
             //DBGLog(@"ep %d ->entry: %@", ndx, [self qdate:epDate] );
         } else if ep! >= 0 {
             // ep is vid
-            sql = String(format: "select date from voData where id=%ld and date < %ld and val <> 0 and val <> '' order by date desc limit 1;", ep!, maxdate) // add val<>0,<>"" 5.vii.12
+            sql = """
+            SELECT max(date) FROM voData 
+            WHERE id = \(ep!) AND date < \(maxdate) AND val <> 0 AND val <> ''
+            AND date NOT IN (SELECT date FROM ignoreRecords)
+            """
             #if FUNCTIONDBG
             DBGLog(String("get ep qry: \(sql)"))
             #endif
-            epDate = to.toQry2Int(sql:sql)!
+            epDate = to.toQry2Int(sql:sql)
             #if FUNCTIONDBG
             DBGLog(String("ep \(ndx) ->vo \(vo.valueName): \(qdate(epDate))"))
             DBGLog(String("ep \(ndx) ->vo \(vo.valueName): \(qdate(epDate))"))
@@ -624,6 +512,8 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
 
             //NSString *vt=nil;
 
+            // ival: int value entered in UI box, negative if ep0
+            // ndx: 0 or 1 for ep0 or ep1
             switch ep {
             case FREPNONE:
                 // no previous endpoint - find nothing prior to now
@@ -675,50 +565,10 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             case FREPCWEEKS:
                 DBGLog(String("first day of week= \(gregorian.firstWeekday) targ= \(targ)"))
                 targ = gregorian.dateComponents([.calendar, .yearForWeekOfYear, .weekOfYear], from: targ!).date
-                /*
-                let localBeginningOfWeek = gregorian.firstWeekday
-                var beginOfWeek: Date?
-                var interval: TimeInterval = 0
-
-                _ = gregorian.dateInterval(of: .weekOfYear, start: &beginOfWeek, interval: &interval, for: targ)
-
-                let shiftedBeginningOfWeek = gregorian.date(bySetting: .weekday, value: localBeginningOfWeek, of: beginOfWeek!)!
-
-                var beginOfWeek: Date? = nil
-                /*
-                                 // ios8 deprecation of NSWeekCalendarUnit -- WeekOfMonth and WeekOfYear below give same result; NSCalendarUnitWeekday does not respect locale preferences
-                                 // note dbg messages time given in GMT but we fall through cases below and wipe the time component
-                                 // so we need to get the begin of week date utc time 00:00:00 to be the date in the local time zone
-                                 BOOL rslt = [gregorian rangeOfUnit:NSWeekCalendarUnit startDate:&beginOfWeek interval:NULL forDate: targ];
-                                 DBGLog(@"NSWeekCalendarUnit (iOS7) %d %@ ",rslt,beginOfWeek);
-                                 rslt = [gregorian rangeOfUnit:NSCalendarUnitWeekOfMonth startDate:&beginOfWeek interval:NULL forDate: targ];
-                                 DBGLog(@"NSCalendarUnitWeekOfMonth (iOS8) %d %@ ",rslt,beginOfWeek);
-                                 rslt = [gregorian rangeOfUnit:NSCalendarUnitWeekday startDate:&beginOfWeek interval:NULL forDate: targ];
-                                 DBGLog(@"NSCalendarUnitWeekday (iOS8) %d %@ %",rslt,beginOfWeek);
-                                 */
-
-                var rslt = false
-                if let targ {
-                    if let rangeOfWeek = gregorian.range(of: .weekOfYear, in:.year, for: targ) {
-                        beginOfWeek = rangeOfWeek.lowerBound
-                        rslt = gregorian.range(of: .weekOfYear, start: &beginOfWeek, interval: nil, for: targ) ?? false
-                    }
-                }
-
-                DBGLog(String("NSCalendarUnitWeekOfYear \(rslt) \(beginOfWeek)"))
-
-                if rslt {
-                    // need to shift date with 00:00:00 UTC ( = 21:00 day before in tz ) to local timezone so day component is correct 
-                    let tz = NSTimeZone.default as NSTimeZone
-                    if let beginOfWeek {
-                        targ = beginOfWeek?!.addingTimeInterval(TimeInterval(tz.secondsFromGMT(for: beginOfWeek)))
-                    }
-                 }
-                 */
                 
                 DBGLog(String("targ= \(targ)"))
 
-            // if any of week, day, month, year we need to wipe hour, minute, second components
+            // if any of cal week, day, month, year we need to wipe hour, minute, second components
                 fallthrough
             case FREPCDAYS:
                 unitFlags.insert(.day)
@@ -747,70 +597,10 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             DBGLog(String("ep \(ndx) ->offset \(ival): \(qdate(epDate))"))
             #endif
         }
-        //sql = nil;
 
         return epDate
     }
-     
-    func calcFunctionValue(_ datePair: [AnyHashable]?) -> NSNumber? {
-        // TODO: finish this -- not used
-        if datePair == nil {
-            return nil
-        }
-        var sql: String
-
-        let epd0 = (datePair?[0] as? NSNumber)?.intValue ?? 0
-        let epd1 = (datePair?[1] as? NSNumber)?.intValue ?? 0
-
-        let maxc = fnArray.count
-        var vid: Int
-        let to = MyTracker
-
-        var result = 0.0
-        var v0 = 0.0
-        var v1 = 0.0
-
-        while currFnNdx < maxc {
-            let currTok = fnArray[currFnNdx].intValue
-            if isFn1Arg(currTok) {
-                currFnNdx += 1
-                vid = fnArray[currFnNdx].intValue
-                switch currTok {
-                case FN1ARGDELTA:
-                    if epd1 == 0 {
-                        v1 = Double(to.getValObj(vid)!.value)!
-                    } else {
-                        sql = String(format: "select val from voData where vid=%ld and date=%d;", vid, epd1)
-                        v1 = to.toQry2Double(sql:sql)!
-                    }
-                    sql = String(format: "select val from voData where vid=%ld and date=%d;", vid, epd0)
-                    v0 = to.toQry2Double(sql:sql)!
-                    result = v1 - v0
-                case FN1ARGAVG:
-                    if epd1 == 0 {
-                        v1 = Double(to.getValObj(vid)!.value)!
-                        sql = String(format: "select avg(val) from voData where vid=%ld and date >=%d;", vid, epd0)
-                        result = Double(to.toQry2Float(sql:sql)!) + v1
-                    } else {
-                        sql = String(format: "select avg(val) from voData where vid=%ld and date >=%d and date <=%d;", vid, epd0, epd1)
-                        result = Double(to.toQry2Float(sql:sql)!)
-                    }
-                default:
-                    switch currTok {
-                    case FN1ARGSUM, FN1ARGPOSTSUM, FN1ARGPRESUM:
-                        break
-                    default:
-                        break
-                    }
-                }
-            }
-        }
-
-
-        return NSNumber(value: result)
-
-    }
-
+    
     // supplied with previous endpoint (endpoint 0), calculate function to current tracker
     func calcFunctionValue(withCurrent epd0: Int, fn2op: Bool = false) -> NSNumber? {
 
@@ -821,17 +611,6 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
 
         FnErr = false
 
-        #if FUNCTIONDBG
-        // print our complete function
-        //var i: Int
-        var outstr = ""
-        for i in 0..<maxc {
-            let object = fnArray[i] 
-            outstr = outstr + " \(object)"
-            
-        }
-        DBGLog(String("fndbg \(vo.valueName ?? "") calcFnValueWithCurrent fnArray= \(outstr)"))
-        #endif
         var epd1: Int
         if to.trackerDate == nil {
             // current tracker entry no date set so epd1=now
@@ -840,46 +619,62 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             // set epd1 to date of current (this) tracker entry
             epd1 = Int(to.trackerDate?.timeIntervalSince1970 ?? 0)
         }
+        
+        #if FUNCTIONDBG
+        // print our complete function
+        var outstr = ""
+        for i in 0..<maxc {
+            let object = fnArray[i]
+            outstr = outstr + " \(object)"
+        }
+        DBGLog(String("fndbg \(vo.valueName ?? "") calcFnValueWithCurrent fnArray= \(outstr)"))
+        DBGLog("epd0 \(Date(timeIntervalSince1970: TimeInterval(epd0)))  epd1 \(Date(timeIntervalSince1970: TimeInterval(epd1)))  trackerDate \(self.MyTracker.trackerDate!)")
+        #endif
 
-        var result = 0.0
+        // Change to use optional Double
+        var result: Double? = 0.0
 
         while currFnNdx < maxc {
             // recursive function, self.currFnNdx holds our current processing position
             let currTok = fnArray[currFnNdx].intValue
             #if FUNCTIONDBG
-            DBGLog(String("fndbg currFnNdx= \(currFnNdx) currTok= \(currTok) result = \(result) fn2op = \(fn2op)"))
+            DBGLog(String("fndbg currFnNdx= \(currFnNdx) currTok= \(currTok) result = \(String(describing: result)) fn2op = \(fn2op)"))
             DBGLog(String("fndbg : \(voFnDefnStr(false, cfndx: currFnNdx)!)"))
             #endif
             if fn2op && (currTok == FN2ARGPLUS || currTok == FN2ARGMINUS || currTok == FNPARENCLOSE) {
                 #if FUNCTIONDBG
-                DBGLog("fndbg +-) return result= \(result)")
+                DBGLog("fndbg +-) return result= \(String(describing: result))")
                 #endif
-                return NSNumber(value: result)  // return from recursion leaving currFnNdx=>currTok
+                return result != nil ? NSNumber(value: result!) : nil  // return from recursion leaving currFnNdx=>currTok
             }
             currFnNdx += 1
             if isFn1Arg(currTok) {
                 // currTok is function taking 1 argument, so get it
                 if currFnNdx >= maxc {
-                    // <--- added from line 462
-                    //DBGErr(@"1-arg fn missing arg: %@",self.fnArray);
                     FnErr = true
-                    return NSNumber(value: result) // crashlytics report past array bounds at next line, so at least return without crashing
+                    return result != nil ? NSNumber(value: result!) : nil // crashlytics report past array bounds at next line, so at least return without crashing
                 }
                 vid = fnArray[currFnNdx].intValue
                 currFnNdx += 1 // get fn arg, can only be valobj vid
                 //valueObj *valo = [to getValObj:vid];
                 let sv1 = to.getValObj(vid)?.value
                 let nullV1 = (nil == sv1 || ("" == sv1))
-                let v1 = Double(sv1 ?? "") ?? 0.0
-                sql = String(format: "select count(val) from voData where id=%ld and date >=%ld and date <%d;", vid, epd0, epd1)
-                var ci = to.toQry2Int(sql:sql)!
+                let trimmedSv1 = sv1?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                let v1 = Double(trimmedSv1) ?? 0.0
+                sql = """
+                SELECT count(val) FROM voData 
+                WHERE id = \(vid) AND date >= \(epd0) AND date < \(epd1)
+                AND date NOT IN (SELECT date FROM ignoreRecords)
+                """
+                var ci = to.toQry2Int(sql:sql)
                 #if FUNCTIONDBG
                 DBGLog(String("v1= \(v1) nullV1=\(nullV1) vid=\(vid) \(vo.parentTracker.trackerName):\(vo.valueName)"))
+                DBGLog(String("sv1= '\(sv1 ?? "nil")'"))
                 #endif
                 // v1 is value for current tracker entry (epd1) for our arg
                 switch currTok {
                 // changed to date > epd1 for consistency with other functions
-                case FN1ARGDELTA, FN1ARGONRATIO, FN1ARGNORATIO, FN1ARGELAPSEDWEEKS, FN1ARGELAPSEDDAYS, FN1ARGELAPSEDHOURS, FN1ARGELAPSEDMINS, FN1ARGELAPSEDSECS:
+                case FN1ARGROUND, FN1ARGDELTA, FN1ARGONRATIO, FN1ARGNORATIO, FN1ARGELAPSEDWEEKS, FN1ARGELAPSEDDAYS, FN1ARGELAPSEDHOURS, FN1ARGELAPSEDMINS, FN1ARGELAPSEDSECS:
                     if nullV1 {
                         return nil // delta requires v1 to subtract from, sums and avg just get one less result
                     }
@@ -887,43 +682,59 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                     //to.sql = [NSString stringWithFormat:@"select val from voData where id=%d and date=%d;",vid,epd0];
                     // with per calendar date calcs, epd0 may not match a datapoint
                     // - so get val coming into this time segment or skip for beginning - rtm 17.iii.13
-                    sql = String(format: "select count(val) from voData where id=%ld and date>=%ld;", vid, epd0)
-                    ci = to.toQry2Int(sql:sql)! // slightly different for delta
+                    sql = """
+                    SELECT count(val) FROM voData 
+                    WHERE id = \(vid) AND date >= \(epd0)
+                    AND date NOT IN (SELECT date FROM ignoreRecords)
+                    """
+                    ci = to.toQry2Int(sql:sql) // slightly different for delta
                     if 0 == ci {
                         return nil // skip for beginning
                     }
                     if isFn1ArgElapsed(currTok) {
-                        sql = String(format: "select date from voData where id=%ld and date>=%ld order by date asc limit 1;", vid, epd0)
-                        let d0 = to.toQry2Int(sql:sql)!
+                        sql = """
+                        SELECT date FROM voData 
+                        WHERE id = \(vid) AND date >= \(epd0)
+                        AND date NOT IN (SELECT date FROM ignoreRecords)
+                        ORDER BY date ASC LIMIT 1
+                        """
+                        let d0 = to.toQry2Int(sql:sql)
                         result = Double(epd1) - Double(d0)
-                        DBGLog(String("elapsed unit: epd0= \(epd0) d0= \(d0) epd1=\(epd1) rslt= \(result)"))
+                        DBGLog(String("elapsed unit: epd0= \(epd0) d0= \(d0) epd1=\(epd1) rslt= \(String(describing: result))"))
                         switch currTok {
                         case FN1ARGELAPSEDWEEKS:
-                            result /= d(7)
+                            result = result != nil ? result! / d(7) : nil
                             fallthrough
                         case FN1ARGELAPSEDDAYS:
-                            result /= d(24)
+                            result = result != nil ? result! / d(24) : nil
                             fallthrough
                         case FN1ARGELAPSEDHOURS:
-                            result /= d(60)
+                            result = result != nil ? result! / d(60) : nil
                             fallthrough
                         case FN1ARGELAPSEDMINS:
-                            result /= d(60)
+                            result = result != nil ? result! / d(60) : nil
                             fallthrough
                         case FN1ARGELAPSEDSECS:
                             fallthrough
                         default:
                             break
                         }
-                        DBGLog(String("elapsed unit: final result = \(result)"))
+                        DBGLog(String("elapsed unit: final result = \(String(describing: result))"))
                     }
-                    sql = String(format: "select val from voData where id=%ld and date>=%ld order by date asc limit 1;", vid, epd0) // desc->asc 22.ii.2016 to match <= -> >= change 25.01.16
-                    let v0 = to.toQry2Double(sql:sql)!
+                    sql = """
+                    SELECT val FROM voData 
+                    WHERE id = \(vid) AND date >= \(epd0)
+                    AND date NOT IN (SELECT date FROM ignoreRecords)
+                    ORDER BY date ASC LIMIT 1
+                    """
+                    let v0 = to.toQry2Double(sql:sql)
                     #if FUNCTIONDBG
                     DBGLog(String("delta/on_ratio/no_ratio: v0= \(v0)"))
                     #endif
                     // do caclulation
                     switch currTok {
+                    case FN1ARGROUND:
+                        result = round(v1)
                     case FN1ARGDELTA:
                         result = v1 - v0
                     case FN1ARGONRATIO:
@@ -936,31 +747,63 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                             return nil
                         }
                         result = v1 / v0
+                                
                     default:
                         break
                     }
-                case FN1ARGAVG:
-                    // below (calculate via sqlite) works but need to include any current but unsaved value
-                    //to.sql = [NSString stringWithFormat:@"select avg(val) from voData where id=%d and date >=%d and date <%d;",
-                    //		  vid,epd0,epd1];
-                    //result = [to toQry2Float:sql];  // --> + v1;
-
-                    var c = Double(vo.optDict["frv0"] ?? "") ?? 0 // if ep has assoc value, then avg is over that num with date/time range already determined
-                    // in other words, is it avg over 'frv' number of hours/days/weeks then that is our denominator
-                    if c == 0.0 {
-                        // else denom is number of entries between epd0 to epd1 
-                        sql = String(format: "select count(val) from voData where id=%ld and val <> '' and date >=%ld and date <%d;", vid, epd0, epd1)
-                        c = Double(to.toQry2Float(sql:sql)! + (nullV1 ? 0.0 : 1.0)) // +1 for current on screen
+                    
+                case FN1ARGCLASSIFY:
+                    // only 1 classify, match values stored in vo.optDict
+                    // Start with result = 0 (no match)
+                    result = nil
+                    #if FUNCTIONDBG
+                    DBGLog(String("CLASSIFY thresholds: 1='\(vo.optDict["classify_1"] ?? "nil")' 2='\(vo.optDict["classify_2"] ?? "nil")' 3='\(vo.optDict["classify_3"] ?? "nil")' 4='\(vo.optDict["classify_4"] ?? "nil")' 5='\(vo.optDict["classify_5"] ?? "nil")' 6='\(vo.optDict["classify_6"] ?? "nil")' 7='\(vo.optDict["classify_7"] ?? "nil")'"))
+                    #endif
+                    for i in (1...7).reversed() {
+                        if let sv1 = sv1, let matchVal = vo.optDict["classify_\(i)"] {
+                            if let matchDbl = Double(matchVal) {
+                                if v1 >= matchDbl {
+                                    #if FUNCTIONDBG
+                                    DBGLog(String("CLASSIFY numeric match: \(v1) >= \(matchDbl) -> classification \(i)"))
+                                    #endif
+                                    result = Double(i)
+                                    break
+                                }
+                            } else if sv1.contains(matchVal) {
+                                #if FUNCTIONDBG
+                                DBGLog(String("CLASSIFY string match: '\(sv1)' contains '\(matchVal)' -> classification \(i)"))
+                                #endif
+                                result = Double(i)
+                                break
+                            }
+                        }
                     }
 
-                    if c == 0.0 {
+                case FN1ARGAVG:
+                    // 14.iv.25  behavior change: average is over count of events, if they want per days have to do that explicitly
+
+                    sql = """
+                    SELECT count(val) FROM voData 
+                    WHERE id = \(vid) AND val <> '' AND date >= \(epd0) AND date < \(epd1)
+                    AND date NOT IN (SELECT date FROM ignoreRecords)
+                    """
+                    let count = Double(to.toQry2Float(sql:sql) + (nullV1 ? 0.0 : 1.0)) // +1 for current on screen
+                    
+                    if count < 2.0 {  // at least 2 entries for average
+                        // nothing in db to average and nullV1 so no current
                         return nil
                     }
-                    sql = String(format: "select sum(val) from voData where id=%ld and date >=%ld and date <%d;", vid, epd0, epd1)
-                    let v = Double(to.toQry2Float(sql:sql)!)
-                    result = (v + v1) / c
+
+                    sql = """
+                    SELECT sum(val) FROM voData 
+                    WHERE id = \(vid) AND date >= \(epd0) AND date < \(epd1)
+                    AND date NOT IN (SELECT date FROM ignoreRecords)
+                    """
+                    let v = Double(to.toQry2Float(sql:sql))
+                    result = (v + v1) / count
                     #if FUNCTIONDBG
-                    DBGLog(String("avg: v= \(v) v1= \(v1) (v+v1)= \(v + v1) c= \(c) rslt= \(result) "))
+                    DBGLog(String("avg: v= \(v) v1= \(v1) (v+v1)= \(v + v1) c= \(count) rslt= \(String(describing: result)) "))
+                    //DBGLog("hello")
                     #endif
                 case FN1ARGMIN:
                     if 0 == ci && nullV1 {
@@ -968,14 +811,18 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                     } else if 0 == ci {
                         result = v1
                     } else {
-                        sql = String(format: "select min(val) from voData where id=%ld and date >=%ld and date <%d;", vid, epd0, epd1)
-                        result = Double(to.toQry2Float(sql:sql)!)
-                        if !nullV1 && v1 < result {
+                        sql = """
+                        SELECT min(val) FROM voData 
+                        WHERE id = \(vid) AND date >= \(epd0) AND date < \(epd1)
+                        AND date NOT IN (SELECT date FROM ignoreRecords)
+                        """
+                        result = Double(to.toQry2Float(sql:sql))
+                        if !nullV1 && v1 < result! {
                             result = v1
                         }
                     }
                     #if FUNCTIONDBG
-                    DBGLog(String("min: result= \(result)"))
+                    DBGLog(String("min: result= \(String(describing: result))"))
                     #endif
                 case FN1ARGMAX:
                     if 0 == ci && nullV1 {
@@ -983,24 +830,71 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                     } else if 0 == ci {
                         result = v1
                     } else {
-                        sql = String(format: "select max(val) from voData where id=%ld and date >=%ld and date <%d;", vid, epd0, epd1)
-                        result = Double(to.toQry2Float(sql:sql)!)
-                        if !nullV1 && v1 > result {
+                        sql = """
+                        SELECT max(val) FROM voData 
+                        WHERE id = \(vid) AND date >= \(epd0) AND date < \(epd1)
+                        AND date NOT IN (SELECT date FROM ignoreRecords)
+                        """
+                        result = Double(to.toQry2Float(sql:sql))
+                        if !nullV1 && v1 > result! {
                             result = v1
                         }
                     }
                     #if FUNCTIONDBG
-                    DBGLog(String("max: result= \(result)"))
+                    DBGLog(String("max: result= \(String(describing: result))"))
                     #endif
                 case FN1ARGCOUNT:
-                    sql = String(format: "select count(val) from voData where id=%ld and date >=%ld and date <%d;", vid, epd0, epd1)
-                    result = Double(to.toQry2Float(sql:sql)!)
+                    sql = """
+                    SELECT count(val) FROM voData 
+                    WHERE id = \(vid) AND date >= \(epd0) AND date < \(epd1)
+                    AND date NOT IN (SELECT date FROM ignoreRecords)
+                    """
+                    result = Double(to.toQry2Float(sql:sql))
                     if !nullV1 {
-                        result += 1.0
+                        result = result != nil ? result! + 1.0 : 1.0
                     }
                     #if FUNCTIONDBG
-                    DBGLog(String("count: result= \(result)"))
+                    DBGLog(String("count: result= \(String(describing: result))"))
                     #endif
+                case FN1ARGDELAY:
+                    let ep0def = Int(self.vo.optDict["frep0"]!)
+                    let ep0delta = (ep0def == FREPENTRY ? 0 : ep0def == FREPHOURS ? (60*60) : (60*60*24)) / 2
+                    sql = """
+                    SELECT val FROM voData 
+                    WHERE id = \(vid) AND date = (
+                        SELECT MIN(date) FROM voData 
+                        WHERE id = \(vid) AND date >= \(epd0-ep0delta) AND date < \(epd0+ep0delta)
+                        AND date NOT IN (SELECT date FROM ignoreRecords)
+                    )
+                    """
+                    result = Double(to.toQry2Float(sql:sql))
+                    #if FUNCTIONDBG
+                    DBGLog(String("delay: result= \(String(describing: result))"))
+                    #endif
+                    case FN1ARGNOT:
+                        // NOT logical operation - invert truthy/falsy value
+                        // if nil or 0 return 1.0 else return nil
+                        result = nullV1 ? 1.0 : v1 == 0.0 ? 1.0 : nil
+
+                        #if FUNCTIONDBG
+                        DBGLog(String("not: result= \(String(describing: result))"))
+                        #endif
+
+                    case FN1ARGFLOOR:
+                        // Floor function - round down to nearest integer
+                        result = nullV1 ? nil : floor(v1)
+
+                        #if FUNCTIONDBG
+                        DBGLog(String("floor: v1= \(v1) result= \(String(describing: result))"))
+                        #endif
+
+                    case FN1ARGCEILING:
+                        // Ceiling function - round up to nearest integer
+                        result = nullV1 ? nil : ceil(v1)
+
+                        #if FUNCTIONDBG
+                        DBGLog(String("ceiling: v1= \(v1) result= \(String(describing: result))"))
+                        #endif
                 default:
                     // remaining options for fn w/ 1 arg are pre/post/all sum
                     switch currTok {
@@ -1010,7 +904,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                         // we conditionally add in v1=(date<=%d) below so presum sql query same as sum
 
                         //to.sql = [NSString stringWithFormat:@"select total(val) from voData where id=%d and date >=%d and date <%d;",
-                        //		  vid,epd0,epd1];
+                        //          vid,epd0,epd1];
                         //break;
                         #if FUNCTIONDBG
                         DBGLog("presum: fall through")
@@ -1018,105 +912,294 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                         fallthrough
                     case FN1ARGSUM:
                         // (date<%d) because add in v1 below
-                        sql = String(format: "select total(val) from voData where id=%ld and date >=%ld and date <%d;", vid, epd0, epd1)
+                        sql = """
+                        SELECT total(val) FROM voData 
+                        WHERE id = \(vid) AND date >= \(epd0) AND date < \(epd1)
+                        AND date NOT IN (SELECT date FROM ignoreRecords)
+                        """
                         #if FUNCTIONDBG
                         DBGLog("sum: set sql")
                         #endif
                     case FN1ARGPOSTSUM:
                         // (date<%d) because add in v1 below
                         // 24.ii.2016 below does not really work, was created when start date was exact match to one to skip -- but with e.g. 'current-3 weeks' need to skip earliest value
-                        sql = String(format: "select total(val) from voData where id=%ld and date >%ld and date <%d;", vid, epd0, epd1)
-                        /*
-                                                     // except
-                                                    sql = [NSString stringWithFormat:@"select date from voData where id=%ld and date >=%ld and date <%d limit 1;",(long)vid,(long)epd0,epd1];
-                                                    int firstDate = [to toQry2Int:sql];
-                                                    if (firstDate) {
-                                                        sql = [NSString stringWithFormat:@"select total(val) from voData where id=%ld and date >%d and date <%d;",(long)vid,firstDate,epd1];
-                                                    } else {
-                                                        sql = @"select 0";
-                                                    }
-                                                     */
+                        sql = """
+                        SELECT total(val) FROM voData 
+                        WHERE id = \(vid) AND date > \(epd0) AND date < \(epd1)
+                        AND date NOT IN (SELECT date FROM ignoreRecords)
+                        """
+
                         #if FUNCTIONDBG
                         DBGLog("postsum: set sql")
                         #endif
+
                     default:
                         break
                     }
-                    result = Double(to.toQry2Float(sql:sql)!)
+                    result = Double(to.toQry2Float(sql:sql))
                     if currTok != FN1ARGPRESUM {
-                        result += v1
+                        result = result != nil ? result! + v1 : v1
                     }
                     #if FUNCTIONDBG
-                    DBGLog(String("pre/post/sum: result= \(result)"))
+                    DBGLog(String("pre/post/sum: result= \(String(describing: result))"))
                     #endif
                 }
             } else if isFn2ArgOp(currTok) {
                 // we are processing some combo of previous result and next value, currFnNdx was ++ already so get that result:
                 let nrnum = calcFunctionValue(withCurrent: epd0, fn2op: true) // currFnNdx now at next place already
-                if nil == nrnum {
-                    return nil
-                }
-                let nextResult = nrnum?.doubleValue ?? 0.0
+                let nextResult = nrnum?.doubleValue
+                
                 switch currTok {
-                // now just combine with what we have so far
-                case FN2ARGPLUS:
-                    result += nextResult
-                    #if FUNCTIONDBG
-                    DBGLog(String("fndbg plus [\(nextResult)]: result= \(result)"))
-                    #endif
-                case FN2ARGMINUS:
-                    result -= nextResult
-                    #if FUNCTIONDBG
-                    DBGLog(String("fndbg minus [\(nextResult)]: result= \(result)"))
-                    #endif
-                case FN2ARGTIMES:
-                    result *= nextResult
-                    #if FUNCTIONDBG
-                    DBGLog(String("fndbg times [\(nextResult)]: result= \(result)"))
-                    #endif
-                case FN2ARGDIVIDE:
-                    if nrnum != nil && nextResult != 0.0 {
-                        result /= nextResult
+                    // now just combine with what we have so far
+                    case FN2ARGPLUS:
+                        if result != nil && nextResult != nil {
+                            result = result! + nextResult!
+                        } else {
+                            result = nil
+                        }
                         #if FUNCTIONDBG
-                        DBGLog(String("fndbg divide [\(nextResult)]: result= \(result)"))
+                        DBGLog(String("fndbg plus [\(String(describing: nextResult))]: result= \(String(describing: result))"))
                         #endif
+                        
+                    case FN2ARGMINUS:
+                        if result != nil && nextResult != nil {
+                            result = result! - nextResult!
+                        } else {
+                            result = nil
+                        }
+                        #if FUNCTIONDBG
+                        DBGLog(String("fndbg minus [\(String(describing: nextResult))]: result= \(String(describing: result))"))
+                        #endif
+                        
+                    case FN2ARGTIMES:
+                        if result != nil && nextResult != nil {
+                            result = result! * nextResult!
+                        } else {
+                            result = nil
+                        }
+                        #if FUNCTIONDBG
+                        DBGLog(String("fndbg times [\(String(describing: nextResult))]: result= \(String(describing: result))"))
+                        #endif
+                        
+                    case FN2ARGDIVIDE:
+                        if result != nil && nextResult != nil && nextResult != 0.0 {
+                            result = result! / nextResult!
+                            #if FUNCTIONDBG
+                            DBGLog(String("fndbg divide [\(String(describing: nextResult))]: result= \(String(describing: result))"))
+                            #endif
+                        } else {
+                            //result = nil;
+                            #if FUNCTIONDBG
+                            DBGLog("divide: rdivide by zero!")
+                            #endif
+                            return nil
+                        }
+                // Modified logical operations to handle nil values
+                case FN2ARGAND:
+                    // Handle nil values as false
+                    // Only return true (non-nil) if both operands are truthy
+                    let prevResult = result
+                    if result == nil || result == 0 || nextResult == nil || nextResult == 0 {
+                        // If either is falsy (nil or 0), result is false (nil)
+                        result = nil
+                    } else if result != 1 || nextResult != 1 {
+                        // If both truthy but one is not 1, return the non-1 value
+                        result = (result != 1) ? result : nextResult
                     } else {
-                        //result = nil;
-                        #if FUNCTIONDBG
-                        DBGLog("divide: rdivide by zero!")
-                        #endif
-                        return nil
+                        // Both are 1, return 1
+                        result = 1.0
                     }
+                    #if FUNCTIONDBG
+                    DBGLog(String("fndbg \(String(describing: prevResult)) AND [\(String(describing: nextResult))]: result= \(String(describing: result))"))
+                    #endif
+                    
+                case FN2ARGOR:
+                    // If either value is truthy (non-nil and non-zero), result is truthy
+                    if (result == nil || result == 0) && (nextResult == nil || nextResult == 0) {
+                        // Both falsy, return nil
+                        result = nil
+                    } else {
+                        // At least one is truthy
+                        // Return the first truthy value, preserving non-1 values
+                        if result != nil && result != 0 {
+                            // First operand is truthy, keep it
+                            // (result already has the value)
+                        } else {
+                            // First operand falsy, use second operand
+                            result = nextResult
+                        }
+                    }
+                    #if FUNCTIONDBG
+                    DBGLog(String("fndbg OR [\(String(describing: nextResult))]: result= \(String(describing: result))"))
+                    #endif
+                    
+                case FN2ARGXOR:
+                    // XOR is true if exactly one operand is truthy
+                    let firstTruthy = result != nil && result != 0
+                    let secondTruthy = nextResult != nil && nextResult != 0
+                    
+                    if firstTruthy != secondTruthy {
+                        // Exactly one is truthy, result is true
+                        // Return the truthy value to preserve non-1 values
+                        result = firstTruthy ? result : nextResult
+                    } else {
+                        // Both truthy or both falsy, result is false (nil)
+                        result = nil
+                    }
+                    #if FUNCTIONDBG
+                    DBGLog(String("fndbg XOR [\(String(describing: nextResult))]: result= \(String(describing: result))"))
+                    #endif
+                    
+                case FN2ARGEQUALTO:
+                    let leftValue = result ?? 0.0
+                    let rightValue = nextResult ?? 0.0
+                    
+                    // Compare the values for equality (using a small epsilon for floating point)
+                    let epsilon = 1e-10
+                    result = abs(leftValue - rightValue) < epsilon ? 1.0 : nil
+                    #if FUNCTIONDBG
+                    DBGLog(String("fndbg EQUALTO [\(String(describing: nextResult))]: result= \(String(describing: result))"))
+                    #endif
+                    
+                case FN2ARGNOTEQUAL:
+                    let leftValue = result ?? 0.0
+                    let rightValue = nextResult ?? 0.0
+                    
+                    // Compare the values
+                    let epsilon = 1e-10
+                    result = abs(leftValue - rightValue) >= epsilon ? 1.0 : nil
+                    #if FUNCTIONDBG
+                    DBGLog(String("fndbg NOTEQUAL [\(String(describing: nextResult))]: result= \(String(describing: result))"))
+                    #endif
+                case FN2ARGGREATER:
+                    if result == nil || nextResult == nil {
+                        // Comparisons with nil return nil
+                        result = nil
+                    } else {
+                        result = result! > nextResult! ? 1.0 : nil
+                    }
+                    #if FUNCTIONDBG
+                    DBGLog(String("fndbg greater than [\(String(describing: nextResult))]: result= \(String(describing: result))"))
+                    #endif
+                    
+                case FN2ARGLESS:
+                    if result == nil || nextResult == nil {
+                        result = nil
+                    } else {
+                        result = result! < nextResult! ? 1.0 : nil
+                    }
+                    #if FUNCTIONDBG
+                    DBGLog(String("fndbg less than [\(String(describing: nextResult))]: result= \(String(describing: result))"))
+                    #endif
+                    
+                case FN2ARGGREATEREQUAL:
+                    if result == nil && (nextResult == nil || nextResult == 0) {
+                        // nil >= nil or nil >= 0 is true
+                        result = 1.0
+                    } else if nextResult == nil && result == 0 {
+                        // 0 >= nil is true
+                        result = 1.0
+                    } else if result == nil || nextResult == nil {
+                        // Any other comparison with nil is false
+                        result = nil
+                    } else {
+                        // Normal comparison
+                        result = result! >= nextResult! ? 1.0 : nil
+                    }
+                    #if FUNCTIONDBG
+                    DBGLog(String("fndbg greater than or equal [\(String(describing: nextResult))]: result= \(String(describing: result))"))
+                    #endif
+                    
+                case FN2ARGLESSEQUAL:
+                    if result == nil && (nextResult == nil || nextResult == 0) {
+                        // nil <= nil or nil <= 0 is true
+                        result = 1.0
+                    } else if nextResult == nil && result == 0 {
+                        // 0 <= nil is true
+                        result = 1.0
+                    } else if result == nil || nextResult == nil {
+                        // Any other comparison with nil is false
+                        result = nil
+                    } else {
+                        // Normal comparison
+                        result = result! <= nextResult! ? 1.0 : nil
+                    }
+                    #if FUNCTIONDBG
+                    DBGLog(String("fndbg less than or equal [\(String(describing: nextResult))]: result= \(String(describing: result))"))
+                    #endif
+
+                case FN2ARGMIN2:
+                    // return the minimum of the two, treating nil as absent
+                    if result == nil  {
+                        result = nextResult
+                    } else if nextResult == nil {
+                        //result = result
+                    } else if result! < nextResult! {
+                        //result = result
+                    } else {
+                        // nextResult is <= result
+                        result = nextResult
+                    } 
+                    #if FUNCTIONDBG
+                    DBGLog(String("fndbg min2 [\(String(describing: nextResult))]: result= \(String(describing: result))"))
+                    #endif
+
+                case FN2ARGMAX2:
+                    // return the maximum of the two, treating nil as absent
+                    if result == nil  {
+                        result = nextResult
+                    } else if nextResult == nil {
+                        //result = result
+                    } else if result! > nextResult! {
+                        //result = result
+                    } else {
+                        // nextResult is >= result
+                        result = nextResult
+                    }
+                    #if FUNCTIONDBG
+                    DBGLog(String("fndbg max2 [\(String(describing: nextResult))]: result= \(String(describing: result))"))
+                    #endif
                 default:
                     break
                 }
             } else if currTok == FNPARENOPEN {
                 // open paren means just recurse and return the result up
                 let nrnum = calcFunctionValue(withCurrent: epd0) // currFnNdx now at next place already
-                if nil == nrnum {
-                    return nil
-                }
-                result = nrnum?.doubleValue ?? 0.0
+                result = nrnum?.doubleValue
                 #if FUNCTIONDBG
-                DBGLog(String("fndbg paren open: result= \(result)"))
+                DBGLog(String("fndbg paren open: result= \(String(describing: result))"))
                 #endif
             } else if currTok == FNPARENCLOSE {
                 // close paren means we are there, return what we have
                 #if FUNCTIONDBG
-                DBGLog(String("fndbg paren close return with result= \(result)"))
+                DBGLog(String("fndbg paren close return with result= \(String(describing: result))"))
                 #endif
-                return NSNumber(value: result)
+                return result != nil ? NSNumber(value: result!) : nil
             } else if FNCONSTANT == currTok {
                 if currFnNdx >= maxc {
                     //DBGErr(@"constant fn missing arg: %@",self.fnArray);
                     FnErr = true
-                    return NSNumber(value: result) // crashlytics report past array bounds above (1-arg) processing function, so safety check here to return without crashing
+                    return result != nil ? NSNumber(value: result!) : nil // crashlytics report past array bounds above (1-arg) processing function, so safety check here to return without crashing
                 }
                 result = fnArray[currFnNdx].doubleValue
                 currFnNdx += 1
                 currFnNdx += 1 // skip the bounding constant tok
                 #if FUNCTIONDBG
-                DBGLog(String("paren open: result= \(result)"))
+                DBGLog(String("paren open: result= \(String(describing: result))"))
+                #endif
+            } else if FNBEFORE == currTok || FNAFTER == currTok {
+                if currFnNdx >= maxc {
+                    FnErr = true
+                    return result != nil ? NSNumber(value: result!) : nil
+                }
+                let timestamp = fnArray[currFnNdx].intValue
+                currFnNdx += 1  // skip timestamp value
+                currFnNdx += 1  // skip closing token
+
+                result = (FNBEFORE == currTok) ? (epd1 < timestamp ? 1.0 : nil) : (epd1 > timestamp ? 1.0 : nil)
+
+                #if FUNCTIONDBG
+                DBGLog(String("\(currTok == FNBEFORE ? "before" : "after"): epd1=\(epd1) ts=\(timestamp) result=\(String(describing: result))"))
                 #endif
             } else if isFnTimeOp(currTok) {
                 if 0 == epd0 {
@@ -1128,36 +1211,36 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
 
                 result = Double(epd1) - Double(epd0)
                 #if FUNCTIONDBG
-                DBGLog(String("timefn: \(result) secs"))
+                DBGLog(String("timefn: \(String(describing: result)) secs"))
                 #endif
                 switch currTok {
                 case FNTIMEWEEKS:
-                    result /= 7 // 7 days /week
+                    result = result != nil ? result! / 7 : nil // 7 days /week
                     #if FUNCTIONDBG
-                    DBGLog(String("timefn: weeks : \(result)"))
+                    DBGLog(String("timefn: weeks : \(String(describing: result))"))
                     #endif
                     fallthrough
                 case FNTIMEDAYS:
-                    result /= 24 // 24 hrs / day
+                    result = result != nil ? result! / 24 : nil // 24 hrs / day
                     #if FUNCTIONDBG
-                    DBGLog(String("timefn: days \(result)"))
+                    DBGLog(String("timefn: days \(String(describing: result))"))
                     #endif
                     fallthrough
                 case FNTIMEHRS:
-                    result /= 60 // 60 mins / hr
+                    result = result != nil ? result! / 60 : nil // 60 mins / hr
                     #if FUNCTIONDBG
-                    DBGLog(String("timefn: hrs \(result)"))
+                    DBGLog(String("timefn: hrs \(String(describing: result))"))
                     #endif
                     fallthrough
                 case FNTIMEMINS:
-                    result /= 60 // 60 secs / min
+                    result = result != nil ? result! / 60 : nil // 60 secs / min
                     #if FUNCTIONDBG
-                    DBGLog(String("timefn: mins \(result)"))
+                    DBGLog(String("timefn: mins \(String(describing: result))"))
                     #endif
                     fallthrough
                 case FNTIMESECS:
                     #if FUNCTIONDBG
-                    DBGLog(String("timefn: secs \(result)"))
+                    DBGLog(String("timefn: secs \(String(describing: result))"))
                     #endif
                     fallthrough
                 default:
@@ -1165,14 +1248,18 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                     break
                 }
                 #if FUNCTIONDBG
-                DBGLog(String("timefn: \(result) final units"))
+                DBGLog(String("timefn: \(String(describing: result)) final units"))
                 #endif
             } else {
                 // remaining option is we have some vid as currTok, return its value up the chain
-                let lvo = to.getValObj(currTok)!
+                guard let lvo = to.getValObj(currTok) else {
+                    DBGLog("voFunction: valueObj with vid \(currTok) not found (may have been deleted)")
+                    result = nil
+                    break
+                }
                 result = lvo.vos!.getNumVal()  // Double(lvo.value) ?? 0
                 #if FUNCTIONDBG
-                DBGLog(String("vid \(lvo.vid): result= \(result)"))
+                DBGLog(String("vid \(lvo.vid): result= \(String(describing: result))"))
                 #endif
                 //result = [[to getValObj:currTok].value doubleValue];
                 //self.currFnNdx++;  // on to next  // already there - postinc on read
@@ -1181,10 +1268,9 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         // swiftify oops?  currFnNdx += 1
 
         #if FUNCTIONDBG
-        DBGLog(String("fndbg \(vo.valueName ?? "") calcFnValueWithCurrent rtn: \(NSNumber(value: result))"))
+        DBGLog(String("fndbg \(vo.valueName ?? "") calcFnValueWithCurrent rtn: \(result != nil ? NSNumber(value: result!) : nil)"))
         #endif
-        return NSNumber(value: result)
-
+        return result != nil ? NSNumber(value: result!) : nil
     }
 
     func checkEP(_ ep: Int) -> Bool {
@@ -1201,67 +1287,78 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
     }
 
     //- (NSString*) currFunctionValue {
-    override func update(_ instr: String) -> String {
-        var instr = instr
-        instr = ""
+    override func update(_ instr: String?) -> String {
         let pto = vo.parentTracker
 
         if nil == pto.tDb {
             return ""
         }
 
-        if !checkEP(1) {
-            return instr
+        if !checkEP(1) {  // if ep1 is valobj, return "" if not valid value
+            return ""
         }
-
 
         // search back for start endpoint that is ok
         let ep0start = Int(MyTracker.trackerDate!.timeIntervalSince1970)
         let ep0date = getEpDate(0, maxdate: ep0start) // start with immed prev to curr record set
-        /*
-            if (ep0date != 0) {
-                [MyTracker loadData:ep0date];   // set values for initial checkEP test
-                while((ep0date != 0) && (![self checkEP:0])) {
-                    ep0date = [self getEpDate:0 maxdate:ep0date];  // not ok, back one more
-                    [MyTracker loadData:ep0date];
-                }
-                [MyTracker loadData:ep0start];   // reset from search
-            }
-          */
 
+#if FUNCTIONDBG
+        DBGLog("ep0start \(Date(timeIntervalSince1970: TimeInterval(ep0start)))   ep0date \(Date(timeIntervalSince1970: TimeInterval(ep0date)))")
+#endif
+        
         if ep0date == 0 {
-            // start endpoint not ok
-            var ep: Int?
-            let nep = vo.optDict["frep0"]
-            ep = (nep != nil ? Int(nep!) : nil)
-            if !(nep == nil || ep! == FREPENTRY) {
+            // start endpoint not ok - no prior date
+            if let nep = vo.optDict["frep0"], let ep = Int(nep), ep != FREPENTRY {
                 // allow to go through if just looking for previous entry and this is first
-                return instr
+                return instr ?? ""
             }
+        }
+
+        #if FUNCTIONDBG
+        if ep0date == lastEpd0 && !lastCalcValue.isEmpty && !fnDirty {
+            DBGLog("fn \(vo.valueName!) update would use cached value \(lastCalcValue) ep0date \(Date(timeIntervalSince1970: TimeInterval(ep0date))) [fnDirty=\(fnDirty), lastCalcValue.isEmpty=\(lastCalcValue.isEmpty)]")
+        } else {
+            DBGLog("fn \(vo.valueName!) update RECALCULATING [ep0date=\(ep0date) vs lastEpd0=\(lastEpd0), fnDirty=\(fnDirty), lastCalcValue.isEmpty=\(lastCalcValue.isEmpty)]")
+        }
+        #endif
+
+        // Use cached value if endpoints match and we have a non-empty cached result
+        if ep0date == lastEpd0 && !lastCalcValue.isEmpty && !fnDirty {
+            return lastCalcValue
         }
 
         currFnNdx = 0
 
         let val = calcFunctionValue(withCurrent: ep0date)
+        
         #if FUNCTIONDBG
         DBGLog(String("fndbg fn update val= \(val)"))
         #endif
         if let val {
             let nddp = vo.optDict["fnddp"]
             let ddp = (nddp == nil ? FDDPDFLT : Int(nddp!))
-            return String(format: String(format: "%%0.%df", ddp!), val.floatValue)
+            lastCalcValue = String(format: String(format: "%%0.%df", ddp!), val.floatValue)
+            lastEpd0 = ep0date
+            fnDirty = false  // Calculation complete, reset dirty flag
+            return lastCalcValue
+        } else {
+            lastEpd0 = -1
+            lastCalcValue = ""  // empty
+            fnDirty = false  // Calculation complete (nil result), reset dirty flag
         }
-        #if FUNCTIONDBG
-        DBGLog(String("fndbg fn update returning: \(instr)"))
-        #endif
-        return instr
-    }
 
+        #if FUNCTIONDBG
+        DBGLog(String("fndbg fn update returning: \(lastCalcValue)"))
+        #endif
+        return lastCalcValue
+    }
+    
     override func voDisplay(_ bounds: CGRect) -> UIView {
 
         //trackerObj *to = (trackerObj*) parentTracker;
         vosFrame = bounds
-
+        _rlab = nil  // force recreate
+        
         //UILabel *rlab = [[UILabel alloc] initWithFrame:bounds];
         //rlab.textAlignment = UITextAlignmentRight;
 
@@ -1269,10 +1366,18 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         CrashlyticsKit.setObjectValue(voFnDefnStr(true), forKey: "fnDefn")
         CrashlyticsKit.setObjectValue(voRangeStr(true), forKey: "fnRange")
         #endif
-
+        #if FUNCTIONDBG
+        DBGLog("display fn voDisplay: \(vo.valueName ?? "nil")")
+        #endif
         var valstr = vo.value // evaluated on read so make copy
         if FnErr {
             valstr = "❌ " + (valstr)
+        } else {
+            // Handle hours:minutes formatting if needed
+            if vo.optDict["hrsmins"] ?? "0" == "1", let numValue = Double(valstr) {
+                let rv = Int(round(numValue))
+                valstr = String(format: "%d:%02d", rv/60, rv % 60)
+            }
         }
         if valstr != "" {
             rlab?.backgroundColor = .clear // was whiteColor
@@ -1283,7 +1388,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
         }
 
         //return [rlab autorelease];
-        DBGLog(String("fn voDisplay: \(rlab?.text ?? "")"))
+        DBGLog(String("fn voDisplay: \(vo.valueName ?? "nil") \(rlab?.text ?? "")"))
         //self.rlab.tag = kViewTag;
 
         return rlab!
@@ -1294,1015 +1399,19 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
     }
 
     // MARK: -
-    // MARK: function configTVObjVC
-    // MARK: -
-
-    // MARK: range definition page
-
-    //
-    // convert endpoint from left or right picker to rownum for offset symbol (hours, months, ...) or valobj
-    //
-
-    // ep options are : 
-    //     row 0:      entry 
-    //     rows 1..m:  [valObjs] (ep = vid)
-    //     rows n...:  other epTitles entries
-
-    func ep(toRow component: Int) -> Int {
-        let key = String(format: "frep%ld", component)
-        var ep: Int?
-        let n = vo.optDict[key]
-        ep = (n != nil ? Int(n!) : nil)
-        DBGLog(String("comp= \(component) ep= \(ep) n= \(n)"))
-        if n == nil || ep! == FREPDFLT {
-            // no endpoint defined, so default row 0
-            DBGLog(" returning 0")
-            return 0
-        }
-        if ep! >= 0 || ep! <= -TMPUNIQSTART {
-            // ep defined and saved, or ep not saved and has tmp vid, so return ndx in vo table
-            //return [MyTracker.valObjTable indexOfObjectIdenticalTo:[MyTracker getValObj:ep]] +1;
-            if let getValObj = MyTracker.getValObj(ep!) {
-                DBGLog(String(" returning \(UInt(((votWoSelf as NSArray?)?.indexOfObjectIdentical(to: getValObj) ?? 0) + 1))"))
-                return ((votWoSelf as NSArray?)?.indexOfObjectIdentical(to: getValObj) ?? 0) + 1
-            }
-            return 0
-            //return ep+1;
-        }
-        DBGLog(String(" returning \((ep! * -1) + votWoSelf.count - 1)"))
-        return (ep! * -1) + votWoSelf.count - 1 // ep is offset into hours, months list
-        //return (ep * -1) + [MyTracker.valObjTable count] -1;  // ep is offset into hours, months list
-    }
-
-    func fnrRowTitle(_ row: Int) -> String {
-        var row = row
-        if row != 0 {
-            let votc = votWoSelf.count//[MyTracker.valObjTable count];
-            if row <= votc {
-                DBGLog(String(" returning \(votWoSelf[row - 1].valueName)"))
-                return votWoSelf[row - 1].valueName! //((valueObj*) [MyTracker.valObjTable objectAtIndex:row-1]).valueName;
-            } else {
-                row -= votc
-            }
-        }
-        DBGLog(String(" returning \(epTitles[row])"))
-        return epTitles[row]
-    }
-
-    // 
-    // if picker row is offset (not valobj), display a textfield and label to get number of (hours, months,...) offset
-    // check 
-    //
-
-    func updateValTF(_ row: Int, component: Int) {
-        let votc = votWoSelf.count //[MyTracker.valObjTable count];
-
-        if row > votc {
-            let vkey = String(format: "frv%ld", component)
-            let key = String(format: "frep%ld", component)
-            if FREPNONE == Int(vo.optDict[key]!) {
-                return
-            }
-            let vtfkey = String(format: "fr%ldTF", component)
-            let pre_vkey = String(format: "frpre%ldvLab", component)
-            let post_vkey = String(format: "frpost%ldvLab", component)
-
-            let vtf = (ctvovcp?.wDict)?[vtfkey] as? UITextField
-            vtf?.text = vo.optDict[vkey]
-            if let vtf {
-                ctvovcp?.scroll.addSubview(vtf)
-            }
-            if let aWDict = (ctvovcp?.wDict)?[pre_vkey] as? UIView {
-                ctvovcp?.scroll.addSubview(aWDict)
-            }
-            let postLab = (ctvovcp?.wDict)?[post_vkey] as? UILabel
-            //postLab.text = [[self fnrRowTitle:row] stringByReplacingOccurrencesOfString:@"cal " withString:@"c "];
-            postLab?.text = fnrRowTitle(row)
-            DBGLog(String(" postlab= \(postLab?.text ?? "")"))
-            if let postLab {
-                ctvovcp?.scroll.addSubview(postLab)
-            }
-
-            if (0 == component) && (ISCALFREP(Int(vo.optDict[key]!)!)) {
-                let ckBtn = (ctvovcp?.wDict)?["graphLastBtn"] as? UISwitch // UIButton
-                let state = !(vo.optDict["graphlast"] == "0") // default:1
-                ckBtn?.isOn = state
-                /*
-                ckBtn?.setImage(
-                    UIImage(named: state ? "checked.png" : "unchecked.png"),
-                    for: .normal)
-                */
-                if let ckBtn {
-                    ctvovcp?.scroll.addSubview(ckBtn)
-                }
-                let glLab = (ctvovcp?.wDict)?["graphLastLabel"] as? UILabel
-                if let glLab {
-                    ctvovcp?.scroll.addSubview(glLab)
-                }
-            }
-        }
-    }
-
-    func drawFuncOptsRange() {
-        var frame = CGRect(x: MARGIN, y: ctvovcp?.lasty ?? 0.0, width: 0.0, height: 0.0)
-
-        var labframe = ctvovcp?.configLabel(
-            "Function range endpoints:",
-            frame: frame,
-            key: "freLab",
-            addsv: true)
-        frame.origin.x = MARGIN
-        frame.origin.y += (labframe?.size.height ?? 0.0) + MARGIN
-
-        // labframe =
-        _ = ctvovcp?.configLabel(
-            "Previous:",
-            frame: frame,
-            key: "frpLab",
-            addsv: true)
-        frame.origin.x = ((ctvovcp?.view.frame.size.width ?? 0.0) / 2.0) + MARGIN
-
-        labframe = ctvovcp?.configLabel(
-            "Current:",
-            frame: frame,
-            key: "frcLab",
-            addsv: true)
-
-        frame.origin.y += (labframe?.size.height ?? 0.0) + MARGIN
-        frame.origin.x = 0.0
-
-        frame = ctvovcp?.configPicker(frame, key: "frPkr", caller: self) ?? CGRect.zero
-        let pkr = (ctvovcp?.wDict)?["frPkr"] as? UIPickerView
-
-        DBGLog(String("pkr component 0 selectRow \(ep(toRow: 0))"))
-        pkr?.selectRow(ep(toRow: 0), inComponent: 0, animated: false)
-        DBGLog(String("pkr component 1 selectRow \(ep(toRow: 1))"))
-        pkr?.selectRow(ep(toRow: 1), inComponent: 1, animated: false)
-
-        frame.origin.y += frame.size.height + MARGIN
-        frame.origin.x = MARGIN
-
-        labframe = ctvovcp?.configLabel(
-            "-",
-            frame: frame,
-            key: "frpre0vLab",
-            addsv: false)
-
-        frame.origin.x += (labframe?.size.width ?? 0.0) + SPACE
-        let tfWidth = "9999".size(withAttributes: [
-            NSAttributedString.Key.font: PrefBodyFont
-        ]).width
-        frame.size.width = tfWidth
-        frame.size.height = minLabelHeight(ctvovcp?.lfHeight ?? 0.0)
-
-        _ = ctvovcp?.configTextField(
-            frame,
-            key: "fr0TF",
-            target: nil,
-            action: nil,
-            num: true,
-            place: nil,
-            text: vo.optDict["frv0"],
-            addsv: false)
-
-        frame.origin.x += tfWidth + 2 * SPACE
-        //labframe =
-        _ = ctvovcp?.configLabel(
-            "cal months",
-            frame: frame,
-            key: "frpost0vLab",
-            addsv: false)
-
-        //[self updateValTF:[self epToRow:0] component:0];
-
-        frame.origin.x = ((ctvovcp?.view.frame.size.width ?? 0.0) / 2.0) + MARGIN
-
-        labframe = ctvovcp?.configLabel(
-            "only last:",
-            frame: frame,
-            key: "graphLastLabel",
-            addsv: false)
-
-        frame.origin.x += (labframe?.size.width ?? 0.0) + SPACE
-        _ = ctvovcp?.configSwitch(
-            frame,
-            key: "graphLastBtn",
-            state: !(vo.optDict["graphlast"] == "0"),
-            addsv: false)
-
-        updateValTF(ep(toRow: 0), component: 0)
-
-        /*
-        	labframe = [self.ctvovcp configLabel:@"+" 
-        						   frame:frame
-        							 key:@"frpre1vLab" 
-        						   addsv:NO ];
-
-        	frame.origin.x += labframe.size.width + SPACE;
-        	[self.ctvovcp configTextField:frame 
-        					  key:@"fr1TF" 
-        				   target:nil
-        				   action:nil
-        					  num:YES 
-        					place:nil
-        					 text:[self.vo.optDict objectForKey:@"frv1"] 
-        					addsv:NO ];
-
-        	frame.origin.x += tfWidth + 2*SPACE;
-        	/ *labframe =* / [self.ctvovcp configLabel:@"cal months"
-        							   frame:frame
-        								 key:@"frpost1vLab" 
-        							   addsv:NO ];
-        	[self updateValTF:[self epToRow:1] component:1];
-        	*/
-
-
-    }
-
-    // MARK: -
-    // MARK: function definition page
-
-    //
-    // generate text to describe function as specified by symbols,vids in fnArray from 
-    //  strings in fnStrs or valueObj names
-    //
-
-    func reloadEmptyFnArray() {
-        if 0 == fnArray.count {
-            // one last try if nothing there
-            loadConfig()
-        }
-    }
-
-    func voFnDefnStr(_ dbg: Bool = false, cfndx: Int? = nil) -> String? {
-        var fstr = ""
-        var closePending = false //square brackets around target of Fn1Arg
-        var constantPending = false // next item is a number not tok or vid
-        var constantClosePending = false // constant bounded on both sides by constant token
-        var arg2Pending = false // looking for second argument
-        var openParenCount = 0
-        
-        for (ndx, n) in fnArray.enumerated() {
-            let i = n.intValue
-            if let cfn = cfndx {
-                if cfn == ndx {
-                    fstr += ">"
-                }
-            }
-            //DBGLog(@"loop start: closePend=%d constantPend=%d constantClosePend=%d arg2Pend=%d openParen=%d fstr=%@",closePending,constantPending,constantClosePending,arg2Pending, openParenCount, fstr);
-            if constantPending {
-                fstr += n.stringValue
-                constantPending = false
-                constantClosePending = true
-            } else if isFn(i) {
-                if isFn2ArgOp(i) {
-                    arg2Pending = true
-                } else {
-                    arg2Pending = false
-                }
-                if FNCONSTANT == i {
-                    if constantClosePending {
-                        constantClosePending = false
-                    } else {
-                        constantPending = true
-                    }
-                } else {
-                    //NSInteger ndx = (i * -1) -1;
-                    //[fstr appendString:[self.fnStrs objectAtIndex:ndx]];  xxx   // get str for token
-                    fstr += "\(fnStrDict[NSNumber(value:i)]!)"
-                    if isFn1Arg(i) {
-                        fstr += "["
-                        closePending = true
-                    }
-                    if FNPARENOPEN == i {
-                        openParenCount += 1
-                    } else if FNPARENCLOSE == i {
-                        openParenCount -= 1
-                    }
-                }
-            } else {
-                if dbg {
-                    let vt = MyTracker.voGetType(forVID: i)
-                    if 0 > vt {
-                        fstr += "noType"
-                    } else {
-                        fstr += rTracker_resource.vtypeNames()[vt]
-                    }
-                } else {
-                    fstr += MyTracker.voGetName(forVID: i)!  // could get from self.fnStrs
-                }
-                if closePending {
-                    fstr += "]"
-                    closePending = false
-                }
-                arg2Pending = false
-            }
-            if !closePending {
-                fstr += " "
-            }
-            DBGLog(String("loop end: closeP=\(closePending) constantP=\(constantPending) constantCloseP=\(constantClosePending) arg2P=\(arg2Pending) openPC=\(openParenCount) fstr=\(fstr)"))
-        }
-        if arg2Pending || closePending || constantPending || constantClosePending || openParenCount != 0 {
-            fstr += " ❌"
-            FnErr = true
-        } else {
-            FnErr = false
-        }
-        DBGLog(String("final fstr: \(fstr)"))
-        return fstr
-    }
-
-    func updateFnTV() {
-        let ftv = (ctvovcp?.wDict)?["fdefnTV2"] as? UITextView
-        ftv?.text = voFnDefnStr()
-    }
-
-    @objc func btnAdd(_ sender: Any?) {
-        if 0 >= fnTitles.count {
-            noVarsAlert()
-            return
-        }
-
-        let pkr = (ctvovcp?.wDict)?["fdPkr"] as? UIPickerView
-        let row = pkr?.selectedRow(inComponent: 0) ?? 0
-        let ntok = fnTitles[row] // get tok from fnTitle and add to fnArray
-
-        if FNCONSTANT == ntok.intValue {
-            // constant has const_tok on both sides to help removal
-            let vtf = (ctvovcp?.wDict)?[CTFKEY] as? UITextField
-            if let vtftd = Double(vtf!.text ?? "") {
-                _fnArray!.append(ntok)
-                _fnArray!.append(NSNumber(value: vtftd))
-                _fnArray!.append(ntok)
-                ctvovcp?.tfDone(vtf)
-            } else {
-                rTracker_resource.alert("Need Value", msg: "Please set a value for the constant.", vc: nil)
-                return
-            }
-
-        } else {
-            _fnArray!.append(ntok)
-        }
-        updateFnTitles()
-        pkr?.reloadComponent(0)
-        updateFnTV()
-    }
-
-    @objc func btnDelete(_ sender: Any?) {
-        // i= constTok remove token and value  -- done
-        //  also [self.tempValObj.optDict removeObjectForKey:@"fdc"]; -- can't be sure with mult consts
-        let pkr = (ctvovcp?.wDict)?["fdPkr"] as? UIPickerView
-        if 0 < fnArray.count {
-            if FNCONSTANT == fnArray.last!.intValue {
-                _fnArray!.removeLast() // remove bounding token after
-                _fnArray!.removeLast() // remove constant value
-            }
-            _fnArray!.removeLast()
-        }
-        updateFnTitles()
-        pkr?.reloadComponent(0)
-        updateFnTV()
-    }
-
-    func drawFuncOptsDefinition() {
-        updateFnTitles()
-
-        var frame = CGRect(x: MARGIN, y: ctvovcp?.lasty ?? 0.0, width: 0.0, height: 0.0)
-
-        var labframe = ctvovcp?.configLabel(
-            "Function definition:",
-            frame: frame,
-            key: "fdLab",
-            addsv: true)
-
-        frame.origin.x = MARGIN
-        frame.origin.y += MARGIN + (labframe?.size.height ?? 0.0)
-        frame.size.width = (ctvovcp?.view.frame.size.width ?? 0.0) - 2 * MARGIN // 300.0f;
-        frame.size.height = 2 * (ctvovcp?.lfHeight ?? 0.0)
-
-        let maxDim = rTracker_resource.getScreenMaxDim()
-        if maxDim > 480 {
-            if maxDim <= 568 {
-                // iphone 5
-                frame.size.height = 4 * (ctvovcp?.lfHeight ?? 0.0)
-            } else if maxDim <= 736 {
-                // iphone 6, 6+
-                frame.size.height = 6 * (ctvovcp?.lfHeight ?? 0.0)
-            } else {
-                frame.size.height = 8 * (ctvovcp?.lfHeight ?? 0.0)
-            }
-        }
-        _ = ctvovcp?.configTextView(frame, key: "fdefnTV2", text: voFnDefnStr())
-
-        frame.origin.x = 0.0
-        frame.origin.y += frame.size.height + MARGIN
-
-        frame = ctvovcp?.configPicker(frame, key: "fdPkr", caller: self) ?? CGRect.zero
-        //UIPickerView *pkr = [self.ctvovcp.wDict objectForKey:@"fdPkr"];
-
-        //[pkr selectRow:[self epToRow:0] inComponent:0 animated:NO];
-        //[pkr selectRow:[self epToRow:1] inComponent:1 animated:NO];
-
-        frame.origin.y += frame.size.height //+ MARGIN;
-        //frame.origin.x = MARGIN;
-        frame.size.height = labframe?.size.height ?? 0.0
-        //
-        frame.origin.x = "Add".size(withAttributes: [
-            NSAttributedString.Key.font: PrefBodyFont
-        ]).width + 3 * MARGIN
-        //frame.origin.y += frame.size.height + MARGIN;
-        labframe = ctvovcp?.configLabel(
-            "Constant value:",
-            frame: frame,
-            key: CLKEY,
-            addsv: false)
-
-        frame.origin.x += (labframe?.size.width ?? 0.0) + SPACE
-        let tfWidth = "9999.99".size(withAttributes: [
-            NSAttributedString.Key.font: PrefBodyFont
-        ]).width
-        frame.size.width = tfWidth
-        frame.size.height = minLabelHeight(ctvovcp?.lfHeight ?? 0.0)
-
-        _ = ctvovcp?.configTextField(
-            frame,
-            key: "fdcTF",
-            target: nil,
-            action: nil,
-            num: true,
-            place: nil,
-            text: nil,
-            addsv: false)
-
-        frame.origin.x = MARGIN
-        frame.origin.y -= 3 * MARGIN // I DO NOT UNDERSTAND THIS!!!!!
-
-        _ = ctvovcp?.configActionBtn(frame, key: "fdaBtn", label: "Add", target: self, action: #selector(btnAdd(_:)))
-        frame.origin.x = -1.0
-        _ = ctvovcp?.configActionBtn(frame, key: "fddBtn", label: "Delete", target: self, action: #selector(btnDelete(_:)))
-
-    }
-
-    // MARK: -
-    // MARK: function overview page
-
-    //
-    // nice text string to describe a specified range endpoint
-    //
-
-    func voEpStr(_ component: Int, dbg: Bool) -> String {
-        let key = String(format: "frep%ld", component)
-        let vkey = String(format: "frv%ld", component)
-        let pre = component != 0 ? "current" : "previous"
-
-        var ep: Int?
-        let n = vo.optDict[key]
-        ep = (n != nil ? Int(n!) : nil)
-        let ep2 = n != nil ? (ep! + 1) * -1 : 0 // invalid if ep is tmpUniq (negative)
-
-        if nil == n || FREPDFLT == ep || FREPNONE == ep {
-            let anEpTitles = epTitles[ep2]
-            return "\(pre) \(anEpTitles)" // FREPDFLT
-        }
-
-        if ep! >= 0 || ep! <= -TMPUNIQSTART {
-            // endpoint is vid and valobj saved, or tmp vid as valobj not saved
-            if dbg {
-                let vtypeNames = rTracker_resource.vtypeNames()[MyTracker.getValObj(ep!)!.vtype]
-                return "\(pre) \(vtypeNames)"
-            } else {
-                return "\(pre) \(MyTracker.getValObj(ep!)!.valueName!)"
-            }
-        }
-
-        // ep is hours / days / months entry
-        let anEpTitles = epTitles[ep2]
-        return "\(component != 0 ? "+" : "-")\(Int(vo.optDict[vkey] ?? "0")!) \(anEpTitles)"
-    }
-
-    func voRangeStr(_ dbg: Bool) -> String? {
-        return "\(voEpStr(0, dbg: dbg)) to \(voEpStr(1, dbg: dbg))"
-    }
-
-    func drawFuncOptsOverview() {
-
-        var frame = CGRect(x: MARGIN, y: ctvovcp?.lasty ?? 0.0, width: 0.0, height: 0.0)
-        var labframe = ctvovcp?.configLabel(
-            "Range:",
-            frame: frame,
-            key: "frLab",
-            addsv: true)
-
-        //frame = (CGRect) {-1.0f, frame.origin.y, 0.0f,labframe.size.height};
-        //[self configActionBtn:frame key:@"frbBtn" label:@"Build" action:@selector(btnBuild:)]; 
-        let screenSize = UIScreen.main.bounds.size
-
-        frame.origin.x = MARGIN
-        frame.origin.y += MARGIN + (labframe?.size.height ?? 0.0)
-        frame.size.width = screenSize.width - 2 * MARGIN // seems always wrong on initial load // self.ctvovcp.view.frame.size.width - 2*MARGIN; // 300.0f;
-        frame.size.height = ctvovcp?.lfHeight ?? 0.0
-
-        _ = ctvovcp?.configTextView(frame, key: "frangeTV", text: voRangeStr(false))
-
-        frame.origin.y += frame.size.height + MARGIN
-        labframe = ctvovcp?.configLabel(
-            "Definition:",
-            frame: frame,
-            key: "fdLab",
-            addsv: true)
-
-        frame = CGRect(x: -1.0, y: frame.origin.y, width: 0.0, height: labframe?.size.height ?? 0.0)
-        //[self configActionBtn:frame key:@"fdbBtn" label:@"Build" action:@selector(btnBuild:)]; 
-
-        frame.origin.x = MARGIN
-        frame.origin.y += MARGIN + frame.size.height
-        frame.size.width = screenSize.width - 2 * MARGIN // self.ctvovcp.view.frame.size.width - 2*MARGIN; // 300.0f;
-        frame.size.height = 2 * (ctvovcp?.lfHeight ?? 0.0)
-
-        let maxDim = rTracker_resource.getScreenMaxDim()
-        if maxDim > 480 {
-            if maxDim <= 568 {
-                // iphone 5
-                frame.size.height = 3 * (ctvovcp?.lfHeight ?? 0.0)
-            } else if maxDim <= 736 {
-                // iphone 6, 6+
-                frame.size.height = 4 * (ctvovcp?.lfHeight ?? 0.0)
-            } else {
-                frame.size.height = 6 * (ctvovcp?.lfHeight ?? 0.0)
-            }
-        }
-
-        _ = ctvovcp?.configTextView(frame, key: "fdefnTV", text: voFnDefnStr())
-
-        frame.origin.y += frame.size.height + MARGIN
-
-        labframe = ctvovcp?.configLabel("Display result decimal places:", frame: frame, key: "fnddpLab", addsv: true)
-
-        frame.origin.x += (labframe?.size.width ?? 0.0) + SPACE
-        let tfWidth = "999".size(withAttributes: [
-            NSAttributedString.Key.font: PrefBodyFont
-        ]).width
-        frame.size.width = tfWidth
-        frame.size.height = ctvovcp?.lfHeight ?? 0.0 // self.labelField.frame.size.height; // lab.frame.size.height;
-
-        _ = ctvovcp?.configTextField(
-            frame,
-            key: "fnddpTF",
-            target: nil,
-            action: nil,
-            num: true,
-            place: "\(FDDPDFLT)",
-            text: vo.optDict["fnddp"],
-            addsv: true)
-
-
-        frame.origin.x = MARGIN
-        frame.origin.y += MARGIN + (labframe?.size.height ?? 0.0)
-
-        frame = ctvovcp?.yAutoscale(frame) ?? CGRect.zero
-
-        //frame.origin.y += frame.size.height + MARGIN;
-        //frame.origin.x = MARGIN;
-
-        ctvovcp?.lasty = frame.origin.y + frame.size.height + MARGIN
-    }
-
-    // MARK: -
-    // MARK: configTVObjVC general support
-
-    //
-    // called for btnDone in configTVObjVC
-    //
-
-    func funcDone() -> Bool {
-        if FnErr {
-            return false
-        }
-        if fnArray.count != 0 {
-            //DBGLog(@"funcDone 0: %@",[self.vo.optDict objectForKey:@"func"]);
-            saveFnArray()
-            DBGLog(String("funcDone 1: \(vo.optDict["func"])"))
-
-            // frep0 and 1 not set if user did not click on range picker
-            if vo.optDict["frep0"] == nil {
-                vo.optDict["frep0"] = String("\(FREPDFLT)")
-            }
-            if vo.optDict["frep1"] == nil {
-                vo.optDict["frep1"] = String("\(FREPDFLT)")
-            }
-
-            DBGLog(String("ep0= \(vo.optDict["frep0"])  ep1=\(vo.optDict["frep1"])"))
-        }
-        return true
-    }
-
-    @objc func btnHelp() {
-        switch fnSegNdx {
-        case FNSEGNDX_OVERVIEW:
-            if let url = URL(string: "http://rob-miller.github.io/rTracker/rTracker/iPhone/QandA/addFunction.html#overview") {
-                UIApplication.shared.open(url, options: [:])
-            }
-        case FNSEGNDX_RANGEBLD:
-            if let url = URL(string: "http://rob-miller.github.io/rTracker/rTracker/iPhone/QandA/addFunction.html#range") {
-                UIApplication.shared.open(url, options: [:])
-            }
-        case FNSEGNDX_FUNCTBLD:
-            if let url = URL(string: "http://rob-miller.github.io/rTracker/rTracker/iPhone/QandA/addFunction.html#operators") {
-                UIApplication.shared.open(url, options: [:])
-            }
-        default:
-            dbgNSAssert(false, "fnSegmentAction bad index!")
-        }
-
-
-
-
-    }
-
-    //
-    // called for configTVObjVC  viewDidLoad
-    //
-    func funcVDL(_ ctvovc: configTVObjVC?, donebutton db: UIBarButtonItem?) {
-
-        if vo.parentTracker.valObjTable.count > 0 {
-
-            let flexibleSpaceButtonItem = UIBarButtonItem(
-                barButtonSystemItem: .flexibleSpace,
-                target: nil,
-                action: nil)
-
-            let segmentTextContent = ["Overview", "Range", "Definition"]
-
-            let segmentedControl = UISegmentedControl(items: segmentTextContent)
-            //[segmentTextContent release];
-
-            segmentedControl.addTarget(self, action: #selector(fnSegmentAction(_:)), for: .valueChanged)
-            //segmentedControl.segmentedControlStyle = UISegmentedControlStyleBar;
-            segmentedControl.selectedSegmentIndex = fnSegNdx //= 0;
-            
-            segmentedControl.subviews[0].accessibilityIdentifier = "fnRange"
-            segmentedControl.subviews[1].accessibilityIdentifier = "fnDefinition"
-            segmentedControl.subviews[2].accessibilityIdentifier = "fnOverview"
-
-            segmentedControl.accessibilityIdentifier = "fnConfigSeg"
-            
-            let scButtonItem = UIBarButtonItem(
-                customView: segmentedControl)
-            let fnHelpButtonItem = UIBarButtonItem(title: "Help", style: .plain, target: self, action: #selector(RootViewController.btnHelp))
-
-            ctvovc?.toolBar.items = [
-                db,
-                flexibleSpaceButtonItem,
-                scButtonItem,
-                flexibleSpaceButtonItem,
-                fnHelpButtonItem,
-                flexibleSpaceButtonItem
-            ].compactMap { $0 }
-        } else {
-            ctvovc?.toolBar.items = [db].compactMap { $0 }
-        }
-
-    }
-
-    func drawSelectedPage() {
-        ctvovcp!.lasty = 2 //frame.origin.y + frame.size.height + MARGIN;
-        switch fnSegNdx {
-        case FNSEGNDX_OVERVIEW:
-            drawFuncOptsOverview()
-            super.voDrawOptions(ctvovcp!)
-        case FNSEGNDX_RANGEBLD:
-            drawFuncOptsRange()
-        case FNSEGNDX_FUNCTBLD:
-            drawFuncOptsDefinition()
-        default:
-            dbgNSAssert(false, "fnSegmentAction bad index!")
-        }
-    }
-
-    @objc func fnSegmentAction(_ sender: UISegmentedControl) {
-        fnSegNdx = sender.selectedSegmentIndex
-        //DBGLog(@"fnSegmentAction: selected segment = %d", self.fnSegNdx);
-
-        //[UIView beginAnimations:nil context:NULL];
-        //[UIView setAnimationBeginsFromCurrentState:YES];
-        //[UIView setAnimationDuration:kAnimationDuration];
-        UIView.animate(withDuration: 0.2, animations: { [self] in
-            ctvovcp?.removeSVFields()
-            drawSelectedPage()
-        })
-        //[UIView commitAnimations];
-    }
-
-    // MARK: protocol: voDrawOptions page
-
-    override func setOptDictDflts() {
-        if nil == vo.optDict["frep0"] {
-            vo.optDict["frep0"] = "\(FREPDFLT)"
-        }
-        if nil == vo.optDict["frep1"] {
-            vo.optDict["frep1"] = "\(FREPDFLT)"
-        }
-        if nil == vo.optDict["fnddp"] {
-            vo.optDict["fnddp"] = "\(FDDPDFLT)"
-        }
-        if nil == vo.optDict["func"] {
-            vo.optDict["func"] = ""
-        }
-        if nil == vo.optDict["autoscale"] {
-            vo.optDict["autoscale"] = AUTOSCALEDFLT ? "1" : "0"
-        }
-        if nil == vo.optDict["graphlast"] {
-            vo.optDict["graphlast"] = GRAPHLASTDFLT ? "1" : "0"
-        }
-
-        return super.setOptDictDflts()
-    }
-
-    override func cleanOptDictDflts(_ key: String) -> Bool {
-
-        let val = vo.optDict[key]
-        if nil == val {
-            return true
-        }
-
-        if ((key == "frep0") && (Int(val!) == FREPDFLT))
-            || ((key == "frep1") && (Int(val!) == FREPDFLT))
-            || ((key == "fnddp") && (Int(val!) == FDDPDFLT))
-            || ((key == "func") && (val! == ""))
-            || ((key == "autoscale") && (val! == (AUTOSCALEDFLT ? "1" : "0")))
-            || ((key == "graphlast") && (val! == (GRAPHLASTDFLT ? "1" : "0"))) {
-            vo.optDict.removeValue(forKey: key)
-            return true
-        }
-
-        return super.cleanOptDictDflts(key)
-    }
-
-    func checkVOs() -> Bool {
-        for valo in MyTracker.valObjTable {
-            if valo.vtype != VOT_FUNC {
-                return true
-            }
-        }
-        return false
-    }
-
-    func noVarsAlert() {
-        rTracker_resource.alert("No variables for function", msg: "A function needs variables to work on.\n\nPlease add a value (like a number, or anything other than a function) to your tracker before trying to create a function.", vc: nil)
-    }
-
-    // MARK: -
-
-
-    override func voDrawOptions(_ ctvovc: configTVObjVC?) {
-        ctvovcp = ctvovc
-        reloadEmptyFnArray()
-        drawSelectedPage()
-    }
-
-    // MARK: -
-
-
-    // MARK: picker support
-
-    //
-    // build list of titles for symbols,operations available for current point in fn definition string
-    //
-
-    func ftAddFnSet() {
-        //var i: Int
-        //for (i=FN1ARGFIRST;i>=FN1ARGLAST;i--) {
-        //	[self.fnTitles addObject:[NSNumber numberWithInt:i]];   xxx // add nsnumber token, enumerated by fn class
-        //}
-        for i in 0..<ARG1CNT {
-            let aFn1args = NSNumber(value:fn1args[i])
-            fnTitles.append(aFn1args)
-        }
-        fnTitles.append(NSNumber(value:FNCONSTANT))  // String("\(FNCONSTANT)"))
-    }
-
-    func ftAddTimeSet() {
-        //var i: Int
-        for i in 0..<TIMECNT {
-            let aFnTimeOps = NSNumber(value:fnTimeOps[i])
-            fnTitles.append(aFnTimeOps)
-        }
-        //for (i=FNTIMEFIRST;i>=FNTIMELAST;i--) {
-        //	[self.fnTitles addObject:[NSNumber numberWithInt:i]];   xxx
-        //}
-    }
-
-    func ftAdd2OpSet() {
-        //var i: Int
-        for i in 0..<ARG2CNT {
-            let aFn2args = NSNumber(value:fn2args[i])
-            fnTitles.append(aFn2args)
-            
-        }
-        //for (i=FN2ARGFIRST;i>=FN2ARGLAST;i--) {
-        //	[self.fnTitles addObject:[NSNumber numberWithInt:i]];  xxx
-        //}
-    }
-
-    func ftAddVOs() {
-        for valo in MyTracker.valObjTable {
-            if valo != vo {
-                fnTitles.append(NSNumber(value: valo.vid))
-            }
-        }
-    }
-
-    func ftAddCloseParen() {
-        var pcount = 0
-        for ni in fnArray {
-            let i = ni.intValue
-            if i == FNPARENOPEN {
-                pcount += 1
-            } else if i == FNPARENCLOSE {
-                pcount -= 1
-            }
-        }
-        if pcount > 0 {
-            fnTitles.append(NSNumber(value:FNPARENCLOSE))  // String(utf8String: FNPARENCLOSE) ?? "")
-        }
-    }
-
-    func ftStartSet() {
-        ftAddFnSet()
-        ftAddTimeSet()
-        fnTitles.append(NSNumber(value:FNPARENOPEN))  // String(utf8String: FNPARENOPEN) ?? "")
-        ftAddVOs()
-    }
-
-    func updateFnTitles() {
-        // create array fnTitles of nsnumber tokens which should be presented in picker for current list of fn being built
-        fnTitles.removeAll()
-        hideConstTF()
-        DBGLog(String("fnArray= \(fnArray)"))
-        if fnArray.count == 0 {
-            // state = start
-            ftStartSet()
-        } else {
-            let last = fnArray.last!.intValue
-            if last >= 0 || last <= -TMPUNIQSTART || isFnTimeOp(last) || FNCONSTANT == last {
-                // state = after valObj
-                ftAdd2OpSet()
-                ftAddCloseParen()
-            } else if isFn1Arg(last) {
-                // state = after Fn1 = delta, avg, sum
-                ftAddVOs()
-            } else if isFn2ArgOp(last) {
-                // state = after fn2op = +,-,*,/
-                ftStartSet()
-            } else if last == FNPARENCLOSE {
-                // state = after close paren
-                ftAdd2OpSet()
-                ftAddCloseParen()
-            } else if last == FNPARENOPEN {
-                // state = after open paren
-                ftStartSet()
-            } else {
-                dbgNSAssert(false, "lost it at updateFnTitles")
-            }
-        }
-    }
-
-    func fnTokenToStr(_ tok: Int) -> String {
-        // convert token to str
-        if isFn(tok) {
-            return String("\(fnStrDict[NSNumber(value: tok)]!)")
-            //tok = (tok * -1) -1;
-            //return [self.fnStrs objectAtIndex:tok];
-        } else {
-            for valo in MyTracker.valObjTable {
-                if valo.vid == tok {
-                    return valo.valueName!
-                }
-            }
-            dbgNSAssert(false, "fnTokenToStr failed to find valObj")
-            return "unknown vid"
-        }
-    }
-
-    func fndRowTitle(_ row: Int) -> String? {
-        return fnTokenToStr(fnTitles[row].intValue) // get nsnumber(tok) from fnTitles, convert to int, convert to str to be placed in specified picker rox
-    }
-
-    func fnrRowCount(_ component: Int) -> Int {
-        /*
-        	NSInteger other = (component ? 0 : 1);
-        	NSString *otherKey = [NSString stringWithFormat:@"frep%d",other];
-        	id otherObj = [self.vo.optDict objectForKey:otherKey];
-        	NSInteger otherVal = [otherObj integerValue];
-        	if (otherVal < -1) {
-         */        // only allow time offset for previous side of range
-        if component == 1 {
-            DBGLog(String(" returning \(votWoSelf.count + 1)"))
-            return votWoSelf.count + 1 // [MyTracker.valObjTable count]+1;  // count all +1 for 'current entry'
-        } else {
-            DBGLog(String(" returning \(votWoSelf.count + MAXFREP)"))
-            return votWoSelf.count + MAXFREP //[MyTracker.valObjTable count] + MAXFREP;
-        }
-    }
-
-    func numberOfComponents(in pickerView: UIPickerView) -> Int {
-        if fnSegNdx == FNSEGNDX_RANGEBLD {
-            return 2
-        } else {
-            return 1
-        }
-    }
-
-    func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
-        if fnSegNdx == FNSEGNDX_RANGEBLD {
-            return fnrRowCount(component)
-        } else {
-            return fnTitles.count
-        }
-    }
-
-    func pickerView(
-        _ pickerView: UIPickerView,
-        titleForRow row: Int,
-        forComponent component: Int
-    ) -> String? {
-        if fnSegNdx == FNSEGNDX_RANGEBLD {
-            return fnrRowTitle(row)
-        } else {
-            // FNSEGNDX_FUNCTBLD
-            return fndRowTitle(row)
-        }
-        //return [NSString stringWithFormat:@"row %d", row];
-    }
-
-    func update(forPickerRowSelect row: Int, inComponent component: Int) {
-        if fnSegNdx == FNSEGNDX_RANGEBLD {
-            ((ctvovcp?.wDict)?["frPkr"] as? UIPickerView)?.reloadComponent(component != 0 ? 0 : 1)
-            //else {
-        }
-        //[((UIPickerView*) [self.wDict objectForKey:@"fnPkr"]) reloadComponent:0];
-        //}
-    }
-
-    func showConstTF() {
-        // display constant box
-        let vtf = (ctvovcp?.wDict)?[CTFKEY] as? UITextField
-        vtf?.text = vo.optDict[LCKEY]
-        if let aWDict = (ctvovcp?.wDict)?[CLKEY] as? UIView {
-            ctvovcp?.scroll.addSubview(aWDict)
-        }
-        if let vtf {
-            ctvovcp?.scroll.addSubview(vtf)
-        }
-    }
-
-    func hideConstTF() {
-        // hide constant box
-        ((ctvovcp?.wDict)?[CTFKEY] as? UIView)?.removeFromSuperview()
-        ((ctvovcp?.wDict)?[CLKEY] as? UIView)?.removeFromSuperview()
-    }
-
-    func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
-        if fnSegNdx == FNSEGNDX_RANGEBLD {
-            let votc = votWoSelf.count //[MyTracker.valObjTable count];
-
-            let key = String(format: "frep%ld", component)
-            let vtfkey = String(format: "fr%ldTF", component)
-            let pre_vkey = String(format: "frpre%ldvLab", component)
-            let post_vkey = String(format: "frpost%ldvLab", component)
-
-            ((ctvovcp?.wDict)?[pre_vkey] as? UIView)?.removeFromSuperview()
-            ((ctvovcp?.wDict)?[vtfkey] as? UIView)?.removeFromSuperview()
-            ((ctvovcp?.wDict)?[post_vkey] as? UIView)?.removeFromSuperview()
-            ((ctvovcp?.wDict)?["graphLastBtn"] as? UIView)?.removeFromSuperview()
-            ((ctvovcp?.wDict)?["graphLastLabel"] as? UIView)?.removeFromSuperview()
-
-            if row == 0 {
-                vo.optDict[key] = "-1"  // NSNumber(value: -1)
-            } else if row <= votc {
-                vo.optDict[key] = String("\(votWoSelf[row - 1].vid)")  // NSNumber(value: votWoSelf[row - 1].vid)
-            } else {
-                vo.optDict[key] = String("\(((row - votc) + 1) * -1)")  // NSNumber(value: ((row - votc) + 1) * -1)
-                updateValTF(row, component: component)
-            }
-            DBGLog(String("picker sel row \(row) \(key) now= \(vo.optDict[key])"))
-        } else if fnSegNdx == FNSEGNDX_FUNCTBLD {
-            //DBGLog(@"fn build row %d= %@",row,[self fndRowTitle:row]);
-            if FNCONSTANT_TITLE == fndRowTitle(row) {
-                showConstTF()
-            } else {
-                hideConstTF()
-            }
-        }
-
-        update(forPickerRowSelect: row, inComponent: component)
-
-    }
-
+    
     // MARK: -
     // MARK: fn value results for graphing
 
     func trimFnVals(_ frep0: Int) {
+        // deletes duplicate date entries depending on ep0
+        //  only called (from doTrimFnVals)
+        // if ep0 is calendar days/weeks/months/years
+        // and calOnlyLast ('only last') is true
+        
+        // this makes it so, e.g. 'total value for calendar month' only shows
+        // at end of month instead of increasing every day of the month
+        
         DBGLog(String("ep= \(frep0)"))
         var sql: String
 
@@ -2333,7 +1442,12 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
 
         var epDate = -1
 
-        sql = String(format: "select date from voData where id = %ld order by date desc", Int(vo.vid))
+        sql = """
+        SELECT date FROM voData 
+        WHERE id = \(Int(vo.vid))
+        AND date NOT IN (SELECT date FROM ignoreRecords)
+        ORDER BY date DESC
+        """
         let dates = MyTracker.toQry2AryI(sql: sql)
         for d in dates {
             var targ = gregorian.date(
@@ -2345,18 +1459,7 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             switch frep0 {
             // if calendar week, we need to get to beginning of week as per calendar
             case FREPCWEEKS:
-                //var beginOfWeek: Date? = nil
                 targ = gregorian.dateComponents([.calendar, .yearForWeekOfYear, .weekOfYear], from: targ!).date
-                /*
-                //BOOL rslt = [gregorian rangeOfUnit:NSWeekCalendarUnit startDate:&beginOfWeek interval:NULL forDate: targ];
-                var rslt = false
-                if let targ {
-                    rslt = gregorian.range(of: .weekOfYear, start: &beginOfWeek, interval: nil, for: targ) ?? false
-                }
-                if rslt {
-                    targ = beginOfWeek
-                }
-                 */
                 fallthrough
             // if any of week, day, month, year we need to wipe hour, minute, second components
             case FREPCDAYS:
@@ -2383,100 +1486,144 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
             if epDate == currD {
                 sql = String(format: "delete from voData where id = %ld and date = %d", Int(vo.vid), d) // safe because this is just cached fn rslt
                 MyTracker.toExecSql(sql:sql)
+                sql = "delete from voFNstatus where id = \(vo.vid) and date = \(d);"
+                MyTracker.toExecSql(sql:sql)
             } else {
                 epDate = currD
             }
         }
-
-
-
-
     }
 
-    override func setFnVals(_ tDate: Int) {
-        // called from trackerObj.m
-        var sql: String
-        if vo.value == "" {
-            //TODO: null/init value is 0.00 so what does this delete line do?
-            sql = String(format: "delete from voData where id = %ld and date = %d;", Int(vo.vid), tDate)
-            //DBGLog(@"sql delete= %@",sql);
-        } else {
-            sql = String(format: "insert or replace into voData (id, date, val) values (%ld, %d,'%@');", Int(vo.vid), tDate, rTracker_resource.toSqlStr(vo.value)!)
-        }
-        MyTracker.toExecSql(sql:sql)
-    }
-
-    override func doTrimFnVals() {
-        let frep0 = Int(vo.optDict["frep0"]!)!
-        if ISCALFREP(frep0) && (vo.optDict["graphlast"] != "0") && MyTracker.goRecalculate {
-            trimFnVals(frep0)
-        }
-    }
-
-    /*
-    // change to move loop on date to tracker level so just do once, not for every fn vo
-
-     // TODO: rtm here -- optionally eliminate fn results for calendar unit endpoints
-    // based on vo opt @"graphlast"
-    - (void) setFnVals {
-        int currDate = (int) [MyTracker.trackerDate timeIntervalSince1970];
-        int nextDate = [MyTracker firstDate];
-
-        if (0 == nextDate) {  // no data yet for this tracker so do not generate a 0 value in database
-            return;
-        }
-
-        float ndx=1.0;
-        float all = [self.vo.parentTracker getDateCount];
-
-        do {
-            [MyTracker loadData:nextDate];
-            //DBGLog(@"sfv: %@ => %@",MyTracker.trackerDate, self.vo.value);
-            if ([self.vo.value isEqualToString:@""]) {   //TODO: null/init value is 0.00 so what does this delete line do? 
-               sql = [NSString stringWithFormat:@"delete from voData where id = %d and date = %d;",self.vo.vid, nextDate];
-            } else {
-               sql = [NSString stringWithFormat:@"insert or replace into voData (id, date, val) values (%d, %d,'%@');",
-                            self.vo.vid, nextDate, [rTracker_resource toSqlStr:self.vo.value]];
+    override func setFnVal(_ tDate: Int, dispatchGroup: DispatchGroup? = nil) {
+        // If in a dispatch group, update asynchronously
+        if let dispatchGroup = dispatchGroup {
+            dispatchGroup.enter()
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                self?.performFnValUpdate(tDate)
+                dispatchGroup.leave()
             }
-            [MyTracker toExecSql:sql];
-
-            [rTracker_resource setProgressVal:(ndx/all)];
-            ndx += 1.0;
-
-        } while (MyTracker.goRecalculate && (nextDate = [MyTracker postDate]));    // iterate through dates
-
-        NSInteger frep0 = [[self.vo.optDict objectForKey:@"frep0"] integerValue];
-        if (ISCALFREP(frep0)
-            &&
-            (![[self.vo.optDict objectForKey:@"graphlast"] isEqualToString:@"0"])
-            &&
-            MyTracker.goRecalculate
-            ) {
-            [self trimFnVals:frep0];
+        } else {
+            // Direct synchronous update - fine for background queue
+            performFnValUpdate(tDate)
         }
-
-        // restore current date
-    	[MyTracker loadData:currDate];
-
+    }
+    
+    // New helper method to encapsulate the actual work
+    private func performFnValUpdate(_ date: Int) {
+        // track vo's in fnstatus so can delete independently
+        var sql: String
+        // vo.value is computed for this tracker date from loaded tracker data when we read it here because reading calls update()
+        // but db must be cleared for vot_function s or will just get db value
+        if vo.value == "" {
+            // Function processed but couldn't calculate (insufficient data)
+            sql = "insert or replace into voFNstatus (id, date, stat) values (\(vo.vid), \(date), \(fnStatus.noData.rawValue))"
+            MyTracker.toExecSql(sql: sql)
+            // Remove any voData since no calculable result
+            sql = "delete from voData where id = \(vo.vid) and date = \(date);"
+            MyTracker.toExecSql(sql: sql)
+        } else {
+            // Function calculated successfully
+            let val = rTracker_resource.toSqlStr(vo.value)
+            sql = "insert or replace into voData (id, date, val) values (\(vo.vid), \(date),'\(val)');"
+            MyTracker.toExecSql(sql: sql)
+            sql = "insert or replace into voFNstatus (id, date, stat) values (\(vo.vid), \(date), \(fnStatus.fnData.rawValue))"
+            MyTracker.toExecSql(sql: sql)
+        }
     }
 
-    - (void) recalculate {
-        [self setFnVals];
+    override func clearFNdata(forDate date: Int? = nil) {
+        // Only clear FN data for valueObjs that are function types
+        guard vo.vtype == VOT_FUNC else {
+            return
+        }
+        
+        let to = vo.parentTracker
+        if let specificDate = date {
+            to.toExecSql(sql: "delete from voData where id = \(vo.vid) and date = \(specificDate)")
+            to.toExecSql(sql: "delete from voFNstatus where id = \(vo.vid) and date = \(specificDate)")
+        } else {
+            var sql = "delete from voData where (id, date) in (select id, date from voFNstatus where id = \(vo.vid))"
+            to.toExecSql(sql: sql)
+            sql = "delete from voFNstatus where id = \(vo.vid)"
+            to.toExecSql(sql: sql)
+        }
     }
-    */
-
-    /*
-    - (void) transformVO:(NSMutableArray *)xdat ydat:(NSMutableArray *)ydat dscale:(double)dscale height:(CGFloat)height border:(float)border firstDate:(int)firstDate {
-
-        // set val for all dates if dirty
-        //[self setFnVals];
-
-        [self transformVO_num:xdat ydat:ydat dscale:dscale height:height border:border firstDate:firstDate];
-
+    
+    override func setFNrecalc() {
+        // force recaclulation, no cached value
+        #if FUNCTIONDBG
+        DBGLog("setFNrecalc() called for vid=\(vo.vid), clearing lastCalcValue='\(lastCalcValue)', setting fnDirty=true")
+        #endif
+        lastCalcValue = ""
+        lastEpd0 = -1  // Also reset the cached endpoint date to force recalculation
+        fnDirty = true
     }
-    */
+    
+    override func doTrimFnVals() {
+        if let odfrep0 = vo.optDict["frep0"], let frep0 = Int(odfrep0) {
+            if ISCALFREP(frep0) && (vo.optDict["calOnlyLast"] != "0") && MyTracker.goRecalculate {
+                trimFnVals(frep0)
+            }
+        }
+    }
 
     override func newVOGD() -> vogd {
         return vogd(vo).initAsNum(vo)
+    }
+    
+    
+    // MARK: protocol: voDrawOptions page
+
+    override func setOptDictDflts() {
+        if nil == vo.optDict["frep0"] {
+            vo.optDict["frep0"] = "\(FREPDFLT)"
+        }
+        if nil == vo.optDict["frep1"] {
+            vo.optDict["frep1"] = "\(FREPDFLT)"
+        }
+        if nil == vo.optDict["fnddp"] {
+            vo.optDict["fnddp"] = "\(FDDPDFLT)"
+        }
+        if nil == vo.optDict["func"] {
+            vo.optDict["func"] = ""
+        }
+        if nil == vo.optDict["hrsmins"] {
+            vo.optDict["hrsmins"] = "\(HRSMINSDFLT)"
+        }
+        if nil == vo.optDict["autoscale"] {
+            vo.optDict["autoscale"] = AUTOSCALEDFLT ? "1" : "0"
+        }
+        if nil == vo.optDict["calOnlyLast"] {
+            vo.optDict["calOnlyLast"] = CALONLYLASTDFLT ? "1" : "0"
+        }
+
+        return super.setOptDictDflts()
+    }
+
+    override func cleanOptDictDflts(_ key: String) -> Bool {
+
+        let val = vo.optDict[key]
+        if nil == val {
+            return true
+        }
+
+        if ((key == "frep0") && (Int(val!) == FREPDFLT))
+            || ((key == "frep1") && (Int(val!) == FREPDFLT))
+            || ((key == "fnddp") && (Int(val!) == FDDPDFLT))
+            || ((key == "func") && (val! == ""))
+            || ((key == "hrsmins") && (val! == (HRSMINSDFLT ? "1" : "0")))
+            || ((key == "autoscale") && (val! == (AUTOSCALEDFLT ? "1" : "0")))
+            || ((key == "calOnlyLast") && (val! == (CALONLYLASTDFLT ? "1" : "0"))) {
+            vo.optDict.removeValue(forKey: key)
+            return true
+        }
+
+        return super.cleanOptDictDflts(key)
+    }
+
+    override func voDrawOptions(_ ctvovc: configTVObjVC?) {
+        ctvovcp = ctvovc
+        reloadEmptyFnArray()
+        drawSelectedPage()
     }
 }

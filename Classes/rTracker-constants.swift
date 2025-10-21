@@ -83,6 +83,8 @@ func d(_ x: Any) -> Double {
 let SAMPLES_VERSION = 1
 
 let DEMOS_VERSION = 5
+
+let WELCOME_SHEET_VERSION = 1
 // demos_version 2 improve colours for one graph, wording improvements, link to getTrackers.pl, iOS settings to change text size
 // demos version 3 fix link for 'tap to drop me a note'; add endpoint <none> example;
 // demos version 4 change links to GitHub, remove rTrackerA URL scheme entry
@@ -99,9 +101,14 @@ let LCKEY = "fdlc"
 let CTFKEY = "fdcTF"
 let CLKEY = "fdcLab"
 
+// strings to access date/time picker for setting before/after timestamp
+let DTKEY = "fddt"        // datetime timestamp storage key
+let DTBKEY = "fddtBtn"    // datetime button key
+let DTLKEY = "fddtLab"    // datetime label key
+
 
 // add to x and y axes to improve visibility of endpoints
-let GRAPHSCALE = d(0.02)
+let GRAPHSCALE = d(0.05)
 
 // default preference for separateDateTimePicker
 

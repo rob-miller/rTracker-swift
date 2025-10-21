@@ -83,7 +83,7 @@ class Togd: NSObject {
     }
 
     func fillVOGDs() {
-        for vo in pto!.valObjTable {
+        for vo in pto!.valObjTableH {
             vo.vogd = vo.vos!.newVOGD()
         }
     }

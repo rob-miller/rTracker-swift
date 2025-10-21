@@ -27,18 +27,6 @@
 import Foundation
 
 class vogd: NSObject {
-    /*{
-        valueObj *vo;
-        NSArray *xdat;
-        NSArray *ydat;
-
-        double minVal;
-        double maxVal;
-
-        double vScale;
-
-        CGFloat yZero;
-    }*/
     var vo: valueObj
     var xdat: [AnyHashable]?
     var ydat: [AnyHashable]?
@@ -65,8 +53,12 @@ class vogd: NSObject {
         }
         let myTracker = vo.parentTracker
         let myTOGD = myTracker.togd!
-        let sql = String(format: "select %@(val collate CMPSTRDBL) from voData where id=%ld and val != '' and date >= %d and date <= %d;", targ, Int(vo.vid), myTOGD.firstDate, myTOGD.lastDate)
-        return myTracker.toQry2Double(sql:sql) ?? 0.0
+        let sql = """
+        SELECT \(targ)(val COLLATE CMPSTRDBL) FROM voData 
+        WHERE id = \(Int(vo.vid)) AND val != '' AND date >= \(myTOGD.firstDate) AND date <= \(myTOGD.lastDate)
+        AND date NOT IN (SELECT date FROM ignoreRecords)
+        """
+        return myTracker.toQry2Double(sql:sql)
     }
 
     func initAsNum(_ inVO: valueObj) -> vogd {
@@ -110,24 +102,17 @@ class vogd: NSObject {
                 maxVal = offVal
             }
         } else if vo.vtype == VOT_CHOICE {
-            minVal = d(0)
+            minVal = Double.greatestFiniteMagnitude
             maxVal = d(0)
             choiceCount = 0
             var c = 0
             for i in 0..<CHOICES {
                 var tval:Double? = nil
-                let key = "cv\(i)"
-                let tstVal = vo.optDict[key]
-                let skey = "c\(i)"
-                let tstStr = vo.optDict[skey]
-                if let tstVal {
-                    // only do specified choice values
+                if (vo.optDict["c\(i)"] ?? "" != "") {
                     c += 1
-                    tval = Double(tstVal) ?? 0.0
-                } else if tstStr != nil && "" != tstStr {
-                    c += 1
-                    tval = Double(i)
+                    tval = Double(vo.optDict["cv\(i)"] ?? "") ?? Double(i+1)
                 }
+
                 if let tval {
                     if minVal > tval {
                         minVal = tval
@@ -145,7 +130,8 @@ class vogd: NSObject {
                 maxVal = d(choiceCount)  // CHOICES
             }
             #if GRAPHDBG
-            DBGLog(String("choice minVal= \(minVal) maxVal= \(maxVal)"))
+            DBGLog(String("choice count \(choiceCount) minVal= \(minVal) maxVal= \(maxVal)"))
+            //DBGLog("hello")
             #endif
 
             /*
@@ -179,15 +165,14 @@ class vogd: NSObject {
             maxVal = 1.0
         }
 
-        if VOT_CHOICE != vo.vtype {
-            let yScaleExpand = (maxVal - minVal) * GRAPHSCALE
-            if nil == vo.optDict["gmax"] || "" == vo.optDict["gmax"] {
-                maxVal += yScaleExpand // +5% each way for visibility unless specified
-            }
-            if nil == vo.optDict["gmin"] || "" == vo.optDict["gmin"] {
-                minVal -= yScaleExpand
-            }
+        let yScaleExpand = (maxVal - minVal) * GRAPHSCALE
+        if nil == vo.optDict["gmax"] || "" == vo.optDict["gmax"] {
+            maxVal += yScaleExpand // +5% each way for visibility unless specified
         }
+        if nil == vo.optDict["gmin"] || "" == vo.optDict["gmin"] {
+            minVal -= yScaleExpand
+        }
+
         #if GRAPHDBG
         DBGLog(String("\(vo.valueName) minval= \(minVal) maxval= \(maxVal)"))
         #endif
@@ -201,9 +186,12 @@ class vogd: NSObject {
         var mxdat: [NSNumber] = []
         var mydat: [NSNumber] = []
 
-        //myTracker.sql = [NSString stringWithFormat:@"select date,val from voData where id=%d and val != '' order by date;",self.vo.vid];
-        // 6.ii.2013 implement maxGraphDays
-        let sql = String(format: "select date,val from voData where id=%ld and val != '' and date >= %d and date <= %d order by date;", Int(vo.vid), myTOGD.firstDate, myTOGD.lastDate)
+        let sql = """
+        SELECT date, val FROM voData 
+        WHERE id = \(Int(vo.vid)) AND val != '' AND date >= \(myTOGD.firstDate) AND date <= \(myTOGD.lastDate)
+        AND date NOT IN (SELECT date FROM ignoreRecords)
+        ORDER BY date
+        """
         #if GRAPHDBG
         DBGLog(String("graph points sql: \(sql)"))
         #endif
@@ -256,14 +244,13 @@ class vogd: NSObject {
 
         var i1: [Int] = []
 
-        //NSMutableArray *s1 = [[NSMutableArray alloc] init];
-
-        //myTracker.sql = [NSString stringWithFormat:@"select date,val from voData where id=%d and val not NULL and val != '' and date >= %d and date <= %d order by date;",self.vo.vid,myTOGD.firstDate,myTOGD.lastDate];
-        //[myTracker toQry2AryIS:i1 s1:s1];
-        //NSEnumerator *e = [s1 objectEnumerator];
-        let sql = String(format: "select date,val from voData where id=%ld and val not NULL and val != '' and date >= %d and date <= %d order by date;", Int(vo.vid), myTOGD.firstDate, myTOGD.lastDate)
+        let sql = """
+        SELECT date, val FROM voData 
+        WHERE id = \(Int(vo.vid)) AND val NOT NULL AND val != '' AND date >= \(myTOGD.firstDate) AND date <= \(myTOGD.lastDate)
+        AND date NOT IN (SELECT date FROM ignoreRecords)
+        ORDER BY date
+        """
         i1 = myTracker.toQry2AryI(sql: sql)
-        //sql = nil;
 
         for ni in i1 {
             //DBGLog(@"i: %@  ",ni);
@@ -287,54 +274,6 @@ class vogd: NSObject {
 
     }
 
-    //- (vogd*) initAsBool:(valueObj*)vo;
-
-    // not used - boolean treated as number
-    /*
-    - (id) initAsBool:(valueObj*)inVO {
-        if ((self = [super init])) {
-
-            self.vo = inVO;
-            self.yZero = 0.0F;
-
-            trackerObj *myTracker = self.vo.parentTracker;
-            togd *myTOGD = myTracker.togd;
-
-            NSMutableArray *mxdat = [[NSMutableArray alloc] init];
-            //NSMutableArray *mydat = [[NSMutableArray alloc] init];
-
-            NSMutableArray *i1 = [[NSMutableArray alloc] init];
-           sql = [NSString stringWithFormat:@"select date from voData where id=%d and val !='' and date >= %d and date <= %d order by date;",self.vo.vid,myTOGD.firstDate,myTOGD.lastDate];
-            [myTracker toQry2AryI:i1];
-          //sql = nil;
-
-            for (NSNumber *ni in i1) {
-
-                //DBGLog(@"i: %@  ",ni);
-                double d = [ni doubleValue];		// date as int secs cast to float
-
-                d -= (double) myTOGD.firstDate;
-                d *= myTOGD.dateScale;
-                //d+= border;
-
-                [mxdat addObject:[NSNumber numberWithDouble:d]];
-
-            }
-            [i1 release];
-
-
-            self.xdat = [NSArray arrayWithArray:mxdat];
-            //ydat = [NSArray arrayWithArray:mydat];
-
-            [mxdat release];
-            //[mydat release];
-        }
-
-        return self;
-
-    }
-    */
-
     func initAsTBoxLC(_ inVO: valueObj) -> vogd {
 
         //super.init()
@@ -349,7 +288,12 @@ class vogd: NSObject {
 
         //var i2: [Int] = []
 
-        let sql = String(format: "select date,val, (LENGTH(val) - LENGTH(REPLACE(val, CHAR(10), '')) + 1) from voData where id=%ld and val not NULL and val != '' and date >= %d and date <= %d order by date;", Int(vo.vid), myTOGD.firstDate, myTOGD.lastDate)
+        let sql = """
+        SELECT date, val, (LENGTH(val) - LENGTH(REPLACE(val, CHAR(10), '')) + 1) FROM voData 
+        WHERE id = \(Int(vo.vid)) AND val NOT NULL AND val != '' AND date >= \(myTOGD.firstDate) AND date <= \(myTOGD.lastDate)
+        AND date NOT IN (SELECT date FROM ignoreRecords)
+        ORDER BY date
+        """
         let rsltISI = myTracker.toQry2AryISI(sql: sql)
         //sql = nil;
 
@@ -414,7 +358,7 @@ class vogd: NSObject {
             return .white // VOT_CHOICE, VOT_INFO
         }
 
-        let cs = rTracker_resource.colorSet()
+        let cs = rTracker_resource.colorSet
         if cs.count <= vo.vcolor {
             // paranoid due to crashlytics report error in gtYAxV:drawYAxis but expect due to vcolor=-1
             DBGErr(String("myGraphColor: vcolor out of range: \(vo.vcolor) cs count= \(cs.count) vtype= \(vo.vtype)"))

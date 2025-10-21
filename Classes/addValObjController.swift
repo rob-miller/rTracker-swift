@@ -62,11 +62,14 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
     var parentTrackerObj: trackerObj? // this makes a retain cycle....
     var graphTypes: [AnyHashable]?
     var voOptDictStash: [String : String]?
-    // UI element properties 
-    @IBOutlet var labelField: UITextField!
-    @IBOutlet var votPicker: UIPickerView!
-    @IBOutlet var infoBtn: UIButton!
-    @IBOutlet weak var toolbar: UIToolbar!
+    // UI element properties (now programmatically created)
+    var labelField: UITextField!
+    var votPicker: UIPickerView!
+    var toolbar: UIToolbar!
+    var typeLabel: UILabel!
+    var graphLabel: UILabel!
+    var graphInfoButton: UIButton!
+    var containerView: UIView!
     private var tmpVtype = 0
     private var tmpVcolor = 0
     private var tmpVGraphType = 0
@@ -76,11 +79,16 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
     deinit {
         DBGLog("avoc dealloc")
     }
-    init(nibName: String, bundle: Bundle?) {
+    convenience init() {
+        self.init(nibName: nil, bundle: nil)
+    }
+
+    override init(nibName: String?, bundle: Bundle?) {
         super.init(nibName: nibName, bundle: bundle)
     }
+
     required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
+        super.init(coder: coder)
     }
     // MARK: -
     // MARK: view support
@@ -93,60 +101,43 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
 
     override func viewDidLoad() {
 
-        let cancelBtn = UIBarButtonItem(
-            barButtonSystemItem: .cancel,
-            target: self,
-            action: #selector(addTrackerController.btnCancel))
-        cancelBtn.accessibilityIdentifier = "avoCancel"
+        let cancelBtn = rTracker_resource.createNavigationButton(target: self, action: #selector(addTrackerController.btnCancel), direction: .left, accId: "avoCancel")
         navigationItem.leftBarButtonItem = cancelBtn
 
-        let saveBtn = UIBarButtonItem(
-            barButtonSystemItem: .save,
-            target: self,
-            action: #selector(addTrackerController.btnSave))
-        saveBtn.accessibilityIdentifier = "avoSave"
+        let saveBtn = rTracker_resource.createDoneButton(target: self, action: #selector(addTrackerController.btnSave), accId: "avoSave")
         navigationItem.rightBarButtonItem = saveBtn
 
+        // Create UI elements programmatically
+        createUI()
+        setupConstraints()
+        connectActionsAndDelegates()
 
-        //[self.navigationController setToolbarHidden:YES animated:YES];
-
-        //UIButton *infoBtn = [UIButton buttonWithType:UIButtonTypeInfoLight];
-        /*
-            UIButton *infoBtn = [UIButton buttonWithType:UIButtonTypeSystem];
-            [infoBtn setTitle:@"\u2699" forState:UIControlStateNormal];   // @"⚙"
-             */
-        infoBtn.titleLabel?.font = .systemFont(ofSize: 28.0)
-        /*
-            [infoBtn addTarget:self action:@selector(btnSetup) forControlEvents:UIControlEventTouchUpInside];
-            infoBtn.frame = CGRectMake(0, 0, 44, 44);
-            UIBarButtonItem *setupBtn = [[UIBarButtonItem alloc] initWithCustomView:infoBtn];
-             */
-        /*
-             UIBarButtonItem *setupBtn = [[UIBarButtonItem alloc]
-        								initWithTitle:@"Setup"
-        								style:UIBarButtonItemStylePlain
-        								target:self
-        								action:@selector(btnSetup)];
-            */
-
-        //self.toolbarItems = @[setupBtn];
-
-
-        sizeVOTLabel = addValObjController.maxLabel(fromArray: rTracker_resource.vtypeNames()) //self.parentTrackerObj.votArray];
+        sizeVOTLabel = addValObjController.maxLabel(fromArray: ValueObjectType.typeNames) //self.parentTrackerObj.votArray];
         let allGraphs = valueObj.allGraphs()
         sizeGTLabel = addValObjController.maxLabel(fromArray: allGraphs)
 
-        colorCount = rTracker_resource.colorSet().count
-
-        // no effect after ios7 self.votPicker.showsSelectionIndicator = YES;
+        colorCount = rTracker_resource.colorSet.count
 
         if tempValObj == nil {
             tempValObj = valueObj(parentOnly: parentTrackerObj!)
-            //self.graphTypes = nil;
+            // Set default graph type to 'no graph' for new valueObjs
+            tempValObj?.vGraphType = VOG_NONE
             graphTypes = voState.voGraphSetNum() //[valueObj graphsForVOT:VOT_NUMBER];
-            //[self updateScrollView:(NSInteger)VOT_NUMBER];
+            
+            // Find the "no graph" row in graphTypes and select it
+            var noGraphRow = 0
+            if let graphTypes = graphTypes {
+                for (index, graphType) in graphTypes.enumerated() {
+                    if let graphTypeStr = graphType as? String, graphTypeStr == "no graph" {
+                        noGraphRow = index
+                        break
+                    }
+                }
+            }
+            
             safeDispatchSync({ [self] in
                 votPicker.selectRow(parentTrackerObj?.nextColor ?? 0, inComponent: 1, animated: false)
+                votPicker.selectRow(noGraphRow, inComponent: 2, animated: false)
             })
         } else {
             labelField.text = tempValObj!.valueName
@@ -184,12 +175,6 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
         labelField.clearsOnBeginEditing = false
         labelField.delegate = self
         labelField.returnKeyType = .done
-        //[self.labelField addTarget:self
-        //			  action:@selector(labelFieldDone:)
-        //	forControlEvents:UIControlEventEditingDidEndOnExit];
-        //	DBGLog(@"frame: %f %f %f %f",self.labelField.frame.origin.x, self.labelField.frame.origin.y, self.labelField.frame.size.width, self.labelField.frame.size.height);
-
-        // set graph paper background, unseen but still there if darkMode
 
         let bg = UIImageView(image: rTracker_resource.get_background_image(self))
         bg.tag = BGTAG
@@ -210,6 +195,137 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
         super.viewDidLoad()
     }
 
+    // MARK: - UI Creation Methods
+
+    func createUI() {
+        view.backgroundColor = .systemBackground
+
+        // Create container view for label and text field
+        containerView = UIView()
+        containerView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(containerView)
+
+        // Create "Label" label
+        let nameLabel = UILabel()
+        nameLabel.text = "Label"
+        nameLabel.font = UIFont.systemFont(ofSize: 17)
+        nameLabel.translatesAutoresizingMaskIntoConstraints = false
+        containerView.addSubview(nameLabel)
+
+        // Create text field
+        labelField = UITextField()
+        labelField.borderStyle = .roundedRect
+        labelField.clearsOnBeginEditing = true
+        labelField.font = UIFont.systemFont(ofSize: 12)
+        labelField.minimumFontSize = 17
+        labelField.accessibilityIdentifier = "valueName"
+        labelField.accessibilityLabel = "value name"
+        labelField.translatesAutoresizingMaskIntoConstraints = false
+        containerView.addSubview(labelField)
+
+        // Create Type label
+        typeLabel = UILabel()
+        typeLabel.text = "Type"
+        typeLabel.font = UIFont.systemFont(ofSize: 17)
+        typeLabel.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(typeLabel)
+
+        // Create Graph label
+        graphLabel = UILabel()
+        graphLabel.text = "Graph"
+        graphLabel.font = UIFont.systemFont(ofSize: 17)
+        graphLabel.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(graphLabel)
+
+        // Create info button next to Graph label
+        graphInfoButton = UIButton(type: .infoDark)
+        graphInfoButton.translatesAutoresizingMaskIntoConstraints = false
+        graphInfoButton.accessibilityIdentifier = "avoGraphInfo"
+        graphInfoButton.accessibilityLabel = "Graph Help"
+        graphInfoButton.accessibilityHint = "Explains which graph these settings apply to"
+        view.addSubview(graphInfoButton)
+
+        // Create picker view
+        votPicker = UIPickerView()
+        votPicker.accessibilityHint = "left wheel sets value type"
+        votPicker.accessibilityIdentifier = "avoPicker"
+        votPicker.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(votPicker)
+
+        // Create toolbar
+        toolbar = UIToolbar()
+        toolbar.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(toolbar)
+
+        // Add modern edit button to toolbar
+        let setupBtn = rTracker_resource.createSettingsButton(target: self, action: #selector(btnSetup(_:)), accId: "avoSetup")
+        setupBtn.accessibilityLabel = "Setup"
+        setupBtn.accessibilityHint = "Configure value object settings"
+        toolbar.items = [setupBtn]
+
+        // Container constraints
+        NSLayoutConstraint.activate([
+            nameLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 10),
+            nameLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 10),
+            nameLabel.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -10),
+            nameLabel.widthAnchor.constraint(equalToConstant: 50), // Fixed width for "Label" text
+
+            labelField.leadingAnchor.constraint(equalTo: nameLabel.trailingAnchor, constant: 10),
+            labelField.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -20),
+            labelField.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 10),
+            labelField.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -10)
+        ])
+    }
+
+    func setupConstraints() {
+        let safeArea = view.safeAreaLayoutGuide
+
+        NSLayoutConstraint.activate([
+            // Container view
+            containerView.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor),
+            containerView.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor),
+            containerView.topAnchor.constraint(equalTo: safeArea.topAnchor, constant: 187),
+            containerView.heightAnchor.constraint(equalToConstant: 54),
+
+            // Type label
+            typeLabel.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor, constant: 80),
+            typeLabel.topAnchor.constraint(equalTo: containerView.bottomAnchor, constant: 30),
+
+            // Graph label (with space for info button)
+            graphLabel.trailingAnchor.constraint(equalTo: graphInfoButton.leadingAnchor, constant: -4),
+            graphLabel.centerYAnchor.constraint(equalTo: typeLabel.centerYAnchor),
+
+            // Graph info button (next to Graph label)
+            graphInfoButton.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor, constant: -56),
+            graphInfoButton.centerYAnchor.constraint(equalTo: graphLabel.centerYAnchor),
+            graphInfoButton.widthAnchor.constraint(equalToConstant: 24),
+            graphInfoButton.heightAnchor.constraint(equalToConstant: 24),
+
+            // Picker view
+            votPicker.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor),
+            votPicker.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor),
+            votPicker.topAnchor.constraint(equalTo: typeLabel.bottomAnchor, constant: 20),
+            votPicker.heightAnchor.constraint(equalToConstant: 216),
+
+            // Toolbar
+            toolbar.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor),
+            toolbar.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor),
+            toolbar.bottomAnchor.constraint(equalTo: safeArea.bottomAnchor)
+        ])
+    }
+
+    func connectActionsAndDelegates() {
+        // Connect picker delegate and data source
+        votPicker.delegate = self
+        votPicker.dataSource = self
+
+        // Connect text field action
+        labelField.addTarget(self, action: #selector(labelFieldDone(_:)), for: .editingDidEndOnExit)
+
+        // Connect info button action
+        graphInfoButton.addTarget(self, action: #selector(btnGraphInfo), for: .touchUpInside)
+    }
+
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         rTracker_resource.setViewMode(self)
         view.setNeedsDisplay()
@@ -227,35 +343,11 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
 
     }
 
-    /*
-    - (void)viewDidUnload {
-    	// Release any retained subviews of the main view.
-    	// e.g. self.myOutlet = nil;
-
-    	DBGLog(@"avoc didUnload");
-
-    	self.votPicker = nil;
-    	self.labelField = nil;
-    	self.tempValObj = nil;
-    	self.graphTypes = nil;
-    	self.parentTrackerObj = nil;
-
-    	self.navigationItem.rightBarButtonItem = nil;
-    	self.navigationItem.leftBarButtonItem = nil;
-    	//[self setToolbarItems:nil
-    	//			 animated:NO];
-    	self.title = nil;
-
-    	[super viewDidUnload];
-    }
-    */
-
     override func viewWillAppear(_ animated: Bool) {
 
         DBGLog("avoc: viewWillAppear")
 
         if let tempValObj {
-            //self.graphTypes = nil;
             graphTypes = tempValObj.vos?.voGraphSet()
             votPicker.reloadComponent(2) // in case added more graphtypes (eg tb count lines)
         }
@@ -298,11 +390,20 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
     }
 
     @IBAction func btnSave() {
-        //DBGLog(@"addVObjC: btnSave was pressed!");
-
         if (labelField.text?.count ?? 0) == 0 {
             rTracker_resource.alert("Save Item", msg: "Please set a name for this value to save", vc: self)
             return
+        }
+        
+        // ADD: Check for duplicate names
+        let newName = labelField.text ?? ""
+        if let parentObj = parentTrackerObj {
+            for vo in parentObj.valObjTable {
+                if vo.valueName == newName && vo.vid != tempValObj?.vid {
+                    rTracker_resource.alert("Duplicate Name", msg: "A value with this name already exists. Please choose a different name.", vc: self)
+                    return
+                }
+            }
         }
         
         if (VOT_CHOICE == tempValObj!.vtype) {
@@ -311,14 +412,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
                 return
             }
         }
-        /*
-        if VOT_FUNC == tempValObj!.vtype {
-            if tempValObj!.optDict["frep0"] == nil {
-                rTracker_resource.alert("Save Function", msg: "Please configure function range (configure button at bottom)", vc: self)
-                return
-            }
-        }
-         */
+
         voOptDictStash = nil
 
         tempValObj!.valueName = labelField.text // in case neglected to 'done' keyboard
@@ -379,7 +473,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
         }
 
         #if DEBUGLOG
-        let selected = rTracker_resource.vtypeNames()[row]// [self.parentTrackerObj.votArray objectAtIndex:row];
+        let selected = ValueObjectType.typeNames[row]
         DBGLog(String("save label: \(tempValObj!.valueName) id: \(Int(tempValObj!.vid)) row: \(UInt(row)) = \(selected)"))
         #endif
 
@@ -394,6 +488,16 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
         btnSave()
     }
 
+    @objc func btnGraphInfo() {
+        let alert = UIAlertController(
+            title: "Graph Settings",
+            message: "These graph settings are for the graph shown when your device is rotated to landscape orientation.",
+            preferredStyle: .alert)
+        let okAction = UIAlertAction(title: "OK", style: .default, handler: nil)
+        alert.addAction(okAction)
+        present(alert, animated: true)
+    }
+
     @IBAction func btnSetup(_ sender: Any) {
         //DBGLog(@"addVObjC: config was pressed!");
         if (tempValObj?.vtype == VOT_FUNC) {
@@ -403,7 +507,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
                 return
             }
         }
-        let ctvovc = configTVObjVC(nibName: "configTVObjVC", bundle: nil)
+        let ctvovc = configTVObjVC()
         ctvovc.to = parentTrackerObj
         //[parentTrackerObj retain];
         ctvovc.vo = tempValObj
@@ -411,8 +515,8 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
             voOptDictStash = tempValObj?.optDict // copyItems: true
         }
         //[tempValObj retain];
-        ctvovc.modalTransitionStyle = .flipHorizontal
-        //[self presentModalViewController:ctvovc animated:YES];
+        ctvovc.modalPresentationStyle = .fullScreen
+        ctvovc.modalTransitionStyle = .coverVertical
         present(ctvovc, animated: true)
     }
 
@@ -465,7 +569,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
     func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
         switch component {
         case 0:
-            return rTracker_resource.vtypeNames().count//[self.parentTrackerObj.votArray count];
+            return ValueObjectType.typeNames.count//[self.parentTrackerObj.votArray count];
         case 1:
             //return [self.parentTrackerObj.colorSet count];
             return colorCount
@@ -489,7 +593,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
     ) -> String? {
         switch component {
         case 0:
-            return rTracker_resource.vtypeNames()?[row] as? String // [self.parentTrackerObj.votArray objectAtIndex:row];
+            return ValueObjectType.typeNames[row] // [self.parentTrackerObj.votArray objectAtIndex:row];
         case 1:
             //return [self.paretntTrackerObj.colorSet objectAtIndex:row];
             return "color"
@@ -519,7 +623,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
             frame.origin.y = 0.0
             label = UILabel(frame: frame)
             label?.backgroundColor = .clear //]greenColor];
-            label?.text = rTracker_resource.vtypeNames()[row] // (self.parentTrackerObj.votArray)[row];
+            label?.text = ValueObjectType.typeNames[row] // (self.parentTrackerObj.votArray)[row];
             label?.font = .boldSystemFont(ofSize: cgfFONTSIZE)
         case 1:
             frame.size.height = 1.2 * cgfCOLORSIDE
@@ -527,7 +631,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
             frame.origin.x = 0.0
             frame.origin.y = 0.0
             label = UILabel(frame: frame)
-            label?.backgroundColor = rTracker_resource.colorSet()[row]
+            label?.backgroundColor = rTracker_resource.colorSet[row]
         case 2:
             frame.size = sizeGTLabel
             frame.size.width += cgfFONTSIZE
@@ -572,7 +676,7 @@ class addValObjController: UIViewController, UITextFieldDelegate, UIPickerViewDe
         } else if tempValObj?.vGraphType == VOG_NONE {
             colorCount = 0
         } else if colorCount == 0 {
-            colorCount = rTracker_resource.colorSet().count
+            colorCount = rTracker_resource.colorSet.count
         }
 
         if oldcc != colorCount {

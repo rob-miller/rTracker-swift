@@ -36,7 +36,8 @@ class gtXAxV: UIView {
     var scaleOriginX: CGFloat = 0.0
     var scaleWidthX: CGFloat = 0.0
     var graphSV: UIScrollView?
-
+    var markDate: Date? = nil
+    
     override init(frame: CGRect) {
         super.init(frame: frame)
         // Initialization code
@@ -60,8 +61,37 @@ class gtXAxV: UIView {
         //Stroke
         context!.strokePath()
         drawXAxis(context)
+        
+        // Draw markDate in lower right corner if available
+        if let markDate = markDate {
+            drawMarkDate(context, date: markDate)
+        }
     }
 
+    func drawMarkDate(_ context: CGContext?, date: Date) {
+        // Format the date (date only, no time)
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateStyle = .medium
+        dateFormatter.timeStyle = .none
+        let dateString = dateFormatter.string(from: date)
+        
+        // Calculate position for lower right corner
+        guard let myFont = myFont else { return }
+        let dateSize = dateString.size(withAttributes: [NSAttributedString.Key.font: myFont])
+        
+        // Position in lower right with some padding
+        let padding: CGFloat = 10.0
+        let x = scaleWidthX - dateSize.width - padding
+        let y = bounds.height - dateSize.height - padding
+        
+        // Draw the date
+        dateString.draw(at: CGPoint(x: x, y: y), withAttributes: [
+            NSAttributedString.Key.font: myFont,
+            NSAttributedString.Key.foregroundColor: UIColor.white
+        ])
+    }
+    
+    
     let DOFFST = 15.0
 
     func drawXAxis(_ context: CGContext?) {
@@ -76,14 +106,15 @@ class gtXAxV: UIView {
         let dateStep = (finDate - startDate) / XTICKS
 
         //CGFloat len = self.bounds.size.width - (CGFloat) (2*BORDER);
-        let step = (scaleWidthX - (1 * BORDER)) / XTICKS // ignore scaleOrigin as it is 0
-
+        //let step = (scaleWidthX - (1 * BORDER)) / XTICKS // ignore scaleOrigin as it is 0
+        let step = (scaleWidthX) / XTICKS
+        
         //[self flipCTM:context];
 
         var nextXt = -2 * DOFFST
         var nextXd = -2 * DOFFST
 
-        for i in 1...Int(XTICKS) {
+        for i in 1...Int(XTICKS-1) {
             var x = CGFloat(d(i) * step)
             var y: CGFloat = 0.0 // self.bounds.size.height - BORDER;
             MoveTo(context!, x, y)
@@ -124,7 +155,7 @@ class gtXAxV: UIView {
             }
 
             x -= DOFFST
-            if (i == 1 || dateStep < 24 * 60 * 60 || Double(i) == XTICKS) && x > nextXt {
+            if (i == 1 || dateStep < 24 * 60 * 60 || Double(i) == XTICKS-1) && x > nextXt {
                 if let myFont {
                     ts.draw(at: CGPoint(x: x, y: y), withAttributes: [
                         NSAttributedString.Key.font: myFont,
@@ -136,7 +167,7 @@ class gtXAxV: UIView {
 
             y += tsize?.height ?? 0.0 // + 1.0f;
             x -= 15.0
-            if (i == 1 || dateStep >= 24 * 60 * 60 || Double(i) == XTICKS) && x > (nextXd + 10.0) {
+            if (i == 1 || dateStep >= 24 * 60 * 60 || Double(i) == XTICKS-1) && x > (nextXd + 10.0) {
                 if (i != 1) && (Double(i) != XTICKS) {
                     AddLineTo(context!, x2, y2)
                 }

@@ -24,6 +24,33 @@
 
 import UIKit
 
+// MARK: - Date Picker Action Types (consolidated from dpRslt.swift)
+
+enum DatePickerAction: Int {
+    case cancel = 0
+    case new = 1
+    case set = 2
+    case goto = 3
+    case gotoPost = 4
+}
+
+class DatePickerResult: NSObject {
+    var date: Date?
+    var action: DatePickerAction = .cancel
+
+    override init() {
+        super.init()
+        action = .cancel
+    }
+}
+
+// Legacy constants for backwards compatibility during transition
+let DPA_CANCEL = DatePickerAction.cancel.rawValue
+let DPA_NEW = DatePickerAction.new.rawValue
+let DPA_SET = DatePickerAction.set.rawValue
+let DPA_GOTO = DatePickerAction.goto.rawValue
+let DPA_GOTO_POST = DatePickerAction.gotoPost.rawValue
+
 ///************
 /// datePickerVC.h
 /// Copyright 2010-2021 Robert T. Miller
@@ -53,83 +80,186 @@ let SEG_TIME = 1
 
 
 class datePickerVC: UIViewController {
-    /*{
 
-    	NSString *myTitle;
-        dpRslt *dpr;
-    	//NSDate *date;
-    	//NSInteger action;
-    }
-    */
     var myTitle: String?
-    //@property (nonatomic,retain) NSDate *date;
-    //@property (nonatomic) NSInteger action;
-    var dpr: dpRslt?
-    // UI element properties 
-    @IBOutlet var navBar: UINavigationBar!
-    @IBOutlet var toolBar: UIToolbar!
-    @IBOutlet var datePicker: UIDatePicker!
-    @IBOutlet var entryNewBtn: UIButton!
-    //@property (nonatomic,strong) IBOutlet UIButton *entryCopyBtn;
-    @IBOutlet var dateSetBtn: UIButton!
-    @IBOutlet var dateGotoBtn: UIButton!
-    //@property (nonatomic,strong) IBOutlet UISegmentedControl *dtSegmentedControl;
-    @IBOutlet var cancelBtn: UIBarButtonItem!
+    var dpr: DatePickerResult?
+    var titleLabel: UILabel!
+    var datePicker: UIDatePicker!
+    var entryNewBtn: UIBarButtonItem!
+    var dateSetBtn: UIBarButtonItem!
+    var dateGotoBtn: UIBarButtonItem!
+    var cancelBtn: UIBarButtonItem!
+    var buttonStackView: UIStackView!
 
-    @IBAction func btnCancel(_ btn: UIButton?) {
+    override init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) {
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    convenience init() {
+        self.init(nibName: nil, bundle: nil)
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+    }
+
+    @objc func btnCancel(_ btn: UIButton?) {
         dpr?.date = datePicker.date
-        dpr?.action = DPA_CANCEL
-        //[self dismissModalViewControllerAnimated:YES];
+        dpr?.action = .cancel
         dismiss(animated: true)
     }
 
-    // Implement viewDidLoad to do additional setup after loading the view, typically from a nib.
     override func viewDidLoad() {
-        navBar.items?.last?.title = myTitle
-        //CGRect f = self.view.frame;
-        //f.size.width = [rTracker_resource getKeyWindowWidth];
-        //self.view.frame = f;
-        /*
-            if (@available(iOS 13.0, *)) {
-                bool darkMode = false;
-
-                darkMode = (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark);
-                if (darkMode) {
-                    self.view.backgroundColor = [UIColor systemBackgroundColor];
-                }
-            }
-             */
-
-        /*
-             // does not resize well -- need more work on xib
-            self.dateSetBtn.titleLabel.font = PrefBodyFont;
-            self.entryNewBtn.titleLabel.font = PrefBodyFont;
-            self.dateGotoBtn.titleLabel.font = PrefBodyFont;
-            */
         super.viewDidLoad()
-        /*f.origin.y= 416;
-            f.size.height = 44;
-            UIToolbar *tb = [ [UIToolbar alloc]initWithFrame:f ];
-            self.toolBar = tb;
-             */
-        /*
-        	UIBarButtonItem *cancelBtn = [[UIBarButtonItem alloc]
-        								initWithBarButtonSystemItem:UIBarButtonSystemItemCancel
-        								target:self
-        								action:@selector(btnCancel:)];
-            //[self setToolbarItems:@[cancelBtn]];
-        	self.toolBar.items = @[cancelBtn];
-            */
 
-        //self.datePicker.locale = [NSLocale currentLocale];
+        setupViews()
+
+        titleLabel.text = myTitle
+
         datePicker.maximumDate = Date()
         if let aDate = dpr?.date {
             datePicker.date = aDate
         }
+    }
 
-        //self.datePicker.minuteInterval = 2;
+    func setupViews() {
+        view.backgroundColor = .systemBackground
 
+        // Set up modal presentation
+        modalPresentationStyle = .pageSheet
+        if let sheet = sheetPresentationController {
+            sheet.detents = [.medium()]
+            sheet.prefersGrabberVisible = true
+        }
 
+        // Create title label
+        titleLabel = UILabel()
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        titleLabel.font = UIFont.boldSystemFont(ofSize: 20)
+        titleLabel.textAlignment = .center
+        titleLabel.textColor = .label
+        view.addSubview(titleLabel)
+
+        // Create date picker
+        datePicker = UIDatePicker()
+        datePicker.translatesAutoresizingMaskIntoConstraints = false
+        datePicker.datePickerMode = .dateAndTime
+        datePicker.preferredDatePickerStyle = .wheels
+        view.addSubview(datePicker)
+
+        // Create buttons using iOS 26 patterns and extract UIButtons
+        entryNewBtn = rTracker_resource.createActionButton(
+            target: self,
+            action: #selector(entryNewBtnAction),
+            symbolName: "doc.badge.plus",
+            accId: "datePicker_newEntry",
+            symbolSize: 24,
+            fallbackTitle: "New Entry"
+        )
+
+        dateSetBtn = rTracker_resource.createDoneButton(
+            target: self,
+            action: #selector(dateSetBtnAction),
+            accId: "datePicker_setDate",
+            preferYellow: false,
+            symbolSize: 24
+        )
+
+        dateGotoBtn = rTracker_resource.createActionButton(
+            target: self,
+            action: #selector(dateGotoBtnAction),
+            symbolName: "arrow.right.circle",
+            accId: "datePicker_gotoDate",
+            symbolSize: 24,
+            fallbackTitle: "Go to Date"
+        )
+
+        cancelBtn = rTracker_resource.createStyledButton(
+            symbolName: "xmark.circle",
+            target: self,
+            action: #selector(btnCancel(_:)),
+            accId: "datePicker_cancel",
+            symbolSize: 24,
+            fallbackTitle: "Cancel"
+        )
+
+        // Create horizontal button stack
+        buttonStackView = UIStackView()
+        buttonStackView.translatesAutoresizingMaskIntoConstraints = false
+        buttonStackView.axis = .horizontal
+        buttonStackView.distribution = .fillEqually
+        buttonStackView.spacing = 16
+        view.addSubview(buttonStackView)
+
+        // Extract UIButtons from UIBarButtonItems and add to stack
+        if let entryNewButton = entryNewBtn.uiButton {
+            entryNewButton.translatesAutoresizingMaskIntoConstraints = false
+            buttonStackView.addArrangedSubview(entryNewButton)
+        }
+
+        if let dateSetButton = dateSetBtn.uiButton {
+            dateSetButton.translatesAutoresizingMaskIntoConstraints = false
+            buttonStackView.addArrangedSubview(dateSetButton)
+        }
+
+        if let dateGotoButton = dateGotoBtn.uiButton {
+            dateGotoButton.translatesAutoresizingMaskIntoConstraints = false
+            buttonStackView.addArrangedSubview(dateGotoButton)
+        }
+
+        // Create cancel button at bottom
+        var cancelButton: UIButton?
+        if let button = cancelBtn.uiButton {
+            button.translatesAutoresizingMaskIntoConstraints = false
+            view.addSubview(button)
+            cancelButton = button
+        }
+
+        // Set up constraints
+        var constraints: [NSLayoutConstraint] = [
+            // Title label constraints
+            titleLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
+            titleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            titleLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+
+            // Date picker constraints
+            datePicker.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 20),
+            datePicker.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            datePicker.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+
+            // Button stack constraints
+            buttonStackView.topAnchor.constraint(equalTo: datePicker.bottomAnchor, constant: 20),
+            buttonStackView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 40),
+            buttonStackView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -40),
+            buttonStackView.heightAnchor.constraint(equalToConstant: 60)
+        ]
+
+        // Add cancel button constraints if button was created
+        if let cancelButton = cancelButton {
+            constraints.append(contentsOf: [
+                cancelButton.topAnchor.constraint(equalTo: buttonStackView.bottomAnchor, constant: 20),
+                cancelButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+                cancelButton.bottomAnchor.constraint(lessThanOrEqualTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20)
+            ])
+        }
+
+        NSLayoutConstraint.activate(constraints)
+
+        // Add tap-outside-to-dismiss
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(backgroundTapped))
+        tapGesture.cancelsTouchesInView = false
+        view.addGestureRecognizer(tapGesture)
+    }
+
+    @objc func backgroundTapped(_ gesture: UITapGestureRecognizer) {
+        let location = gesture.location(in: view)
+
+        // Check if tap is outside of date picker and button areas
+        if !datePicker.frame.contains(location) &&
+           !buttonStackView.frame.contains(location) &&
+           !titleLabel.frame.contains(location) {
+            btnCancel(nil)
+        }
     }
 
     override func didReceiveMemoryWarning() {
@@ -139,94 +269,44 @@ class datePickerVC: UIViewController {
         // Release any cached data, images, etc that aren't in use.
     }
 
-    /*
-    - (void)viewDidUnload {
-    	self.title = nil;
-    	self.entryNewBtn = nil;
-    	self.dateSetBtn = nil;
-    	self.dateGotoBtn = nil;
-    	self.datePicker = nil;
-    	self.navBar = nil;
-    	self.toolBar = nil;
-
-    	// note keep date for parent
-
-        [super viewDidUnload];
-        // Release any retained subviews of the main view.
-        // e.g. self.myOutlet = nil;
-    }
-    */
 
 
 
     // MARK: -
     // MARK: button actions
 
-    @IBAction func cancelEvent(_ sender: Any) {
+    @objc func cancelEvent(_ sender: Any) {
     }
 
-    @IBAction func entryNewBtnAction() {
+    @objc func entryNewBtnAction() {
         dpr?.date = datePicker.date
-        dpr?.action = DPA_NEW
-        //[self dismissModalViewControllerAnimated:YES];
+        dpr?.action = .new
         dismiss(animated: true)
 
-        /*
-        if SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO("13.0") {
-            (presentationController?.delegate as? UIViewController)?.viewWillAppear(false)
-        }
-         */
         (presentationController?.delegate as? UIViewController)?.beginAppearanceTransition(true, animated: true)
         (presentationController?.delegate as? UIViewController)?.endAppearanceTransition()
     }
 
     //- (IBAction) entryCopyBtnAction;
-    @IBAction func dateSetBtnAction() {
+    @objc func dateSetBtnAction() {
         dpr?.date = datePicker.date
-        dpr?.action = DPA_SET
-        //[self dismissModalViewControllerAnimated:YES];
+        dpr?.action = .set
         dismiss(animated: true)
-        /*
-        if SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO("13.0") {
-            (presentationController?.delegate as? UIViewController)?.viewWillAppear(false)
-        }
-         */
+
         (presentationController?.delegate as? UIViewController)?.beginAppearanceTransition(true, animated: true)
         (presentationController?.delegate as? UIViewController)?.endAppearanceTransition()
     }
 
 
     //- (IBAction) dateModeChoice:(id)sender;
-    @IBAction func dateGotoBtnAction() {
+    @objc func dateGotoBtnAction() {
         dpr?.date = datePicker.date
-        dpr?.action = DPA_GOTO
-        //[self dismissModalViewControllerAnimated:YES];
+        dpr?.action = .goto
+
         dismiss(animated: true)
-        /*
-        if SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO("13.0") {
-            (presentationController?.delegate as? UIViewController)?.viewWillAppear(false)
-        }
-         */
+
         (presentationController?.delegate as? UIViewController)?.beginAppearanceTransition(true, animated: true)
         (presentationController?.delegate as? UIViewController)?.endAppearanceTransition()
     }
-    /*
-    - (IBAction) dateModeChoice:(id)sender
-    {
-    	self.datePicker.maximumDate = [NSDate date];
-    	self.datePicker.date = self.dpr.date;
 
-    	switch ([sender selectedSegmentIndex]) {
-    		case SEG_DATE :
-    			self.datePicker.datePickerMode = UIDatePickerModeDate;
-    			break;
-    		case SEG_TIME:
-    			self.datePicker.datePickerMode = UIDatePickerModeTime;
-    			break;
-    		default:
-    			dbgNSAssert(0,@"dateModeChoice: cannot identify seg index");
-    			break;
-    	}
-    }
-    */
 }

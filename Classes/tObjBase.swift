@@ -78,14 +78,10 @@ class tObjBase: NSObject {
     override init() {
 
         super.init()
-        //DBGLog(@"tObjBase init: db %@",self.dbName);
-        //self.tDb=nil;
-        //[self getTDb];
         tuniq = TMPUNIQSTART
     }
 
     deinit {
-        //DBGLog(@"dealloc tObjBase: %@  id=%d",self.dbName,self.toid);
         closeTDb()
         
         NotificationCenter.default.removeObserver(
@@ -160,28 +156,19 @@ class tObjBase: NSObject {
                     name: UIApplication.willTerminateNotification,
                     object: app)
                 
-                DBGLog(String("opened tDb \(dbName) tDb= \(tDb)"))
+                //DBGLog(String("opened tDb \(dbName)"))
             }
         }
         
         var c: Int
         toExecSql(sql:"create table if not exists uniquev (id integer primary key, value integer);")
-        c = toQry2Int(sql:"select count(*) from uniquev where id=0;")!
+        c = toQry2Int(sql:"select count(*) from uniquev where id=0;")
         
         if c == 0 {
             DBGLog("init uniquev")
             toExecSql(sql:"insert into uniquev (id, value) values (0, 1);")
         }
     }
-
-    /* valid to have as nil
-    - (sqlite3*) tDb {
-        if (nil == tDb) {
-            [self getTDb];
-        }
-        return tDb;
-    }
-    */
 
     func deleteTDb() {
         DBGLog(String("deleteTDb dbName= \(dbName ?? "") id=\(toid)"))
@@ -226,7 +213,7 @@ class tObjBase: NSObject {
             i = -tuniq
             //DBGLog(@"temp tObj id=%d getUnique returning %d",self.toid,i);
         } else {
-            i = toQry2Int(sql:"select value from uniquev where id=0;")!
+            i = toQry2Int(sql:"select value from uniquev where id=0;")
             DBGLog(String("id \(toid) getUnique got \(i)"))
             toExecSql(sql:"update uniquev set value = \(i+1) where id=0;")
         }
@@ -234,7 +221,7 @@ class tObjBase: NSObject {
     }
 
     func minUniquev(_ minU: Int) {
-        let i = toQry2Int(sql:"select value from uniquev where id=0;")!
+        let i = toQry2Int(sql:"select value from uniquev where id=0;")
         if i <= minU {
             toExecSql(sql:"update uniquev set value = \(minU + 1) where id=0;")
         }
@@ -330,6 +317,33 @@ class tObjBase: NSObject {
         }
     }
 
+    func toQry2ArySI(sql: String) -> [(String, Int)] {
+        tObjBase.performDatabaseOperation(toid: toid) { [self] in
+            
+            SQLDbg(String("toQry2ArySI: \(dbName!) => _\(sql)_"))
+            dbgNSAssert(tDb != nil, "toQry2ArySI called with no tDb")
+            
+            var stmt: OpaquePointer?  // sqlite3_stmt?
+            //objc_sync_enter(self)
+            if sqlite3_prepare_v2(tDb, sql, -1, &stmt, nil) == SQLITE_OK {
+                var results: [(String, Int)] = []
+                while sqlite3_step(stmt) == SQLITE_ROW {
+                    let s1 = String(cString: sqlite3_column_text(stmt, 1)!)
+                    let i1 = Int(sqlite3_column_int(stmt, 0))
+                    results.append((s1, i1))
+                    SQLDbg(String("  rslt: \(s1) \(i1)"))
+                }
+                //tobDoneCheck(rslt, sql: sql)
+                sqlite3_finalize(stmt)
+                //objc_sync_exit(self)
+                return results
+            } else {
+                tobPrepError(sql)
+                return []
+            }
+        }
+    }
+
     func toQry2AryISI(sql: String) -> [(Int, String, Int)] {
         tObjBase.performDatabaseOperation(toid: toid) { [self] in
             
@@ -363,10 +377,6 @@ class tObjBase: NSObject {
         tObjBase.performDatabaseOperation(toid: toid) { [self] in
             
             SQLDbg(String("toQry2AryISII: \(dbName!) => _\(sql)_"))
-            guard let tDb = tDb else {
-                dbgNSAssert(false, "toQry2AryISII called with no tDb")
-                return []
-            }
             
             var stmt: OpaquePointer?
             if sqlite3_prepare_v2(tDb, sql, -1, &stmt, nil) == SQLITE_OK {
@@ -388,14 +398,36 @@ class tObjBase: NSObject {
         }
     }
 
+    func toQry2AryISIII(sql: String) -> [(Int, String, Int, Int, Int)] {
+        tObjBase.performDatabaseOperation(toid: toid) { [self] in
+            
+            SQLDbg(String("toQry2AryISII: \(dbName!) => _\(sql)_"))
+            
+            var stmt: OpaquePointer?
+            if sqlite3_prepare_v2(tDb, sql, -1, &stmt, nil) == SQLITE_OK {
+                var results: [(Int, String, Int, Int, Int)] = []
+                while sqlite3_step(stmt) == SQLITE_ROW {
+                    let i1 = Int(sqlite3_column_int(stmt, 0))
+                    let s1 = String(cString: sqlite3_column_text(stmt, 1)!)
+                    let i2 = Int(sqlite3_column_int(stmt, 2))
+                    let i3 = Int(sqlite3_column_int(stmt, 3))
+                    let i4 = Int(sqlite3_column_int(stmt, 4))
+                    results.append((i1, s1, i2, i3, i4))
+                    SQLDbg(String("  rslt: \(i1) \(s1) \(i2) \(i3) \(i4)"))
+                }
+                sqlite3_finalize(stmt)
+                return results
+            } else {
+                tobPrepError(sql)
+                return [(0, "", 0, 0, 0)]
+            }
+        }
+    }
+    
     func toQry2ArySS(sql: String) -> [(String, String)] {
         tObjBase.performDatabaseOperation(toid: toid) { [self] in
             
             SQLDbg(String("toQry2ArySS: \(dbName!) => _\(sql)_"))
-            guard let tDb = tDb else {
-                dbgNSAssert(false, "toQry2ArySS called with no tDb")
-                return []
-            }
             
             var stmt: OpaquePointer?
             if sqlite3_prepare_v2(tDb, sql, -1, &stmt, nil) == SQLITE_OK {
@@ -415,15 +447,59 @@ class tObjBase: NSObject {
         }
     }
 
+    func toQry2ArySSI(sql: String) -> [(String, String, Int)] {
+        tObjBase.performDatabaseOperation(toid: toid) { [self] in
+            
+            SQLDbg(String("toQry2ArySSI: \(dbName!) => _\(sql)_"))
+            
+            var stmt: OpaquePointer?
+            if sqlite3_prepare_v2(tDb, sql, -1, &stmt, nil) == SQLITE_OK {
+                var results: [(String, String, Int)] = []
+                while sqlite3_step(stmt) == SQLITE_ROW {
+                    let s1 = String(cString: sqlite3_column_text(stmt, 0)!)
+                    let s2 = String(cString: sqlite3_column_text(stmt, 1)!)
+                    let i1 = Int(sqlite3_column_int(stmt, 2))
+                    results.append((s1, s2, i1))
+                    SQLDbg(String("  rslt: \(s1) \(s2) \(i1)"))
+                }
+                sqlite3_finalize(stmt)
+                return results
+            } else {
+                tobPrepError(sql)
+                return []
+            }
+        }
+    }
 
+    func toQry2ArySSSI(sql: String) -> [(String, String, String, Int)] {
+        tObjBase.performDatabaseOperation(toid: toid) { [self] in
+            
+            SQLDbg(String("toQry2ArySSSI: \(dbName!) => _\(sql)_"))
+            
+            var stmt: OpaquePointer?
+            if sqlite3_prepare_v2(tDb, sql, -1, &stmt, nil) == SQLITE_OK {
+                var results: [(String, String, String, Int)] = []
+                while sqlite3_step(stmt) == SQLITE_ROW {
+                    let s1 = String(cString: sqlite3_column_text(stmt, 0)!)
+                    let s2 = String(cString: sqlite3_column_text(stmt, 1)!)
+                    let s3 = String(cString: sqlite3_column_text(stmt, 2)!)
+                    let i1 = Int(sqlite3_column_int(stmt, 3))
+                    results.append((s1, s2, s3, i1))
+                    SQLDbg(String("  rslt: \(s1) \(s2) \(s3) \(i1)"))
+                }
+                sqlite3_finalize(stmt)
+                return results
+            } else {
+                tobPrepError(sql)
+                return []
+            }
+        }
+    }
+    
     func toQry2AryIIS(sql: String) -> [(Int, Int, String)] {
         tObjBase.performDatabaseOperation(toid: toid) { [self] in
             
             SQLDbg(String("toQry2AryIIS: \(dbName!) => _\(sql)_"))
-            guard let tDb = tDb else {
-                dbgNSAssert(false, "toQry2AryIIS called with no tDb")
-                return []
-            }
             
             var stmt: OpaquePointer?
             if sqlite3_prepare_v2(tDb, sql, -1, &stmt, nil) == SQLITE_OK {
@@ -448,10 +524,6 @@ class tObjBase: NSObject {
         tObjBase.performDatabaseOperation(toid: toid) { [self] in
             
             SQLDbg(String("toQry2AryIISIII: \(dbName!) => _\(sql)_"))
-            guard let tDb = tDb else {
-                dbgNSAssert(false, "toQry2AryIISIII called with no tDb")
-                return []
-            }
             
             var stmt: OpaquePointer?
             if sqlite3_prepare_v2(tDb, sql, -1, &stmt, nil) == SQLITE_OK {
@@ -476,14 +548,41 @@ class tObjBase: NSObject {
         }
     }
 
+    /*  not needed
+    func toQry2AryIISIIII(sql: String) -> [(Int, Int, String, Int, Int, Int, Int)] {
+        tObjBase.performDatabaseOperation(toid: toid) { [self] in
+            
+            SQLDbg(String("toQry2AryIISIII: \(dbName!) => _\(sql)_"))
+            
+            var stmt: OpaquePointer?
+            if sqlite3_prepare_v2(tDb, sql, -1, &stmt, nil) == SQLITE_OK {
+                var results: [(Int, Int, String, Int, Int, Int, Int)] = []
+                while sqlite3_step(stmt) == SQLITE_ROW {
+                    let i1 = Int(sqlite3_column_int(stmt, 0))
+                    let i2 = Int(sqlite3_column_int(stmt, 1))
+                    let s1 = String(cString: sqlite3_column_text(stmt, 2)!)
+                    let i3 = Int(sqlite3_column_int(stmt, 3))
+                    let i4 = Int(sqlite3_column_int(stmt, 4))
+                    let i5 = Int(sqlite3_column_int(stmt, 5))
+                    let i6 = Int(sqlite3_column_int(stmt, 6))
+                    results.append((i1, i2, s1, i3, i4, i5, i6))
+                    //SQLDbg(String("  rslt: \(i1) \(i2) \(s1) \(i3) \(i4) \(i5) \(i5)"))
+                }
+                sqlite3_finalize(stmt)
+                SQLDbg(String("    rslt: \(results)"))
+                return results
+            } else {
+                tobPrepError(sql)
+                return []
+            }
+        }
+    }
+    */
+    
     func toQry2AryID(sql: String) -> [(Int, Double)] {
         tObjBase.performDatabaseOperation(toid: toid) { [self] in
             
             SQLDbg(String("toQry2AryID: \(dbName!) => _\(sql)_"))
-            guard let tDb = tDb else {
-                dbgNSAssert(false, "toQry2AryID called with no tDb")
-                return []
-            }
             
             var stmt: OpaquePointer?
             if sqlite3_prepare_v2(tDb, sql, -1, &stmt, nil) == SQLITE_OK {
@@ -503,14 +602,122 @@ class tObjBase: NSObject {
         }
     }
 
+    func toQry2AryII(sql: String) -> [(Int, Int)] {
+        tObjBase.performDatabaseOperation(toid: toid) { [self] in
+
+            SQLDbg(String("toQry2AryII: \(dbName!) => _\(sql)_"))
+
+            var stmt: OpaquePointer?
+            if sqlite3_prepare_v2(tDb, sql, -1, &stmt, nil) == SQLITE_OK {
+                var results: [(Int, Int)] = []
+                while sqlite3_step(stmt) == SQLITE_ROW {
+                    let i1 = Int(sqlite3_column_int(stmt, 0))
+                    let i2 = Int(sqlite3_column_int(stmt, 1))
+                    results.append((i1, i2))
+                    SQLDbg(String("  rslt: \(i1) \(i2)"))
+                }
+                sqlite3_finalize(stmt)
+                return results
+            } else {
+                tobPrepError(sql)
+                return []
+            }
+        }
+    }
+
+    func toQry2Ary(sql: String) -> [(Any, Any)] {
+        return tObjBase.performDatabaseOperation(toid: toid) { [self] in
+            
+            SQLDbg(String("toQry2Ary: \(dbName!) => *\(sql)*"))
+
+            var stmt: OpaquePointer?
+            if sqlite3_prepare_v2(tDb, sql, -1, &stmt, nil) == SQLITE_OK {
+                var results: [(Any, Any)] = []
+                while sqlite3_step(stmt) == SQLITE_ROW {
+                    // Get column types
+                    let col0Type = sqlite3_column_type(stmt, 0)
+                    let col1Type = sqlite3_column_type(stmt, 1)
+                    
+                    // Extract values based on column types
+                    var val0: Any
+                    var val1: Any
+                    
+                    // Column 0
+                    switch col0Type {
+                    case SQLITE_INTEGER:
+                        val0 = Int(sqlite3_column_int64(stmt, 0))
+                    case SQLITE_FLOAT:
+                        val0 = sqlite3_column_double(stmt, 0)
+                    case SQLITE_TEXT:
+                        if let cString = sqlite3_column_text(stmt, 0) {
+                            val0 = String(cString: cString)
+                        } else {
+                            val0 = ""
+                        }
+                    case SQLITE_NULL:
+                        val0 = NSNull()
+                    default:
+                        val0 = NSNull()
+                    }
+                    
+                    // Column 1
+                    switch col1Type {
+                    case SQLITE_INTEGER:
+                        val1 = Int(sqlite3_column_int64(stmt, 1))
+                    case SQLITE_FLOAT:
+                        val1 = sqlite3_column_double(stmt, 1)
+                    case SQLITE_TEXT:
+                        if let cString = sqlite3_column_text(stmt, 1) {
+                            val1 = String(cString: cString)
+                        } else {
+                            val1 = ""
+                        }
+                    case SQLITE_NULL:
+                        val1 = NSNull()
+                    default:
+                        val1 = NSNull()
+                    }
+                    
+                    results.append((val0, val1))
+                    SQLDbg(String("  rslt: \(val0) \(val1)"))
+                }
+                sqlite3_finalize(stmt)
+                return results
+            } else {
+                tobPrepError(sql)
+                return []
+            }
+        }
+    }
+    
+    func toQry2AryDate(sql: String) -> [(Date, Double)] {
+        return tObjBase.performDatabaseOperation(toid: toid) { [self] in
+            
+            var stmt: OpaquePointer?
+            if sqlite3_prepare_v2(self.tDb, sql, -1, &stmt, nil) == SQLITE_OK {
+                var results: [(Date, Double)] = []
+                
+                while sqlite3_step(stmt) == SQLITE_ROW {
+                    // Get the timestamp as seconds since 1970
+                    let timestamp = sqlite3_column_int64(stmt, 0)
+                    // Convert to Date
+                    let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
+                    let val = sqlite3_column_double(stmt, 1)
+                    results.append((date, val))
+                }
+                sqlite3_finalize(stmt)
+                return results
+            } else {
+                // Handle error
+                return []
+            }
+        } ?? []
+    }
+    
     func toQry2AryI(sql: String) -> [Int] {
         tObjBase.performDatabaseOperation(toid: toid) { [self] in
             
             SQLDbg(String("toQry2AryI: \(dbName!) => _\(sql)_"))
-            guard let tDb = tDb else {
-                dbgNSAssert(false, "toQry2AryI called with no tDb")
-                return []
-            }
             
             var stmt: OpaquePointer?
             if sqlite3_prepare_v2(tDb, sql, -1, &stmt, nil) == SQLITE_OK {
@@ -533,10 +740,6 @@ class tObjBase: NSObject {
     func toQry2DictII(sql: String?) -> [Int : Int] {
         tObjBase.performDatabaseOperation(toid: toid) { [self] in
             SQLDbg(String("toQry2DictII: \(dbName!) => _\(sql)_"))
-            guard let tDb = tDb else {
-                dbgNSAssert(false, "toQry2DictII called with no tDb")
-                return [:]
-            }
             
             var stmt: OpaquePointer?
             var dict: [Int: Int] = [:]
@@ -557,13 +760,34 @@ class tObjBase: NSObject {
         }
     }
 
+    func toQry2DictIS(sql: String?) -> [Int : String] {
+        tObjBase.performDatabaseOperation(toid: toid) { [self] in
+            SQLDbg(String("toQry2DictIS: \(dbName!) => _\(sql)_"))
+
+            var stmt: OpaquePointer?
+            var dict: [Int: String] = [:]
+
+            if sqlite3_prepare_v2(tDb, sql, -1, &stmt, nil) == SQLITE_OK {
+                //var rslt: Int
+                while sqlite3_step(stmt) == SQLITE_ROW {
+                    let key = Int(sqlite3_column_int(stmt, 0))
+                    let value = String(cString: sqlite3_column_text(stmt, 1))
+                    dict[key] = value
+                    SQLDbg(String("  rslt: \(key) -> \(value)"))
+                }
+                //tobDoneCheck(rslt, sql: sql)
+                sqlite3_finalize(stmt)
+            } else {
+                tobPrepError(sql)
+            }
+            SQLDbg(String("  returns \(dict)"))
+            return dict
+        }
+    }
+
     func toQry2SetI(sql: String) -> Set<Int> {
         tObjBase.performDatabaseOperation(toid: toid) { [self] in
             SQLDbg(String("toQry2SetI: \(dbName!) => _\(sql)_"))
-            guard let tDb = tDb else {
-                dbgNSAssert(false, "toQry2SetI called with no tDb")
-                return []
-            }
             
             var stmt: OpaquePointer?
             var set = Set<Int>()
@@ -588,10 +812,6 @@ class tObjBase: NSObject {
     func toQry2IntInt(sql: String) -> (Int, Int)? {
         tObjBase.performDatabaseOperation(toid: toid) { [self] in
             SQLDbg(String("toQry2AryII: \(dbName!) => _\(sql)_"))
-            guard let tDb = tDb else {
-                dbgNSAssert(false, "toQry2AryII called with no tDb")
-                return nil
-            }
             
             var stmt: OpaquePointer?
             var i1:Int = 0, i2:Int = 0
@@ -614,10 +834,6 @@ class tObjBase: NSObject {
     func toQry2IntIntInt(sql: String) -> (Int, Int, Int)? {
         tObjBase.performDatabaseOperation(toid: toid) { [self] in
             SQLDbg(String("toQry2IntIntInt: \(dbName!) => _\(sql)_"))
-            guard let tDb = tDb else {
-                dbgNSAssert(false, "toQry2IntIntInt called with no tDb")
-                return nil
-            }
             
             var stmt: OpaquePointer?
             var i1:Int = 0, i2:Int = 0, i3:Int = 0
@@ -638,13 +854,9 @@ class tObjBase: NSObject {
         }
     }
 
-    func toQry2Int(sql: String) -> Int? {
+    func toQry2Int(sql: String) -> Int {
         tObjBase.performDatabaseOperation(toid: toid) { [self] in
             SQLDbg(String("toQry2Int: \(dbName!) => _\(sql)_"))
-            guard let tDb = tDb else {
-                dbgNSAssert(false, "toQry2Int called with no tDb")
-                return nil
-            }
             
             var stmt: OpaquePointer?
             var irslt = 0
@@ -661,50 +873,28 @@ class tObjBase: NSObject {
             return irslt
         }
     }
-
-    /*
-    func toQry2Str(sql: String) -> String? {
-        SQLDbg(String("toQry2StrCopy: \(dbName!) => _\(sql)_"))
-        guard let tDb = tDb else {
-            dbgNSAssert(false, "toQry2StrCopy called with no tDb")
-            return nil
-        }
-
-        var stmt: OpaquePointer?
-        var srslt : String?
-        
-        if sqlite3_prepare_v2(tDb, sql, -1, &stmt, nil) == SQLITE_OK {
-            let step = sqlite3_step(stmt)
-            if step == SQLITE_ROW {
-                let textPointer = sqlite3_column_text(stmt, 0)
-                if let textPointer = textPointer {
-                    srslt = rTracker_resource.fromSqlStr(String(cString: textPointer))
-                }
-            } else if step != SQLITE_DONE {
-                tobExecError(sql)
-            }
-            //[self tobDoneCheck:rslt];
-            sqlite3_finalize(stmt)
-        } else {
-            tobPrepError(sql)
-        }
-        objc_sync_exit(self)
-        SQLDbg(String("  returns _\(srslt ?? "nil")_"))
-
-        return srslt
-    }
-     */
     
-    func toQry2Str(sql: String) -> String? {
+    func toAddColumnINE(table: String, col: String, typ: String, dflt: String? = nil) {
+        // Check if the column already exists
+        let checkColumnSQL = "SELECT COUNT(*) FROM pragma_table_info('\(table)') WHERE name = '\(col)'"
+        let columnExistsResult = toQry2Str(sql: checkColumnSQL)
+        let columnExists = (Int(columnExistsResult) ?? 0) > 0
+        
+        if !columnExists {
+            //DBGLog("Adding 'hidden' column to toplevel table")
+            let alterTableSQL = "ALTER TABLE \(table) ADD COLUMN \(col) \(typ)\(dflt != nil ? " DEFAULT \(dflt!)" : "")"
+            toExecSql(sql: alterTableSQL)
+        } else {
+            //DBGLog("'hidden' column already exists in toplevel table")
+        }
+    }
+    
+    func toQry2Str(sql: String) -> String {
         tObjBase.performDatabaseOperation(toid: toid) { [self] in
             SQLDbg(String("toQry2StrCopy: \(dbName!) => _\(sql)_"))
-            guard let tDb = tDb else {
-                dbgNSAssert(false, "toQry2StrCopy called with no tDb")
-                return nil
-            }
             
             var stmt: OpaquePointer?
-            var srslt : String?
+            var srslt : String = ""
             
             if sqlite3_prepare_v2(tDb, sql, -1, &stmt, nil) == SQLITE_OK {
                 while sqlite3_step(stmt) == SQLITE_ROW {
@@ -719,18 +909,15 @@ class tObjBase: NSObject {
                 tobPrepError(sql)
             }
             //objc_sync_exit(self)
-            SQLDbg(String("  returns _\(srslt ?? "nil")_"))
+            SQLDbg(String("  returns _\(srslt)_"))
             
             return srslt
         }
     }
-    func toQry2I12aS1(sql: String) -> ([Int], String)? {
+    
+    func toQry2I12aS1(sql: String) -> ([Int], String) {
         tObjBase.performDatabaseOperation(toid: toid) { [self] in
             SQLDbg(String("toQry2AryI11S1: \(dbName!) => _\(sql)_"))
-            guard let tDb = tDb else {
-                dbgNSAssert(false, "toQry2AryI11S1 called with no tDb")
-                return nil
-            }
             
             var stmt: OpaquePointer?
             var srslt : String = ""
@@ -743,7 +930,7 @@ class tObjBase: NSObject {
                     }
                     let textPointer = sqlite3_column_text(stmt, 12)
                     if let textPointer = textPointer {
-                        srslt = rTracker_resource.fromSqlStr(String(cString: textPointer))!
+                        srslt = rTracker_resource.fromSqlStr(String(cString: textPointer))
                     }
                     SQLDbg(String("  rslt: \(arr[0]) \(arr[1]) \(arr[2]) \(arr[3]) \(arr[4]) \(arr[5]) \(arr[6]) \(arr[7]) \(arr[8]) \(arr[9]) \(arr[10]) \(arr[11]) \(srslt)"))
                 }
@@ -756,13 +943,9 @@ class tObjBase: NSObject {
         }
     }
     
-    func toQry2Float(sql: String) -> Float? {
+    func toQry2Float(sql: String) -> Float {
         tObjBase.performDatabaseOperation(toid: toid) { [self] in
             SQLDbg(String("toQry2Float: \(dbName!) => _\(sql)_"))
-            guard let tDb = tDb else {
-                dbgNSAssert(false, "toQry2Float called with no tDb")
-                return nil
-            }
             
             var stmt: OpaquePointer?
             var frslt: Float = 0.0
@@ -781,17 +964,13 @@ class tObjBase: NSObject {
         }
     }
 
-    func toQry2Double(sql: String) -> Double? {
+    func toQry2Double(sql: String) -> Double {
         tObjBase.performDatabaseOperation(toid: toid) { [self] in
             SQLDbg(String("toQry2Double: \(dbName!) => _\(sql)_"))
-            guard let tDb = tDb else {
-                dbgNSAssert(false, "toQry2Double called with no tDb")
-                return nil
-            }
             
             var stmt: OpaquePointer?
             var drslt = 0.0
-            objc_sync_enter(self)
+            //objc_sync_enter(self)
             
             if sqlite3_prepare_v2(tDb, sql, -1, &stmt, nil) == SQLITE_OK {
                 while sqlite3_step(stmt) == SQLITE_ROW {
@@ -849,10 +1028,6 @@ class tObjBase: NSObject {
         #if DEBUGLOG
         tObjBase.performDatabaseOperation(toid: toid) { [self] in
             SQLDbg(String("toQry2Log: \(dbName!) => _\(sql)_"))
-            guard let tDb = tDb else {
-                dbgNSAssert(false, "toQry2Log called with no tDb")
-                return
-            }
             
             var stmt: OpaquePointer?
             var srslt: String

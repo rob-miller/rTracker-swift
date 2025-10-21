@@ -32,45 +32,53 @@ class voText: voState, UITextFieldDelegate {
     private var _dtf: UITextField?
     var dtf: UITextField {
         //safeDispatchSync({ [self] in
-        if self._dtf != nil && self._dtf?.frame.size.width != vosFrame.size.width {
-            self._dtf = nil // first time around thinks size is 320, handle larger devices
+        if let existingDtf = _dtf, existingDtf.frame.size.width != vosFrame.size.width {
+            _dtf = nil // first time around thinks size is 320, handle larger devices
         }
         // })
         
-        if nil == _dtf {
+        if _dtf == nil {
             DBGLog(String("init \(vo.valueName) : x=\(vosFrame.origin.x) y=\(vosFrame.origin.y) w=\(vosFrame.size.width) h=\(vosFrame.size.height)"))
-            _dtf = UITextField(frame: vosFrame)
             
-
-            _dtf?.textColor = .label
-            _dtf?.backgroundColor = .secondarySystemBackground
+            let textField = UITextField(frame: vosFrame)
             
-            _dtf?.borderStyle = .roundedRect //Bezel;
-            _dtf?.font = PrefBodyFont //[UIFont systemFontOfSize:17.0];
-            _dtf?.autocorrectionType = .no // no auto correction support
+            textField.textColor = .label
+            textField.backgroundColor = .secondarySystemBackground
             
-            _dtf?.keyboardType = .default // use the full keyboard
-            _dtf?.placeholder = "<enter text>"
+            textField.borderStyle = .roundedRect //Bezel;
+            textField.font = PrefBodyFont //[UIFont systemFontOfSize:17.0];
+            textField.autocorrectionType = .no // no auto correction support
             
-            _dtf?.returnKeyType = .done
+            textField.keyboardType = .default // use the full keyboard
+            if vo.optDict["otsrc"] == "1" {
+                textField.placeholder = "<no data>"
+            } else {
+                textField.placeholder = "<enter number>"
+            }
             
-            _dtf?.clearButtonMode = .whileEditing // has a clear 'x' button to the right
+            textField.returnKeyType = .done
+            
+            textField.clearButtonMode = .whileEditing // has a clear 'x' button to the right
             
             //dtf.tag = kViewTag;		// tag this control so we can remove it later for recycled cells
-            _dtf?.delegate = self // let us be the delegate so we know when the keyboard's "Done" button is pressed
+            textField.delegate = self // let us be the delegate so we know when the keyboard's "Done" button is pressed
             
             // Add an accessibility label that describes what the text field is for.
-            _dtf?.accessibilityLabel = NSLocalizedString("NormalTextField", comment: "")
-            _dtf?.text = ""
-            _dtf?.addTarget(self, action: #selector(voNumber.textFieldDidChange(_:)), for: .editingChanged)
+            textField.accessibilityLabel = NSLocalizedString("NormalTextField", comment: "")
+            textField.text = ""
+            textField.addTarget(self, action: #selector(voNumber.textFieldDidChange(_:)), for: .editingChanged)
             
-            _dtf?.accessibilityIdentifier = "\(self.tvn())_textfield"
+            textField.accessibilityIdentifier = "\(self.tvn())_textfield"
+            
+            _dtf = textField
         }
     
         return _dtf!
     }
+    
     var startStr: String?
-
+    private var localCtvovc: configTVObjVC?
+    
     override func getValCap() -> Int {
         // NSMutableString size for value
         return 32
@@ -112,7 +120,7 @@ class voText: voState, UITextFieldDelegate {
     }
 
     override func resetData() {
-        if nil != _dtf {
+        if _dtf != nil && !vo.parentTracker.loadingDbData {
             // not self, do not instantiate
             if Thread.isMainThread {
                 dtf.text = ""
@@ -128,6 +136,17 @@ class voText: voState, UITextFieldDelegate {
     override func voDisplay(_ bounds: CGRect) -> UIView {
         vosFrame = bounds
 
+        _dtf = nil  // force recreate
+        
+        if vo.optDict["otsrc"] == "1" {
+            if let xrslt = vo.vos?.getOTrslt() {
+                vo.value = xrslt
+            } else {
+                vo.value = ""
+            }
+            addExternalSourceOverlay(to: dtf)  // no taps
+
+        }
         if vo.value != dtf.text {
             safeDispatchSync({ [self] in
                 dtf.text = vo.value
@@ -139,16 +158,17 @@ class voText: voState, UITextFieldDelegate {
         return dtf
     }
 
-    override func update(_ instr: String) -> String {
-        // confirm textfield not forgotten
-        if ((nil == _dtf) /* NOT self.dtf as we want to test if is instantiated */) || !(instr == "") {
-            return instr
+    override func update(_ instr: String?) -> String {
+        // Return input string if textfield isn't instantiated yet or if input string is non-empty
+        if (nil == _dtf) || (instr?.isEmpty == false) {  /* NOT self.dtf as we want to test if is instantiated */
+            return instr ?? ""
         }
-        var cpy: String?
-        safeDispatchSync({ [self] in
-            cpy = dtf.text ?? ""
-        })
-        return cpy!
+        
+        var textFieldContent: String = ""
+        safeDispatchSync { [self] in
+            textFieldContent = dtf.text ?? ""
+        }
+        return textFieldContent
     }
 
     // MARK: -
@@ -161,27 +181,56 @@ class voText: voState, UITextFieldDelegate {
     }
 
     override func cleanOptDictDflts(_ key: String) -> Bool {
-        /*
-            NSString *val = [self.vo.optDict objectForKey:key];
-            if (nil == val) 
-                return YES;
-            if (([key isEqualToString:@"shrinkb"] && [val isEqualToString:(SHRINKBDFLT ? @"1" : @"0")])
-                ) {
-                [self.vo.optDict removeObjectForKey:key];
-                return YES;
-            }
-            */
+
         return super.cleanOptDictDflts(key)
     }
 
+    @objc func forwardToConfigOtherTrackerSrcView() {
+        localCtvovc?.configOtherTrackerSrcView()
+    }
+    
     override func voDrawOptions(_ ctvovc: configTVObjVC) {
-        let labframe = ctvovc.configLabel(
-            "Options:",
+        
+        var frame = CGRect(x: MARGIN, y: ctvovc.lasty, width: 0.0, height: 0.0)
+        
+        var labframe = ctvovc.configLabel(
+            "Text options:",
             frame: CGRect(x: MARGIN, y: ctvovc.lasty, width: 0.0, height: 0.0),
             key: "gooLab",
             addsv: true)
 
-        ctvovc.lasty += labframe.size.height + MARGIN
+        localCtvovc = ctvovc
+        
+        frame.origin.x = MARGIN
+        frame.origin.y += MARGIN + labframe.size.height
+        
+        labframe = ctvovc.configLabel("Other Tracker source: ", frame: frame, key: "otsLab", addsv: true)
+        frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
+
+        frame = ctvovc.configSwitch(
+            frame,
+            key: "otsBtn",
+            state: vo.optDict["otsrc"] == "1",
+            addsv: true)
+
+        frame.origin.x = MARGIN
+        frame.origin.y += MARGIN + frame.size.height
+        
+        let source = self.vo.optDict["otTracker"] ?? ""
+        let value = self.vo.optDict["otValue"] ?? ""
+        let str = (!source.isEmpty && !value.isEmpty) ? "\(source):\(value)" : "Configure"
+        
+        frame = ctvovc.configActionBtn(frame, key: "otSelBtn", label: str, target: self, action: #selector(forwardToConfigOtherTrackerSrcView))
+        ctvovc.switchUpdate(okey: "otsrc", newState: vo.optDict["otsrc"] == "1")
+        
+        frame.origin.x = MARGIN
+        frame.origin.y += MARGIN + frame.size.height
+        
+        
+        labframe = ctvovc.configLabel("Other options:", frame: frame, key: "noLab", addsv: true)
+        
+        ctvovc.lasty = frame.origin.y + labframe.size.height + MARGIN
+        
         super.voDrawOptions(ctvovc)
     }
 

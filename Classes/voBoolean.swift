@@ -38,17 +38,14 @@ class voBoolean: voState {
         return _bSwitch
     }
 
+    private var localCtvovc: configTVObjVC?
 
     @objc func boolBtnAction(_ bSwitch: UIButton?) {
-        // default is unchecked or nil // 25.i.14 use assigned val // was "so only certain is if =1" ?
+        // default is unchecked or nil
         if vo.value == "" {
             let bv = vo.optDict["boolval"]
-            //if (nil == bv) {
-            //bv = BOOLVALDFLTSTR;
-            //[self.vo.optDict setObject:bv forKey:@"boolval"];
-            //}
             vo.value = bv!
-            rTracker_resource.setSwitch(self.bSwitch!, colr: rTracker_resource.colorSet()[Int(vo.optDict["btnColr"]!)!])
+            rTracker_resource.setSwitch(self.bSwitch!, colr: rTracker_resource.colorSet[Int(vo.optDict["btnColr"]!)!])
             if "1" == vo.optDict["setstrackerdate"] {
                 vo.setTrackerDateToNow()
             }
@@ -63,19 +60,36 @@ class voBoolean: voState {
 
     override func voDisplay(_ bounds: CGRect) -> UIView {
         vosFrame = bounds
-
+        // Force recreation of switch for each cell to ensure proper rendering
+        _bSwitch = nil
+        
+        if vo.optDict["otsrc"] == "1" {
+            if let xrslt = vo.vos?.getOTrslt() {
+                if xrslt.isEmpty {  // Empty string
+                    vo.value = ""
+                } else if let numericValue = Double(xrslt) { // It's a number in string form
+                    vo.value = numericValue < 0.5 ? "" : "1"
+                } else { // It's a non-empty text string that's not a number
+                    vo.value = "1"
+                }
+            } else {  // xrslt is nil
+                vo.value = ""
+            }
+            
+            addExternalSourceOverlay(to: bSwitch!)  // no taps
+        }
         if vo.value == "" {
             rTracker_resource.clrSwitch(bSwitch!, colr: .tertiarySystemBackground)
         } else {
-            rTracker_resource.setSwitch(bSwitch!, colr: rTracker_resource.colorSet()[Int(vo.optDict["btnColr"]!)!])
+            rTracker_resource.setSwitch(bSwitch!, colr: rTracker_resource.colorSet[Int(vo.optDict["btnColr"]!)!])
         }
 
-        DBGLog(String("bool data= \(vo.value)"))
+        //DBGLog(String("bool data= \(vo.value)"))
         return bSwitch!
     }
 
     override func voGraphSet() -> [String] {
-        return ["dots", "bar"]
+        return ["dots", "bar", "no graph"]
     }
 
     // MARK: -
@@ -132,18 +146,34 @@ class voBoolean: voState {
     @objc func boolColorButtonAction(_ btn: UIButton?) {
         var col = Int(vo.optDict["btnColr"]!)!
         col += 1
-        if col >= rTracker_resource.colorSet().count {
+        if col >= rTracker_resource.colorSet.count {
             col = 0
         }
         vo.optDict["btnColr"] = String(format: "%ld", col)
-        btn?.backgroundColor = rTracker_resource.colorSet()[col]
+        btn?.backgroundColor = rTracker_resource.colorSet[col]
     }
-
+    
+    @objc func forwardToConfigOtherTrackerSrcView() {
+        localCtvovc?.configOtherTrackerSrcView()
+    }
+    
     override func voDrawOptions(_ ctvovc: configTVObjVC) {
         var frame = CGRect(x: MARGIN, y: ctvovc.lasty, width: 0.0, height: 0.0)
 
-        var labframe = ctvovc.configLabel("stored value:", frame: frame, key: "bvLab", addsv: true)
+        var labframe = ctvovc.configLabel(
+            "Boolean (yes/no) options:",
+            frame: CGRect(x: MARGIN, y: ctvovc.lasty, width: 0.0, height: 0.0),
+            key: "gooLab",
+            addsv: true)
 
+        localCtvovc = ctvovc
+        
+        
+        frame.origin.x = MARGIN
+        frame.origin.y += MARGIN + labframe.size.height
+        
+        labframe = ctvovc.configLabel("stored value:", frame: frame, key: "bvLab", addsv: true)
+        
         frame.origin.x = labframe.size.width + MARGIN + SPACE
         let tfWidth = "9999999999".size(withAttributes: [
             NSAttributedString.Key.font: PrefBodyFont
@@ -196,7 +226,7 @@ class voBoolean: voState {
             bc = BOOLBTNCOLRDFLTSTR
             vo.optDict["btnColr"] = BOOLBTNCOLRDFLTSTR
         }
-        btn.backgroundColor = rTracker_resource.colorSet()[Int(bc!)!]
+        btn.backgroundColor = rTracker_resource.colorSet[Int(bc!)!]
 
         btn.titleLabel?.font = PrefBodyFont
 
@@ -206,17 +236,42 @@ class voBoolean: voState {
         ctvovc.scroll.addSubview(btn)
 
 
-        //-----
+        frame.origin.x = MARGIN
+        frame.origin.y += MARGIN + frame.size.height
+        
+        labframe = ctvovc.configLabel("Other Tracker source: ", frame: frame, key: "otsLab", addsv: true)
+        frame = CGRect(x: labframe.size.width + MARGIN + SPACE, y: frame.origin.y, width: labframe.size.height, height: labframe.size.height)
 
-        ctvovc.lasty = frame.origin.y + labframe.size.height + MARGIN + SPACE
+        frame = ctvovc.configSwitch(
+            frame,
+            key: "otsBtn",
+            state: vo.optDict["otsrc"] == "1",
+            addsv: true)
+
+        frame.origin.x = MARGIN
+        frame.origin.y += MARGIN + frame.size.height
+        
+        let source = self.vo.optDict["otTracker"] ?? ""
+        let value = self.vo.optDict["otValue"] ?? ""
+        let str = (!source.isEmpty && !value.isEmpty) ? "\(source):\(value)" : "Configure"
+        
+        frame = ctvovc.configActionBtn(frame, key: "otSelBtn", label: str, target: self, action: #selector(forwardToConfigOtherTrackerSrcView))
+        ctvovc.switchUpdate(okey: "otsrc", newState: vo.optDict["otsrc"] == "1")
+        
+        frame.origin.x = MARGIN
+        frame.origin.y += MARGIN + frame.size.height
+        
+        
+        labframe = ctvovc.configLabel("Other options:", frame: frame, key: "noLab", addsv: true)
+
+        ctvovc.lasty = frame.origin.y + labframe.size.height + MARGIN
 
         super.voDrawOptions(ctvovc)
     }
     
     override func voTVCellHeight() -> CGFloat {
-        //return CELL_HEIGHT_TALL;
-        DBGLog(String("\(bSwitch!.frame.size.height) \(3 * MARGIN) \(vo.getLabelSize().height) \(vo.getLongTitleSize().height)"))
-        return bSwitch!.frame.size.height + MARGIN   // (3 * MARGIN) // + vo.getLabelSize().height + vo.getLongTitleSize().height
+        //DBGLog(String("\(bSwitch!.frame.size.height) \(3 * MARGIN) \(vo.getLabelSize().height) "))
+        return bSwitch!.frame.size.height + MARGIN   // (3 * MARGIN) // + vo.getLabelSize().height
     }
 
     /* rtm here : export value option -- need to parse and match value if choice did not match

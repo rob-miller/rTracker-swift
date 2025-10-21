@@ -85,23 +85,37 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>7967</string>
+	<string>8323</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
 	<key>NSContactsUsageDescription</key>
 	<string>$(PRODUCT_NAME) can use your contact names in trackers.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>Access is needed to import and export tracker data</string>
+	<key>NSFileProviderUsageDescription</key>
+	<string>Enable user to load HealthKit identifiers</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Enable reading Apple Health data into your trackers</string>
-	<key>NSMainNibFile</key>
-	<string>MainWindow</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Reads your HealthKit data to load into your private trackers for your own personal analysis. </string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
 		<false/>
 		<key>UISceneConfigurations</key>
-		<dict/>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>Default Configuration</string>
+					<key>UISceneDelegateClassName</key>
+					<string>$(PRODUCT_MODULE_NAME).rTrackerSceneDelegate</string>
+				</dict>
+			</array>
+		</dict>
 	</dict>
 	<key>UIFileSharingEnabled</key>
 	<true/>
@@ -114,6 +128,8 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 	</array>
+	<key>UISupportsDocumentBrowser</key>
+	<true/>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>
@@ -122,7 +138,7 @@
 				<string>public.data</string>
 			</array>
 			<key>UTTypeDescription</key>
-			<string>rTracker Document</string>
+			<string>rTracker rtrk Document</string>
 			<key>UTTypeIdentifier</key>
 			<string>com.realidata.rTracker.rtrk</string>
 			<key>UTTypeSize320IconFile</key>
