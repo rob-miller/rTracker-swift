@@ -183,6 +183,41 @@ class rtDocs {
             description: "Calculates seconds in the range.",
         ),
         rtDocEntry(
+            identifier: "op_sunday",
+            title: "Sunday",
+            description: "Returns true if the entry is on a Sunday.",
+        ),
+        rtDocEntry(
+            identifier: "op_monday",
+            title: "Monday",
+            description: "Returns true if the entry is on a Monday.",
+        ),
+        rtDocEntry(
+            identifier: "op_tuesday",
+            title: "Tuesday",
+            description: "Returns true if the entry is on a Tuesday.",
+        ),
+        rtDocEntry(
+            identifier: "op_wednesday",
+            title: "Wednesday",
+            description: "Returns true if the entry is on a Wednesday.",
+        ),
+        rtDocEntry(
+            identifier: "op_thursday",
+            title: "Thursday",
+            description: "Returns true if the entry is on a Thursday.",
+        ),
+        rtDocEntry(
+            identifier: "op_friday",
+            title: "Friday",
+            description: "Returns true if the entry is on a Friday.",
+        ),
+        rtDocEntry(
+            identifier: "op_saturday",
+            title: "Saturday",
+            description: "Returns true if the entry is on a Saturday.",
+        ),
+        rtDocEntry(
             identifier: "op_delay",
             title: "delay",
             description: "Returns the value from the first entry in the range. Use this to mark lagged events. Example: delay[training] with early endpoint of '-10 days' might be used to measure retention exactly 10 days after a lesson.",

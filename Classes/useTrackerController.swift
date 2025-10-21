@@ -1267,9 +1267,13 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
         // see related updateTableCells above
         //DBGLog(@"utc: updateTrackerTableView");
         DispatchQueue.main.async(execute: { [self] in
-            
+
             for vo in tracker!.valObjTableH {
                 vo.display = nil  // always redisplay
+                // Clear function caches when date changes - functions depend on trackerDate (epd1)
+                if vo.vtype == VOT_FUNC {
+                    vo.vos?.setFNrecalc()  // Force recalculation with new trackerDate
+                }
             }
             
             // Remove any existing tint view (in case state changed)

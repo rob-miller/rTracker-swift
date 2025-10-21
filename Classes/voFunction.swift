@@ -120,10 +120,23 @@ func isFn2ArgOp(_ i: Int) -> Bool {
 let FNNEWTIMEFIRST = FNNEW2ARGLAST - 10
 let FNTIMEMINS = FNNEWTIMEFIRST - 1
 let FNTIMESECS = FNTIMEMINS - 1
+
+let FNTIMESUNDAY = FNTIMESECS - 1
+let FNTIMEMONDAY = FNTIMESUNDAY - 1
+let FNTIMETUESDAY = FNTIMEMONDAY - 1
+let FNTIMEWEDNESDAY = FNTIMETUESDAY - 1
+let FNTIMETHURSDAY = FNTIMEWEDNESDAY - 1
+let FNTIMEFRIDAY = FNTIMETHURSDAY - 1
+let FNTIMESATURDAY = FNTIMEFRIDAY - 1
+
 let FNNEWTIMELAST = FNNEWTIMEFIRST - 100
 
 func isFnTimeOp(_ i: Int) -> Bool {
     ((i <= FNTIMEFIRST) && (i >= FNTIMELAST)) || ((i <= FNNEWTIMEFIRST) && (i >= FNNEWTIMELAST))
+}
+
+func isFnDayOfWeek(_ i: Int) -> Bool {
+    (i <= FNTIMESUNDAY) && (i >= FNTIMESATURDAY)
 }
 
 let FNNEWOTHERFIRST = FNNEWTIMELAST - 10
@@ -154,8 +167,8 @@ let PARENFNS = [FNPARENOPEN, FNPARENCLOSE]
 let PARENSTRS = ["(", ")"]
 let PARENCNT = PARENFNS.count
 
-let TIMEFNS = [FNTIMEWEEKS,FNTIMEDAYS,FNTIMEHRS,FNTIMEMINS,FNTIMESECS]
-let TIMESTRS = ["weeks","days","hours","minutes","seconds"]
+let TIMEFNS = [FNTIMEWEEKS,FNTIMEDAYS,FNTIMEHRS,FNTIMEMINS,FNTIMESECS,FNTIMESUNDAY,FNTIMEMONDAY,FNTIMETUESDAY,FNTIMEWEDNESDAY,FNTIMETHURSDAY,FNTIMEFRIDAY,FNTIMESATURDAY]
+let TIMESTRS = ["weeks","days","hours","minutes","seconds","Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]
 let TIMECNT = TIMEFNS.count
 
 let OTHERFNS = [FNCONSTANT, FNBEFORE, FNAFTER]
@@ -1202,14 +1215,40 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                 DBGLog(String("\(currTok == FNBEFORE ? "before" : "after"): epd1=\(epd1) ts=\(timestamp) result=\(String(describing: result))"))
                 #endif
             } else if isFnTimeOp(currTok) {
-                if 0 == epd0 {
-                    #if FUNCTIONDBG
-                    DBGLog(" timefn: at beginning")
-                    #endif
-                    return nil
-                }
+                // Handle day-of-week operators (don't require epd0)
+                if isFnDayOfWeek(currTok) {
+                    let date = Date(timeIntervalSince1970: TimeInterval(epd1))
+                    let calendar = Calendar.current
+                    let weekday = calendar.component(.weekday, from: date)
 
-                result = Double(epd1) - Double(epd0)
+                    // weekday: 1=Sunday, 2=Monday, 3=Tuesday, 4=Wednesday, 5=Thursday, 6=Friday, 7=Saturday
+                    let expectedWeekday: Int
+                    switch currTok {
+                    case FNTIMESUNDAY:    expectedWeekday = 1
+                    case FNTIMEMONDAY:    expectedWeekday = 2
+                    case FNTIMETUESDAY:   expectedWeekday = 3
+                    case FNTIMEWEDNESDAY: expectedWeekday = 4
+                    case FNTIMETHURSDAY:  expectedWeekday = 5
+                    case FNTIMEFRIDAY:    expectedWeekday = 6
+                    case FNTIMESATURDAY:  expectedWeekday = 7
+                    default:              expectedWeekday = 0
+                    }
+
+                    result = (weekday == expectedWeekday) ? 1.0 : nil
+
+                    #if FUNCTIONDBG
+                    DBGLog("day-of-week: epd1=\(epd1) weekday=\(weekday) expected=\(expectedWeekday) result=\(String(describing: result))")
+                    #endif
+                } else {
+                    // Handle time duration operators (require epd0)
+                    if 0 == epd0 {
+                        #if FUNCTIONDBG
+                        DBGLog(" timefn: at beginning")
+                        #endif
+                        return nil
+                    }
+
+                    result = Double(epd1) - Double(epd0)
                 #if FUNCTIONDBG
                 DBGLog(String("timefn: \(String(describing: result)) secs"))
                 #endif
@@ -1247,9 +1286,10 @@ class voFunction: voState, UIPickerViewDelegate, UIPickerViewDataSource {
                     //result /= d( 60 * 60 );  // 60 secs min * 60 secs hr
                     break
                 }
-                #if FUNCTIONDBG
-                DBGLog(String("timefn: \(String(describing: result)) final units"))
-                #endif
+                    #if FUNCTIONDBG
+                    DBGLog(String("timefn: \(String(describing: result)) final units"))
+                    #endif
+                } // end else (time duration operators)
             } else {
                 // remaining option is we have some vid as currTok, return its value up the chain
                 guard let lvo = to.getValObj(currTok) else {

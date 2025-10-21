@@ -31,6 +31,8 @@ Implements function value objects that can calculate derived values from other t
 ## Implementation Details
 - **Return Value Strategy**: Functions return `nil` internally (empty string `""` externally) when calculations cannot be performed, rather than returning '0'
 - **Time Calculations**: Support for elapsed time, calendar periods, and relative date ranges
+- **Time Duration Operators**: weeks, days, hours, minutes, seconds - require both epd0 and epd1, calculate difference and convert to specified units
+- **Day-of-Week Operators**: Sunday through Saturday - use only epd1, return 1.0 if entry falls on that day, nil otherwise
 - **Logical Operations**: Implement AND, OR, XOR, comparison operators with nil-aware semantics
 - **Boolean Functions**: `before` and `after` compare record date/time against configured timestamp, returning 1.0 for true or nil for false
 - **Caching**: Uses `lastCalcValue` and `lastEpd0` for performance optimization
@@ -66,7 +68,7 @@ NEW FUNCTION ALLOCATION SPACES (Add new functions here):
   FNNEW2ARGLAST = FNNEW2ARGFIRST - 100  (100 space allocation)
 
   FNNEWTIMEFIRST = FNNEW2ARGLAST - 10
-    [New time functions: mins, secs]
+    [New time functions: mins, secs, Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday]
   FNNEWTIMELAST = FNNEWTIMEFIRST - 100  (100 space allocation)
 
   FNNEWOTHERFIRST = FNNEWTIMELAST - 10
@@ -140,6 +142,7 @@ Functions with configurable parameters (like `constant`, `before`, `after`) use 
 - Reuses `constantPending`/`constantClosePending` flags in display logic
 
 ## Current Issues & TODOs
+✅ **COMPLETED (2025-10-21)**: Implemented day-of-week operators (Sunday through Saturday)
 ✅ **COMPLETED (2025-10-08)**: Implemented floor and ceiling as 1-arg functions
 ✅ **COMPLETED (2025-10-08)**: Fixed min2/max2 display from symbols to text
 ✅ **COMPLETED (2025-10-08)**: Fixed stale function display by removing early return cache
@@ -153,6 +156,51 @@ Functions with configurable parameters (like `constant`, `before`, `after`) use 
 ✅ Updated fnStrDict initialization to include fnOtherOps array
 
 ## Recent Development History
+- 2025-10-21: **Fixed Function Caching Bug When TrackerDate Changes**
+  - **Bug**: When user changed date for a record, day-of-week functions showed BOTH old and new days as true
+  - **Root Cause**: Cache validation in `update()` only checked `ep0date` (previous endpoint), NOT `epd1` (current entry date from `trackerDate`)
+    - Cache key: `if ep0date == lastEpd0 && !lastCalcValue.isEmpty && !fnDirty` (line 1366)
+    - When `trackerDate` changed, `epd1` would be different but cache wasn't invalidated
+    - Function returned OLD cached value calculated with OLD `epd1`
+  - **Fix**: Added `vo.vos?.setFNrecalc()` call in `updateTrackerTableView()` (useTrackerController.swift:1274-1276)
+    - Matches existing pattern in `updateTableCells()` (line 172)
+    - Forces cache invalidation when date changes
+    - Ensures functions recalculate with new `trackerDate`/`epd1` value
+  - **Impact**: Fixes day-of-week operators and any other functions that depend on current entry timestamp (`epd1`)
+  - **Related files**: useTrackerController.swift (updateTrackerTableView function)
+- 2025-10-21: **Fixed Critical Epoch Bug in Day-of-Week Operators**
+  - **Bug**: Line 1220 used wrong epoch - `timeIntervalSinceReferenceDate` instead of `timeIntervalSince1970`
+  - **Impact**: Systematic 4-day offset error (Tuesday detected as Saturday, Monday as Friday)
+  - **Root Cause**:
+    - `timeIntervalSinceReferenceDate` = January 1, 2001 epoch
+    - `timeIntervalSince1970` = January 1, 1970 epoch (Unix epoch)
+    - Difference: 978,307,200 seconds (~31 years)
+  - **Fix**: Changed to `Date(timeIntervalSince1970: TimeInterval(epd1))` at line 1220
+  - **Rationale**: rTracker stores all timestamps as Unix epoch (timeIntervalSince1970)
+    - Database queries use `timeIntervalSince1970` (valueObj.swift:513, 516)
+    - All date conversions throughout codebase use `timeIntervalSince1970`
+    - `before/after` functions compare Unix epoch timestamps directly
+- 2025-10-21: **Implemented Day-of-Week Operators (Sunday through Saturday)**
+  - **New Helper Function**: Added `isFnDayOfWeek()` at line 138 to check if token is FNTIMESUNDAY...FNTIMESATURDAY
+  - **Token Constants**: Already defined at lines 124-130 (FNTIMESUNDAY through FNTIMESATURDAY)
+  - **Arrays**: Already in TIMEFNS and TIMESTRS arrays (lines 166-167)
+  - **Evaluation Logic**: Added in `calcFunctionValue()` at lines 1217-1241
+    - Handles day-of-week operators BEFORE time duration operators (different requirements)
+    - Uses only `epd1` (current entry timestamp), does NOT require `epd0`
+    - Converts epd1 to Date using `timeIntervalSince1970` (Unix epoch)
+    - Uses `Calendar.current` to get weekday component (1=Sunday through 7=Saturday)
+    - Returns 1.0 if weekday matches the operator's expected day, nil otherwise
+    - Matches pattern of `before/after` operators (boolean result using only epd1)
+  - **Time Duration Operators**: Wrapped existing weeks/days/hrs/mins/secs logic in else block (lines 1242-1292)
+    - These operators require BOTH epd0 and epd1 (calculate time difference)
+    - Separated from day-of-week operators which only need epd1
+  - **Debug Logging**: Added FUNCTIONDBG logging for day-of-week evaluation (line 1240)
+  - **Documentation**: Already existed in rtDocs.swift (lines 186-218)
+  - **UI Support**: Already existed in voFunctionConfig.swift (lines 821-827)
+  - **Use Cases**:
+    - Filter entries by day of week (e.g., "sum of calories on Sundays")
+    - Conditional logic based on day (e.g., "if Monday then 1 else 0")
+    - Time-based analysis (e.g., "average sleep on weekends vs weekdays")
 - 2025-10-08: **Changed Logical Operators to Programming Style**
   - **NOT operator**: Changed from `¬` to `!` (line 146 in ARG1STRS)
   - **AND operator**: Changed from `∧` to `&` (line 150 in ARG2STRS)
@@ -225,4 +273,4 @@ Functions with configurable parameters (like `constant`, `before`, `after`) use 
 - Performance improvements with pull-to-refresh mechanisms (b4966ac)
 
 ## Last Updated
-2025-10-08 - Changed logical operators to programming style: NOT `¬`→`!`, AND `∧`→`&`, OR `∨`→`|`, XOR `⊕`→`^`. Also implemented floor/ceiling as 1-arg functions and changed min2/max2 to use "><" and "<>" symbols. All operators now use ASCII characters (no Unicode), making them more familiar to programmers and easier to type. No backward compatibility issues since stored functions use numeric tokens, not display strings.
+2025-10-21 - Fixed function caching bug when trackerDate changes. Added `setFNrecalc()` call in `updateTrackerTableView()` to force function recalculation when the record date is changed. Previously, the cache validation only checked `ep0date` (previous endpoint) and missed when `epd1` (current entry date) changed, causing day-of-week functions to show both old and new days as true. The fix matches the existing pattern in `updateTableCells()` and ensures all functions that depend on the current entry timestamp recalculate correctly when dates change.

@@ -10,10 +10,11 @@ Main view controller for data entry in trackers. Displays value objects in a tab
 
 ## Important Methods/Functions
 - `viewDidLoad()`: Sets up UI, loads external data sources (HealthKit/Other Trackers)
-- `updateTrackerTableView()`: Refreshes the table display, handles ignored record tinting
+- `updateTrackerTableView()`: Refreshes the table display, handles ignored record tinting, forces function recalculation via setFNrecalc()
+- `updateTableCells(_:)`: Updates specific cells, forces function recalculation for changed values
 - `pullToRefreshStarted(_:)`: Handles pull-to-refresh gestures with progressive refresh
 - `handleFullRefresh()`: Comprehensive data reload from all external sources
-- `setTrackerDate(_:)`: Navigates to specific dates, handles data loading/saving
+- `loadTrackerDate(_:)`: Navigates to specific dates, handles data loading/saving, calls updateTrackerTableView()
 - `saveActions()`: Saves current tracker data and manages rejectable tracker acceptance
 
 ## Dependencies & Relationships
@@ -45,7 +46,21 @@ Main view controller for data entry in trackers. Displays value objects in a tab
   - Cancel handling: Restores original tracker date when user cancels save alerts
 
 ## Recent Development History
-**Current Session (2025-09-26) - Date Picker Modernization and Save Handling:**
+**Current Session (2025-10-21) - Function Cache Invalidation Fix:**
+- **MAJOR BUG FIX**: Added `setFNrecalc()` call in `updateTrackerTableView()` for VOT_FUNC objects (lines 1274-1276)
+- **Problem**: When user changed date for a record, function values used stale cached values
+  - Cache validation only checked `ep0date` (previous endpoint), not `epd1` (current entry timestamp from `trackerDate`)
+  - Day-of-week functions showed BOTH old and new days as true
+  - Any function depending on current entry date (`epd1`) would show incorrect cached results
+- **Root Cause**: `updateTrackerTableView()` set `vo.display = nil` but didn't invalidate function caches
+- **Fix**: Added VOT_FUNC check with `vo.vos?.setFNrecalc()` call
+  - Matches existing pattern in `updateTableCells()` (line 172)
+  - Forces cache invalidation by clearing `lastCalcValue` and setting `lastEpd0 = -1`
+  - Ensures functions recalculate with new `trackerDate`/`epd1` value
+- **Impact**: Functions now correctly recalculate when date changes via currDateBtn or loadTrackerDate()
+- **Related**: voFunction.swift (cache validation logic), datePickerVC.swift (date selection)
+
+**Previous Session (2025-09-26) - Date Picker Modernization and Save Handling:**
 - **MAJOR**: Updated DatePickerResult integration from legacy dpRslt to modern enum-based system
 - **Enhanced save conflict handling**: Added `createNewEntry()` function with proper unsaved changes checking
 - **Fixed cancel behavior**: Implemented `originalTrackerDate` restoration when user cancels save alerts
@@ -81,6 +96,7 @@ Main view controller for data entry in trackers. Displays value objects in a tab
 - **Navigation**: Complex date navigation with search set support and swipe gestures
 
 ## Current Issues & TODOs
+- ✅ **COMPLETED (2025-10-21)**: Fixed function cache invalidation when date changes
 - ✅ **COMPLETED (2025-10-08)**: Fixed swipe right looping behavior at oldest record
 - ✅ **COMPLETED**: DatePickerResult modernization with enum-based actions
 - ✅ **COMPLETED**: Save conflict handling for new entries via createNewEntry()
@@ -91,7 +107,8 @@ Main view controller for data entry in trackers. Displays value objects in a tab
 - ✅ **COMPLETED**: Accept/reject mode visual clarity with red/green color coding
 
 ## Last Updated
-2025-10-08 - **Swipe Right Boundary Fix**: Fixed `handleViewSwipeRight()` to prevent looping back to current record when reaching the oldest entry. Added early return when `targD == -1` (no previous date available) at line 1677-1679. Previously, swiping right at the oldest record would call `loadTrackerDate(-1)` which triggered `resetData()` and created a blank entry with current date, appearing to loop. Now the swipe gesture simply does nothing at the history boundary, matching user expectations.
+2025-10-21 - **Function Cache Invalidation Fix**: Fixed critical bug where function values showed stale cached results when record date was changed. Added `setFNrecalc()` call in `updateTrackerTableView()` at lines 1274-1276 to force function recalculation when `trackerDate` changes. The cache validation logic only checked `ep0date` (previous endpoint) but missed when `epd1` (current entry timestamp) changed, causing day-of-week functions to show both old and new days as true. The fix matches the existing pattern in `updateTableCells()` and ensures all functions recalculate with the new date.
 
-Previous update:
-2025-09-26 - Date Picker Modernization: Enhanced save conflict handling and UI consistency fixes
+Previous updates:
+- 2025-10-08 - Swipe Right Boundary Fix: Prevented looping at oldest record
+- 2025-09-26 - Date Picker Modernization: Enhanced save conflict handling and UI consistency fixes
