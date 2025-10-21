@@ -33,7 +33,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
     init() {
         //super.init()
         DBGLog("rtHealthKit init called")
-        tl = RootViewController.shared.tlist
+        tl = trackerList.shared
         let sql = "select count(*) from rthealthkit"
         dbInitialised = (tl?.toQry2Int(sql:sql) ?? 0) != 0
         loadHealthKitConfigurations()

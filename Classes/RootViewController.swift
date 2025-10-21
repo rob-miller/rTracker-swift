@@ -71,7 +71,6 @@ extension Notification.Name {
 }
 
 public class RootViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, UNUserNotificationCenterDelegate {
-    static let shared = RootViewController()
     var tableView: UITableView?
 
     var initialPrefsLoad = false

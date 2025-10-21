@@ -1566,53 +1566,74 @@ class rTracker_resource: NSObject {
     let sql = "SELECT disabled FROM rthealthkit"
     let statuses = tl.toQry2AryI(sql: sql)
 
-    // Determine which symbol to use based on configuration state
-    let symbolName: String
-    let hasAny = statuses.count > 0
+    func symbolFromStatuses(_ statuses: [Int]) -> String {
+        // determine symbol based on db statuses
 
-    if !hasAny {
-      // No configurations exist
-      symbolName = "heart"
-    } else {
-      // Filter out hidden entries (status 4) for analysis
-      let activeStatuses = statuses.filter { $0 != 4 }
-
-      if activeStatuses.isEmpty {
-        // All are hidden
-        symbolName = "heart"
-      } else if activeStatuses.allSatisfy({ $0 == 1 || $0 == 3 }) {
-        // All enabled (status 1) or authorized with no data (status 3)
-        symbolName = healthKitIcon
-      } else if activeStatuses.contains(where: { $0 == 2 }) {
-        // Some not authorized (2)
-        symbolName = "arrow.trianglehead.clockwise.heart"
-      } else {
-        // Default fallback
-        symbolName = "heart"
-      }
+        if statuses.isEmpty {
+            return "heart"
+        }
+        let active = statuses.filter { $0 != 4 }
+        if active.isEmpty {
+            return "heart"
+        } else if active.allSatisfy({ $0 == 1 || $0 == 3 }) {
+            return healthKitIcon
+        } else if active.contains(2) {
+            return "arrow.trianglehead.clockwise.heart"
+        } else {
+            return "heart"
+        }
     }
 
-    return createActionButton(
-      target: target,
-      action: action,
-      symbolName: symbolName,
-      accId: accId,
-      tintColor: .systemRed,
-      fallbackTitle: "❤️"
+    let originalSymbol = symbolFromStatuses(statuses)
+
+    let healthButton = createActionButton(
+        target: target,
+        action: action,
+        symbolName: originalSymbol,
+        accId: accId,
+        tintColor: .systemRed,
+        fallbackTitle: "❤️"
     )
+    // now have db info based button ready for return
+
+    // start a new thread to update it if healthkit authorisations have changed
+    DispatchQueue.global(qos: .utility).async {
+        let rthk = rtHealthKit.shared
+        rthk.updateAuthorisations {
+            // Re-read DB (after update) and compute new symbol
+            let refreshed = tl.toQry2AryI(sql: sql)
+            let newSymbol = symbolFromStatuses(refreshed)
+
+            guard newSymbol != originalSymbol else { return }
+
+            let fallbackTitle = (newSymbol == healthKitIcon ? "❤️" : "💔")
+            DBGLog("healthkit access has changed, updating button to \(newSymbol) fallback \(fallbackTitle)", color: .ORANGE)
+
+            DispatchQueue.main.async {
+                // healthbutton is a uibarbuttonitem with customview of uibutton
+                if let btn = healthButton.customView as? UIButton {
+                    if #available(iOS 26.0, *) {
+                        // use configuration update
+                        var config = btn.configuration
+                        let symSize = UIImage.SymbolConfiguration(pointSize: 22, weight: .regular)
+                        let img = UIImage(systemName: newSymbol)?
+                            .applyingSymbolConfiguration(symSize)?
+                            .withTintColor(.systemRed, renderingMode: .alwaysOriginal)
+                        config?.image = img
+                        btn.configuration = config
+                    } else {
+                        // Pre-iOS26 fallback: update title
+                        btn.setTitle(fallbackTitle, for: .normal)
+                        btn.setImage(nil, for: .normal)
+                    }
+                } // else all is broken bc customview not uibutton as created above
+            }
+        }
+    }
+
+    // return the button which will update async if needed
+    return healthButton
   }
-
-}
-
-// MARK: - UIBarButtonItem Extension for Privacy Views
-extension UIBarButtonItem {
-  /// Returns the underlying UIButton from customView for privacy views that need direct UIButton access
-  var uiButton: UIButton? {
-    return self.customView as? UIButton
-  }
-}
-
-extension rTracker_resource {
 
   /// Shows help content in a popover or modal presentation
   class func showHelp(
@@ -1737,4 +1758,14 @@ extension rTracker_resource {
       sourceRect: sourceRect)
   }
 
+} // end of class rTracker_resource
+
+
+// MARK: - UIBarButtonItem Extension when need UIButton access
+
+extension UIBarButtonItem {
+  /// Returns the underlying UIButton from customView for privacy views that need direct UIButton access
+  var uiButton: UIButton? {
+    return self.customView as? UIButton
+  }
 }
