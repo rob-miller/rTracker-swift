@@ -134,27 +134,53 @@ class rtDocs {
         rtDocEntry(
             identifier: "op_elapsed_weeks",
             title: "elapsed_weeks",
-            description: "Calculates weeks between first and last entries with data in the range.",
+            description: "Calculates weeks between first and last entries with data for the specified value in the range.",
         ),
         rtDocEntry(
             identifier: "op_elapsed_days",
             title: "elapsed_days",
-            description: "Calculates days between first and last entries with data in the range.",
+            description: "Calculates days between first and last entries with data for the specified value in the range.",
         ),
         rtDocEntry(
             identifier: "op_elapsed_hrs",
             title: "elapsed_hrs",
-            description: "Calculates hours between first and last entries with data in the range.",
+            description: "Calculates hours between first and last entries with data for the specified value in the range.",
         ),
         rtDocEntry(
             identifier: "op_elapsed_mins",
             title: "elapsed_mins",
-            description: "Calculates minutes between first and last entries with data in the range.",
+            description: "Calculates minutes between first and last entries with data for the specified value in the range.",
         ),
         rtDocEntry(
             identifier: "op_elapsed_secs",
             title: "elapsed_secs",
-            description: "Calculates seconds between first and last entries with data in the range.",
+            description: "Calculates seconds between first and last entries with data for the specified value in the range.",
+        ),
+        rtDocEntry(
+            identifier: "op_weeks",
+            title: "weeks",
+            description: "Calculates weeks in the range.",
+        ),
+        rtDocEntry(
+            identifier: "op_days",
+            title: "days",
+            description: "Calculates days in the range.",
+        ),
+        rtDocEntry(
+            identifier: "op_hrs",
+            title: "hours",
+            description: "Calculates hours in the range.",
+        ),
+        rtDocEntry(
+            identifier: "op_mins",
+            title: "minutes",
+
+            description: "Calculates minutes in the range.",
+        ),
+        rtDocEntry(
+            identifier: "op_secs",
+            title: "seconds",
+            description: "Calculates seconds in the range.",
         ),
         rtDocEntry(
             identifier: "op_delay",
