@@ -38,6 +38,8 @@ class voState: NSObject, voProtocol {
         super.init()
 
         vo.useVO = true
+
+        // Add extra height for HealthKit subtitle (16pt: 14pt label + 2pt spacing)
     }
 
     func getValCap() -> Int {
@@ -643,20 +645,26 @@ class voState: NSObject, voProtocol {
         return stat == hkStatus.hkData.rawValue
     }
 
+    func subtitleHeight() -> CGFloat {
+        // Add extra height for HealthKit subtitle (16pt: 14pt label + 2pt spacing)
+        if isCurrentEntryFromHealthKit() && !hideValueSubtitles() {
+            return 6.0
+        } else {
+            return 0.0
+        }
+    }
+
     func voTVCellHeight() -> CGFloat {
         let labelSize = vo.getLabelSize()
         let maxLabel = vo.parentTracker.maxLabel
 
-        // Add extra height for HealthKit subtitle (16pt: 14pt label + 2pt spacing)
-        let subtitleHeight: CGFloat = isCurrentEntryFromHealthKit() ? 16 : 0
-
         if labelSize.width <= maxLabel.width || VOT_INFO == vo.vtype {
             //return CELL_HEIGHT_NORMAL;
             //return maxLabel.height + (2*MARGIN);
-            return labelSize.height + (2 * MARGIN) + subtitleHeight
+            return labelSize.height + (2 * MARGIN) + subtitleHeight()
         } else {
             //return CELL_HEIGHT_TALL;
-            return labelSize.height + maxLabel.height + (2 * MARGIN) + subtitleHeight
+            return labelSize.height + maxLabel.height + (2 * MARGIN) + subtitleHeight()
         }
     }
 
@@ -701,6 +709,10 @@ class voState: NSObject, voProtocol {
         }
         
         return cell!
+    }
+
+    func hideValueSubtitles() -> Bool {
+        return UserDefaults.standard.bool(forKey: "hide_value_subtitles")
     }
 
     // Helper method to setup the label portion of the cell
@@ -750,7 +762,7 @@ class voState: NSObject, voProtocol {
         }
 
         // Add subtitle for HealthKit data sources
-        if isFromHealthKit {
+        if isFromHealthKit && !hideValueSubtitles() {
             let subtitleLabel = UILabel(frame: CGRect(
                 x: isIconTagged ? 26 : 0,
                 y: label.frame.maxY + 2,
@@ -764,7 +776,7 @@ class voState: NSObject, voProtocol {
             containerView.addSubview(subtitleLabel)
 
             // Expand container to accommodate subtitle
-            containerView.frame.size.height = bounds.size.height + 16
+            //containerView.frame.size.height = bounds.size.height + subtitleHeight
         }
 
         cell.contentView.addSubview(containerView)
