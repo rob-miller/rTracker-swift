@@ -97,6 +97,7 @@ Central utility class providing shared resources and UI components across the ap
 - Maintained backward compatibility with existing API
 
 ## Current Issues & TODOs
+- **COMPLETED (2025-10-22)**: Added notification support for toolbar visibility refresh after HealthKit database updates
 - **COMPLETED**: Major button consolidation - Reduced from 25+ functions to 5 core functions
 - **COMPLETED**: Updated all client files to use consolidated button functions
 - **COMPLETED**: Fixed all compilation errors across UseTrackerController, voNumber, trackerChart, privacyV, addValObjController, RootViewController, addTrackerController
@@ -109,6 +110,29 @@ Central utility class providing shared resources and UI components across the ap
 - All button system refactoring and consolidation work is now complete
 
 ## Last Updated
+2025-10-22 - **Added Notification for HealthKit Database Updates** (lines 1617-1620):
+- **Problem**: `hide_health_button_when_enabled` preference caused button to stay hidden after permissions revoked
+  - When user revoked HealthKit permissions in Settings app and returned to rTracker
+  - `refreshToolBar()` checked database synchronously before async `updateAuthorisations()` completed
+  - Database still had old status values (1 or 3 = authorized)
+  - Button stayed hidden even though it should have become visible
+- **Solution**: Post notification after async database update completes
+  - **New Notification**: `healthKitDatabaseUpdated` posted in `createHealthButton()` completion handler
+  - Posted ALWAYS after `updateAuthorisations()` finishes (line 1618-1620)
+  - Even if button icon doesn't change, toolbar visibility might need update
+  - RootViewController listens for notification and refreshes toolbar with fresh database values
+- **Implementation Details**:
+  - Notification posted on main queue for immediate delivery
+  - Posted before checking if icon changed (lines 1617-1620, before guard statement)
+  - Handles edge case: all permissions revoked but button was hidden
+  - Second toolbar refresh uses updated database to correctly show button
+- **Benefits**:
+  - ✅ Fixes toolbar visibility bug with `hide_health_button_when_enabled` preference
+  - ✅ No timing dependencies or arbitrary delays
+  - ✅ Works for any database state change detected by async update
+  - ✅ Clean separation: icon update (in createHealthButton) vs visibility update (in RootViewController)
+
+Previous update:
 2025-10-21 - **Added Health Access Guidance Alert Function**:
 - **New Function**: `showHealthEnableGuidance(from:)` - Centralized guidance alert for enabling HealthKit access
 - **Location**: After help methods, following existing utility pattern
