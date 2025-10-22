@@ -641,8 +641,9 @@ class voState: NSObject, voProtocol {
         let sql = "SELECT stat FROM voHKstatus WHERE id = \(vo.vid) AND date = \(currentDate)"
         let stat = vo.parentTracker.toQry2Int(sql: sql)
 
-        // Return true only if stat = 1 (hkData), meaning data came from Apple Health
-        return stat == hkStatus.hkData.rawValue
+        // Return true if HealthKit was queried (both hkData=1 and noData=0)
+        // Only manual entries (no voHKstatus record) should not show the icon
+        return stat == hkStatus.hkData.rawValue || stat == hkStatus.noData.rawValue
     }
 
     func subtitleHeight() -> CGFloat {
