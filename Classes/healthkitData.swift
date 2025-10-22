@@ -428,7 +428,7 @@ private let baseHealthDataQueries: [HealthDataQuery] = [
         },
         aggregationType: .groupedByNight,
         aggregationTime: DateComponents(hour: 12, minute: 0), // 12:00 PM
-        info: "Counts complete sleep cycles, defined as a Deep sleep segment minutes) followed by a REM segment (both at least \(MINSLEEPSEGMENTDURATION) minutes).",
+        info: "Counts complete sleep cycles, defined as a Deep sleep segment followed by a REM segment (both at least \(MINSLEEPSEGMENTDURATION) minutes).",
         sampleType: .category
     ),
 
