@@ -109,6 +109,23 @@ Central utility class providing shared resources and UI components across the ap
 - All button system refactoring and consolidation work is now complete
 
 ## Last Updated
+2025-10-21 - **Added Health Access Guidance Alert Function**:
+- **New Function**: `showHealthEnableGuidance(from:)` - Centralized guidance alert for enabling HealthKit access
+- **Location**: After help methods, following existing utility pattern
+- **Purpose**: Shows user instructions when they dismiss HealthStatusViewController with no enabled data
+- **Message Content**:
+  - Title: "Enable Health Access"
+  - Instructions: "If you tapped 'Don't Allow', you can enable access to your health data..."
+  - 4-step guide: Open Health app → Profile picture → Apps → rTracker → Turn On All
+- **Parameter**: Takes `UIViewController` to present alert from correct context
+- **Usage**: Called from both RootViewController and voNumber when HealthStatusViewController dismissed
+- **Pattern**: Follows existing help method patterns (`showHelp`, `showHelpWithAttributedContent`)
+- **Benefits**:
+  - Eliminates code duplication (single implementation vs two identical methods)
+  - Centralized message - easy to update guidance text in one location
+  - Consistent with rTracker-resource utility architecture
+
+Previous update:
 2025-10-21 - **Simplified Health Button Icon Logic** (lines 1569-1589):
 - **Problem**: Complex logic with three states (heart, heart.fill, arrow.trianglehead.clockwise.heart) was unnecessary
   - For HealthKit read access, app cannot distinguish between "not authorized" (status 2) and "no data" (status 3)

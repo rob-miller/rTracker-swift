@@ -73,6 +73,40 @@ Main root view controller for the rTracker app. Manages the primary tracker list
 - `819040f`: Cleanup debug message improvements
 
 ## Last Updated
+2025-10-21 - **Health Button Refresh System & Guidance Alerts:**
+- **Health Button Refresh Implementation**:
+  - `refreshHealthButton()` method: Invalidates cached button and calls `refreshToolBar(false)`
+  - Simple 3-line implementation leverages existing toolbar infrastructure
+  - Called from `appWillEnterForegroundRVC()` to detect external permission changes
+- **HealthStatusViewController Dismissal Handling**:
+  - **Done Button**: `onDismiss` callback with 0.3s delay before showing guidance alert
+  - **Swipe Dismissal**: `presentationControllerDidDismiss` delegate method (no delay needed)
+  - Added `UIAdaptivePresentationControllerDelegate` conformance
+- **Guidance Alert Logic**:
+  - Checks database after dismissal: If NO status 1 entries (no readable data), shows alert
+  - Uses centralized `rTracker_resource.showHealthEnableGuidance(from:)` method
+  - Alert message: "If you tapped 'Don't Allow'..." with 4-step instructions
+- **Timing Fix for Done Button**:
+  - `DispatchQueue.main.asyncAfter(deadline: .now() + 0.3)` delays alert presentation
+  - Allows page sheet dismissal animation to complete (~0.25-0.3 seconds)
+  - Prevents alert presentation conflict with dismissing modal
+- **Button Creation Pattern**:
+  - `healthBtn` computed property uses `skipAsyncUpdate: false` (not true)
+  - Allows async database updates to detect external permission changes
+  - When button recreated on foreground, launches background query for fresh HealthKit data
+  - Updates button icon in-place if permissions changed in Settings app
+- **App Lifecycle Integration**:
+  - `appWillEnterForegroundRVC()`: Calls `refreshHealthButton()` after `refreshView()`
+  - Detects permission changes made in Settings → Health → Data Access & Devices
+  - Button icon updates within ~1 second of app foregrounding
+- **Benefits**:
+  - ✅ Health button refreshes on modal dismissal (both Done and swipe)
+  - ✅ Detects external permission changes without app restart
+  - ✅ Guides users to enable access when needed
+  - ✅ No toolbar disappearing bugs (uses existing refreshToolBar infrastructure)
+  - ✅ Clean separation: UI refresh vs guidance messaging
+
+Previous update:
 2025-10-16 - **Privacy Button Security Fix + iOS 26 Migration:**
 - **SECURITY FIX in privBtnSetImg()**: Lines 686-717
   - **Critical Issue**: Initial implementation changed icon to clear sunglasses when privacy view appeared (security vulnerability!)

@@ -18,7 +18,8 @@
       "Bash(cat:*)",
       "Bash(tee:*)",
       "Read(//private/tmp/**)",
-      "Bash(sqlite3 \"/Users/rob/Library/Mobile Documents/com~apple~CloudDocs/sync/proj/rTracker-swift/Documents/tList.db\" \"SELECT name, hkid, disabled FROM rthealthkit WHERE disabled != 4 ORDER BY name\")"
+      "Bash(sqlite3 \"/Users/rob/Library/Mobile Documents/com~apple~CloudDocs/sync/proj/rTracker-swift/Documents/tList.db\" \"SELECT name, hkid, disabled FROM rthealthkit WHERE disabled != 4 ORDER BY name\")",
+      "Bash(awk:*)"
     ],
     "deny": []
   }
