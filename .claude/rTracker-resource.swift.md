@@ -109,6 +109,28 @@ Central utility class providing shared resources and UI components across the ap
 - All button system refactoring and consolidation work is now complete
 
 ## Last Updated
+2025-10-21 - **Simplified Health Button Icon Logic** (lines 1569-1589):
+- **Problem**: Complex logic with three states (heart, heart.fill, arrow.trianglehead.clockwise.heart) was unnecessary
+  - For HealthKit read access, app cannot distinguish between "not authorized" (status 2) and "no data" (status 3)
+  - Both appear identically to the user (no readable data)
+  - The refresh icon state was misleading and not actionable
+- **Solution**: Simplified to two states based on actual readable data
+  - `heart`: Nothing has data (empty, all hidden, or all status 2/3)
+  - `heart.fill` (healthKitIcon): Something has readable data (at least one status 1)
+- **Status Values**:
+  - 1 = enabled (authorized AND has data) ← Only this indicates readable data
+  - 2 = notAuthorised ← No readable data
+  - 3 = notPresent (authorized but no data) ← No readable data
+  - 4 = hidden (user disabled) ← Filtered out
+- **Logic Flow**:
+  1. If statuses empty → heart (no setup)
+  2. Filter out hidden (status 4)
+  3. If all hidden → heart (nothing visible)
+  4. If any status 1 → heart.fill (has data)
+  5. Otherwise → heart (authorized but no data, or not authorized)
+- **Benefits**: Clearer user feedback, simpler code, reflects actual HealthKit read limitations
+
+Previous update:
 2025-10-16 - **Privacy Button Migration to iOS 26 SF Symbols:**
 - **New privacyIcon Constant**: Line 49 - `let privacyIcon = "sunglasses"`
   - Centralized SF Symbol name for privacy buttons

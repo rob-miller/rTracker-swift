@@ -135,7 +135,8 @@ struct ahViewController: View {
                 // Update HealthKit Choices button (fixed position above done button)
                 Button(action: {
                     rthk.dbInitialised = false
-                    rthk.loadHealthKitConfigurations()
+                    rthk.loadHealthKitConfigurations(request: true)
+
                 }) {
                     Text("Update HealthKit Choices")
                         .font(.system(size: 15, weight: .semibold))

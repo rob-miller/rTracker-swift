@@ -70,7 +70,7 @@ extension Notification.Name {
     static let notifyPrivacyLockdown = Notification.Name("notifyPrivacyLockdown")
 }
 
-public class RootViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, UNUserNotificationCenterDelegate {
+public class RootViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, UNUserNotificationCenterDelegate, UIAdaptivePresentationControllerDelegate {
     var tableView: UITableView?
 
     var initialPrefsLoad = false
@@ -412,9 +412,15 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         _ = self.privacyObj.lockDown()
     }
     @objc func appWillEnterForegroundRVC() {
+        DBGLog("rvc: appWillEnterForegroundRVC privacy= \(privacyValue)")
+
+
         // privacy locked down when rvc entered background, while appdelegate puts up and pulls down blank image
         // this refreshview seems to happen before the blank view controller disappears
         refreshView()
+
+        // Refresh health button to detect external permission changes
+        refreshHealthButton()
     }
     
     public override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
@@ -787,7 +793,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     var _healthBtn: UIBarButtonItem?
     var healthBtn: UIBarButtonItem {
         if _healthBtn == nil {
-            _healthBtn = rTracker_resource.createHealthButton(target: self, action: #selector(btnHealth), accId: "health")
+            _healthBtn = rTracker_resource.createHealthButton(target: self, action: #selector(btnHealth), accId: "health", skipAsyncUpdate: false)
             _healthBtn!.accessibilityLabel = "Apple Health"
             _healthBtn!.accessibilityHint = "tap to view Apple Health status and manage permissions"
         }
@@ -998,10 +1004,32 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
     @objc func btnHealth() {
         DBGLog("Health button pressed")
-        let healthStatusView = HealthStatusViewController(showConfigInstructions: true)
+        let healthStatusView = HealthStatusViewController(showConfigInstructions: true, onDismiss: { [weak self] in
+            self?.refreshHealthButton()
+        })
         let hostingController = UIHostingController(rootView: healthStatusView)
         hostingController.modalPresentationStyle = .pageSheet
+
+        // Set delegate to handle swipe dismissal
+        hostingController.presentationController?.delegate = self
+
         present(hostingController, animated: true, completion: nil)
+    }
+
+    func refreshHealthButton() {
+        // Invalidate cached button to force recreation with updated status
+        _healthBtn = nil
+
+        // Refresh entire toolbar (recreates health button via healthBtn computed property)
+        refreshToolBar(false)
+    }
+
+    // MARK: - UIAdaptivePresentationControllerDelegate
+
+    public func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
+        // Refresh health button when HealthStatusViewController is dismissed via swipe
+        DBGLog("Health status view dismissed via swipe, refreshing button")
+        refreshHealthButton()
     }
 
 #if DEBUGLOG

@@ -207,6 +207,32 @@ Handles numeric input fields in trackers, supporting manual entry, HealthKit int
 - **HealthKit Cross-Contamination Bug** (2025-08-26): Fixed issue where low-frequency HealthKit valueObjs would repeatedly reprocess dates where we already knew there was `noData`. The complex OR-based SQL query only excluded `stat = hkData` entries but allowed `stat = noData` entries to be reprocessed indefinitely. Simplified to exclude ANY existing voHKstatus entry for the specific valueObj, preventing unnecessary reprocessing of dates we've already attempted.
 
 ## Last Updated
+2025-10-21 - **Fixed Dispatch Controller for updateAuthorisations** (lines 1438-1496):
+- **Problem 1**: ahViewController was being presented before updateAuthorisations() completed
+  - Called `rthk.updateAuthorisations(request:true)` with completion handler
+  - Presentation code was inside completion but had incorrect signature/structure
+  - Had `{ success in` parameter but actual signature is `() -> Void`
+  - Had `if success {` check that never executed properly
+- **Problem 2**: Incorrect weak self capture syntax
+  - Used `{ weak self in` instead of `{ [weak self] in`
+  - Missing `guard let self = self else { return }` unwrapping
+  - Missing explicit `self.` prefixes for property access
+- **Solution**:
+  - Removed incorrect `success` parameter from closure
+  - Removed unnecessary `if success` conditional wrapper
+  - Fixed weak capture: `{ [weak self] in` with `guard let self = self else { return }`
+  - Added explicit `self.` prefixes for `vo` and `ctvovcp` property access
+  - Moved all view controller creation/presentation code into completion handler
+  - Added debug log to confirm authorization completed before presenting
+- **Result**: ahViewController now waits until HealthKit authorization database is fully updated
+  - All authorization status checks complete
+  - All data availability queries finish
+  - Database updates committed
+  - Then view controller presents with current data
+  - Proper memory management with weak self capture prevents retain cycles
+- **Ensures**: UI shows accurate, up-to-date HealthKit authorization and availability status
+
+Previous update:
 2025-10-15 - **Fixed Health Button Horizontal Position** (line 1562-1564):
 - **Problem**: Button overlapped right 1/3 of switch instead of being positioned to the right
   - Line 1564 calculated: `x: frame.origin.x + frame.size.width + SPACE`
