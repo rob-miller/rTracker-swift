@@ -225,7 +225,7 @@ class voNumber: voState, UITextFieldDelegate, UIAdaptivePresentationControllerDe
         && Int(vo.parentTracker.trackerDate!.timeIntervalSince1970) > self.MyTracker.lastDbDate
       {
         self.vo.vos?.addExternalSourceOverlay(to: self.dtf)  // no taps
-        // apple healthkit source and trackerDate is newer than last in database (not historical = new record)
+        // apple healthkit source and trackerDate is newer than last in database (not historical = new record) so query hk for current data
         if vo.optDict["ahPrevD"] ?? "0" == "1" {
           let calendar = Calendar.current
           targD = calendar.date(byAdding: .day, value: -1, to: targD) ?? targD
@@ -275,6 +275,20 @@ class voNumber: voState, UITextFieldDelegate, UIAdaptivePresentationControllerDe
         self.vo.vos?.addExternalSourceOverlay(to: self.dtf)
         DBGLog("\(vo.valueName!) -- HK query for \(vo.optDict["ahSource"]!) targD \(targD) returned: \(healthKitResult ?? "nil")", color:.BLUE)
 
+      } else if vo.optDict["ahksrc"] == "1" {
+        // Historical HealthKit record with no data
+        //self.vo.vos?.addExternalSourceOverlay(to: self.dtf)
+        
+        // Apply same unit-based display logic as current records
+        let currentUnit = self.vo.optDict["ahUnit"]
+        let hkUnit: HKUnit? = {
+            guard let unitStr = currentUnit, !unitStr.isEmpty else { return nil }
+            return HKUnit(from: unitStr)
+        }()
+        
+        dtf.text = shouldShowZeroForNoData(unit: hkUnit) ? "0" : ""
+        //DBGLog("\(vo.valueName!) -- Historical HK record, no data, showing: \(dtf.text ?? "empty")")
+
       } else if vo.optDict["otsrc"] == "1" {
         self.vo.vos?.addExternalSourceOverlay(to: self.dtf)  // no taps
         if let xrslt = vo.vos?.getOTrslt() {
@@ -289,11 +303,14 @@ class voNumber: voState, UITextFieldDelegate, UIAdaptivePresentationControllerDe
         }
       } else {
         dtf.text = ""
+        //DBGLog(String("\(vo.valueName!) -- vo.value empty set dtf.text to empty string"))
       }
     } else {
       dtf.backgroundColor = .secondarySystemBackground
       dtf.textColor = .label
       dtf.text = formatValueForDisplay(vo.value)
+      DBGLog(String("\(vo.valueName!) -- vo.value non-empty set dtf.text to \(dtf.text ?? "nil")"))
+
       if vo.optDict["ahksrc"] == "1" || vo.optDict["otsrc"] == "1" {
         self.vo.vos?.addExternalSourceOverlay(to: self.dtf)  // no taps
         #if DEBUGLOG
