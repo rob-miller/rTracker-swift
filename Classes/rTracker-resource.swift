@@ -1614,8 +1614,13 @@ class rTracker_resource: NSObject {
             let newSymbol = symbolFromStatuses(refreshed)
             DBGLog("createHealthButton: After updateAuthorisations - originalSymbol=\(originalSymbol), newSymbol=\(newSymbol), refreshed statuses = \(refreshed)", color: .CYAN)
 
+            // Always post notification when database is updated (for toolbar visibility refresh)
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: .healthKitDatabaseUpdated, object: nil)
+            }
+
             guard newSymbol != originalSymbol else {
-                DBGLog("createHealthButton: No change, skipping update", color: .CYAN)
+                DBGLog("createHealthButton: No change, skipping icon update", color: .CYAN)
                 return
             }
 
