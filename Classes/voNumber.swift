@@ -1425,6 +1425,20 @@ class voNumber: voState, UITextFieldDelegate, UIAdaptivePresentationControllerDe
     // Present health status view without config instructions (user already at config screen)
     let healthStatusView = HealthStatusViewController(showConfigInstructions: false, onDismiss: { [weak self] in
       self?.refreshHealthButton()
+
+      // Check if we should show guidance (delayed to allow dismissal to complete)
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+        let tl = trackerList.shared
+        let sql = "SELECT disabled FROM rthealthkit WHERE disabled != 4"
+        let statuses = tl.toQry2AryI(sql: sql)
+        let hasEnabledData = statuses.contains { $0 == 1 }
+
+        if !hasEnabledData && !statuses.isEmpty {
+          if let ctvovcp = self?.ctvovcp {
+            rTracker_resource.showHealthEnableGuidance(from: ctvovcp)
+          }
+        }
+      }
     })
     let hostingController = UIHostingController(rootView: healthStatusView)
     hostingController.modalPresentationStyle = .pageSheet
@@ -1444,6 +1458,18 @@ class voNumber: voState, UITextFieldDelegate, UIAdaptivePresentationControllerDe
     // Refresh health button when HealthStatusViewController is dismissed via swipe
     DBGLog("Health status view dismissed via swipe from voNumber, refreshing button")
     refreshHealthButton()
+
+    // Check if we should show guidance
+    let tl = trackerList.shared
+    let sql = "SELECT disabled FROM rthealthkit WHERE disabled != 4"
+    let statuses = tl.toQry2AryI(sql: sql)
+    let hasEnabledData = statuses.contains { $0 == 1 }
+
+    if !hasEnabledData && !statuses.isEmpty {
+      if let ctvovcp = ctvovcp {
+        rTracker_resource.showHealthEnableGuidance(from: ctvovcp)
+      }
+    }
   }
 
   private func refreshHealthButton() {

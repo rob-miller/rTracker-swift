@@ -1706,6 +1706,17 @@ class rTracker_resource: NSObject {
     viewController.present(alertController, animated: true)
   }
 
+  /// Shows guidance alert for enabling HealthKit access
+  class func showHealthEnableGuidance(from viewController: UIViewController) {
+    let alert = UIAlertController(
+      title: "Enable Health Access",
+      message: "If you tapped \"Don't Allow\", you can still enable access to your health data:\n\n1. Open the Apple Health app\n2. Tap your profile picture (top right)\n3. Tap Apps → rTracker\n4. Tap 'Turn On All'",
+      preferredStyle: .alert
+    )
+    alert.addAction(UIAlertAction(title: "OK", style: .default))
+    viewController.present(alert, animated: true)
+  }
+
   /// Shows contextual help composed from multiple documentation entries
   class func showContextualHelp(
     identifiers: [String], from sourceView: UIView?, in viewController: UIViewController,

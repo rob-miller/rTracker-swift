@@ -1006,6 +1006,20 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         DBGLog("Health button pressed")
         let healthStatusView = HealthStatusViewController(showConfigInstructions: true, onDismiss: { [weak self] in
             self?.refreshHealthButton()
+
+            // Check if we should show guidance (delayed to allow dismissal to complete)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                let tl = trackerList.shared
+                let sql = "SELECT disabled FROM rthealthkit WHERE disabled != 4"
+                let statuses = tl.toQry2AryI(sql: sql)
+                let hasEnabledData = statuses.contains { $0 == 1 }
+
+                if !hasEnabledData && !statuses.isEmpty {
+                    if let strongSelf = self {
+                        rTracker_resource.showHealthEnableGuidance(from: strongSelf)
+                    }
+                }
+            }
         })
         let hostingController = UIHostingController(rootView: healthStatusView)
         hostingController.modalPresentationStyle = .pageSheet
@@ -1030,6 +1044,16 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         // Refresh health button when HealthStatusViewController is dismissed via swipe
         DBGLog("Health status view dismissed via swipe, refreshing button")
         refreshHealthButton()
+
+        // Check if we should show guidance
+        let tl = trackerList.shared
+        let sql = "SELECT disabled FROM rthealthkit WHERE disabled != 4"
+        let statuses = tl.toQry2AryI(sql: sql)
+        let hasEnabledData = statuses.contains { $0 == 1 }
+
+        if !hasEnabledData && !statuses.isEmpty {
+            rTracker_resource.showHealthEnableGuidance(from: self)
+        }
     }
 
 #if DEBUGLOG
