@@ -33,7 +33,7 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
     init() {
         //super.init()
         DBGLog("rtHealthKit init called")
-        tl = RootViewController.shared.tlist
+        tl = trackerList.shared
         let sql = "select count(*) from rthealthkit"
         dbInitialised = (tl?.toQry2Int(sql:sql) ?? 0) != 0
         loadHealthKitConfigurations()
@@ -150,21 +150,9 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
         }
     }
 
-    func updateAuthorisations(completion: @escaping () -> Void) {
-            let dispatchGroup = DispatchGroup()
-            dispatchGroup.enter()
-            
-            requestHealthKitAuthorization(healthDataQueries: healthDataQueries) { success, error in
-                if let error = error {
-                    DBGLog("HealthKit authorization failed with error: \(error.localizedDescription)")
-                } else {
-                    DBGLog("HealthKit authorization \(success ? "succeeded" : "failed").")
-                }
-                dispatchGroup.leave()
-            }
-            
-            // this notify section is waiting until until leave() corresponding to enter() above is triggered
-            dispatchGroup.notify(queue: .main) { [self] in
+    func updateAuthorisations(request: Bool = false, completion: @escaping () -> Void) {
+            // Helper function to run the data-checking loop
+            let runDataCheckingLoop: () -> Void = { [self] in
                 let dispatchGroup3 = DispatchGroup()
                 for query in healthDataQueries {
                     // Start a new group task for each query
@@ -362,6 +350,30 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                     completion() // Call the completion handler in loadHealthKitConfigurations
                 }
             }
+
+            // Now call the helper based on whether we need to request permissions first
+            if request {
+                // Request authorization first, then check data
+                let dispatchGroup = DispatchGroup()
+                dispatchGroup.enter()
+
+                requestHealthKitAuthorization(healthDataQueries: healthDataQueries) { success, error in
+                    if let error = error {
+                        DBGLog("HealthKit authorization failed with error: \(error.localizedDescription)")
+                    } else {
+                        DBGLog("HealthKit authorization \(success ? "succeeded" : "failed").")
+                    }
+                    dispatchGroup.leave()
+                }
+
+                // Wait for authorization, then run data checking
+                dispatchGroup.notify(queue: .main) {
+                    runDataCheckingLoop()
+                }
+            } else {
+                // Skip authorization request, go straight to data checking
+                runDataCheckingLoop()
+            }
         }
 
     func requestHealthKitAuthorization(healthDataQueries: [HealthDataQuery], completion: @escaping (Bool, Error?) -> Void) {
@@ -370,12 +382,12 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
             completion(false, NSError(domain: "HealthKit", code: 1, userInfo: [NSLocalizedDescriptionKey: "HealthKit is not available on this device."]))
             return
         }
-        
+
         let healthStore = HKHealthStore()
-        
+
         // Extract HKObjectTypes from healthDataQueries
         var readTypes: Set<HKObjectType> = []
-        
+
         for query in healthDataQueries {
             switch query.sampleType {
             case .quantity:
@@ -390,20 +402,20 @@ class rtHealthKit: ObservableObject {   // }, XMLParserDelegate {
                 readTypes.insert(HKObjectType.workoutType())
             }
         }
-        
+
         // Request Authorization
         healthStore.requestAuthorization(toShare: nil, read: readTypes) { success, error in
             completion(success, error)
         }
     }
     
-    func loadHealthKitConfigurations() {
+    func loadHealthKitConfigurations(request: Bool = false) {
         let dispatchGroup2 = DispatchGroup()
         
         if !dbInitialised {
             dispatchGroup2.enter()
             DBGLog("load configs not dbinit so updateAuths")
-            updateAuthorisations(completion: {
+            updateAuthorisations(request: request, completion: {
                 dispatchGroup2.leave()
             })
             

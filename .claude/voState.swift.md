@@ -70,4 +70,18 @@ Base UI state class for value objects in rTracker. Manages the UI presentation a
 - `6869287`: fn updates with current tracker; vos.update accepts String?
 
 ## Last Updated
+2025-10-22 - **HealthKit Icon for No-Data Historical Records** (line 646):
+- **Problem**: Historical records with `stat = 0` (noData) didn't show HealthKit heart icon
+  - Example: Sleep cycles showing "0" (from unit-based display filter) had no HealthKit indicator
+  - `isCurrentEntryFromHealthKit()` only returned `true` for `stat = 1` (hkData)
+- **Solution**: Modified check to return `true` for BOTH `stat = 1` (hkData) and `stat = 0` (noData)
+  - Changed: `return stat == hkStatus.hkData.rawValue`
+  - To: `return stat == hkStatus.hkData.rawValue || stat == hkStatus.noData.rawValue`
+- **Rationale**: `stat = 0` means HealthKit was queried but returned no data (still a HealthKit source)
+  - Absence of voHKstatus entry means manual data (correctly shows no icon)
+- **Result**: Historical HealthKit records now show heart icon whether data was found or not ✅
+  - Sleep cycles with "0" display now correctly tagged with HealthKit heart icon
+  - Manual entries continue to show no icon (no voHKstatus record)
+
+Previous update:
 2025-10-16 - **HealthKit Icon Fix for Current Records**: Modified `isCurrentEntryFromHealthKit()` to check if record exists in database before querying `voHKstatus`. For unsaved/current records, now correctly shows HealthKit icon and subtitle when `ahksrc == "1"` (configured for HealthKit). For saved/historical records, continues to query actual data source from `voHKstatus` table. This ensures current records display HealthKit branding appropriately while maintaining accurate historical data source indicators.

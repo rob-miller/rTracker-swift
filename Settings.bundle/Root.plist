@@ -64,6 +64,16 @@
 			<key>Type</key>
 			<string>PSToggleSwitchSpecifier</string>
 			<key>Title</key>
+			<string>Hide value subtitles</string>
+			<key>Key</key>
+			<string>hide_value_subtitles</string>
+			<key>DefaultValue</key>
+			<false/>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSToggleSwitchSpecifier</string>
+			<key>Title</key>
 			<string>Hide the privacy button</string>
 			<key>Key</key>
 			<string>hide_privacy_button</string>

@@ -25,14 +25,16 @@ import HealthKit
 /// SwiftUI view displaying Apple Health data source status and permission management
 struct HealthStatusViewController: View {
     let showConfigInstructions: Bool
+    let onDismiss: (() -> Void)?
     @Environment(\.dismiss) var dismiss
     @State private var healthSources: [(name: String, hkid: String, status: Int)] = []
     @State private var isRefreshing = false
     @State private var showPermissionAlert = false
     @State private var permissionError: String?
 
-    init(showConfigInstructions: Bool = true) {
+    init(showConfigInstructions: Bool = true, onDismiss: (() -> Void)? = nil) {
         self.showConfigInstructions = showConfigInstructions
+        self.onDismiss = onDismiss
     }
 
     var body: some View {
@@ -98,6 +100,7 @@ struct HealthStatusViewController: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
+                        onDismiss?()
                         dismiss()
                     }
                 }
@@ -221,7 +224,7 @@ struct HealthStatusViewController: View {
                     showPermissionAlert = true
                 } else if success {
                     // Trigger re-check of authorization status
-                    rthk.updateAuthorisations {
+                    rthk.updateAuthorisations(request: true) {
                         DispatchQueue.main.async {
                             // Reload the list after authorization check completes
                             loadHealthSources()

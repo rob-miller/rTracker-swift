@@ -97,6 +97,7 @@ Central utility class providing shared resources and UI components across the ap
 - Maintained backward compatibility with existing API
 
 ## Current Issues & TODOs
+- **COMPLETED (2025-10-22)**: Added notification support for toolbar visibility refresh after HealthKit database updates
 - **COMPLETED**: Major button consolidation - Reduced from 25+ functions to 5 core functions
 - **COMPLETED**: Updated all client files to use consolidated button functions
 - **COMPLETED**: Fixed all compilation errors across UseTrackerController, voNumber, trackerChart, privacyV, addValObjController, RootViewController, addTrackerController
@@ -109,6 +110,68 @@ Central utility class providing shared resources and UI components across the ap
 - All button system refactoring and consolidation work is now complete
 
 ## Last Updated
+2025-10-22 - **Added Notification for HealthKit Database Updates** (lines 1617-1620):
+- **Problem**: `hide_health_button_when_enabled` preference caused button to stay hidden after permissions revoked
+  - When user revoked HealthKit permissions in Settings app and returned to rTracker
+  - `refreshToolBar()` checked database synchronously before async `updateAuthorisations()` completed
+  - Database still had old status values (1 or 3 = authorized)
+  - Button stayed hidden even though it should have become visible
+- **Solution**: Post notification after async database update completes
+  - **New Notification**: `healthKitDatabaseUpdated` posted in `createHealthButton()` completion handler
+  - Posted ALWAYS after `updateAuthorisations()` finishes (line 1618-1620)
+  - Even if button icon doesn't change, toolbar visibility might need update
+  - RootViewController listens for notification and refreshes toolbar with fresh database values
+- **Implementation Details**:
+  - Notification posted on main queue for immediate delivery
+  - Posted before checking if icon changed (lines 1617-1620, before guard statement)
+  - Handles edge case: all permissions revoked but button was hidden
+  - Second toolbar refresh uses updated database to correctly show button
+- **Benefits**:
+  - ✅ Fixes toolbar visibility bug with `hide_health_button_when_enabled` preference
+  - ✅ No timing dependencies or arbitrary delays
+  - ✅ Works for any database state change detected by async update
+  - ✅ Clean separation: icon update (in createHealthButton) vs visibility update (in RootViewController)
+
+Previous update:
+2025-10-21 - **Added Health Access Guidance Alert Function**:
+- **New Function**: `showHealthEnableGuidance(from:)` - Centralized guidance alert for enabling HealthKit access
+- **Location**: After help methods, following existing utility pattern
+- **Purpose**: Shows user instructions when they dismiss HealthStatusViewController with no enabled data
+- **Message Content**:
+  - Title: "Enable Health Access"
+  - Instructions: "If you tapped 'Don't Allow', you can enable access to your health data..."
+  - 4-step guide: Open Health app → Profile picture → Apps → rTracker → Turn On All
+- **Parameter**: Takes `UIViewController` to present alert from correct context
+- **Usage**: Called from both RootViewController and voNumber when HealthStatusViewController dismissed
+- **Pattern**: Follows existing help method patterns (`showHelp`, `showHelpWithAttributedContent`)
+- **Benefits**:
+  - Eliminates code duplication (single implementation vs two identical methods)
+  - Centralized message - easy to update guidance text in one location
+  - Consistent with rTracker-resource utility architecture
+
+Previous update:
+2025-10-21 - **Simplified Health Button Icon Logic** (lines 1569-1589):
+- **Problem**: Complex logic with three states (heart, heart.fill, arrow.trianglehead.clockwise.heart) was unnecessary
+  - For HealthKit read access, app cannot distinguish between "not authorized" (status 2) and "no data" (status 3)
+  - Both appear identically to the user (no readable data)
+  - The refresh icon state was misleading and not actionable
+- **Solution**: Simplified to two states based on actual readable data
+  - `heart`: Nothing has data (empty, all hidden, or all status 2/3)
+  - `heart.fill` (healthKitIcon): Something has readable data (at least one status 1)
+- **Status Values**:
+  - 1 = enabled (authorized AND has data) ← Only this indicates readable data
+  - 2 = notAuthorised ← No readable data
+  - 3 = notPresent (authorized but no data) ← No readable data
+  - 4 = hidden (user disabled) ← Filtered out
+- **Logic Flow**:
+  1. If statuses empty → heart (no setup)
+  2. Filter out hidden (status 4)
+  3. If all hidden → heart (nothing visible)
+  4. If any status 1 → heart.fill (has data)
+  5. Otherwise → heart (authorized but no data, or not authorized)
+- **Benefits**: Clearer user feedback, simpler code, reflects actual HealthKit read limitations
+
+Previous update:
 2025-10-16 - **Privacy Button Migration to iOS 26 SF Symbols:**
 - **New privacyIcon Constant**: Line 49 - `let privacyIcon = "sunglasses"`
   - Centralized SF Symbol name for privacy buttons

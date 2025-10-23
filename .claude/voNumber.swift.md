@@ -207,6 +207,63 @@ Handles numeric input fields in trackers, supporting manual entry, HealthKit int
 - **HealthKit Cross-Contamination Bug** (2025-08-26): Fixed issue where low-frequency HealthKit valueObjs would repeatedly reprocess dates where we already knew there was `noData`. The complex OR-based SQL query only excluded `stat = hkData` entries but allowed `stat = noData` entries to be reprocessed indefinitely. Simplified to exclude ANY existing voHKstatus entry for the specific valueObj, preventing unnecessary reprocessing of dates we've already attempted.
 
 ## Last Updated
+2025-10-21 - **Health Button Refresh System & Guidance Alerts:**
+- **Inline Health Button Refresh Implementation**:
+  - `refreshHealthButton()` method: Removes old button and creates new one with updated status
+  - Uses `skipAsyncUpdate: true` to prevent database wipes during UI refresh
+  - Preserves button frame position when recreating
+  - Adds new button to `ctvovcp.scroll` (scrollview) at same coordinates
+- **HealthStatusViewController Dismissal Handling**:
+  - **Done Button**: `onDismiss` callback with 0.3s delay before showing guidance alert
+  - **Swipe Dismissal**: `presentationControllerDidDismiss` delegate method (no delay needed)
+  - Already had `UIAdaptivePresentationControllerDelegate` conformance from previous work
+- **Guidance Alert Logic**:
+  - Checks database after dismissal: If NO status 1 entries (no readable data), shows alert
+  - Uses centralized `rTracker_resource.showHealthEnableGuidance(from:)` method
+  - Presents from `ctvovcp` (config view controller)
+  - Alert message: "If you tapped 'Don't Allow'..." with 4-step instructions
+- **Timing Fix for Done Button**:
+  - `DispatchQueue.main.asyncAfter(deadline: .now() + 0.3)` delays alert presentation
+  - Allows page sheet dismissal animation to complete (~0.25-0.3 seconds)
+  - Prevents alert presentation conflict with dismissing modal
+- **Implementation Pattern**:
+  - `showHealthStatus()`: Presents HealthStatusViewController with both callback and delegate
+  - Callback handles Done button dismissal with delayed guidance check
+  - Delegate handles swipe dismissal with immediate guidance check (already dismissed)
+  - Both paths refresh button first, then check if guidance needed
+- **Benefits**:
+  - ✅ Inline health button refreshes on modal dismissal (both Done and swipe)
+  - ✅ Guides users to enable access when needed
+  - ✅ No code duplication (uses centralized guidance alert function)
+  - ✅ Proper timing prevents presentation conflicts
+
+Previous update:
+2025-10-21 - **Fixed Dispatch Controller for updateAuthorisations** (lines 1438-1496):
+- **Problem 1**: ahViewController was being presented before updateAuthorisations() completed
+  - Called `rthk.updateAuthorisations(request:true)` with completion handler
+  - Presentation code was inside completion but had incorrect signature/structure
+  - Had `{ success in` parameter but actual signature is `() -> Void`
+  - Had `if success {` check that never executed properly
+- **Problem 2**: Incorrect weak self capture syntax
+  - Used `{ weak self in` instead of `{ [weak self] in`
+  - Missing `guard let self = self else { return }` unwrapping
+  - Missing explicit `self.` prefixes for property access
+- **Solution**:
+  - Removed incorrect `success` parameter from closure
+  - Removed unnecessary `if success` conditional wrapper
+  - Fixed weak capture: `{ [weak self] in` with `guard let self = self else { return }`
+  - Added explicit `self.` prefixes for `vo` and `ctvovcp` property access
+  - Moved all view controller creation/presentation code into completion handler
+  - Added debug log to confirm authorization completed before presenting
+- **Result**: ahViewController now waits until HealthKit authorization database is fully updated
+  - All authorization status checks complete
+  - All data availability queries finish
+  - Database updates committed
+  - Then view controller presents with current data
+  - Proper memory management with weak self capture prevents retain cycles
+- **Ensures**: UI shows accurate, up-to-date HealthKit authorization and availability status
+
+Previous update:
 2025-10-15 - **Fixed Health Button Horizontal Position** (line 1562-1564):
 - **Problem**: Button overlapped right 1/3 of switch instead of being positioned to the right
   - Line 1564 calculated: `x: frame.origin.x + frame.size.width + SPACE`

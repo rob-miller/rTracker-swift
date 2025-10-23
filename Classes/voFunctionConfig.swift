@@ -812,6 +812,20 @@ extension voFunction {
         case "elapsed_mins": return "op_elapsed_mins"
         case "elapsed_secs": return "op_elapsed_secs"
 
+        // Time operators
+        case "weeks": return "op_weeks"
+        case "days": return "op_days"
+        case "hours": return "op_hrs"
+        case "minutes": return "op_mins"
+        case "seconds": return "op_secs"
+        case "Sunday": return "op_sunday"
+        case "Monday": return "op_monday"
+        case "Tuesday": return "op_tuesday"
+        case "Wednesday": return "op_wednesday"
+        case "Thursday": return "op_thursday"
+        case "Friday": return "op_friday"
+        case "Saturday": return "op_saturday"
+
         // Other operators
         case "delay": return "op_delay"
         case "round": return "op_round"

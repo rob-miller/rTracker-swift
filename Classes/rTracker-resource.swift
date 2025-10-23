@@ -1556,63 +1556,113 @@ class rTracker_resource: NSObject {
   ///   - target: The target object for the button action
   ///   - action: The selector to call when button is tapped
   ///   - accId: Accessibility identifier for the button
+  ///   - skipAsyncUpdate: If true, skip the async authorization check (default: false)
   /// - Returns: UIBarButtonItem with appropriate heart symbol state:
   ///   - "heart" (outline, red): Not configured or all hidden
   ///   - "heart.fill" (red): All sources enabled
   ///   - "arrow.trianglehead.clockwise.heart" (red): Some not authorized or no data
-  class func createHealthButton(target: Any?, action: Selector, accId: String) -> UIBarButtonItem {
+  class func createHealthButton(target: Any?, action: Selector, accId: String, skipAsyncUpdate: Bool = false) -> UIBarButtonItem {
     // Query database for HealthKit configuration status
     let tl = trackerList.shared
     let sql = "SELECT disabled FROM rthealthkit"
     let statuses = tl.toQry2AryI(sql: sql)
 
-    // Determine which symbol to use based on configuration state
-    let symbolName: String
-    let hasAny = statuses.count > 0
+    func symbolFromStatuses(_ statuses: [Int]) -> String {
+        // determine symbol based on db statuses
+        // For read access, we cannot distinguish between 'not authorized' and 'no data'
+        // So we only show: heart (nothing has data) or heart.fill (something has data)
 
-    if !hasAny {
-      // No configurations exist
-      symbolName = "heart"
-    } else {
-      // Filter out hidden entries (status 4) for analysis
-      let activeStatuses = statuses.filter { $0 != 4 }
+        if statuses.isEmpty {
+            return "heart"  // No HealthKit setup
+        }
 
-      if activeStatuses.isEmpty {
-        // All are hidden
-        symbolName = "heart"
-      } else if activeStatuses.allSatisfy({ $0 == 1 || $0 == 3 }) {
-        // All enabled (status 1) or authorized with no data (status 3)
-        symbolName = healthKitIcon
-      } else if activeStatuses.contains(where: { $0 == 2 }) {
-        // Some not authorized (2)
-        symbolName = "arrow.trianglehead.clockwise.heart"
-      } else {
-        // Default fallback
-        symbolName = "heart"
-      }
+        let active = statuses.filter { $0 != 4 }  // Exclude hidden items
+
+        if active.isEmpty {
+            return "heart"  // All items are hidden
+        }
+
+        if active.contains(1) {
+            return healthKitIcon  // At least one item has readable data (status 1)
+        } else {
+            return "heart"  // No items have data (all are status 2 or 3)
+        }
     }
 
-    return createActionButton(
-      target: target,
-      action: action,
-      symbolName: symbolName,
-      accId: accId,
-      tintColor: .systemRed,
-      fallbackTitle: "❤️"
+    let originalSymbol = symbolFromStatuses(statuses)
+    DBGLog("createHealthButton: originalSymbol = \(originalSymbol), statuses = \(statuses)", color: .CYAN)
+
+    let healthButton = createActionButton(
+        target: target,
+        action: action,
+        symbolName: originalSymbol,
+        accId: accId,
+        tintColor: .systemRed,
+        fallbackTitle: "❤️"
     )
+    // now have db info based button ready for return
+
+    // start a new thread to update it if healthkit authorisations have changed
+    // (unless skipAsyncUpdate is true, which means we're refreshing after user interaction)
+    if !skipAsyncUpdate {
+      DispatchQueue.global(qos: .utility).async {
+        let rthk = rtHealthKit.shared
+        DBGLog("createHealthButton: Starting async updateAuthorisations", color: .CYAN)
+        rthk.updateAuthorisations {
+            // Re-read DB (after update) and compute new symbol
+            let refreshed = tl.toQry2AryI(sql: sql)
+            let newSymbol = symbolFromStatuses(refreshed)
+            DBGLog("createHealthButton: After updateAuthorisations - originalSymbol=\(originalSymbol), newSymbol=\(newSymbol), refreshed statuses = \(refreshed)", color: .CYAN)
+
+            // Always post notification when database is updated (for toolbar visibility refresh)
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: .healthKitDatabaseUpdated, object: nil)
+            }
+
+            guard newSymbol != originalSymbol else {
+                DBGLog("createHealthButton: No change, skipping icon update", color: .CYAN)
+                return
+            }
+
+            let fallbackTitle = (newSymbol == healthKitIcon ? "❤️" : "💔")
+            DBGLog("healthkit access has changed, updating button to \(newSymbol) fallback \(fallbackTitle)", color: .ORANGE)
+
+            DispatchQueue.main.async {
+                DBGLog("createHealthButton: In main.async, attempting to update button icon to \(newSymbol)", color: .ORANGE)
+                // healthbutton is a uibarbuttonitem with customview of uibutton
+                if let btn = healthButton.customView as? UIButton {
+                    DBGLog("createHealthButton: Found button, checking iOS version", color: .ORANGE)
+                    if #available(iOS 26.0, *) {
+                        DBGLog("createHealthButton: iOS 26+, using configuration update", color: .ORANGE)
+                        // use configuration update
+                        var config = btn.configuration
+                        let symSize = UIImage.SymbolConfiguration(pointSize: 22, weight: .regular)
+                        let img = UIImage(systemName: newSymbol)?
+                            .applyingSymbolConfiguration(symSize)?
+                            .withTintColor(.systemRed, renderingMode: .alwaysOriginal)
+                        config?.image = img
+                        btn.configuration = config
+                        DBGLog("createHealthButton: Configuration updated", color: .ORANGE)
+                    } else {
+                        DBGLog("createHealthButton: Pre-iOS 26, using fallback title update", color: .ORANGE)
+                        // Pre-iOS26 fallback: update title
+                        btn.setTitle(fallbackTitle, for: .normal)
+                        btn.setImage(nil, for: .normal)
+                        DBGLog("createHealthButton: Title/image updated", color: .ORANGE)
+                    }
+                } else {
+                    DBGLog("createHealthButton: ERROR - customView is not UIButton!", color: .RED)
+                }
+            }
+        }
+      }
+    } else {
+      DBGLog("createHealthButton: Skipping async update (skipAsyncUpdate=true)", color: .CYAN)
+    }
+
+    // return the button which will update async if needed
+    return healthButton
   }
-
-}
-
-// MARK: - UIBarButtonItem Extension for Privacy Views
-extension UIBarButtonItem {
-  /// Returns the underlying UIButton from customView for privacy views that need direct UIButton access
-  var uiButton: UIButton? {
-    return self.customView as? UIButton
-  }
-}
-
-extension rTracker_resource {
 
   /// Shows help content in a popover or modal presentation
   class func showHelp(
@@ -1659,6 +1709,17 @@ extension rTracker_resource {
 
     alertController.addAction(UIAlertAction(title: "OK", style: .default))
     viewController.present(alertController, animated: true)
+  }
+
+  /// Shows guidance alert for enabling HealthKit access
+  class func showHealthEnableGuidance(from viewController: UIViewController) {
+    let alert = UIAlertController(
+      title: "Enable Health Access",
+      message: "If you tapped \"Don't Allow\", you can still enable access to your health data:\n\n1. Open the Apple Health app\n2. Tap your profile picture (top right)\n3. Tap Apps → rTracker\n4. Tap 'Turn On All'",
+      preferredStyle: .alert
+    )
+    alert.addAction(UIAlertAction(title: "OK", style: .default))
+    viewController.present(alert, animated: true)
   }
 
   /// Shows contextual help composed from multiple documentation entries
@@ -1737,4 +1798,14 @@ extension rTracker_resource {
       sourceRect: sourceRect)
   }
 
+} // end of class rTracker_resource
+
+
+// MARK: - UIBarButtonItem Extension when need UIButton access
+
+extension UIBarButtonItem {
+  /// Returns the underlying UIButton from customView for privacy views that need direct UIButton access
+  var uiButton: UIButton? {
+    return self.customView as? UIButton
+  }
 }

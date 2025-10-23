@@ -25,12 +25,13 @@ import HealthKit
 import SwiftUI
 import UIKit
 
-class voNumber: voState, UITextFieldDelegate {
+class voNumber: voState, UITextFieldDelegate, UIAdaptivePresentationControllerDelegate {
 
   private var _dtf: UITextField?
   lazy var rthk = rtHealthKit.shared
   private static var healthKitCache: [String: String] = [:]  // Cache by "sourceName-date"
   let noHKdataMsg = "No HealthKit data available"
+  private var healthButton: UIButton?  // Store reference to health button for refreshing
 
   private func shouldShowZeroForNoData(unit: HKUnit?) -> Bool {
     guard let unit = unit else { return false }
@@ -224,7 +225,7 @@ class voNumber: voState, UITextFieldDelegate {
         && Int(vo.parentTracker.trackerDate!.timeIntervalSince1970) > self.MyTracker.lastDbDate
       {
         self.vo.vos?.addExternalSourceOverlay(to: self.dtf)  // no taps
-        // apple healthkit source and trackerDate is newer than last in database (not historical = new record)
+        // apple healthkit source and trackerDate is newer than last in database (not historical = new record) so query hk for current data
         if vo.optDict["ahPrevD"] ?? "0" == "1" {
           let calendar = Calendar.current
           targD = calendar.date(byAdding: .day, value: -1, to: targD) ?? targD
@@ -274,6 +275,20 @@ class voNumber: voState, UITextFieldDelegate {
         self.vo.vos?.addExternalSourceOverlay(to: self.dtf)
         DBGLog("\(vo.valueName!) -- HK query for \(vo.optDict["ahSource"]!) targD \(targD) returned: \(healthKitResult ?? "nil")", color:.BLUE)
 
+      } else if vo.optDict["ahksrc"] == "1" {
+        // Historical HealthKit record with no data
+        //self.vo.vos?.addExternalSourceOverlay(to: self.dtf)
+        
+        // Apply same unit-based display logic as current records
+        let currentUnit = self.vo.optDict["ahUnit"]
+        let hkUnit: HKUnit? = {
+            guard let unitStr = currentUnit, !unitStr.isEmpty else { return nil }
+            return HKUnit(from: unitStr)
+        }()
+        
+        dtf.text = shouldShowZeroForNoData(unit: hkUnit) ? "0" : ""
+        //DBGLog("\(vo.valueName!) -- Historical HK record, no data, showing: \(dtf.text ?? "empty")")
+
       } else if vo.optDict["otsrc"] == "1" {
         self.vo.vos?.addExternalSourceOverlay(to: self.dtf)  // no taps
         if let xrslt = vo.vos?.getOTrslt() {
@@ -288,11 +303,14 @@ class voNumber: voState, UITextFieldDelegate {
         }
       } else {
         dtf.text = ""
+        //DBGLog(String("\(vo.valueName!) -- vo.value empty set dtf.text to empty string"))
       }
     } else {
       dtf.backgroundColor = .secondarySystemBackground
       dtf.textColor = .label
       dtf.text = formatValueForDisplay(vo.value)
+      DBGLog(String("\(vo.valueName!) -- vo.value non-empty set dtf.text to \(dtf.text ?? "nil")"))
+
       if vo.optDict["ahksrc"] == "1" || vo.optDict["otsrc"] == "1" {
         self.vo.vos?.addExternalSourceOverlay(to: self.dtf)  // no taps
         #if DEBUGLOG
@@ -1422,9 +1440,28 @@ class voNumber: voState, UITextFieldDelegate {
     DBGLog("Show health status pressed from voNumber")
 
     // Present health status view without config instructions (user already at config screen)
-    let healthStatusView = HealthStatusViewController(showConfigInstructions: false)
+    let healthStatusView = HealthStatusViewController(showConfigInstructions: false, onDismiss: { [weak self] in
+      self?.refreshHealthButton()
+
+      // Check if we should show guidance (delayed to allow dismissal to complete)
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+        let tl = trackerList.shared
+        let sql = "SELECT disabled FROM rthealthkit WHERE disabled != 4"
+        let statuses = tl.toQry2AryI(sql: sql)
+        let hasEnabledData = statuses.contains { $0 == 1 }
+
+        if !hasEnabledData && !statuses.isEmpty {
+          if let ctvovcp = self?.ctvovcp {
+            rTracker_resource.showHealthEnableGuidance(from: ctvovcp)
+          }
+        }
+      }
+    })
     let hostingController = UIHostingController(rootView: healthStatusView)
     hostingController.modalPresentationStyle = .pageSheet
+
+    // Set delegate to refresh button on swipe dismissal
+    hostingController.presentationController?.delegate = self
 
     // Present directly from ctvovcp (same pattern as configAppleHealthView)
     ctvovcp?.present(hostingController, animated: true, completion: {
@@ -1432,61 +1469,110 @@ class voNumber: voState, UITextFieldDelegate {
     })
   }
 
+  // MARK: - UIAdaptivePresentationControllerDelegate
+
+  func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
+    // Refresh health button when HealthStatusViewController is dismissed via swipe
+    DBGLog("Health status view dismissed via swipe from voNumber, refreshing button")
+    refreshHealthButton()
+
+    // Check if we should show guidance
+    let tl = trackerList.shared
+    let sql = "SELECT disabled FROM rthealthkit WHERE disabled != 4"
+    let statuses = tl.toQry2AryI(sql: sql)
+    let hasEnabledData = statuses.contains { $0 == 1 }
+
+    if !hasEnabledData && !statuses.isEmpty {
+      if let ctvovcp = ctvovcp {
+        rTracker_resource.showHealthEnableGuidance(from: ctvovcp)
+      }
+    }
+  }
+
+  private func refreshHealthButton() {
+    guard let button = healthButton else { return }
+
+    // Remove old button
+    button.removeFromSuperview()
+
+    // Create new button with updated status (skipAsyncUpdate to prevent database wipe)
+    let healthButtonItem = rTracker_resource.createHealthButton(
+      target: self,
+      action: #selector(showHealthStatus),
+      accId: "voNumber_health",
+      skipAsyncUpdate: true
+    )
+
+    if let newButton = healthButtonItem.uiButton {
+      // Use same frame as before
+      newButton.frame = button.frame
+      ctvovcp?.scroll.addSubview(newButton)
+      self.healthButton = newButton  // Update reference
+    }
+  }
+
   @objc func configAppleHealthView() {
     DBGLog("config Apple Health view")
 
-    let hostingController = UIHostingController(
-      rootView: ahViewController(
-        valueName: vo.valueName ?? "",
-        selectedChoice: vo.optDict["ahSource"],
-        selectedUnitString: vo.optDict["ahUnit"],
-        ahPrevD: vo.optDict["ahPrevD"] ?? "0" == "1",
-        ahkTimeSrc: MyTracker.optDict["ahkTimeSrc"] as? String == String(vo.vid),
-        ahFrequency: vo.optDict["ahFrequency"] ?? AHFREQUENCYDFLT,
-        ahTimeFilter: vo.optDict["ahTimeFilter"] ?? AHTIMEFILTERDFLT,
-        ahAggregation: vo.optDict["ahAggregation"] ?? AHAGGREGATIONDFLT,
-        onDismiss: {
-          [self]
-          updatedChoice, updatedUnit, updatedAhPrevD, updatedAhkTimeSrc, updatedAhFrequency,
-          updatedAhTimeFilter, updatedAhAggregation in
-          vo.optDict["ahSource"] = updatedChoice
-          vo.optDict["ahUnit"] = updatedUnit
-          vo.optDict["ahPrevD"] = updatedAhPrevD ? "1" : "0"
-          vo.optDict["ahFrequency"] = updatedAhFrequency
-          vo.optDict["ahTimeFilter"] = updatedAhTimeFilter
-          vo.optDict["ahAggregation"] = updatedAhAggregation
+    rthk.updateAuthorisations(request:true) { [weak self] in
+      guard let self = self else { return }
 
-          // Handle ahkTimeSrc at tracker level
-          if updatedAhkTimeSrc {
-            // Switch is ON: Set this vo as the time source
-            MyTracker.optDict["ahkTimeSrc"] = String(vo.vid)
-          } else {
-            // Switch is OFF: Remove time source if it was this vo
-            if MyTracker.optDict["ahkTimeSrc"] as? String == String(vo.vid) {
-              MyTracker.optDict.removeValue(forKey: "ahkTimeSrc")
-            }
-          }
+      // Wait for authorization update to complete before presenting view
+      DBGLog("Authorization update completed, presenting ahViewController")
 
-          if let button = ctvovcp?.scroll.subviews.first(where: {
-            $0 is UIButton && $0.accessibilityIdentifier == "configtv_ahSelBtn"
-          }) as? UIButton {
-            DBGLog(
-              "ahSelect view returned: \(updatedChoice ?? "nil") \(updatedUnit ?? "nil") optDict is \(vo.optDict["ahSource"] ?? "nil")  \(vo.optDict["ahUnit"] ?? "nil")"
-            )
-            DispatchQueue.main.async {
-              button.setTitle(self.vo.optDict["ahSource"] ?? "Configure", for: .normal)
-              button.sizeToFit()
+      let hostingController = UIHostingController(
+        rootView: ahViewController(
+          valueName: self.vo.valueName ?? "",
+          selectedChoice: self.vo.optDict["ahSource"],
+          selectedUnitString: self.vo.optDict["ahUnit"],
+          ahPrevD: self.vo.optDict["ahPrevD"] ?? "0" == "1",
+          ahkTimeSrc: self.MyTracker.optDict["ahkTimeSrc"] as? String == String(self.vo.vid),
+          ahFrequency: self.vo.optDict["ahFrequency"] ?? AHFREQUENCYDFLT,
+          ahTimeFilter: self.vo.optDict["ahTimeFilter"] ?? AHTIMEFILTERDFLT,
+          ahAggregation: self.vo.optDict["ahAggregation"] ?? AHAGGREGATIONDFLT,
+          onDismiss: {
+            [self]
+            updatedChoice, updatedUnit, updatedAhPrevD, updatedAhkTimeSrc, updatedAhFrequency,
+            updatedAhTimeFilter, updatedAhAggregation in
+            self.vo.optDict["ahSource"] = updatedChoice
+            self.vo.optDict["ahUnit"] = updatedUnit
+            self.vo.optDict["ahPrevD"] = updatedAhPrevD ? "1" : "0"
+            self.vo.optDict["ahFrequency"] = updatedAhFrequency
+            self.vo.optDict["ahTimeFilter"] = updatedAhTimeFilter
+            self.vo.optDict["ahAggregation"] = updatedAhAggregation
+
+            // Handle ahkTimeSrc at tracker level
+            if updatedAhkTimeSrc {
+              // Switch is ON: Set this vo as the time source
+              self.MyTracker.optDict["ahkTimeSrc"] = String(self.vo.vid)
+            } else {
+              // Switch is OFF: Remove time source if it was this vo
+              if self.MyTracker.optDict["ahkTimeSrc"] as? String == String(self.vo.vid) {
+                self.MyTracker.optDict.removeValue(forKey: "ahkTimeSrc")
+              }
             }
+
+            if let button = self.ctvovcp?.scroll.subviews.first(where: {
+              $0 is UIButton && $0.accessibilityIdentifier == "configtv_ahSelBtn"
+            }) as? UIButton {
+              DBGLog(
+                "ahSelect view returned: \(updatedChoice ?? "nil") \(updatedUnit ?? "nil") optDict is \(self.vo.optDict["ahSource"] ?? "nil")  \(self.vo.optDict["ahUnit"] ?? "nil")"
+              )
+              DispatchQueue.main.async {
+                button.setTitle(self.vo.optDict["ahSource"] ?? "Configure", for: .normal)
+                button.sizeToFit()
+              }
+            }
+            //DBGLog("ahSelect view returned: \(updatedChoice) optDict is \(self.vo.optDict["ahSource"] ?? "nil")")
           }
-          //DBGLog("ahSelect view returned: \(updatedChoice) optDict is \(vo.optDict["ahSource"] ?? "nil")")
-        }
+        )
       )
-    )
-    hostingController.modalPresentationStyle = .fullScreen
-    hostingController.modalTransitionStyle = .coverVertical
+      hostingController.modalPresentationStyle = .fullScreen
+      hostingController.modalTransitionStyle = .coverVertical
 
-    // Present the hosting controller
-    ctvovcp?.present(hostingController, animated: true)
+      // Present the hosting controller
+      self.ctvovcp?.present(hostingController, animated: true)
+    }
   }
   @objc func forwardToConfigOtherTrackerSrcView() {
     ctvovcp?.configOtherTrackerSrcView()
@@ -1558,7 +1644,7 @@ class voNumber: voState, UITextFieldDelegate {
       action: #selector(showHealthStatus),
       accId: "voNumber_health"
     )
-    if let healthButton = healthButtonItem.uiButton {
+    if let button = healthButtonItem.uiButton {
       let switchWidth: CGFloat = 80.0
       let healthBtnFrame = CGRect(
         x: frame.origin.x + switchWidth + SPACE,
@@ -1566,8 +1652,9 @@ class voNumber: voState, UITextFieldDelegate {
         width: 30,
         height: frame.size.height
       )
-      healthButton.frame = healthBtnFrame
-      ctvovc.scroll.addSubview(healthButton)
+      button.frame = healthBtnFrame
+      ctvovc.scroll.addSubview(button)
+      self.healthButton = button  // Store reference for later refresh
     }
 
     frame.origin.x = MARGIN

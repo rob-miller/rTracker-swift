@@ -60,6 +60,31 @@ SwiftUI view displaying Apple Health data source status and managing HealthKit p
 - Conditional instruction text based on calling context
 
 ## Last Updated
+2025-10-21 - **Added Dismissal Callback Support:**
+- **New onDismiss Parameter**:
+  - Added optional `onDismiss: (() -> Void)?` property to struct
+  - Updated `init` to accept optional callback: `init(showConfigInstructions: Bool = true, onDismiss: (() -> Void)? = nil)`
+  - Callback stored as property for use in Done button
+- **Done Button Enhancement**:
+  - Modified Done button to call `onDismiss?()` before `dismiss()`
+  - Allows parent view controllers to detect dismissal and take action
+  - Callback fires when user taps Done button (programmatic dismissal)
+  - Swipe dismissal handled separately via `UIAdaptivePresentationControllerDelegate` in parent
+- **Usage Pattern**:
+  - RootViewController passes callback to refresh health button and check guidance
+  - voNumber passes callback to refresh inline button and check guidance
+  - Callback executes before view dismisses (intentionally for coordination)
+  - Parent views add 0.3s delay before presenting guidance alert to avoid conflict
+- **Integration**:
+  - Works with existing delegate pattern for swipe dismissal
+  - Provides dual-path dismissal handling (Done button vs swipe)
+  - No changes to existing functionality - purely additive
+- **Benefits**:
+  - Enables parent views to respond to dismissal
+  - Supports guidance alert presentation after dismissal
+  - Clean separation of SwiftUI view logic from UIKit parent coordination
+
+Previous update:
 2025-10-15 - **Updated Manage Permissions Button Icon** (line 80):
 - **Symbol Change**: `"heart.text.square"` → `"heart.fill"`
 - Consistent with health status button icon throughout app

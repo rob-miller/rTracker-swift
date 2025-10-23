@@ -11,7 +11,8 @@ Handles HealthKit integration for querying and processing health metrics, catego
 
 ## Important Methods/Functions
 - `loadHealthKitConfigurations()`: Loads and processes all HealthKit configurations with MenuTab preservation
-- `requestHealthKitAuthorization()`: Handles authorization requests for all sample types
+- `checkHealthKitAuthorization()`: Checks authorization status without showing permission sheet, updates database accordingly
+- `requestHealthKitAuthorization()`: Handles authorization requests for all sample types (shows permission sheet)
 - `workoutPredicate(for:startDate:endDate:)`: Creates predicates for workout queries with activity and location filtering
 - `handleCategoryTypeQuery()`: Specialized handler for category data including Mindful Minutes
 - `handleWorkoutQuery()`: Processes workout data for duration, energy, and distance metrics
@@ -54,6 +55,105 @@ Handles HealthKit integration for querying and processing health metrics, catego
 - **COMPLETED (2025-09-29)**: Fixed sleep cycles/segments/transitions naming mismatch
 
 ## Last Updated
+2025-10-21: **Removed checkHealthKitAuthorization() and Fixed Read Permission Detection** (lines 153-377):
+- **Critical Discovery**: HealthKit's `authorizationStatus(for:)` only checks WRITE permissions, not READ permissions
+  - Line 217 comment confirmed: `// only checks write access, cannot query read access`
+  - Privacy feature: Apps can't determine if user denied READ access or if there's no data
+  - `checkHealthKitAuthorization()` always returned `.sharingDenied` for read-only access
+- **Problem**: `updateAuthorisations(request: false)` only checked authorization, didn't query data
+  - Called broken `checkHealthKitAuthorization()` function
+  - Database incorrectly updated with status 2 (denied) even when read access was granted
+  - Button icon showed wrong state after external permission changes
+- **Solution**: Restructured to ALWAYS query for actual data in both paths
+  - **Deleted** `checkHealthKitAuthorization()` function entirely (lines 379-446 removed)
+  - **Restructured** `updateAuthorisations()` with helper function `runDataCheckingLoop()`
+  - `request: true` → Request permissions THEN query data
+  - `request: false` → Skip permission request, query data directly
+  - Both paths now check authorization status AND data existence
+- **Data Checking Flow** (extracted as closure):
+  - Queries HealthKit for actual sample data
+  - Sets status 1 (enabled) if authorized AND data exists
+  - Sets status 3 (notPresent) if authorized but no data
+  - Sets status 2 (notAuthorised) if not authorized
+- **Impact**:
+  - ✅ Detects external permission changes (Settings app)
+  - ✅ Button icon correctly reflects actual data availability
+  - ✅ No more false "Sharing Denied" for enabled read permissions
+  - ✅ Async button update works properly (queries data instead of broken auth check)
+  - ✅ Database stays accurate across app sessions
+
+Previous update:
+2025-10-21: **Made Database Cleanup Optional in checkHealthKitAuthorization()** (lines 375-383):
+- **Previous Problem**: Function always deleted entire database on every call
+  - Caused data loss when async button update ran at app startup
+  - Button showed correct icon initially, then async task wiped database and changed icon
+  - Status 1 (authorized with data) entries were lost and replaced with status 2/3
+- **Solution**: Added `cleanDatabase: Bool = false` parameter
+  - Database only deleted when explicitly requested with `cleanDatabase: true`
+  - Default behavior (`cleanDatabase: false`) preserves existing data
+  - Uses INSERT...ON CONFLICT DO UPDATE to update existing entries without deletion
+- **Impact**:
+  - Async button update no longer wipes database
+  - Status 1 entries preserved across app sessions
+  - Icon stays correct after permissions are granted
+  - Orphaned entries handled by ON CONFLICT UPDATE (existing entries updated, new ones inserted)
+
+Previous update:
+2025-10-21: **Added Database Cleanup in checkHealthKitAuthorization()** (lines 378-381):
+- **Problem**: Database contained orphaned/stale entries with old display names
+  - Old sleep entries: "Sleep - Core" (with dash)
+  - Current entries: "Core Sleep" (no dash) or "Sleep: Awake" (with colon)
+  - Old workout entries with obsolete identifiers
+  - Result: 49 status 1 (enabled) items that were never updated, causing wrong icon
+- **Root Cause**: Display name changes over time left duplicate/orphaned database rows
+- **Solution**: Added `DELETE FROM rthealthkit` at start of `checkHealthKitAuthorization()`
+  - Clears all existing entries before repopulating
+  - Ensures database always matches current `healthDataQueries` array
+  - Eliminates orphaned entries with old naming conventions
+- **Impact**:
+  - No more stale status 1 entries
+  - Icon correctly shows `heart` when all permissions denied
+  - Database stays synchronized with code configuration
+  - Clean slate on every authorization check
+
+Previous update:
+2025-10-21: **Fixed Database Overwrite Bug in updateAuthorisations()** - Major refactoring (lines 153-373):
+- **Critical Bug**: Second loop (lines 172-369) was overwriting correct database values set by `checkHealthKitAuthorization()`
+  - Lines 222-223, 242-243, 349-350: Forced `status = .sharingAuthorized` even when `.sharingDenied`
+  - This caused denied items to be marked as status 3 (notPresent) instead of status 2 (notAuthorised)
+  - Result: Wrong icon displayed (heart.fill instead of heart)
+- **Root Cause**: Both `checkHealthKitAuthorization()` AND data-checking loop ran for `request==false`, causing double-processing
+- **Solution**: Restructured function to prevent redundant processing:
+  - `request==true`: Request authorization → Check authorization + data existence → Update database
+  - `request==false`: Check authorization only → Update database → Done (NO data checking)
+- **Code Changes**:
+  - Moved data-checking loop (formerly lines 172-369) INSIDE `if request` block
+  - Added separate `else` block for `request==false` that only calls `checkHealthKitAuthorization()`
+  - Eliminated double-processing and database overwrites
+- **Behavior Now**:
+  - When permissions denied: Correctly sets status 2 (notAuthorised) and keeps it
+  - Icon logic correctly shows `heart` (empty) when no status 1 items exist
+  - No spurious "Authorized but No Data Present" messages for denied items
+- **Impact**: Fixes icon state and database integrity for all authorization scenarios
+
+Previous update:
+2025-10-21: **Refactored Authorization Checking** - Created new `checkHealthKitAuthorization()` function (lines 375-486):
+- **Refactoring**: Extracted authorization checking logic from `updateAuthorisations()` into dedicated function
+- **Function Signature**: `checkHealthKitAuthorization(healthDataQueries: [HealthDataQuery])` - mirrors `requestHealthKitAuthorization()`
+- **Purpose**: Checks authorization status without showing permission sheet, updates database accordingly
+- **Implementation**:
+  - Loops through all `healthDataQueries` to check authorization status
+  - Uses `healthStore.authorizationStatus(for:)` for read-only permission checking
+  - Handles all three sample types: `.quantity`, `.category`, `.workout`
+  - Updates database based on three authorization states:
+    - `.notDetermined`: Sets `enableStatus.notAuthorised` (permission not requested yet)
+    - `.sharingDenied`: Sets `enableStatus.notAuthorised` (permission explicitly denied)
+    - `.sharingAuthorized`: Sets `enableStatus.enabled` (permission granted)
+- **Key Feature**: No permission sheet shown - only reads existing authorization state
+- **Database Updates**: Uses same SQL pattern as rest of function (INSERT...ON CONFLICT DO UPDATE)
+- **Caller**: `updateAuthorisations()` now calls this function when `request == false` (line 167)
+
+Previous update:
 2025-10-15: **Sleep Category Name Parsing Fix** - Fixed critical bug in `updateAuthorisations()` function (lines 241-310):
 - **Problem**: Function was parsing sleep display names expecting dash separator (e.g., "Sleep - Awake"), but actual names use colon or no separator (e.g., "Sleep: Awake", "Core Sleep")
 - **Symptom**: All sleep categories logged "No suffix found in displayName" errors and failed to check for data availability

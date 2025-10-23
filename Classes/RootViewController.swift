@@ -68,10 +68,10 @@ extension Notification.Name {
     static let notifyOpenTracker = Notification.Name("notifyOpenTracker")
     static let notifyOpenTrackerInApp = Notification.Name("notifyOpenTrackerInApp")
     static let notifyPrivacyLockdown = Notification.Name("notifyPrivacyLockdown")
+    static let healthKitDatabaseUpdated = Notification.Name("healthKitDatabaseUpdated")
 }
 
-public class RootViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, UNUserNotificationCenterDelegate {
-    static let shared = RootViewController()
+public class RootViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, UNUserNotificationCenterDelegate, UIAdaptivePresentationControllerDelegate {
     var tableView: UITableView?
 
     var initialPrefsLoad = false
@@ -143,6 +143,10 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         var shouldShowHealthBtn = true
 
         if hideHealthButton {
+            // CRITICAL: Access healthBtn property to ensure async database update runs
+            // Even if we hide the button, we need the async update to detect permission changes
+            let _ = healthBtn
+
             // Check if all health sources are authorized (heart.fill state)
             let tl = trackerList.shared
             let sql = "SELECT disabled FROM rthealthkit"
@@ -150,7 +154,10 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
             if statuses.count > 0 {
                 let activeStatuses = statuses.filter { $0 != 4 }
-                if !activeStatuses.isEmpty && activeStatuses.allSatisfy({ $0 == 1 || $0 == 3 }) {
+                // Hide button only if at least SOME items have readable data (status 1)
+                // If everything is status 3 (no data anywhere), keep button visible to alert user
+                // (status 3 could mean "not authorized" - app can't distinguish for read permissions)
+                if !activeStatuses.isEmpty && activeStatuses.contains(1) {
                     shouldShowHealthBtn = false
                 }
             }
@@ -178,7 +185,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
                 items.append(healthBtn)
             }
             #if DEBUGLOG
-            items.append(debugResetBtn)  // Add debug reset button in debug builds
+            //items.append(debugResetBtn)  // Add debug reset button in debug builds
             #endif
             items.append(flexibleSpaceButtonItem)
             if shouldShowPrivacyBtn {
@@ -196,8 +203,8 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
             DBGLog("refreshToolBar: Health button hidden")
         }
         #if DEBUGLOG
-        DBGLog("refreshToolBar: Adding debug reset button")
-        items.append(debugResetBtn)  // Add debug reset button in debug builds
+        //DBGLog("refreshToolBar: Adding debug reset button")
+        //items.append(debugResetBtn)  // Add debug reset button in debug builds
         #endif
         items.append(flexibleSpaceButtonItem)
         if shouldShowPrivacyBtn {
@@ -336,6 +343,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         NotificationCenter.default.addObserver(self, selector: #selector(handleNotifyOpenTrackerInApp(_:)), name: .notifyOpenTrackerInApp, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(appWillEnterBackgroundRVC), name: UIApplication.didEnterBackgroundNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(appWillEnterForegroundRVC), name: UIApplication.willEnterForegroundNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(handleHealthKitDatabaseUpdated), name: .healthKitDatabaseUpdated, object: nil)
         //NotificationCenter.default.addObserver(self, selector: #selector(handlePrivacyLockdown(_:)), name: .notifyPrivacyLockdown, object: nil)
 
         //DBGLog(@"rvc: viewDidLoad privacy= %d",[privacyObj getPrivacyValue]);
@@ -413,9 +421,15 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         _ = self.privacyObj.lockDown()
     }
     @objc func appWillEnterForegroundRVC() {
+        DBGLog("rvc: appWillEnterForegroundRVC privacy= \(privacyValue)")
+
+
         // privacy locked down when rvc entered background, while appdelegate puts up and pulls down blank image
         // this refreshview seems to happen before the blank view controller disappears
         refreshView()
+
+        // Refresh health button to detect external permission changes
+        refreshHealthButton()
     }
     
     public override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
@@ -788,13 +802,14 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
     var _healthBtn: UIBarButtonItem?
     var healthBtn: UIBarButtonItem {
         if _healthBtn == nil {
-            _healthBtn = rTracker_resource.createHealthButton(target: self, action: #selector(btnHealth), accId: "health")
+            _healthBtn = rTracker_resource.createHealthButton(target: self, action: #selector(btnHealth), accId: "health", skipAsyncUpdate: false)
             _healthBtn!.accessibilityLabel = "Apple Health"
             _healthBtn!.accessibilityHint = "tap to view Apple Health status and manage permissions"
         }
         return _healthBtn!
     }
 
+/*
 #if DEBUGLOG
     var _debugResetBtn: UIBarButtonItem?
     var debugResetBtn: UIBarButtonItem {
@@ -814,7 +829,7 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
         return _debugResetBtn!
     }
 #endif
-
+*/
     var _addBtn: UIBarButtonItem?
     var addBtn: UIBarButtonItem {
         if _addBtn == nil {
@@ -999,10 +1014,63 @@ public class RootViewController: UIViewController, UITableViewDelegate, UITableV
 
     @objc func btnHealth() {
         DBGLog("Health button pressed")
-        let healthStatusView = HealthStatusViewController(showConfigInstructions: true)
+        let healthStatusView = HealthStatusViewController(showConfigInstructions: true, onDismiss: { [weak self] in
+            self?.refreshHealthButton()
+
+            // Check if we should show guidance (delayed to allow dismissal to complete)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                let tl = trackerList.shared
+                let sql = "SELECT disabled FROM rthealthkit WHERE disabled != 4"
+                let statuses = tl.toQry2AryI(sql: sql)
+                let hasEnabledData = statuses.contains { $0 == 1 }
+
+                if !hasEnabledData && !statuses.isEmpty {
+                    if let strongSelf = self {
+                        rTracker_resource.showHealthEnableGuidance(from: strongSelf)
+                    }
+                }
+            }
+        })
         let hostingController = UIHostingController(rootView: healthStatusView)
         hostingController.modalPresentationStyle = .pageSheet
+
+        // Set delegate to handle swipe dismissal
+        hostingController.presentationController?.delegate = self
+
         present(hostingController, animated: true, completion: nil)
+    }
+
+    func refreshHealthButton() {
+        // Invalidate cached button to force recreation with updated status
+        _healthBtn = nil
+        DBGLog("Refreshing health button to reflect current HealthKit permission status", color:.GREEN)
+        // Refresh entire toolbar (recreates health button via healthBtn computed property)
+        refreshToolBar(false)
+    }
+
+    @objc func handleHealthKitDatabaseUpdated() {
+        // Called when async HealthKit database update completes
+        // Refresh toolbar to update button visibility based on fresh permission status
+        DBGLog("HealthKit database updated, refreshing toolbar for hide_health_button_when_enabled")
+        refreshToolBar(false)
+    }
+
+    // MARK: - UIAdaptivePresentationControllerDelegate
+
+    public func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
+        // Refresh health button when HealthStatusViewController is dismissed via swipe
+        DBGLog("Health status view dismissed via swipe, refreshing button")
+        refreshHealthButton()
+
+        // Check if we should show guidance
+        let tl = trackerList.shared
+        let sql = "SELECT disabled FROM rthealthkit WHERE disabled != 4"
+        let statuses = tl.toQry2AryI(sql: sql)
+        let hasEnabledData = statuses.contains { $0 == 1 }
+
+        if !hasEnabledData && !statuses.isEmpty {
+            rTracker_resource.showHealthEnableGuidance(from: self)
+        }
     }
 
 #if DEBUGLOG

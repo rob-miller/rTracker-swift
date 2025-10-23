@@ -73,6 +73,105 @@ Main root view controller for the rTracker app. Manages the primary tracker list
 - `819040f`: Cleanup debug message improvements
 
 ## Last Updated
+2025-10-22 - **Fixed hide_health_button_when_enabled Logic (CRITICAL FIXES):**
+- **Problem #1 - Timing Issue**: When HealthKit permissions were revoked in Settings app, button stayed hidden
+  - `refreshToolBar()` queried database synchronously before async update completed
+  - Database still had old status values (1 or 3 = authorized)
+  - Button incorrectly stayed hidden even though permissions were revoked
+  - Async `updateAuthorisations()` updated database too late (after toolbar configured)
+- **Problem #2 - CRITICAL Logic Flaw**: Async update never ran when button was hidden!
+  - `healthBtn` property only accessed when `shouldShowHealthBtn` was true (lines 177-178, 192-194)
+  - When hiding decision made based on stale data, property never accessed
+  - Button never created → async update never launched → database never refreshed
+  - Notification never posted → second refresh never happened → **infinite hidden state**
+- **Solution Part 1**: Added notification-based refresh after async database update
+  - **New Notification**: `healthKitDatabaseUpdated` (line 71)
+  - **Posted in rTracker-resource.swift**: After `updateAuthorisations()` completes (line 1617-1620)
+  - **Handler Method**: `handleHealthKitDatabaseUpdated()` (lines 1043-1048)
+  - **Observer Registration**: Added in `viewDidLoad()` (line 339)
+- **Solution Part 2 - CRITICAL FIX**: Force `healthBtn` property access in `refreshToolBar()` (lines 146-148)
+  - **Key Addition**: `let _ = healthBtn` immediately when `hideHealthButton` is true
+  - Ensures button is always created and async update always runs
+  - Even if button won't be shown, async update must run to detect permission changes
+  - Without this, the entire notification system is useless (notification never posted)
+- **Implementation Flow (NOW WORKS CORRECTLY)**:
+  1. User returns from Settings → `appWillEnterForegroundRVC()` called
+  2. Calls `refreshHealthButton()` → invalidates button → calls `refreshToolBar()` (first refresh with stale data)
+  3. `refreshToolBar()` checks `hideHealthButton` preference → true
+  4. **CRITICAL**: Forces `healthBtn` property access (line 148) → button created
+  5. Button creation launches async `updateAuthorisations()` in background
+  6. Query database (stale values) → decides to hide button → toolbar configured without button
+  7. Async update completes → database updated with fresh values
+  8. Posts `healthKitDatabaseUpdated` notification
+  9. `handleHealthKitDatabaseUpdated()` receives notification → calls `refreshToolBar()` (second refresh)
+  10. Second refresh queries database → sees revoked permissions (status 2) → shows button!
+- **Key Insight**: Notification posted ALWAYS after database update (line 1617-1620)
+  - Even if icon doesn't change, toolbar visibility might need update
+  - Handles edge case where all permissions revoked but button was hidden
+- **Problem #3 - WRONG Logic**: Incorrect interpretation of status values (line 157)
+  - **Original condition**: `activeStatuses.allSatisfy({ $0 == 1 || $0 == 3 })`
+  - Hid button when ALL items were status 1 OR 3
+  - **Critical misunderstanding**: For read permissions, status 3 means "no readable data"
+  - App cannot distinguish "not authorized" from "no data" for read-only permissions
+  - When ALL items are status 3 → likely user denied access → need to show button!
+- **Solution Part 3 - CORRECTED Logic**: Only hide when SOME data is readable (line 160)
+  - **New condition**: `activeStatuses.contains(1)`
+  - Hide button only if at least SOME items have status 1 (readable data exists)
+  - If everything is status 3 (no readable data anywhere) → keep button visible
+  - This alerts user there's likely a permission problem
+- **Status Value Meanings for Read Permissions**:
+  - Status 1 = Has readable data (definitely authorized AND has data)
+  - Status 3 = No readable data (could be "not authorized" OR "authorized but no data yet")
+  - Status 4 = Hidden (excluded from logic)
+- **New Behavior**:
+  - Some items have status 1 → Hide button ✅ Something is working
+  - All items are status 3 → Show button ✅ Alert user (probable denial)
+  - Mix of status 1 and 3 → Hide button ✅ At least something works
+- **Benefits**:
+  - ✅ Button visibility correctly reflects current HealthKit authorization state
+  - ✅ Works with `hide_health_button_when_enabled` preference correctly now
+  - ✅ Detects external permission changes (Settings app)
+  - ✅ No timing dependencies or arbitrary delays
+  - ✅ Uses existing notification infrastructure pattern
+  - ✅ **CRITICAL**: Forced property access ensures async update ALWAYS runs
+  - ✅ Fixes infinite hidden state bug (button never shows after revocation)
+  - ✅ **CORRECTED**: Shows button when all status 3 (probable access denial)
+
+Previous update:
+2025-10-21 - **Health Button Refresh System & Guidance Alerts:**
+- **Health Button Refresh Implementation**:
+  - `refreshHealthButton()` method: Invalidates cached button and calls `refreshToolBar(false)`
+  - Simple 3-line implementation leverages existing toolbar infrastructure
+  - Called from `appWillEnterForegroundRVC()` to detect external permission changes
+- **HealthStatusViewController Dismissal Handling**:
+  - **Done Button**: `onDismiss` callback with 0.3s delay before showing guidance alert
+  - **Swipe Dismissal**: `presentationControllerDidDismiss` delegate method (no delay needed)
+  - Added `UIAdaptivePresentationControllerDelegate` conformance
+- **Guidance Alert Logic**:
+  - Checks database after dismissal: If NO status 1 entries (no readable data), shows alert
+  - Uses centralized `rTracker_resource.showHealthEnableGuidance(from:)` method
+  - Alert message: "If you tapped 'Don't Allow'..." with 4-step instructions
+- **Timing Fix for Done Button**:
+  - `DispatchQueue.main.asyncAfter(deadline: .now() + 0.3)` delays alert presentation
+  - Allows page sheet dismissal animation to complete (~0.25-0.3 seconds)
+  - Prevents alert presentation conflict with dismissing modal
+- **Button Creation Pattern**:
+  - `healthBtn` computed property uses `skipAsyncUpdate: false` (not true)
+  - Allows async database updates to detect external permission changes
+  - When button recreated on foreground, launches background query for fresh HealthKit data
+  - Updates button icon in-place if permissions changed in Settings app
+- **App Lifecycle Integration**:
+  - `appWillEnterForegroundRVC()`: Calls `refreshHealthButton()` after `refreshView()`
+  - Detects permission changes made in Settings → Health → Data Access & Devices
+  - Button icon updates within ~1 second of app foregrounding
+- **Benefits**:
+  - ✅ Health button refreshes on modal dismissal (both Done and swipe)
+  - ✅ Detects external permission changes without app restart
+  - ✅ Guides users to enable access when needed
+  - ✅ No toolbar disappearing bugs (uses existing refreshToolBar infrastructure)
+  - ✅ Clean separation: UI refresh vs guidance messaging
+
+Previous update:
 2025-10-16 - **Privacy Button Security Fix + iOS 26 Migration:**
 - **SECURITY FIX in privBtnSetImg()**: Lines 686-717
   - **Critical Issue**: Initial implementation changed icon to clear sunglasses when privacy view appeared (security vulnerability!)
