@@ -239,6 +239,8 @@ class datePickerVC: UIViewController {
             constraints.append(contentsOf: [
                 cancelButton.topAnchor.constraint(equalTo: buttonStackView.bottomAnchor, constant: 20),
                 cancelButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+                cancelButton.widthAnchor.constraint(equalToConstant: 120),
+                cancelButton.heightAnchor.constraint(equalToConstant: 60),
                 cancelButton.bottomAnchor.constraint(lessThanOrEqualTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20)
             ])
         }

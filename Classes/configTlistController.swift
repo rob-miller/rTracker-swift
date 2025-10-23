@@ -256,25 +256,6 @@ class configTlistController: UIViewController, UITableViewDelegate, UITableViewD
 
         Thread.detachNewThreadSelector(#selector(startExportZip), toTarget: self, with: nil)
     }
-    
-    /*
-    func getExportFilesBtn() -> UIBarButtonItem? {
-        var exportBtn: UIBarButtonItem?
-        exportBtn = UIBarButtonItem(
-            title: "Export all to app directory",
-            style: .plain,
-            target: self,
-            action: #selector(btnExport))
-        if #available(iOS 26.0, *) {
-            exportBtn?.hidesSharedBackground = true  // Remove white container background
-        }
-        
-        exportBtn!.accessibilityIdentifier = "exportAll"
-        exportBtn!.accessibilityLabel = "Export All"
-        exportBtn!.accessibilityHint = "tap to save all trackers in rTracker's Documents folder"
-        return exportBtn
-    }
-     */
 
       // Menu options
       enum MenuOption: String {
