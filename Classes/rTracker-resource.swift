@@ -1386,7 +1386,7 @@ class rTracker_resource: NSObject {
       buttonItem.hidesSharedBackground = true
       return buttonItem
     } else {
-      // Pre-iOS 26: Use fallbacks
+      // Pre-iOS 26: Create UIButton and wrap in customView for compatibility
 
       // First check for legacy bespoke image (e.g., privacy button PNGs)
       if let imageName = legacyImageName {
@@ -1402,16 +1402,41 @@ class rTracker_resource: NSObject {
         return buttonItem
       }
 
-      // Otherwise use systemItem or title fallbacks
-      let buttonItem: UIBarButtonItem
-      if let systemItem = fallbackSystemItem {
-        buttonItem = UIBarButtonItem(barButtonSystemItem: systemItem, target: target, action: action)
+      // Create UIButton with SF Symbol or text
+      let button = UIButton(type: .system)
+
+      // Try to use SF Symbol (available iOS 13+)
+      if let image = UIImage(systemName: symbolName) {
+        let symConfig = UIImage.SymbolConfiguration(pointSize: symbolSize, weight: .regular)
+        let configuredImage = image.withConfiguration(symConfig)
+        button.setImage(configuredImage, for: .normal)
+        button.tintColor = symbolColor
       } else if let title = fallbackTitle {
-        buttonItem = UIBarButtonItem(title: title, style: .plain, target: target, action: action)
+        // Fallback to text if SF Symbol not available
+        button.setTitle(title, for: .normal)
+        button.setTitleColor(symbolColor, for: .normal)
       } else {
-        // Default fallback
-        buttonItem = UIBarButtonItem(barButtonSystemItem: .done, target: target, action: action)
+        // Last resort: use system item text representation
+        let defaultTitle = fallbackSystemItem == .done ? "Done" : "Button"
+        button.setTitle(defaultTitle, for: .normal)
+        button.setTitleColor(symbolColor, for: .normal)
       }
+
+      // Apply background color if specified
+      button.backgroundColor = backgroundColor
+
+      // Apply border if specified
+      if let borderColor = borderColor, borderWidth > 0 {
+        button.layer.borderWidth = borderWidth
+        button.layer.borderColor = borderColor.cgColor
+        button.layer.cornerRadius = 8
+      }
+
+      button.addTarget(target, action: action, for: .touchUpInside)
+      button.accessibilityIdentifier = accId
+
+      // Wrap in customView so .uiButton works for all callers
+      let buttonItem = UIBarButtonItem(customView: button)
       buttonItem.accessibilityIdentifier = accId
       return buttonItem
     }

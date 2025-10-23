@@ -78,7 +78,26 @@ Central utility class providing shared resources and UI components across the ap
 - Consistent `.label` color for visibility in light/dark modes
 
 ## Recent Development History
-**Current Session (2025-09-26) - MAJOR BUTTON CONSOLIDATION:**
+**Current Session (2025-10-23) - Pre-iOS 26 Button Fix:**
+- **CRITICAL FIX**: Fixed buttons not appearing in datePickerVC on iOS < 26 devices (lines 1388-1442)
+- **Problem**: Pre-iOS 26 fallback created UIBarButtonItem from system item/title without customView
+  - `.uiButton` property returned `nil` on iOS < 26
+  - datePickerVC extracts UIButton via `.uiButton` to add to stack view
+  - Buttons never appeared on screen on older devices
+- **Root Cause**: Only iOS 26+ path created UIButton in customView
+  - Pre-iOS 26 used `UIBarButtonItem(barButtonSystemItem:)` or `UIBarButtonItem(title:)` directly
+  - These don't have underlying UIButton in customView
+- **Solution**: Modified pre-iOS 26 fallback to create UIButton and wrap in customView
+  - Creates `UIButton(type: .system)` with SF Symbol (iOS 13+) or text fallback
+  - Applies tintColor, backgroundColor, border styling
+  - Wraps in `UIBarButtonItem(customView:)` so `.uiButton` works
+- **Impact**:
+  - ✅ datePickerVC buttons now appear on iOS < 26 devices
+  - ✅ useTrackerController continues to work (uses UIBarButtonItem directly)
+  - ✅ Maintains consistent appearance across iOS versions
+  - ✅ Backwards compatible with iOS 13+ (SF Symbols requirement)
+
+**Previous Session (2025-09-26) - MAJOR BUTTON CONSOLIDATION:**
 - **MASSIVE REFACTOR**: Reduced 25+ button functions to 4 core functions
 - **Eliminated Functions**: Removed createSaveButton, createAddButton, createBackButton, createEditButton, createCopyButton, createClearButton, createLockButton, createPrivacySaveButton, createLeftChevronCircleButton, createRightChevronCircleButton, createCancelBinButton, createCancelButton, createMenuButton, createAcceptButton, createCalendarButton, createSearchButton, createDeleteButton, createSkipToEndButton, createChartButton, createDoneButton (old), createMinusButton
 - **New Architecture**: 4 consolidated functions with parameters for customization
@@ -97,6 +116,7 @@ Central utility class providing shared resources and UI components across the ap
 - Maintained backward compatibility with existing API
 
 ## Current Issues & TODOs
+- **COMPLETED (2025-10-23)**: Fixed pre-iOS 26 button display in datePickerVC
 - **COMPLETED (2025-10-22)**: Added notification support for toolbar visibility refresh after HealthKit database updates
 - **COMPLETED**: Major button consolidation - Reduced from 25+ functions to 5 core functions
 - **COMPLETED**: Updated all client files to use consolidated button functions
