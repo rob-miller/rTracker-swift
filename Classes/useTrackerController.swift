@@ -1719,7 +1719,6 @@ class useTrackerController: UIViewController, UITableViewDelegate, UITableViewDa
     }
     
     @objc func btnCurrDate() {
-        //DBGLog(@"pressed date becuz its a button, should pop up a date picker....");
         
         dpvc.myTitle = "Date for \(tracker!.trackerName ?? "")"
         dpr.date = tracker!.trackerDate

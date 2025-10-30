@@ -79,4 +79,15 @@ Modal date picker view controller for selecting dates and performing date-relate
 - files from Swiftify (initial Swift conversion)
 
 ## Last Updated
+2025-10-23 - **Fixed "Squished" Cancel Button** (lines 242-243):
+- **Problem**: Cancel button appeared compressed/squished at bottom of date picker
+- **Root Cause**: Button had position constraints (top, centerX, bottom) but no size constraints
+  - Relied on intrinsic content size which was too small
+  - Button stack buttons had explicit 60pt height, cancel button had none
+- **Solution**: Added explicit size constraints to cancel button
+  - Width: 120pt (reasonable size for icon + potential text)
+  - Height: 60pt (matches button stack height)
+- **Result**: Cancel button now displays with proper, consistent size ✅
+
+Previous update:
 2025-09-26 - Code consolidation: dpRslt.swift types moved here with modern enum patterns
