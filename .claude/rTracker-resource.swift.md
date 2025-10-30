@@ -116,6 +116,7 @@ Central utility class providing shared resources and UI components across the ap
 - Maintained backward compatibility with existing API
 
 ## Current Issues & TODOs
+- **COMPLETED (2025-10-30)**: Fixed fallbackSystemItem not being used on pre-iOS 26 devices
 - **COMPLETED (2025-10-23)**: Fixed pre-iOS 26 button display in datePickerVC
 - **COMPLETED (2025-10-22)**: Added notification support for toolbar visibility refresh after HealthKit database updates
 - **COMPLETED**: Major button consolidation - Reduced from 25+ functions to 5 core functions
@@ -130,6 +131,28 @@ Central utility class providing shared resources and UI components across the ap
 - All button system refactoring and consolidation work is now complete
 
 ## Last Updated
+2025-10-30 - **Fixed fallbackSystemItem Not Being Used on Pre-iOS 26** (lines 1405-1469):
+- **Problem**: When SF Symbol not available on pre-iOS 26, fallbackSystemItem parameter was ignored
+  - Code showed "Button" text instead of using system item icon (e.g., .action share icon)
+  - Lines 1419-1422 only checked fallbackSystemItem to determine text ("Done" or "Button")
+  - Never actually created UIBarButtonItem using the system item
+- **Impact**: useTrackerController menu button showed "Button" text instead of share icon
+- **Root Cause**: Pre-iOS 26 fallback logic only used fallbackSystemItem for text determination
+- **Solution**: Restructured fallback logic with proper priority order
+  1. Try SF Symbol first (iOS 13+) → create UIButton with symbol in customView
+  2. If SF Symbol fails AND fallbackSystemItem provided → create UIBarButtonItem(barButtonSystemItem:)
+  3. Otherwise → create UIButton with fallbackTitle or "Button" text in customView
+- **Implementation**: Lines 1432-1437 now properly use fallbackSystemItem
+  - `UIBarButtonItem(barButtonSystemItem: systemItem, target: target, action: action)`
+  - Applies symbolColor as tintColor
+  - Returns proper system button with native icon
+- **Benefits**:
+  - ✅ Share icon (.action) now appears correctly on pre-iOS 26 devices
+  - ✅ All system items work as expected when SF Symbols unavailable
+  - ✅ Maintains customView pattern for SF Symbol path
+  - ✅ Clean fallback hierarchy: Symbol → SystemItem → Text
+
+Previous update:
 2025-10-22 - **Added Notification for HealthKit Database Updates** (lines 1617-1620):
 - **Problem**: `hide_health_button_when_enabled` preference caused button to stay hidden after permissions revoked
   - When user revoked HealthKit permissions in Settings app and returned to rTracker

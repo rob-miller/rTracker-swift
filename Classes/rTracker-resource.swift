@@ -1402,43 +1402,70 @@ class rTracker_resource: NSObject {
         return buttonItem
       }
 
-      // Create UIButton with SF Symbol or text
-      let button = UIButton(type: .system)
-
       // Try to use SF Symbol (available iOS 13+)
       if let image = UIImage(systemName: symbolName) {
+        // SF Symbol available: Create UIButton with symbol
+        let button = UIButton(type: .system)
         let symConfig = UIImage.SymbolConfiguration(pointSize: symbolSize, weight: .regular)
         let configuredImage = image.withConfiguration(symConfig)
         button.setImage(configuredImage, for: .normal)
         button.tintColor = symbolColor
-      } else if let title = fallbackTitle {
-        // Fallback to text if SF Symbol not available
-        button.setTitle(title, for: .normal)
-        button.setTitleColor(symbolColor, for: .normal)
+
+        // Apply background color if specified
+        button.backgroundColor = backgroundColor
+
+        // Apply border if specified
+        if let borderColor = borderColor, borderWidth > 0 {
+          button.layer.borderWidth = borderWidth
+          button.layer.borderColor = borderColor.cgColor
+          button.layer.cornerRadius = 8
+        }
+
+        button.addTarget(target, action: action, for: .touchUpInside)
+        button.accessibilityIdentifier = accId
+
+        // Wrap in customView so .uiButton works for all callers
+        let buttonItem = UIBarButtonItem(customView: button)
+        buttonItem.accessibilityIdentifier = accId
+        return buttonItem
+
+      } else if let systemItem = fallbackSystemItem {
+        // SF Symbol not available but fallbackSystemItem provided: use system item
+        let buttonItem = UIBarButtonItem(barButtonSystemItem: systemItem, target: target, action: action)
+        buttonItem.accessibilityIdentifier = accId
+        buttonItem.tintColor = symbolColor
+        return buttonItem
+
       } else {
-        // Last resort: use system item text representation
-        let defaultTitle = fallbackSystemItem == .done ? "Done" : "Button"
-        button.setTitle(defaultTitle, for: .normal)
+        // SF Symbol not available, no system item: Create UIButton with text
+        let button = UIButton(type: .system)
+
+        if let title = fallbackTitle {
+          button.setTitle(title, for: .normal)
+        } else {
+          // Last resort text fallback
+          button.setTitle("Button", for: .normal)
+        }
         button.setTitleColor(symbolColor, for: .normal)
+
+        // Apply background color if specified
+        button.backgroundColor = backgroundColor
+
+        // Apply border if specified
+        if let borderColor = borderColor, borderWidth > 0 {
+          button.layer.borderWidth = borderWidth
+          button.layer.borderColor = borderColor.cgColor
+          button.layer.cornerRadius = 8
+        }
+
+        button.addTarget(target, action: action, for: .touchUpInside)
+        button.accessibilityIdentifier = accId
+
+        // Wrap in customView so .uiButton works for all callers
+        let buttonItem = UIBarButtonItem(customView: button)
+        buttonItem.accessibilityIdentifier = accId
+        return buttonItem
       }
-
-      // Apply background color if specified
-      button.backgroundColor = backgroundColor
-
-      // Apply border if specified
-      if let borderColor = borderColor, borderWidth > 0 {
-        button.layer.borderWidth = borderWidth
-        button.layer.borderColor = borderColor.cgColor
-        button.layer.cornerRadius = 8
-      }
-
-      button.addTarget(target, action: action, for: .touchUpInside)
-      button.accessibilityIdentifier = accId
-
-      // Wrap in customView so .uiButton works for all callers
-      let buttonItem = UIBarButtonItem(customView: button)
-      buttonItem.accessibilityIdentifier = accId
-      return buttonItem
     }
   }
 
